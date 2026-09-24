@@ -17,11 +17,12 @@ TanStack Charts does not use Recharts: it runs on its own engine built from D3 p
 
 ## Recharts versus TanStack Charts for agent-built charts
 
-- **Grammar as data**: TanStack Charts composes marks, scales, channels, and transforms, a spec an LLM can write and we can validate, in the tradition of Vega-Lite. Recharts uses fixed chart-type components.
-- **No dead ends**: unusual requests become another layer instead of hacked JSX.
-- **One place to lock the look**: palette and typography rules apply to every possible chart, instead of theming each chart-type component.
-- **Caveat**: its type inference helps authored code, not runtime LLM output, which still needs runtime validation.
-- **Risk**: Alpha. Acceptable for a prototype if the version is pinned and wrapped in our own `Chart` catalog component, so swapping to Recharts touches one file.
+- **Grammar versus chart types**: TanStack Charts composes marks, scales, channels, and transforms; Recharts uses fixed chart-type components.
+- **Where the grammar would help**: if the LLM wrote chart specs, a grammar is data it writes well (like Vega-Lite). But under the catalog model (ADR-014) the LLM only fills props of tested components, so this advantage mostly disappears.
+- **What remains**: a developer-side benefit of building catalog charts on one grammar and one theme.
+- **Rendering**: both render in Electron, whose window is Chromium. Recharts needs a DOM; TanStack Charts can also render SVG without one (server-side), which matters only for charts that leave the app (emailed reports, Slack, PDF, thumbnails).
+- **Risk**: TanStack Charts is Alpha; Recharts is mature, shadcn's default, and already used in Ethan's PlanMonster dashboard.
+- **Verdict**: Recharts behind Kay's own catalog components; watch TanStack Charts.
 
 ## The real question: what is the agent allowed to emit?
 
@@ -37,7 +38,7 @@ These are the two ends of the spectrum: A2UI-style catalogs give coherence, whil
 
 1. Kay catalog components (`Table`, `Chart`, `Action`, `Edit`, `Receipt`) with constrained, intent-level props.
 2. Built from shadcn primitives for the look and TanStack Table for table logic.
-3. Charts on Recharts via shadcn today; watch TanStack Charts, since grammar-of-graphics specs are data an LLM writes well, but it is Alpha.
+3. Charts on Recharts via shadcn, behind catalog components (ADR-014); watch TanStack Charts.
 4. Agents emit an A2UI-like JSON spec that references the catalog.
 5. Plugins that truly need bespoke UI use a sandboxed iframe with Kay's design tokens injected as CSS variables.
 

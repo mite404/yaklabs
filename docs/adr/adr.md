@@ -84,3 +84,10 @@ Unpinned text may be edited directly and restored from version history (ADR-011)
 Proposed changes render as a redline, with strikethrough for removed text and a non-formatting marker (underline or highlight tint, not bold) for added text, so the signal never depends on red/green or collides with real formatting.
 Each change is accepted or rejected individually from a review panel; on accept, struck text collapses away (~200ms) and the new text settles to normal styling.
 Open: inline redline plus a review-list panel, versus a side-by-side compose panel; prototype both.
+
+## ADR-014 - Charts are tested catalog components; the LLM only describes data
+
+2026-09-24 - Accepted.
+Each chart type (`LineChart`, `BarChart`, and so on) is built and tested once as a Kay catalog component, and the LLM only emits a validated data description (series, fields, a small set of deliberate options such as reference lines), never new chart code.
+Requests outside the catalog get an honest fallback ("I can show this as a table") instead of improvised UI.
+The engine is Recharts (mature, shadcn's default) hidden behind the catalog, so switching to TanStack Charts later touches only the catalog.
