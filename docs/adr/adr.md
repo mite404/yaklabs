@@ -64,3 +64,10 @@ Principle: no special syntax to invoke a skill, but immediate confirmation that 
 Tapping an action opens its options; pressing and holding skips the options and runs with the user's saved defaults, which appear inside the fill bar as it fills (release early to cancel), and the fill takes longer for actions that are harder to undo.
 After the same choices repeat, the options panel suggests "hold to skip this next time", and hold falls back to opening the panel when a default looks wrong for the current context.
 This keeps full agency on tap and adds throughput on hold, modeled on Amp's hold-to-ship.
+
+## ADR-011 - Documents autosave; agent edits are named versions
+
+2026-09-24 - Accepted.
+New documents and artifacts save automatically, with an auto-generated title in a predictable place, matching the Google Docs habits of knowledge workers.
+Every agent edit is recorded as an attributed, restorable version, and when the user is editing at the same time, agent changes land as suggestions instead of overwriting their text.
+This sets the product-wide line: changes inside Kay are automatic and reversible, while effects that leave Kay (send, share, publish) are deliberate (ADR-010).
