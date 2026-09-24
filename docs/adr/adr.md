@@ -41,7 +41,7 @@ Agent work is shown by what changed in the world (sent, changed, spent, waiting 
 
 ## ADR-007 - Confirmation weight matches irreversibility
 
-2026-09-24 - Proposed.
+2026-09-24 - Superseded by ADR-010.
 Reversible actions take a tap; irreversible ones use hold-to-confirm, with the hold getting longer as the consequence grows.
 The playful interaction doubles as a signal of how much the action matters.
 
@@ -57,3 +57,10 @@ This ties legibility to the success metric: users creating their own workflows a
 Typing plain words (e.g. "create watcher workflow") shows matching skills in a popup above the input; Tab applies one, and Enter sends as typed unless the user arrowed into the popup.
 The matched words become a chip inside the compose box (Backspace turns it back into text), so users get natural language and visible confirmation without memorizing a `/` command, which remains an optional power-user shortcut.
 Principle: no special syntax to invoke a skill, but immediate confirmation that it is applied, so the user is never left wondering what the agent will do with their message.
+
+## ADR-010 - Tap to choose, hold to ship with your defaults
+
+2026-09-24 - Accepted.
+Tapping an action opens its options; pressing and holding skips the options and runs with the user's saved defaults, which appear inside the fill bar as it fills (release early to cancel), and the fill takes longer for actions that are harder to undo.
+After the same choices repeat, the options panel suggests "hold to skip this next time", and hold falls back to opening the panel when a default looks wrong for the current context.
+This keeps full agency on tap and adds throughput on hold, modeled on Amp's hold-to-ship.
