@@ -24,7 +24,7 @@ People proofread as they type, so layout shifts break their place.
 
 ## ADR-004 - Recognition over recall for skills
 
-2026-09-24 - Accepted.
+2026-09-24 - Superseded by ADR-009.
 Typing `/` shows a filterable list of skills inline, and the chosen skill appears as a visible chip before sending.
 Users never need to memorize skill names or wait for "loading skill" to confirm.
 
@@ -50,3 +50,9 @@ The playful interaction doubles as a signal of how much the action matters.
 2026-09-24 - Proposed.
 A finished run renders as a reactive recipe (like marimo) where editing an upstream step re-runs the steps after it, and any run can be saved as a skill.
 This ties legibility to the success metric: users creating their own workflows and skills.
+
+## ADR-009 - Skills match from plain language, confirmed as a chip
+
+2026-09-24 - Accepted.
+Typing plain words (e.g. "create watcher workflow") shows matching skills in a popup above the input; Tab applies one, and Enter sends as typed unless the user arrowed into the popup.
+The matched words become a chip inside the compose box (Backspace turns it back into text), so users get natural language and visible confirmation without memorizing a `/` command, which remains an optional power-user shortcut.
