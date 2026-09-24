@@ -71,3 +71,16 @@ This keeps full agency on tap and adds throughput on hold, modeled on Amp's hold
 New documents and artifacts save automatically, with an auto-generated title in a predictable place, matching the Google Docs habits of knowledge workers.
 Every agent edit is recorded as an attributed, restorable version, and when the user is editing at the same time, agent changes land as suggestions instead of overwriting their text.
 This sets the product-wide line: changes inside Kay are automatic and reversible, while effects that leave Kay (send, share, publish) are deliberate (ADR-010).
+
+## ADR-012 - Pin to lock what you like
+
+2026-09-24 - Accepted.
+Users can pin a whole document or a single section (pin icon appears in the margin on hover), and the agent treats pinned text as locked: it never rewrites it and says when it left pinned text alone.
+Unpinned text may be edited directly and restored from version history (ADR-011); pinned text only ever receives suggestions.
+
+## ADR-013 - Agent edits are reviewed as a redline
+
+2026-09-24 - Proposed.
+Proposed changes render as a redline, with strikethrough for removed text and a non-formatting marker (underline or highlight tint, not bold) for added text, so the signal never depends on red/green or collides with real formatting.
+Each change is accepted or rejected individually from a review panel; on accept, struck text collapses away (~200ms) and the new text settles to normal styling.
+Open: inline redline plus a review-list panel, versus a side-by-side compose panel; prototype both.
