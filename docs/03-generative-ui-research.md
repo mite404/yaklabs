@@ -12,7 +12,16 @@ Question: which foundation lets an LLM build data surfaces (tables, charts) for 
 | Frameworks | React, Vue, Solid, Svelte, Angular; Charts adds Lit, vanilla, experimental React Native | React |
 
 The comparison is engine versus paint job.
-shadcn's own Data Table is TanStack Table underneath, and TanStack Charts already reimplements shadcn's chart catalog.
+shadcn's own Data Table is TanStack Table underneath.
+TanStack Charts does not use Recharts: it runs on its own engine built from D3 primitives, and it ships its own versions of shadcn's chart examples as an alternative to the Recharts ones.
+
+## Recharts versus TanStack Charts for agent-built charts
+
+- **Grammar as data**: TanStack Charts composes marks, scales, channels, and transforms, a spec an LLM can write and we can validate, in the tradition of Vega-Lite. Recharts uses fixed chart-type components.
+- **No dead ends**: unusual requests become another layer instead of hacked JSX.
+- **One place to lock the look**: palette and typography rules apply to every possible chart, instead of theming each chart-type component.
+- **Caveat**: its type inference helps authored code, not runtime LLM output, which still needs runtime validation.
+- **Risk**: Alpha. Acceptable for a prototype if the version is pinned and wrapped in our own `Chart` catalog component, so swapping to Recharts touches one file.
 
 ## The real question: what is the agent allowed to emit?
 
