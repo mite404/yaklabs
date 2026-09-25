@@ -269,3 +269,10 @@ The cards redefine the text tokens locally instead of carrying colours of their 
 2026-09-25 - Accepted.
 Places to type use one shared `.field` class with the outline button's 1px border and 4px corners (ADR-035), so a field reads as part of the same family; surfaces tune it through `--field-*` tokens, and the strong surface is a reusable `.surface-strong` class rather than per-component colours.
 In the "Needs you" card, the typed answer uses it, with a placeholder greyer than the statements in rows 1 and 3 so a question to answer is not mistaken for a choice; a faint recessed fill keeps that greyer placeholder at 4.6:1, and the send key sits inside the field's right edge and takes room only once there is text.
+
+## ADR-044 - Focus is the darkest hero green
+
+2026-09-25 - Accepted.
+The focus ring, the compose box's focused border, and the focus glow use `#161d17` (Ethan's pick, the darkest green in the hero photo), 16:1 on the paper surfaces, replacing the olive accent (6.6:1), so focus reads as one strong, on-brand mark.
+On the strong surface it would be 2.8:1, under the 3:1 a focus ring needs, so that surface keeps a cream ring (5.6:1) until a pattern that passes there is chosen.
+
