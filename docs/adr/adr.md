@@ -240,5 +240,6 @@ The thread panel enforces this for every component by watching each turn grow ri
 ## ADR-039 - "Needs you": a question the agent waits on, separate from the recap
 
 2026-09-25 - Accepted.
-When the agent is blocked on the user, it emits a validated question (zod, fails closed) that floats above the compose box as a "Needs you" card with numbered choices after Claude Code's question prompt: the agent's branches, an answer typed right in the card, and a host-added "Chat about something else", with keys 1 to N and no close button.
+When the agent is blocked on the user, it emits a validated question (zod, fails closed) that floats above the compose box as a "Needs you" card with numbered choices after Claude Code's question prompt: the agent's branches, one concrete question answered by typing right in the card, and a way out that the agent may word for the moment ("Chat about a plan to ...") and the host otherwise fills with "Chat about something else", with keys 1 to N and no close button.
+Each row asks something different, so the card never asks "what do you want to talk about?" twice.
 The recap only reports what happened and never asks for anything, and the question shows as soon as the agent is blocked rather than after idle time, because being blocked is not an idle state; while a question is open, it takes the recap's place.

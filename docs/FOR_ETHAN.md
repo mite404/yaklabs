@@ -52,6 +52,8 @@ Nothing is built yet, so the cast is the set of ideas the prototypes will be mad
 
 - **The 20px that was really 16.** The last card was meant to rest 20px above the compose box but measured 16 to 20px, because the thread scrolled to its end before the charts and fonts finished sizing, then stopped a few pixels short. Fix: while the thread is at its end, it stays there as content settles, and the padding subtracts the compose row's 4px inset so the visible gap is exactly 20px. Lesson: measure the resting state after everything has loaded, not the frame after mount.
 
+- **The question that vanished.** Writing "Chat about a plan to capture a different selection of sales data" into the typed-answer row broke the card: at 64 characters it passed the row's 60-character limit, so the strict schema dropped the whole question, as designed. It was also in the wrong row, which made rows 2 and 3 both ask "what do you want to chat about?". Fix: the way out got its own agent-worded field (`elsewhere`), and row 2 became a concrete question ("How many weeks ahead should it forecast?"). Lesson: fail-closed means a small content slip hides the whole card, so every row needs one clear job and a field of its own.
+
 ## 5. Director's Commentary
 
 ### The agent only states intent; the design system does the rest
@@ -245,14 +247,15 @@ Now the question is its own validated payload, and the host always adds the exit
 export const awaitingSchema = z.strictObject({
   question: text,
   options: z.array(z.strictObject({ label: ..., detail: text.optional() })).min(1).max(4),
-  answer: z.strictObject({ placeholder: ... }),
+  answer: z.strictObject({ placeholder: ... }), // one concrete question, typed in the card
+  elsewhere: z.string()...optional(), // the way out, worded for the moment
 });
 ```
 
 ```mermaid
 flowchart TD
   A[Agent] -->|blocked on the user| Q{awaitingSchema}
-  Q -->|valid| N["Needs you card<br/>1 branch · 2 typed answer · 3 chat about something else"]
+  Q -->|valid| N["Needs you card<br/>1 branch · 2 concrete question · 3 the way out"]
   Q -->|invalid| X[dropped, nothing half-shown]
   A -->|work recorded| R[Recap: outcomes only, after 10 idle minutes]
   N -->|while open| H[recap waits]
