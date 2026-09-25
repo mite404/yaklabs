@@ -356,6 +356,8 @@
    pair, and a header that folds the card to one line. Everything lines up on a 12px inset. */
 .awaiting.attention-surface {
   --tile-bg: var(--awaiting-tile-bg);
+  --attention-hover: var(--awaiting-hover);
+  --tile-wash: var(--awaiting-hover);
   padding: 4px 12px 12px;
   background: var(--awaiting-bg);
 }
@@ -457,6 +459,11 @@
   --ink: var(--attention-hover-ink);
   --soft-ink: var(--attention-hover-ink);
   color: var(--ink);
+}
+/* Needs you hovers to a light grey, so its rows keep their usual inks. */
+.awaiting.attention-surface :is(.awaiting-tile, .awaiting-header, .awaiting-action):hover {
+  --ink: var(--tile-ink);
+  --soft-ink: var(--tile-muted);
 }
 /* Keyboard focus sits inside the tile, where it clears 3:1 against the tile itself. */
 .awaiting-tile:focus-visible {
