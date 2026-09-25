@@ -36,6 +36,13 @@ it("floats the agent's question above the compose box with numbered choices and 
   expect(html).not.toContain("Dismiss");
 });
 
+it("waits for a choice: Submit stays disabled until a tile is selected, Skip is always there", () => {
+  const html = renderToStaticMarkup(<ChatThreadPanel thread={threads.awaiting} />);
+  expect(html).toMatch(/<button class="awaiting-action awaiting-submit" disabled="">Submit<\/button>/);
+  expect(html).toContain(">Skip</button>");
+  expect(html).not.toContain('aria-checked="true"');
+});
+
 it("shows no card and no error when the agent's question is malformed", () => {
   const html = renderToStaticMarkup(<ChatThreadPanel thread={threads.malformed} />);
   expect(html).not.toContain('aria-label="Needs you"');

@@ -346,14 +346,35 @@
   box-shadow: 0 2px 8px var(--shadow);
   font-size: 12px;
 }
-/* "Needs you" (ADR-039): numbered choices after Claude Code's question prompt. Rows carry
-   an 8px inset so their hover wash frames the text, which aligns with the label above. */
+/* "Needs you" (ADR-039, ADR-045): numbered tiles on the strong surface, a Skip and Submit
+   pair, and a header that folds the card to one line. Everything lines up on a 12px inset. */
 .awaiting {
-  padding: 12px 8px 8px 6px;
+  --tile-bg: color-mix(in srgb, var(--yak-night) 18%, var(--surface-strong)); /* cream 7.0:1 */
+  padding: 4px 12px 12px;
+}
+.awaiting:not([data-open]) {
+  padding-bottom: 4px;
+}
+/* The header is the fold control: label, the question when folded, and a chevron. */
+.awaiting-header {
+  width: calc(100% + 16px);
+  margin: 0 -8px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+}
+.awaiting-header:hover {
+  background: var(--wash);
 }
 .awaiting-label {
-  display: inline-block;
-  margin: 0 0 8px 8px;
+  flex: none;
+  margin: 0;
   padding: 2px 8px;
   border-radius: 20px;
   background: var(--warn-bg);
@@ -363,43 +384,82 @@
   letter-spacing: 0.4px;
   text-transform: uppercase;
 }
+.awaiting-summary {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+  font-weight: 500;
+}
+.awaiting-chevron {
+  margin-left: auto;
+  display: inline-flex;
+  color: var(--muted);
+}
 .awaiting-question {
-  margin: 0 8px 8px;
+  margin: 4px 0 10px;
   font-size: 14px;
   font-weight: 550;
   line-height: 1.45;
   letter-spacing: 0;
   color: var(--ink);
 }
+/* Options are separated by fill, not outlines: each is its own tile. */
 .awaiting-options {
-  list-style: none;
-  margin: 0;
-  padding: 0;
   display: grid;
-  gap: 2px;
+  gap: 4px;
 }
-.awaiting-row {
+.awaiting-tile {
   width: 100%;
   display: grid;
-  grid-template-columns: 20px minmax(0, 1fr) auto;
-  align-items: baseline;
+  grid-template-columns: 20px minmax(0, 1fr);
+  align-items: start;
   gap: 8px;
   margin: 0;
-  padding: 7px 8px;
+  padding: 8px;
   border: none;
-  border-radius: 8px;
-  background: transparent;
+  border-radius: 4px;
+  background: var(--tile-bg);
   text-align: left;
   font-size: 13px;
   line-height: 1.45;
   color: var(--ink);
+  cursor: pointer;
 }
-button.awaiting-row:hover {
+.awaiting-tile:hover {
   background: var(--wash);
 }
+/* Keyboard focus sits inside the tile, where it clears 3:1 against the tile itself. */
+.awaiting-tile:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+/* The number badge: no outline at rest, an outline on hover, filled solid when selected. */
 .awaiting-key {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  margin-top: -0.5px;
+  border: 1px solid transparent;
+  border-radius: 4px;
   color: var(--muted);
+  font-size: 12px;
   font-variant-numeric: tabular-nums;
+  transition:
+    border-color var(--btn-duration, 150ms) ease,
+    background-color var(--btn-duration, 150ms) ease;
+}
+.awaiting-tile:hover .awaiting-key {
+  border-color: var(--muted);
+}
+.awaiting-tile[data-selected] .awaiting-key {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--surface-strong);
+  font-weight: 600;
 }
 .awaiting-option,
 .awaiting-detail {
@@ -411,46 +471,60 @@ button.awaiting-row:hover {
 .awaiting-detail {
   color: var(--muted);
 }
-.awaiting-elsewhere {
-  font-weight: 400;
-  color: var(--muted);
-}
-/* The typed answer is an outlined field (.field), so it reads as a place to type rather
-   than a statement; its placeholder is greyer than the statements in rows 1 and 3.
-   The field carries its own box, so this row trims its padding to keep the text on the
-   same line as its number. */
-.awaiting-row.awaiting-answer {
-  grid-template-columns: 20px minmax(0, 1fr);
+/* The typed answer: an outlined field (.field) inside its tile, so it reads as a place to
+   type; the tile trims its padding so the field's text sits level with its number. */
+.awaiting-answer {
   align-items: center;
-  padding-block: 3px;
+  padding-block: 4px;
 }
-/* The send key sits inside the field's right edge, so the outline spans the whole row. */
-.awaiting-field {
-  position: relative;
+.awaiting-answer .field {
+  padding-inline: 8px;
 }
-/* Room for the key only once there is something to send, so the placeholder keeps the
-   full width it was measured against (40 characters in the narrow card). */
-.awaiting-field .field:not(:placeholder-shown) {
-  padding-right: 34px;
+.awaiting-answer .awaiting-key {
+  margin-top: 0;
 }
-.awaiting-send {
-  position: absolute;
-  top: 50%;
-  right: 4px;
-  transform: translateY(-50%);
-  width: 22px;
-  height: 22px;
-  padding: 0;
-  border: none;
-  border-radius: 3px;
-  /* Olive would vanish on the strong surface, so the send key inverts it to cream. */
+/* Skip and Submit, bottom right. Submit waits for a selection (and, for the typed answer,
+   some text); it is cream on the strong surface, where olive would disappear. */
+.awaiting-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 12px;
+}
+.awaiting-action {
+  padding: 6px 14px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.3;
+  transition:
+    background-color var(--btn-duration, 150ms) ease,
+    opacity var(--btn-duration, 150ms) ease;
+}
+.awaiting-action:hover {
+  background: var(--wash);
+}
+.awaiting-submit {
+  border-color: var(--ink);
   background: var(--ink);
   color: var(--surface-strong);
-  font-size: 13px;
-  line-height: 1;
 }
-.awaiting-send:disabled {
-  visibility: hidden;
+.awaiting-submit:hover {
+  background: var(--ink);
+  opacity: 0.9;
+}
+.awaiting-submit:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+@media (prefers-reduced-motion: reduce) {
+  .awaiting-key,
+  .awaiting-action {
+    transition: none;
+  }
 }
 
 @keyframes recap-in {

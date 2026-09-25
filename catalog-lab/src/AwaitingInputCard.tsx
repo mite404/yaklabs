@@ -1,90 +1,151 @@
-import { useState, type FormEvent, type KeyboardEvent } from "react";
+import { useRef, useState, type KeyboardEvent } from "react";
 import type { AwaitingInput } from "./awaiting";
 
 // The way out when the agent does not word one for the moment: the user is never cornered.
 const ELSEWHERE = "Chat about something else";
 
+function Chevron({ open }: { open: boolean }) {
+  return (
+    <svg
+      viewBox="0 0 16 16"
+      width="14"
+      height="14"
+      aria-hidden="true"
+      style={{ transform: open ? "rotate(90deg)" : undefined }}
+    >
+      <path d="M6 3.5 10.5 8 6 12.5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 /**
  * "Needs you": the agent is blocked on a question, floating above the compose box (ADR-039).
- * Numbered choices, after Claude Code's question prompt: the agent's branches, a concrete
- * question answered right in the card, and a way out ("Chat about something else", or the
- * agent's wording for the moment). Keys 1 to N pick a row.
- * It has no close button; leaving is itself a choice, so the question is never silently lost.
+ * Numbered tiles, after Claude's and Amp's question prompts (ADR-045): the agent's branches,
+ * a concrete question answered in a field, and a way out ("Chat about something else", or the
+ * agent's wording for the moment). Choosing is two steps: a click, a number key, or the arrow
+ * keys select a tile, and Enter or Submit sends it; Skip sets the question aside.
+ * The header folds the card to one line, so the user can read the thread above and come back.
  * @param onAnswer Sends a branch's label or the typed answer as the user's reply.
  * @param onElsewhere Sets the question aside and hands focus back to the compose box.
+ * @param startCollapsed Open folded to its header (stories).
  */
 export function AwaitingInputCard({
   question,
   onAnswer,
   onElsewhere,
+  startCollapsed = false,
 }: {
   question: AwaitingInput;
   onAnswer: (answer: string) => void;
   onElsewhere: () => void;
+  startCollapsed?: boolean;
 }) {
+  const [open, setOpen] = useState(!startCollapsed);
+  const [selected, setSelected] = useState<number>();
   const [typed, setTyped] = useState("");
-  const answerRow = question.options.length + 1;
+  const field = useRef<HTMLInputElement>(null);
+  const options = useRef<HTMLDivElement>(null);
+  // Rows are 0-based here and shown 1-based: the branches, then the answer, then the way out.
+  const answerRow = question.options.length;
   const elsewhereRow = answerRow + 1;
+  const rows = elsewhereRow + 1;
+  const canSubmit = selected !== undefined && (selected !== answerRow || typed.trim() !== "");
 
-  function submit(event: FormEvent) {
-    event.preventDefault();
-    if (typed.trim()) onAnswer(typed.trim());
+  // Selecting moves focus to the chosen tile, as in any radio group, so Enter sends it.
+  function select(row: number) {
+    setSelected(row);
+    if (row === answerRow) field.current?.focus();
+    else options.current?.querySelectorAll<HTMLElement>(".awaiting-tile")[row]?.focus();
   }
 
-  // Number keys pick a row, except while the user is typing an answer.
-  function pick(event: KeyboardEvent) {
-    if (event.target instanceof HTMLInputElement) return;
-    const row = Number(event.key);
-    if (row >= 1 && row <= question.options.length) onAnswer(question.options[row - 1].label);
-    else if (row === answerRow)
-      event.currentTarget.querySelector<HTMLInputElement>(".awaiting-answer input")?.focus();
-    else if (row === elsewhereRow) onElsewhere();
+  function submit() {
+    if (selected === undefined || !canSubmit) return;
+    if (selected === answerRow) onAnswer(typed.trim());
+    else if (selected === elsewhereRow) onElsewhere();
+    else onAnswer(question.options[selected].label);
+  }
+
+  // Number keys and arrows select, Enter sends (Space or a click also selects a tile).
+  // While typing only Enter is ours; the header and the action buttons keep their own Enter.
+  function keys(event: KeyboardEvent) {
+    const target = event.target as HTMLElement;
+    if (!open) return;
+    const typing = target instanceof HTMLInputElement;
+    const ownEnter = target.closest(".awaiting-header, .awaiting-actions") !== null;
+    if (event.key === "Enter") {
+      if (ownEnter) return;
+      submit();
+    }
+    else if (typing) return;
+    else if (event.key === "ArrowDown") select(((selected ?? -1) + 1) % rows);
+    else if (event.key === "ArrowUp") select(((selected ?? rows) - 1 + rows) % rows);
+    else if (Number(event.key) >= 1 && Number(event.key) <= rows) select(Number(event.key) - 1);
     else return;
     event.preventDefault();
   }
 
+  const tile = (row: number) => ({
+    role: "radio" as const,
+    "aria-checked": selected === row,
+    "data-selected": selected === row || undefined,
+  });
+
   return (
-    <section className="awaiting surface-strong" aria-label="Needs you" onKeyDown={pick}>
-      <p className="awaiting-label">Needs you</p>
-      <h3 className="awaiting-question">{question.question}</h3>
-      <ol className="awaiting-options">
-        {question.options.map((option, i) => (
-          <li key={option.label}>
-            <button className="awaiting-row" onClick={() => onAnswer(option.label)}>
-              <span className="awaiting-key">{i + 1}</span>
-              <span>
-                <span className="awaiting-option">{option.label}</span>
-                {option.detail && <span className="awaiting-detail">{option.detail}</span>}
-              </span>
-            </button>
-          </li>
-        ))}
-        <li>
-          <form className="awaiting-row awaiting-answer" onSubmit={submit}>
-            <span className="awaiting-key">{answerRow}</span>
-            <span className="awaiting-field">
+    <section
+      className="awaiting surface-strong"
+      aria-label="Needs you"
+      data-open={open || undefined}
+      onKeyDown={keys}
+    >
+      <button className="awaiting-header" aria-expanded={open} onClick={() => setOpen(!open)}>
+        <span className="awaiting-label">Needs you</span>
+        {!open && <span className="awaiting-summary">{question.question}</span>}
+        <span className="awaiting-chevron">
+          <Chevron open={open} />
+        </span>
+      </button>
+      {open && (
+        <>
+          <h3 className="awaiting-question" id="awaiting-question">
+            {question.question}
+          </h3>
+          <div ref={options} className="awaiting-options" role="radiogroup" aria-labelledby="awaiting-question">
+            {question.options.map((option, i) => (
+              <button key={option.label} className="awaiting-tile" onClick={() => select(i)} {...tile(i)}>
+                <span className="awaiting-key">{i + 1}</span>
+                <span>
+                  <span className="awaiting-option">{option.label}</span>
+                  {option.detail && <span className="awaiting-detail">{option.detail}</span>}
+                </span>
+              </button>
+            ))}
+            <div className="awaiting-tile awaiting-answer" onClick={() => select(answerRow)} {...tile(answerRow)}>
+              <span className="awaiting-key">{answerRow + 1}</span>
               <input
+                ref={field}
                 className="field"
                 value={typed}
+                onFocus={() => setSelected(answerRow)}
                 onChange={(event) => setTyped(event.target.value)}
                 placeholder={question.answer.placeholder}
                 aria-label={question.answer.placeholder}
               />
-              <button type="submit" className="awaiting-send" disabled={!typed.trim()} aria-label="Send answer">
-                ↵
-              </button>
-            </span>
-          </form>
-        </li>
-        <li>
-          <button className="awaiting-row" onClick={onElsewhere}>
-            <span className="awaiting-key">{elsewhereRow}</span>
-            <span className="awaiting-option awaiting-elsewhere">
-              {question.elsewhere ?? ELSEWHERE}
-            </span>
-          </button>
-        </li>
-      </ol>
+            </div>
+            <button className="awaiting-tile" onClick={() => select(elsewhereRow)} {...tile(elsewhereRow)}>
+              <span className="awaiting-key">{elsewhereRow + 1}</span>
+              <span className="awaiting-option">{question.elsewhere ?? ELSEWHERE}</span>
+            </button>
+          </div>
+          <div className="awaiting-actions">
+            <button className="awaiting-action" onClick={onElsewhere}>
+              Skip
+            </button>
+            <button className="awaiting-action awaiting-submit" disabled={!canSubmit} onClick={submit}>
+              Submit
+            </button>
+          </div>
+        </>
+      )}
     </section>
   );
 }
