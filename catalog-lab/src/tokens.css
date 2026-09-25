@@ -35,6 +35,7 @@
      our choice, "Ethan" = Ethan's pick. Nothing is sampled from pixels: the screen used for
      sampling had a blue-light filter (ADR-051). */
   --yak-night: #111411; /* css: the page body behind the shell */
+  --yak-graphite: #56564f; /* Ethan: chart marks; green is kept for button hovers (ADR-058) */
   --yak-paper-bright: #f8f8f6; /* Ethan: one step brighter than paper */
   /* derived: --sage's hue (OKLCH 124°) at L 0.46 / C 0.06, an olive that reads as green in
      flat UI and shares a hue with the sage tint; chosen over a forest-hue option. */
@@ -53,7 +54,7 @@
   --bubble-tint: color-mix(in srgb, var(--sage) 40%, var(--paper));
   --bubble-tint-strong: color-mix(in srgb, var(--sage) 75%, var(--paper));
   --bubble-line: var(--sage);
-  --data: var(--accent); /* chart marks */
+  --data: var(--yak-graphite); /* chart marks: 6.4:1 on paper */
   /* Ethan: a warm mid grey; 3.0:1 on the app surface and 3.3:1 on the page, the 3:1 a ring needs. */
   --focus: #8a8a85;
   --shadow: color-mix(in srgb, var(--yak-night) 10%, transparent);
@@ -508,7 +509,7 @@ h1 span {
   display: inline-block;
   width: 7px;
   height: 7px;
-  background: var(--accent);
+  background: var(--data); /* the legend key is the mark's own colour */
   border-radius: 50%;
   margin-right: 4px;
 }
