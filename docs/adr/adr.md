@@ -317,3 +317,9 @@ The Design Engineer posting lives on meetkay.ai, Kay's product site, whose style
 2026-09-25 - Accepted.
 The screen used to sample colours had a blue-light filter, so every colour picked from screenshots or recordings as a brand fact is dropped: the hero-photo greens and cream and the measured button hover fill `#242b24`; this amends ADR-034, ADR-035 and ADR-046.
 The button hover uses the declared near-black green `#111411` until the site's hover rule is read from its stylesheet, text on dark fills uses the declared paper `#f0efea`, darker greens are mixed from declared values, and Ethan's warm greys stay as deliberate picks, flagged for a re-check with the filter off.
+
+## ADR-052 - The button's hover is the site's moss, read from its stylesheet
+
+2026-09-25 - Accepted.
+yaklabs.ai's rule is `.apply-jump:hover { background: var(--moss); border-color: var(--moss); color: var(--paper) }`, so the outline button now fills with `--moss` `#263b30` (paper text 10.4:1), and its border turns moss too, instantly, since only the fill and text colour are transitioned; this replaces the provisional `#111411` from ADR-051 and the measured `#242b24` from ADR-035.
+The button follows yaklabs.ai's `--moss`, not meetkay.ai's `#1d291f` (ADR-050), because it copies that site's button; which moss the product uses elsewhere stays open.
