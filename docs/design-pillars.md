@@ -83,13 +83,20 @@ Around 100ms reads as instant, around 150 to 200ms reads as a soft arrival, and 
 Bars stay the data colour (olive `#515e38`) for most of their height and deepen over the bottom 20px to the olive-tinted display ink `#22251e`, like a soft shadow where they meet the axis.
 The band is a fixed 20px on every bar, not a percentage, so tall and short bars are grounded identically; bars shorter than 20px fade over their full height.
 The dark end uses the display ink rather than a photo green so the gradient stays in one hue family (OKLCH 124°).
+The shade follows an ease-in-out curve (rule 11), so the band has no visible top edge.
 
 | Property | Value | Source |
 | --- | --- | --- |
 | Bar colour | `--data` (olive `#515e38`) | derived |
 | Base colour | `--data-deep` (display ink `#22251e`) | derived |
 | Band height | 20px, fixed | Ethan |
+| Band curve | smoothstep (ease-in-out), 9 stops | derived |
 | Top corners | 4px | derived (matches the button) |
+
+### 11. Ease gradients like motion
+
+A linear gradient that starts or stops inside a shape creates a faint false line where it begins, because the eye exaggerates any sudden change in the rate of change (Mach banding).
+Shape feathered gradients and shadows with an ease-in-out curve (smoothstep: zero slope at both ends), approximated with several colour stops, exactly as a camera move eases in and out.
 
 ## Open questions
 
