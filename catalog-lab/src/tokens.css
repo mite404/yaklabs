@@ -14,12 +14,15 @@
   background: var(--bg);
   font-synthesis: none;
 
-  /* yaklabs.ai's own tokens, same names and values as its stylesheet (ADR-049). Two text
-     inks and two line weights: that is the whole contrast pattern. */
+  /* The site's own tokens, same names as its stylesheet (ADR-049); where yaklabs.ai and
+     meetkay.ai differ, Kay's own site wins (ADR-050). Two text inks and two line weights:
+     that is the whole contrast pattern. */
   --paper: #f0efea; /* the app surface */
   --paper-deep: #e4e4df; /* hover and inset fill */
   --ink: #252524; /* headings, primary text: 13.3:1 on paper */
-  --soft-ink: #4a4a47; /* body and secondary text: 7.7:1 */
+  /* Body and all secondary text, one step lighter than headings: meetkay.ai's value (Kay's
+     own site, which the product follows), not yaklabs.ai's #4a4a47. 5.8:1 on paper. */
+  --soft-ink: #5c5c57;
   --blue: #95aac8; /* text selection */
   --sage: #c7cfba; /* the user's bubble only (ADR-047) */
   --chalk: #e5e8d9;
