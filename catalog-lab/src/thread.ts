@@ -68,7 +68,7 @@ export const profitCard = {
       ],
     },
     sentence: "{measure} was {total} for {period}, peaking on {peakLabel} at {peakValue}.",
-    recipe: [
+    steps: [
       "Pulled last week's orders (Sep 14–20) from the sales system",
       "Grouped sales by day",
       "Subtracted cost of goods sold to get gross profit",

@@ -60,7 +60,8 @@ export function InteractiveCard({
         )
       : 0;
   const [index, setIndex] = useState(initial);
-  const [showRecipe, setShowRecipe] = useState(false);
+  // Always starts collapsed: the answer earns trust on its own, the steps are there on demand (ADR-036).
+  const [showWork, setShowWork] = useState(false);
   const barShape = gradientBar(useId());
 
   // An invalid payload gets the same honest catalog-limit card as any other rejection.
@@ -168,9 +169,9 @@ export function InteractiveCard({
         <p className="stop-description">{stop.description}</p>
       </div>
 
-      {showRecipe && (
-        <ol className="recipe" aria-label="Recipe">
-          {props.recipe.map((step) => (
+      {showWork && (
+        <ol className="work-steps" aria-label="How I got this">
+          {props.steps.map((step) => (
             <li key={step}>{step}</li>
           ))}
         </ol>
@@ -178,8 +179,8 @@ export function InteractiveCard({
 
       <footer>
         <span>{props.source}</span>
-        <button className="btn btn-sm" aria-expanded={showRecipe} onClick={() => setShowRecipe(!showRecipe)}>
-          {showRecipe ? "Hide recipe" : "Show recipe"}
+        <button className="btn btn-sm" aria-expanded={showWork} onClick={() => setShowWork(!showWork)}>
+          {showWork ? "Hide my work" : "Show my work"}
         </button>
       </footer>
     </section>

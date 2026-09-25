@@ -43,4 +43,4 @@ type Story = StoryObj<typeof meta>;
 export const Default: Story = { args: { label: "Apply for this role", size: "default" } };
 
 /** Compact size used inside cards and dialogs. */
-export const Small: Story = { args: { label: "Show recipe", size: "small" } };
+export const Small: Story = { args: { label: "Show my work", size: "small" } };

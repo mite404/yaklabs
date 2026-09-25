@@ -103,8 +103,8 @@
   color: var(--muted);
 }
 
-/* Recipe view: the same card one layer deeper (ADR-008). */
-.recipe {
+/* "Show my work": the same card one layer deeper, collapsed by default (ADR-008, ADR-036). */
+.work-steps {
   margin: 0 16px 12px;
   padding: 10px 12px 10px 30px;
   border-radius: 10px;

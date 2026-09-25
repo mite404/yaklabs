@@ -58,7 +58,7 @@ export const interactiveSchema = z
         .min(1)
         .max(160)
         .refine(usesOnlyKnownPlaceholders, "Sentence uses an unknown placeholder"),
-      recipe: z.array(text).min(1).max(8),
+      steps: z.array(text).min(1).max(8),
     }),
   })
   .superRefine(({ props }, context) => {
