@@ -86,38 +86,37 @@ button:hover {
   background: var(--wash);
 }
 /* Outline button, after yaklabs.ai's "Apply for this role" (ADR-035): an ink outline at rest
-   that fills with the near-black green on hover. The delay lives on the hover rule only,
-   because a transition uses the destination state's timing: the fill waits a beat before
-   arriving, then clears promptly on the way out. Timing is tokenised for iteration. */
+   that fills with forest green on hover. Values are the site's computed styles except the
+   hover fill, which is measured from a recording. The site has no delay: the "beat" before
+   the fill is the 150ms ease transition itself. Timing is tokenised for iteration. */
 .btn {
   --btn-border: color-mix(in srgb, var(--yak-ink) 72%, var(--yak-paper)); /* css: ink at 0.72 */
   --btn-hover-bg: var(--yak-forest); /* measured from a hover recording: #242b24 */
   --btn-hover-ink: var(--yak-paper);
-  --btn-duration: 120ms; /* measured: ~7 frames at 60Hz */
-  --btn-delay: 60ms; /* estimated: the recording cannot show the delay */
-  --btn-ease: ease-out;
+  --btn-duration: 150ms; /* css */
+  --btn-delay: 0ms; /* css: none; kept as a token for iteration */
+  --btn-ease: ease; /* css: the default curve */
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 9px 22px;
+  padding: 10px 22px; /* css */
   border: 1px solid var(--btn-border);
-  border-radius: 2px;
+  border-radius: 4px; /* css */
   background: transparent;
   color: var(--ink);
-  font-size: 15px;
-  font-weight: 500;
+  font-size: 14px; /* css */
+  font-weight: 500; /* css */
   line-height: 1.3;
   white-space: nowrap;
+  /* css: only the fill and text colour animate; the border does not change. */
   transition:
     background-color var(--btn-duration) var(--btn-ease),
-    border-color var(--btn-duration) var(--btn-ease),
     color var(--btn-duration) var(--btn-ease);
 }
 .btn:hover,
 .btn[data-preview="hover"] {
   background: var(--btn-hover-bg);
-  border-color: var(--btn-hover-bg);
   color: var(--btn-hover-ink);
   transition-delay: var(--btn-delay);
 }
@@ -130,7 +129,6 @@ button:hover {
   opacity: 0.45;
   cursor: default;
   background: transparent;
-  border-color: var(--btn-border);
   color: var(--ink);
 }
 /* Compact size for buttons inside cards and dialogs. */
