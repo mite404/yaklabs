@@ -358,42 +358,20 @@
   --tile-bg: var(--awaiting-tile-bg);
   --attention-hover: var(--awaiting-hover);
   --tile-wash: var(--awaiting-hover);
-  padding: 4px 12px 12px;
+  padding: 4px 0 12px;
   background: var(--awaiting-bg);
 }
 .awaiting:not([data-open]) {
   padding-bottom: 4px;
 }
-/* The header is the fold control: label, the question when folded, and a chevron. */
-.awaiting-header {
-  width: calc(100% + 16px);
-  margin: 0 -8px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px;
-  border: none;
-  border-radius: 8px;
-  background: transparent;
-  color: var(--ink);
-  text-align: left;
+/* The fold (Disclosure) spans the card, so its line is flush with the card's edges; the
+   header sits 4px in, so its 8px padding puts the label on the same 12px inset as the body. */
+.awaiting .disclosure-header {
+  width: calc(100% - 8px);
+  margin: 0 4px;
 }
-/* Open, a line under the header marks it as the fold control; 8px keeps the header's hover
-   fill clear of the line. Folded, there is no body to separate, so no line. */
-.awaiting[data-open] .awaiting-header {
-  position: relative;
-  margin-bottom: 8px;
-}
-.awaiting[data-open] .awaiting-header::after {
-  content: "";
-  position: absolute;
-  left: 8px;
-  right: 8px;
-  bottom: -8px;
-  border-bottom: 1px solid var(--hairline);
-}
-.awaiting-header:hover {
-  background: var(--paper-deep);
+.awaiting .disclosure-body {
+  padding: 0 12px;
 }
 .awaiting-label {
   flex: none;
@@ -422,8 +400,7 @@
   color: var(--soft-ink);
 }
 .awaiting-question {
-  /* 20px from the header, which collapses with its 8px: 12px below the line. */
-  margin: 20px 0 10px;
+  margin: 12px 0 10px; /* 12px below the line */
   font-size: 14px;
   font-weight: 550;
   line-height: 1.45;
@@ -455,13 +432,13 @@
   background: var(--paper-deep);
 }
 /* Hovered rows on the attention surface darken, so their text switches to the hover ink. */
-.attention-surface :is(.awaiting-tile, .recap li button, .awaiting-header, .awaiting-action, .recap-close):hover {
+.attention-surface :is(.awaiting-tile, .recap li button, .disclosure-header, .awaiting-action, .recap-close):hover {
   --ink: var(--attention-hover-ink);
   --soft-ink: var(--attention-hover-ink);
   color: var(--ink);
 }
 /* Needs you hovers to a light grey, so its rows keep their usual inks. */
-.awaiting.attention-surface :is(.awaiting-tile, .awaiting-header, .awaiting-action):hover {
+.awaiting.attention-surface :is(.awaiting-tile, .disclosure-header, .awaiting-action):hover {
   --ink: var(--tile-ink);
   --soft-ink: var(--tile-muted);
 }

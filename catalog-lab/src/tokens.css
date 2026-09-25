@@ -3,6 +3,7 @@
    Optical-size cuts adjust letterforms between small labels and large headings. */
 @import "@fontsource-variable/inter/opsz.css";
 @import "@fontsource-variable/newsreader/opsz.css";
+@import "./primitives.css";
 
 :root {
   /* Fallback stacks mirror yaklabs.ai. */

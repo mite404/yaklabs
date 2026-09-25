@@ -7,6 +7,7 @@ import {
   simulatedTranscript,
   type AudioDevice,
 } from "./dictation";
+import { Modal } from "./Modal";
 import { Waveform } from "./Waveform";
 import "./dictation.css";
 
@@ -115,22 +116,6 @@ function useSpeechTranscript(enabled: boolean) {
   return { text, supported };
 }
 
-// Keeps Tab inside the dialog so focus cannot wander to the paused compose box.
-function trapTab(event: KeyboardEvent<HTMLElement>) {
-  const focusable = event.currentTarget.querySelectorAll<HTMLElement>(
-    "button:not([disabled]), [tabindex='0']",
-  );
-  const first = focusable[0];
-  const last = focusable[focusable.length - 1];
-  if (event.shiftKey && document.activeElement === first) {
-    event.preventDefault();
-    last.focus();
-  } else if (!event.shiftKey && document.activeElement === last) {
-    event.preventDefault();
-    first.focus();
-  }
-}
-
 /**
  * Full-attention dictation: a modal over the thread that makes clear typing is paused
  * while recording, with a large center-playhead waveform, a live transcript preview,
@@ -177,12 +162,11 @@ export function DictationModal({
       ? "The waveform is live, but this browser has no speech service, so no text will appear."
       : undefined);
 
+  // The modal handles Tab and Escape; an open microphone picker takes Escape first.
   function onKeyDown(event: KeyboardEvent<HTMLElement>) {
-    if (event.key === "Tab") trapTab(event);
-    if (event.key === "Escape") {
+    if (event.key === "Escape" && picking) {
       event.preventDefault();
-      if (picking) setPicking(false);
-      else onCancel();
+      setPicking(false);
     }
     if (event.key === "Enter" && !(event.target instanceof HTMLButtonElement)) {
       event.preventDefault();
@@ -191,14 +175,7 @@ export function DictationModal({
   }
 
   return (
-    <div className="dictation-backdrop">
-      <section
-        className="dictation"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="dictation-title"
-        onKeyDown={onKeyDown}
-      >
+    <Modal className="dictation" labelledBy="dictation-title" onClose={onCancel} onKeyDown={onKeyDown}>
         <header className="dictation-header">
           <p id="dictation-title">
             <span className="rec-dot" aria-hidden="true" />
@@ -257,7 +234,6 @@ export function DictationModal({
             </button>
           </div>
         </footer>
-      </section>
-    </div>
+    </Modal>
   );
 }

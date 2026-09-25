@@ -1,25 +1,8 @@
 /* Dictation takes over the thread: a dimmed, blurred backdrop says "typing is paused",
    and the dialog gives the waveform room to be read at a glance (ADR-028). */
-.dictation-backdrop {
-  position: absolute;
-  inset: 0;
-  z-index: 5;
-  display: grid;
-  place-items: center;
-  padding: var(--thread-gutter, 20px);
-  background: var(--scrim);
-  backdrop-filter: blur(3px);
-  animation: dictation-fade 160ms ease-out;
-}
-
 .dictation {
   width: min(100%, 560px);
-  background: var(--paper);
-  border: 1px solid var(--hairline);
-  border-radius: 16px;
-  box-shadow: 0 18px 48px var(--shadow-strong);
   padding: 16px 18px 14px;
-  animation: dictation-rise 200ms ease-out;
 }
 
 .dictation-header {
@@ -167,25 +150,12 @@
   background: currentColor;
 }
 
-@keyframes dictation-fade {
-  from {
-    opacity: 0;
-  }
-}
-@keyframes dictation-rise {
-  from {
-    opacity: 0;
-    transform: translateY(8px) scale(0.98);
-  }
-}
 @keyframes rec-pulse {
   50% {
     opacity: 0.35;
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .dictation-backdrop,
-  .dictation,
   .rec-dot {
     animation: none;
   }

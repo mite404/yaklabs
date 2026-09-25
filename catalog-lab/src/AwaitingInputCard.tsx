@@ -1,22 +1,9 @@
 import { useRef, useState, type KeyboardEvent } from "react";
 import type { AwaitingInput } from "./awaiting";
+import { Disclosure } from "./Disclosure";
 
 // The way out when the agent does not word one for the moment: the user is never cornered.
 const ELSEWHERE = "Chat about something else";
-
-function Chevron({ open }: { open: boolean }) {
-  return (
-    <svg
-      viewBox="0 0 16 16"
-      width="14"
-      height="14"
-      aria-hidden="true"
-      style={{ transform: open ? "rotate(90deg)" : undefined }}
-    >
-      <path d="M6 3.5 10.5 8 6 12.5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
-  );
-}
 
 /**
  * "Needs you": the agent is blocked on a question, floating above the compose box (ADR-039).
@@ -71,7 +58,7 @@ export function AwaitingInputCard({
     const target = event.target as HTMLElement;
     if (!open) return;
     const typing = target instanceof HTMLInputElement;
-    const ownEnter = target.closest(".awaiting-header, .awaiting-actions") !== null;
+    const ownEnter = target.closest(".disclosure-header, .awaiting-actions") !== null;
     if (event.key === "Enter") {
       if (ownEnter) return;
       submit();
@@ -97,15 +84,16 @@ export function AwaitingInputCard({
       data-open={open || undefined}
       onKeyDown={keys}
     >
-      <button className="awaiting-header" aria-expanded={open} onClick={() => setOpen(!open)}>
-        <span className="awaiting-label">Needs you</span>
-        {!open && <span className="awaiting-summary">{question.question}</span>}
-        <span className="awaiting-chevron">
-          <Chevron open={open} />
-        </span>
-      </button>
-      {open && (
-        <>
+      <Disclosure
+        open={open}
+        onToggle={() => setOpen(!open)}
+        summary={
+          <>
+            <span className="awaiting-label">Needs you</span>
+            {!open && <span className="awaiting-summary">{question.question}</span>}
+          </>
+        }
+      >
           <h3 className="awaiting-question" id="awaiting-question">
             {question.question}
           </h3>
@@ -144,8 +132,7 @@ export function AwaitingInputCard({
               Submit
             </button>
           </div>
-        </>
-      )}
+      </Disclosure>
     </section>
   );
 }
