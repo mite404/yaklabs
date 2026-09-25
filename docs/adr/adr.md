@@ -187,3 +187,9 @@ Controls must fit the data (sliders need a numeric range or labeled stops; two m
 2026-09-25 - Accepted.
 When the user changes an interactive card or custom view, its current state attaches to their next message as a visible, removable chip (e.g. "Net profit · Sep 14-20"), so the agent answers about what the user is actually looking at.
 This applies to catalog cards and to model-written custom views alike (the typed export is the contract, after the "copy as JSON" pattern in Thariq Shihipar's HTML article), and it follows ADR-009: no hidden context, and the user always sees what the agent will act on.
+
+## ADR-031 - Interaction is conversation: the user's choices feed the agent
+
+2026-09-25 - Accepted.
+Meaningful choices the user makes in any interactive surface (card controls, accepting or rejecting redline changes, pins, sorting on a bucket board) are fed back to the agent as structured, visible input, so the chat becomes a live feedback loop where the user steers by doing, not only by writing.
+This keeps users engaged and playing instead of checking out while reading walls of text, which serves the goal of turning them into creators; only meaningful choices count (no hovers or scrolls, and only a card's latest state), and every choice travels as a visible, removable chip (ADR-009, ADR-030).
