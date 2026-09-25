@@ -275,6 +275,11 @@ a {
   color: var(--accent);
 }
 /* Body copy sits one step lighter than headings, as on yaklabs.ai. */
+/* A clicked text field shows only its focused border, never the ring: the ring is for
+   keyboard and assistive focus (ADR-053, see inputModality.ts). */
+:root[data-input="pointer"] :is(input, textarea):focus-visible {
+  outline: none;
+}
 /* Text selection, as on yaklabs.ai. */
 ::selection {
   background: var(--blue);

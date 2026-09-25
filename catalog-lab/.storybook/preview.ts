@@ -1,5 +1,8 @@
 import type { Decorator, Preview } from "@storybook/react-vite";
+import { trackInputModality } from "../src/inputModality";
 import "../src/tokens.css";
+
+trackInputModality();
 
 // Dark mode is set on the root element, the way the app would (ADR-046).
 const withTheme: Decorator = (Story, context) => {
