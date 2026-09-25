@@ -31,12 +31,10 @@
   --rule: rgba(37, 37, 36, 0.72); /* strong lines and outlines: 5.7:1 */
   --hairline: rgba(37, 37, 36, 0.25); /* card borders and dividers */
 
-  /* Ours, where the site declares nothing: "css" = a literal in its stylesheet, "photo" =
-     picked from the hero image in Figma, "derived" = our choice, "Ethan" = Ethan's pick. */
+  /* Ours, where the site declares nothing: "css" = a literal in its stylesheet, "derived" =
+     our choice, "Ethan" = Ethan's pick. Nothing is sampled from pixels: the screen used for
+     sampling had a blue-light filter (ADR-051). */
   --yak-night: #111411; /* css: the page body behind the shell */
-  --yak-cream: #f5f5f0; /* photo: text on the dark hero */
-  --yak-forest: #242b24; /* photo: dominant hero green; the button's hover fill */
-  --yak-sage-deep: #3d423b; /* photo: hover on dark surfaces */
   /* derived: --sage's hue (OKLCH 124°) at L 0.46 / C 0.06, an olive that reads as green in
      flat UI and shares a hue with the sage tint; chosen over a forest-hue option. */
   --yak-green: #515e38;
@@ -50,7 +48,7 @@
   /* Roles built on those: the window around the app, and the rest below. */
   --bg: color-mix(in srgb, var(--paper) 45%, white); /* derived: the window around the app */
   --accent: var(--yak-green); /* 6.1:1 on paper and under cream text */
-  --on-accent: var(--yak-cream);
+  --on-accent: var(--paper); /* css: the site's text on dark fills */
   /* The user's bubble, and nothing else (ADR-047): the site's sage tint marks "you". */
   --bubble-tint: color-mix(in srgb, var(--sage) 40%, var(--paper));
   --bubble-tint-strong: color-mix(in srgb, var(--sage) 75%, var(--paper));
@@ -71,14 +69,14 @@
   --surface-strong: var(--yak-stone);
   --on-strong: var(--yak-night); /* 5.4:1 */
   --on-strong-muted: var(--yak-night); /* nothing lighter clears 4.5:1 on this grey */
-  --on-strong-wash: color-mix(in srgb, var(--yak-cream) 15%, var(--yak-stone)); /* 6.6:1 */
+  --on-strong-wash: color-mix(in srgb, var(--paper) 15%, var(--yak-stone)); /* 6.5:1 */
   --on-strong-line: color-mix(in srgb, var(--yak-night) 55%, var(--yak-stone));
   --on-strong-focus: var(--yak-night); /* 5.4:1 on the surface, 11:1 on a tile */
-  --on-strong-inverse: var(--yak-cream); /* text on a filled action: 17:1 on night */
+  --on-strong-inverse: var(--paper); /* text on a filled action: 16.1:1 on night */
   --tile-bg: var(--yak-stone-light);
   --tile-ink: var(--ink); /* 9.3:1 */
   --tile-muted: color-mix(in srgb, var(--ink) 80%, var(--yak-stone-light)); /* 5.8:1 */
-  --tile-wash: color-mix(in srgb, var(--yak-cream) 30%, var(--yak-stone-light)); /* hover */
+  --tile-wash: color-mix(in srgb, var(--paper) 30%, var(--yak-stone-light)); /* hover */
   --tile-field-bg: transparent;
   --tile-field-border: color-mix(in srgb, var(--ink) 55%, var(--yak-stone-light)); /* 3.1:1 */
   --tile-field-placeholder: color-mix(in srgb, var(--ink) 72%, var(--yak-stone-light)); /* 4.7:1 */
@@ -114,12 +112,13 @@ button:hover {
   background: var(--paper-deep);
 }
 /* Outline button, after yaklabs.ai's "Apply for this role" (ADR-035): an ink outline at rest
-   that fills with forest green on hover. Values are the site's computed styles except the
-   hover fill, which is measured from a recording. The site has no delay: the "beat" before
+   that fills with the declared near-black green on hover. Values are the site's computed
+   styles; the hover rule never printed, so the fill is the likeliest declared colour until
+   it is read from the stylesheet (ADR-051). The site has no delay: the "beat" before
    the fill is the 150ms ease transition itself. Timing is tokenised for iteration. */
 .btn {
   --btn-border: var(--rule); /* css: the site's outline is its rule */
-  --btn-hover-bg: var(--yak-forest); /* measured from a hover recording: #242b24 */
+  --btn-hover-bg: var(--yak-night); /* css-declared #111411; hover rule unconfirmed */
   --btn-hover-ink: var(--paper);
   --btn-duration: 150ms; /* css */
   --btn-delay: 0ms; /* css: none; kept as a token for iteration */
@@ -204,22 +203,23 @@ button:hover {
 }
 
 /* Dark mode (ADR-046): only the attention surfaces are themed so far. The dark card that
-   was tried in light mode is kept here: cream text, deeper tiles, and sage hovers. */
+   was tried in light mode is kept here: paper text, deeper tiles, and darker hovers. */
 :root[data-theme="dark"] {
   --surface-strong: var(--yak-slate);
-  --on-strong: var(--yak-cream); /* 5.6:1 */
-  --on-strong-muted: color-mix(in srgb, var(--yak-cream) 90%, var(--yak-slate)); /* 4.9:1 */
-  --on-strong-wash: var(--yak-sage-deep); /* Ethan: hover on dark surfaces; cream 9.4:1 */
-  --on-strong-line: color-mix(in srgb, var(--yak-cream) 14%, var(--yak-slate));
-  --on-strong-focus: var(--yak-cream);
-  --on-strong-inverse: var(--yak-slate); /* 5.6:1 on cream */
-  --tile-bg: color-mix(in srgb, var(--yak-night) 18%, var(--yak-slate)); /* cream 7.0:1 */
-  --tile-ink: var(--yak-cream);
-  --tile-muted: color-mix(in srgb, var(--yak-cream) 90%, var(--yak-slate)); /* 6.1:1 */
-  --tile-wash: var(--yak-sage-deep);
+  --on-strong: var(--paper); /* 5.3:1 */
+  --on-strong-muted: color-mix(in srgb, var(--paper) 90%, var(--yak-slate)); /* 4.7:1 */
+  /* derived: hover on dark surfaces, halfway to the night green; paper 9.8:1 */
+  --on-strong-wash: color-mix(in srgb, var(--yak-night) 50%, var(--yak-slate));
+  --on-strong-line: color-mix(in srgb, var(--paper) 14%, var(--yak-slate));
+  --on-strong-focus: var(--paper);
+  --on-strong-inverse: var(--yak-slate); /* 5.3:1 on paper */
+  --tile-bg: color-mix(in srgb, var(--yak-night) 18%, var(--yak-slate)); /* paper 6.6:1 */
+  --tile-ink: var(--paper);
+  --tile-muted: color-mix(in srgb, var(--paper) 90%, var(--yak-slate)); /* 5.8:1 */
+  --tile-wash: var(--on-strong-wash);
   --tile-field-bg: color-mix(in srgb, var(--yak-night) 12%, var(--yak-slate));
-  --tile-field-border: color-mix(in srgb, var(--yak-cream) 60%, var(--yak-slate));
-  --tile-field-placeholder: color-mix(in srgb, var(--yak-cream) 75%, var(--yak-slate));
+  --tile-field-border: color-mix(in srgb, var(--paper) 60%, var(--yak-slate));
+  --tile-field-placeholder: color-mix(in srgb, var(--paper) 78%, var(--yak-slate)); /* 4.6:1 */
 }
 
 /* The strong surface for what needs attention (ADR-042). It redefines the text tokens, so
@@ -618,7 +618,7 @@ label {
   border-color: var(--accent);
 }
 .primary:hover {
-  background: var(--yak-forest);
+  background: color-mix(in srgb, var(--accent) 75%, var(--yak-night)); /* paper 7.9:1 */
 }
 .backlog .muted {
   margin-top: 9px;
