@@ -354,8 +354,10 @@
 }
 /* "Needs you" (ADR-039, ADR-045): numbered tiles on the attention surface, a Skip and Submit
    pair, and a header that folds the card to one line. Everything lines up on a 12px inset. */
-.awaiting {
+.awaiting.attention-surface {
+  --tile-bg: var(--awaiting-tile-bg);
   padding: 4px 12px 12px;
+  background: var(--awaiting-bg);
 }
 .awaiting:not([data-open]) {
   padding-bottom: 4px;
@@ -373,6 +375,20 @@
   background: transparent;
   color: var(--ink);
   text-align: left;
+}
+/* Open, a line under the header marks it as the fold control; 8px keeps the header's hover
+   fill clear of the line. Folded, there is no body to separate, so no line. */
+.awaiting[data-open] .awaiting-header {
+  position: relative;
+  margin-bottom: 8px;
+}
+.awaiting[data-open] .awaiting-header::after {
+  content: "";
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: -8px;
+  border-bottom: 1px solid var(--hairline);
 }
 .awaiting-header:hover {
   background: var(--paper-deep);
@@ -404,7 +420,8 @@
   color: var(--soft-ink);
 }
 .awaiting-question {
-  margin: 4px 0 10px;
+  /* 20px from the header, which collapses with its 8px: 12px below the line. */
+  margin: 20px 0 10px;
   font-size: 14px;
   font-weight: 550;
   line-height: 1.45;

@@ -84,6 +84,10 @@
   --tile-field-bg: transparent;
   --tile-field-border: var(--rule); /* 5.7:1 */
   --tile-field-placeholder: var(--rule); /* 5.7:1 */
+  /* Needs you parts from the Recap (ADR-059): the card is the app's paper and its option
+     pills take the attention grey (ink 10.4:1, soft-ink 5.0:1, rule 5.0:1 on them). */
+  --awaiting-bg: var(--paper);
+  --awaiting-tile-bg: var(--yak-stone-pale);
 
   --radius: 14px;
   --space: 24px;
@@ -217,6 +221,8 @@ button:hover {
   /* derived: hover on dark surfaces, halfway to the night green; paper 9.8:1 */
   --attention-hover: color-mix(in srgb, var(--yak-night) 50%, var(--yak-slate));
   --attention-hover-ink: var(--paper); /* 9.8:1 */
+  --awaiting-bg: var(--yak-slate); /* dark mode keeps the Needs you card as it was */
+  --awaiting-tile-bg: color-mix(in srgb, var(--yak-night) 18%, var(--yak-slate));
   --attention-line: color-mix(in srgb, var(--paper) 14%, var(--yak-slate));
   --attention-focus: var(--paper);
   --on-attention-inverse: var(--yak-slate); /* 5.3:1 on paper */
