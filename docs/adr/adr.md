@@ -1,7 +1,7 @@
 # Architecture Decision Records
 
 Each record is 1-3 sentences.
-Status is one of: Proposed, Accepted, Superseded (by ADR-N).
+Status is one of: Proposed, Accepted, Watch (decided for now, revisit as we learn), Superseded (by ADR-N).
 Newest records go at the bottom.
 
 ## ADR-001 - Focus on agent legibility
@@ -41,7 +41,7 @@ Agent work is shown by what changed in the world (sent, changed, spent, waiting 
 
 ## ADR-007 - Confirmation weight matches irreversibility
 
-2026-09-24 - Proposed.
+2026-09-24 - Superseded by ADR-010.
 Reversible actions take a tap; irreversible ones use hold-to-confirm, with the hold getting longer as the consequence grows.
 The playful interaction doubles as a signal of how much the action matters.
 
@@ -57,3 +57,85 @@ This ties legibility to the success metric: users creating their own workflows a
 Typing plain words (e.g. "create watcher workflow") shows matching skills in a popup above the input; Tab applies one, and Enter sends as typed unless the user arrowed into the popup.
 The matched words become a chip inside the compose box (Backspace turns it back into text), so users get natural language and visible confirmation without memorizing a `/` command, which remains an optional power-user shortcut.
 Principle: no special syntax to invoke a skill, but immediate confirmation that it is applied, so the user is never left wondering what the agent will do with their message.
+
+## ADR-010 - Tap to choose, hold to ship with your defaults
+
+2026-09-24 - Accepted.
+Tapping an action opens its options; pressing and holding skips the options and runs with the user's saved defaults, which appear inside the fill bar as it fills (release early to cancel), and the fill takes longer for actions that are harder to undo.
+After the same choices repeat, the options panel suggests "hold to skip this next time", and hold falls back to opening the panel when a default looks wrong for the current context.
+This keeps full agency on tap and adds throughput on hold, modeled on Amp's hold-to-ship.
+
+## ADR-011 - Documents autosave; agent edits are named versions
+
+2026-09-24 - Accepted.
+New documents and artifacts save automatically, with an auto-generated title in a predictable place, matching the Google Docs habits of knowledge workers.
+Every agent edit is recorded as an attributed, restorable version, and when the user is editing at the same time, agent changes land as suggestions instead of overwriting their text.
+This sets the product-wide line: changes inside Kay are automatic and reversible, while effects that leave Kay (send, share, publish) are deliberate (ADR-010).
+
+## ADR-012 - Pin to lock what you like
+
+2026-09-24 - Accepted.
+Users can pin a whole document or a single section (pin icon appears in the margin on hover), and the agent treats pinned text as locked: it never rewrites it and says when it left pinned text alone.
+Unpinned text may be edited directly and restored from version history (ADR-011); pinned text only ever receives suggestions.
+
+## ADR-013 - Agent edits are reviewed as a redline
+
+2026-09-24 - Proposed.
+Proposed changes render as a redline, with strikethrough for removed text and a non-formatting marker (underline or highlight tint, not bold) for added text, so the signal never depends on red/green or collides with real formatting.
+Each change is accepted or rejected individually from a review panel; on accept, struck text collapses away (~200ms) and the new text settles to normal styling.
+Open: inline redline plus a review-list panel, versus a side-by-side compose panel; prototype both.
+
+## ADR-014 - Charts are tested catalog components; the LLM only describes data
+
+2026-09-24 - Accepted.
+Each chart type (`LineChart`, `BarChart`, and so on) is built and tested once as a Kay catalog component, and the LLM only emits a validated data description (series, fields, a small set of deliberate options such as reference lines), never new chart code.
+Requests outside the catalog get an honest fallback ("I can show this as a table") instead of improvised UI.
+The engine is Recharts (mature, shadcn's default) hidden behind the catalog, so switching to TanStack Charts later touches only the catalog.
+
+## ADR-015 - Catalog components vary by options, split by purpose
+
+2026-09-25 - Accepted.
+Variations such as reference lines, stacking, and annotations are optional, individually tested props on one component (e.g. `LineChart`), which the LLM fills as data and never as nested JSX, because props compose while variant components multiply.
+A new component is justified only when the purpose or data shape changes (e.g. `Sparkline` inline in text, or `BudgetVsActual`).
+
+## ADR-016 - Watch the catalog's long tail
+
+2026-09-25 - Watch.
+The line between "an option on an existing component" and "outside the catalog" will keep moving as users ask for things we did not predict.
+Every out-of-catalog fallback is logged with what was asked, and recurring requests are promoted to new options or components, so the catalog grows from real demand; revisit the fallback rate and the option budget per component regularly.
+
+## ADR-017 - Kay suggests skills from repeated patterns
+
+2026-09-25 - Accepted.
+When a user repeats a similar request, Kay suggests turning it into a skill, but only at a natural pause after a run completes, showing the evidence ("asked 3 times: Mon, Wed, today") and opening the draft as an editable recipe (ADR-008) before anything is saved.
+Suggestions offer "Not now" and "Don't suggest this" and are frequency-capped; this is ADR-016's feedback loop at the scale of one user, inspired by Hermes agent.
+
+## ADR-018 - "Previously on": a recap when the user returns
+
+2026-09-25 - Accepted.
+After time away (time since last input plus the window losing and regaining focus), a short outcomes-first recap of the last runs appears above the compose box, rendered from recorded events with links to evidence (ADR-005/006), inspired by Amp.
+It overlays the conversation without moving the input (ADR-003) and collapses into a "Recap" chip as soon as the user types.
+
+## ADR-019 - A pop-out Kay for work across threads
+
+2026-09-25 - Accepted.
+A pop-out chat outside the thread list, summoned anywhere by a global shortcut, handles side questions, status across threads and projects, and orchestration, inspired by Amp's Puck.
+Threads are for doing a piece of work and the pop-out is for talking about your work; when a side question becomes real work, it is handed off to a new thread visibly, and the user-facing name avoids the word "orchestrator".
+
+## ADR-020 - Edit and Remix open a linked new thread
+
+2026-09-25 - Accepted.
+Refining a skill or a chart/table starts a new thread so the original flow stays clean.
+Both threads link to each other ("Remixed from" / "Remixed to"), and finishing the remix offers "Use this in the original", which updates it as a named version (ADR-011), so forks never become orphans.
+
+## ADR-021 - User messages are high-contrast landmarks
+
+2026-09-25 - Accepted.
+The user's messages render as contained cards with a distinct fill and weight (contrast without loud colour), so they work as chapter headings when scrolling back.
+While scrolling through a long answer, the question it answers stays pinned at the top of the thread.
+
+## ADR-022 - The scrollbar is a map of the conversation
+
+2026-09-25 - Accepted.
+Each turn is a marker on the scrollbar; hover shows the request and a turn summary built from recorded events (ADR-005), and clicking jumps so the user's message lands vertically centered every time (eye trace), inspired by Zed's Delta.
+Markers are coloured by kind (user message, outcome, waiting on you), have generous hit targets, and support bookmarking.
