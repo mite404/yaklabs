@@ -368,3 +368,9 @@ Neither card shows a shadow on its top edge any more; the lift shows only below.
 2026-09-25 - Accepted; amends ADR-059.
 Needs you option pills rest on brand.css's `--paper-deep` (`#e4e4df`, one step below the card's paper) and hover to `#d6d5cf`, which is light enough that labels and details keep their usual inks (10.4:1 and 5.0:1); the header and Skip share that hover, and the Recap keeps its `#8a8a85` hover.
 
+## ADR-061 - Submit announces readiness with motion, and fills only on hover
+
+2026-09-25 - Accepted.
+Once a choice is made, Submit stays an outline: a second outline fades in from 8px outside and closes onto the border in 320ms, so becoming available is a motion rather than a colour, and the moss fill is left for hover alone; before, a filled Submit and its moss hover were nearly the same.
+It is CSS only (a pseudo-element created when `:disabled` stops matching starts the animation), and under reduced motion the outline simply appears.
+
