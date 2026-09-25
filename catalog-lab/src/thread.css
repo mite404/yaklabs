@@ -451,7 +451,7 @@ button.awaiting-row:hover,
   padding: 0;
   border: none;
   border-radius: 6px;
-  /* Olive would vanish on the strong surface (1.1:1), so the send key inverts it. */
+  /* Olive would vanish on the strong surface, so the send key inverts it to cream. */
   background: var(--ink);
   color: var(--surface-strong);
   font-size: 13px;

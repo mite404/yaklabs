@@ -32,8 +32,9 @@
   --yak-green: #515e38;
   /* derived: the olive-tinted display ink from design pillar 3 ("header text green"). */
   --yak-ink-display: #22251e;
-  /* Ethan: a warm dark grey for surfaces that need the user's attention. */
-  --yak-slate: #51534b;
+  /* Ethan: a warm grey for surfaces that need the user's attention; the lightest in its
+     family where cream text still clears 4.5:1 (#8a8a85 was softer but 3.2:1). */
+  --yak-slate: #62625d;
 
   /* Semantic tokens: the only colours components use. */
   --bg: var(--yak-paper);
@@ -60,10 +61,11 @@
   --warn-ink: #66511f; /* derived */
   --record: #b8432c; /* derived: recording dot */
   /* A strong surface for what needs attention (the recap, "Needs you"), and its text. */
-  --surface-strong: var(--yak-slate); /* 7.4:1 against paper */
-  --on-strong: var(--yak-cream); /* 7.1:1 */
-  --on-strong-muted: color-mix(in srgb, var(--yak-cream) 85%, var(--yak-slate)); /* 5.7:1; 4.7:1 on hover */
-  --on-strong-wash: color-mix(in srgb, var(--yak-cream) 8%, var(--yak-slate)); /* hover */
+  --surface-strong: var(--yak-slate); /* 5.8:1 against paper */
+  --on-strong: var(--yak-cream); /* 5.6:1 */
+  --on-strong-muted: color-mix(in srgb, var(--yak-cream) 90%, var(--yak-slate)); /* 4.9:1; 5.8:1 on hover */
+  /* Hover darkens: lightening would pull muted text under 4.5:1 on this grey. */
+  --on-strong-wash: color-mix(in srgb, var(--yak-night) 14%, var(--yak-slate));
   --on-strong-line: color-mix(in srgb, var(--yak-cream) 14%, var(--yak-slate)); /* edge */
 
   --radius: 14px;
