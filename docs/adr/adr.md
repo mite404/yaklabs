@@ -145,3 +145,9 @@ Markers are coloured by kind (user message, outcome, waiting on you), have gener
 2026-09-25 - Accepted.
 Catalog components live inside a chat thread whose width depends on split panes, so they use container queries with three densities: compact (under ~480px), standard (~480-720px), and expanded (opened in the side pane).
 Inside a thread, cards drop page-level framing (no repeated question, no large headings), offer "Open in pane" for exploration, and reserve their final height before rendering so the conversation never jumps (ADR-003).
+
+## ADR-024 - Strict single-card selection before A2UI
+
+2026-09-25 - Accepted.
+The agent selects exactly one catalog card with required and optional props and a meaning-bearing variant; one invented field rejects the whole card.
+This answers "can the goal be reached without A2UI?" with yes, and makes every failure loud and specific, which speeds up iteration; A2UI-style component trees and streaming stay out until a real need appears.
