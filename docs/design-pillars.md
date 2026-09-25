@@ -76,6 +76,21 @@ The button seemed to pause before filling, but its CSS has no delay: a 150ms `ea
 Before adding a delay to make something feel deliberate, try a slightly longer duration; a real delay makes a control feel unresponsive.
 Around 100ms reads as instant, around 150 to 200ms reads as a soft arrival, and past about 300ms a hover starts to feel sluggish.
 
+## Data visualisation
+
+### 10. Bars are grounded: a fixed 20px darker base
+
+Bars stay the data colour (olive `#515e38`) for most of their height and deepen over the bottom 20px to the olive-tinted display ink `#22251e`, like a soft shadow where they meet the axis.
+The band is a fixed 20px on every bar, not a percentage, so tall and short bars are grounded identically; bars shorter than 20px fade over their full height.
+The dark end uses the display ink rather than a photo green so the gradient stays in one hue family (OKLCH 124°).
+
+| Property | Value | Source |
+| --- | --- | --- |
+| Bar colour | `--data` (olive `#515e38`) | derived |
+| Base colour | `--data-deep` (display ink `#22251e`) | derived |
+| Band height | 20px, fixed | Ethan |
+| Top corners | 4px | derived (matches the button) |
+
 ## Open questions
 
 - The hover rule itself (it did not print): confirm the fill `#242b24` and that the border really stays unchanged on hover.
