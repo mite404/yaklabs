@@ -112,14 +112,15 @@ button:hover {
   background: var(--paper-deep);
 }
 /* Outline button, after yaklabs.ai's "Apply for this role" (ADR-035): an ink outline at rest
-   that fills with the declared near-black green on hover. Values are the site's computed
-   styles; the hover rule never printed, so the fill is the likeliest declared colour until
-   it is read from the stylesheet (ADR-051). The site has no delay: the "beat" before
-   the fill is the 150ms ease transition itself. Timing is tokenised for iteration. */
+   that fills with moss on hover, straight from the site's rule (ADR-052):
+   `.apply-jump:hover { background: var(--moss); border-color: var(--moss); color: var(--paper) }`.
+   The site has no delay: the "beat" before the fill is the 150ms ease transition itself.
+   Timing is tokenised for iteration. */
 .btn {
   --btn-border: var(--rule); /* css: the site's outline is its rule */
-  --btn-hover-bg: var(--yak-night); /* css-declared #111411; hover rule unconfirmed */
-  --btn-hover-ink: var(--paper);
+  --btn-hover-bg: var(--moss); /* css: the site's hover rule */
+  --btn-hover-border: var(--moss); /* css */
+  --btn-hover-ink: var(--paper); /* css: 10.4:1 on moss */
   --btn-duration: 150ms; /* css */
   --btn-delay: 0ms; /* css: none; kept as a token for iteration */
   --btn-ease: ease; /* css: the default curve */
@@ -136,7 +137,7 @@ button:hover {
   font-weight: 500; /* css */
   line-height: 1.3;
   white-space: nowrap;
-  /* css: only the fill and text colour animate; the border does not change. */
+  /* css: only the fill and text colour animate; the border turns moss instantly. */
   transition:
     background-color var(--btn-duration) var(--btn-ease),
     color var(--btn-duration) var(--btn-ease);
@@ -144,6 +145,7 @@ button:hover {
 .btn:hover,
 .btn[data-preview="hover"] {
   background: var(--btn-hover-bg);
+  border-color: var(--btn-hover-border);
   color: var(--btn-hover-ink);
   transition-delay: var(--btn-delay);
 }
