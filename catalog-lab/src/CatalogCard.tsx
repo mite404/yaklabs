@@ -1,4 +1,4 @@
-import { useId, useState } from "react";
+import { useState } from "react";
 import {
   ResponsiveContainer,
   LineChart as RechartsLineChart,
@@ -11,7 +11,9 @@ import {
   Tooltip,
 } from "recharts";
 import { resolve, type DataProps, type Selection } from "./catalog";
-import { gradientBar } from "./GradientBar";
+
+/** Bars are flat data colour with the button's 4px top corners; no gradient (ADR-055). */
+export const BAR_RADIUS = 4;
 
 function DataTable({ props }: { props: DataProps }) {
   return (
@@ -44,7 +46,6 @@ function DataTable({ props }: { props: DataProps }) {
 }
 
 function Chart({ selection }: { selection: Selection }) {
-  const barShape = gradientBar(useId());
   const props = selection.props;
   const axes = (
     <>
@@ -100,7 +101,7 @@ function Chart({ selection }: { selection: Selection }) {
               dataKey="value"
               name={props.unit}
               fill="var(--data)"
-              shape={barShape}
+              radius={[BAR_RADIUS, BAR_RADIUS, 0, 0]}
               isAnimationActive={false}
             />
           </RechartsBarChart>

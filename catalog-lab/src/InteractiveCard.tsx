@@ -1,4 +1,4 @@
-import { useId, useState } from "react";
+import { useState } from "react";
 import {
   Bar,
   BarChart,
@@ -8,8 +8,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { CatalogCard } from "./CatalogCard";
-import { gradientBar } from "./GradientBar";
+import { BAR_RADIUS, CatalogCard } from "./CatalogCard";
 import {
   attachmentLabel,
   fillSentence,
@@ -64,7 +63,6 @@ export function InteractiveCard({
   const [index, setIndex] = useState(initial);
   // Always starts collapsed: the answer earns trust on its own, the steps are there on demand (ADR-036).
   const [showWork, setShowWork] = useState(false);
-  const barShape = gradientBar(useId());
   // An invalid payload gets the same honest catalog-limit card as any other rejection.
   if (result.kind === "rejected") return <CatalogCard payload={null} context="thread" />;
 
@@ -132,7 +130,7 @@ export function InteractiveCard({
             <Bar
               dataKey="value"
               fill="var(--data)"
-              shape={barShape}
+              radius={[BAR_RADIUS, BAR_RADIUS, 0, 0]}
               isAnimationActive={animate}
               animationDuration={TRANSITION_MS}
             />

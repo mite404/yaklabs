@@ -38,8 +38,6 @@
   /* derived: --sage's hue (OKLCH 124°) at L 0.46 / C 0.06, an olive that reads as green in
      flat UI and shares a hue with the sage tint; chosen over a forest-hue option. */
   --yak-green: #515e38;
-  /* derived: the olive-tinted display ink from design pillar 3 ("header text green"). */
-  --yak-ink-display: #22251e;
   /* Ethan: warm greys for surfaces that need the user's attention (ADR-046). */
   --yak-stone: #8a8a85; /* light mode */
   --yak-stone-light: #cbcac4; /* light mode: tiles, darker than the user's bubbles */
@@ -54,7 +52,6 @@
   --bubble-tint-strong: color-mix(in srgb, var(--sage) 75%, var(--paper));
   --bubble-line: var(--sage);
   --data: var(--accent); /* chart marks */
-  --data-deep: var(--yak-ink-display); /* the grounded base of bars */
   /* Ethan: a warm mid grey; 3.0:1 on the app surface and 3.3:1 on the page, the 3:1 a ring needs. */
   --focus: #8a8a85;
   --shadow: color-mix(in srgb, var(--yak-night) 10%, transparent);
