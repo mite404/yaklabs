@@ -1,4 +1,5 @@
 import { scenarios } from "./fixtures";
+import type { RecapItem } from "./recap";
 
 /** One turn in a thread; agent turns may carry a catalog payload the host validates. */
 export type ThreadMessage =
@@ -12,7 +13,12 @@ export type ThreadMessage =
     };
 
 /** A deterministic conversation used to evaluate cards in their real context. */
-export type Thread = { title: string; messages: ThreadMessage[] };
+export type Thread = {
+  title: string;
+  messages: ThreadMessage[];
+  /** Structured outcomes recorded during the thread, shown after the user is away. */
+  recap?: RecapItem[];
+};
 
 // Synthetic conversations: every payload comes from the shared fixtures,
 // so a card in a thread and a card in a story are the exact same input.
@@ -47,6 +53,18 @@ export const threads: Record<string, Thread> = {
         payload: scenarios.comparison.payload,
       },
     ],
+    recap: [
+      {
+        kind: "done",
+        text: "Charted closed cases for Sep 14–20: peak of 62 on Saturday.",
+        turnId: "a1",
+      },
+      {
+        kind: "done",
+        text: "Compared teams: Support closed the most, 84 cases.",
+        turnId: "a2",
+      },
+    ],
   },
   fallbacks: {
     title: "Checking the edges",
@@ -76,6 +94,18 @@ export const threads: Record<string, Thread> = {
         time: "14:12",
         text: "That view isn't in the catalog yet, so I haven't guessed at one.",
         payload: scenarios.unsupported.payload,
+      },
+    ],
+    recap: [
+      {
+        kind: "done",
+        text: "Showed the single reading as exact values instead of a trend.",
+        turnId: "a1",
+      },
+      {
+        kind: "needs-you",
+        text: "A forecast view isn't available yet. Decide whether to request it.",
+        turnId: "a2",
       },
     ],
   },

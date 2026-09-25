@@ -42,7 +42,7 @@
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
-  padding: 20px var(--thread-gutter);
+  padding: 20px var(--thread-gutter) calc(20px + var(--recap-space, 0px));
   display: flex;
   flex-direction: column;
   gap: 20px;
@@ -81,6 +81,12 @@
   gap: 12px;
 }
 
+/* The dock stacks the recap above the compose box without affecting the compose
+   box's position: the recap is absolutely placed and overlays the conversation. */
+.thread-dock {
+  position: relative;
+}
+
 /* Fixed-height compose box: typing never resizes or moves it (ADR-003).
    Resets the lab's global textarea rule, which is sized for the JSON editor. */
 .thread-compose {
@@ -90,7 +96,7 @@
 .compose-box {
   border: 1px solid var(--line);
   border-radius: 12px;
-  padding: 10px 12px 8px;
+  padding: 10px 8px 6px 12px;
   background: var(--paper);
 }
 .compose-box:focus-within {
@@ -103,7 +109,7 @@
   height: 44px;
   min-height: 0;
   margin: 0;
-  padding: 0;
+  padding: 0 4px 0 0;
   border: none;
   border-radius: 0;
   resize: none;
@@ -113,17 +119,47 @@
   color: var(--ink);
   background: transparent;
 }
+/* Attach on the far left; dictate then send on the right (ADR-026). */
 .compose-bar {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  gap: 12px;
-  font-size: 11px;
+  gap: 4px;
+  margin-left: -6px;
 }
-.compose-bar button {
+.compose-hint {
+  flex: 1;
+  min-width: 0;
+  padding-left: 4px;
+  font-size: 11px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.compose-icon {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  flex: none;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted);
+}
+.compose-icon:hover {
+  background: var(--wash);
+  color: var(--ink);
+}
+.compose-icon[aria-pressed="true"] {
+  background: #fbe9e5;
+  color: #a33b25;
+}
+.compose-send {
   width: 30px;
   height: 30px;
   flex: none;
+  margin-left: 2px;
   padding: 0;
   border-radius: 50%;
   border: none;
@@ -131,10 +167,157 @@
   color: #fff;
   font-size: 15px;
 }
-.compose-bar button:disabled {
+.compose-send:hover {
+  background: var(--accent);
+}
+.compose-send:disabled {
   background: var(--wash);
   color: var(--muted);
   cursor: default;
+}
+
+/* Recap: "Previously on", floating above the compose box (ADR-018). The slot shares
+   the scroll area's gutters so the card lines up with the conversation column. */
+.recap-slot {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 100%;
+  overflow: hidden;
+  scrollbar-gutter: stable;
+  padding: 12px var(--thread-gutter) 10px;
+  pointer-events: none;
+}
+.recap,
+.recap-chip {
+  pointer-events: auto;
+  animation: recap-in 180ms ease-out;
+}
+.recap {
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: 0 6px 20px #20372b1f;
+  padding: 10px 8px 8px 14px;
+}
+.recap-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+.recap-header p {
+  margin: 0;
+  font-size: 12px;
+}
+.recap-close {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted);
+  font-size: 18px;
+  line-height: 1;
+}
+.recap-close:hover {
+  background: var(--wash);
+  color: var(--ink);
+}
+.recap ul {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 2px;
+}
+.recap li button {
+  width: 100%;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 10px;
+  padding: 7px 8px 7px 0;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  text-align: left;
+  font-size: 13px;
+  line-height: 1.45;
+}
+.recap li button:hover {
+  background: var(--wash);
+}
+.recap-kind {
+  font-size: 10px;
+  font-weight: 650;
+  letter-spacing: 0.4px;
+  border-radius: 20px;
+  padding: 2px 8px;
+  white-space: nowrap;
+}
+.recap-kind-done {
+  background: #eaf4ea;
+  color: #3b724e;
+}
+.recap-kind-needs-you {
+  background: #faf0d9;
+  color: #735a22;
+}
+.recap-go {
+  color: var(--muted);
+  opacity: 0;
+}
+.recap li button:hover .recap-go,
+.recap li button:focus-visible .recap-go {
+  opacity: 1;
+}
+.recap-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--line);
+  background: var(--paper);
+  box-shadow: 0 2px 8px #20372b14;
+  font-size: 12px;
+}
+.recap-count {
+  background: #faf0d9;
+  color: #735a22;
+  border-radius: 10px;
+  padding: 0 6px;
+  font-size: 11px;
+  font-weight: 650;
+}
+@keyframes recap-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+/* A jumped-to turn glows briefly so the eye finds it (ADR-022). */
+.turn[data-flash] {
+  border-radius: 12px;
+  animation: turn-flash 1.2s ease-out;
+}
+@keyframes turn-flash {
+  from {
+    box-shadow: 0 0 0 4px #27786240;
+  }
+  to {
+    box-shadow: 0 0 0 4px #27786200;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .recap,
+  .recap-chip,
+  .turn[data-flash] {
+    animation: none;
+  }
 }
 
 /* Catalog cards inside a thread drop page-level framing: the question is already the

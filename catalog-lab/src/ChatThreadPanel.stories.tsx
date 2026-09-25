@@ -2,6 +2,10 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { ChatThreadPanel } from "./ChatThreadPanel";
 import { threads } from "./thread";
 
+// A fixed clock keeps idle-time stories deterministic.
+const NOW = Date.UTC(2026, 8, 25, 9, 16);
+const MINUTE = 60_000;
+
 const meta = {
   title: "Thread/Chat thread panel",
   component: ChatThreadPanel,
@@ -23,4 +27,44 @@ export const Fallbacks: Story = { args: { thread: threads.fallbacks } };
 
 export const FallbacksNarrow: Story = {
   args: { thread: threads.fallbacks, width: 420 },
+};
+
+/** Active thread, 12 minutes since the user's last message: the recap appears. */
+export const RecapAfterIdle: Story = {
+  args: {
+    thread: threads.trend,
+    now: NOW,
+    activity: { active: true, lastUserInputAt: NOW - 12 * MINUTE },
+  },
+};
+
+/** "Needs you" items lead the recap, ahead of completed work. */
+export const RecapNeedsYou: Story = {
+  args: {
+    thread: threads.fallbacks,
+    now: NOW,
+    activity: { active: true, lastUserInputAt: NOW - 25 * MINUTE },
+  },
+};
+
+export const RecapNarrow: Story = {
+  args: { ...RecapNeedsYou.args, width: 420 },
+};
+
+/** Only 4 minutes idle: no recap yet. */
+export const RecentlyActive: Story = {
+  args: {
+    thread: threads.trend,
+    now: NOW,
+    activity: { active: true, lastUserInputAt: NOW - 4 * MINUTE },
+  },
+};
+
+/** Idle but finished: an inactive thread has nothing new to recap. */
+export const InactiveThread: Story = {
+  args: {
+    thread: threads.trend,
+    now: NOW,
+    activity: { active: false, lastUserInputAt: NOW - 40 * MINUTE },
+  },
 };
