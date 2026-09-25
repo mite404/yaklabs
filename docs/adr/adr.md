@@ -1,7 +1,7 @@
 # Architecture Decision Records
 
 Each record is 1-3 sentences.
-Status is one of: Proposed, Accepted, Superseded (by ADR-N).
+Status is one of: Proposed, Accepted, Watch (decided for now, revisit as we learn), Superseded (by ADR-N).
 Newest records go at the bottom.
 
 ## ADR-001 - Focus on agent legibility
@@ -91,3 +91,15 @@ Open: inline redline plus a review-list panel, versus a side-by-side compose pan
 Each chart type (`LineChart`, `BarChart`, and so on) is built and tested once as a Kay catalog component, and the LLM only emits a validated data description (series, fields, a small set of deliberate options such as reference lines), never new chart code.
 Requests outside the catalog get an honest fallback ("I can show this as a table") instead of improvised UI.
 The engine is Recharts (mature, shadcn's default) hidden behind the catalog, so switching to TanStack Charts later touches only the catalog.
+
+## ADR-015 - Catalog components vary by options, split by purpose
+
+2026-09-25 - Proposed.
+Variations such as reference lines, stacking, and annotations are optional, individually tested props on one component (e.g. `LineChart`), which the LLM fills as data and never as nested JSX, because props compose while variant components multiply.
+A new component is justified only when the purpose or data shape changes (e.g. `Sparkline` inline in text, or `BudgetVsActual`).
+
+## ADR-016 - Watch the catalog's long tail
+
+2026-09-25 - Watch.
+The line between "an option on an existing component" and "outside the catalog" will keep moving as users ask for things we did not predict.
+Every out-of-catalog fallback is logged with what was asked, and recurring requests are promoted to new options or components, so the catalog grows from real demand; revisit the fallback rate and the option budget per component regularly.
