@@ -281,3 +281,15 @@ On the strong surface the grey is 1.8:1, so that surface keeps a cream ring (5.6
 2026-09-25 - Accepted.
 Choices are tiles a shade deeper than the card (separated by fill, not outlines), each with its number on the left: the number's outline appears on hover and fills solid when selected, and choosing is two steps, select (click, number key, arrows) then send (Enter or Submit), with Skip beside Submit at the bottom right, after Claude's and Amp's question prompts.
 The card stays dark so it catches the eye while the app waits on the user, and its header folds it to one line (label, question, chevron), after Amp, so the user can read back through the thread without dismissing the question.
+
+## ADR-046 - Attention surfaces in light and dark mode
+
+2026-09-25 - Accepted.
+In light mode, the current mode, the recap and "Needs you" sit on a mid grey `#8a8a85` with the darkest ink `#111411` (5.4:1, since the regular ink is 4.4:1 there), and choices are tiles of `#cbcac4`, darker than the user's bubbles, with dark text (9.3:1); hovers lighten, as on every light surface.
+The dark card tried in light mode (`#62625d`, cream text, deeper tiles, sage hovers) is kept as dark mode under `:root[data-theme="dark"]`, switchable from Storybook's toolbar; only the attention surfaces are themed so far.
+
+## ADR-047 - The sage tint means "you", and nothing else
+
+2026-09-25 - Accepted.
+The sage-green tint of the user's bubble is reserved for that bubble, so the colour always means "this is what you said"; context chips, badges and tags use the neutral wash instead.
+The tokens are named `--bubble-*` so the tint cannot be reused elsewhere by accident.

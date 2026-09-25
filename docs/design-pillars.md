@@ -114,7 +114,7 @@ The gap is the token `--rest-gap`; the thread's bottom padding subtracts the com
 
 ## Surfaces
 
-### 13. Attention gets the strong surface
+### 13. Attention gets the strong surface (light and dark)
 
 The thread's cards all sit on light paper, so anything that needs the user (the recap, a "Needs you" question) uses the strong surface, a warm grey, and stands apart without a badge or a colour of alarm.
 It is the lightest grey in its family where cream text still clears 4.5:1: softer greys either fail with light text or look disabled with dark text.
@@ -123,11 +123,13 @@ Brand olive disappears on it, so actions on the strong surface invert to cream i
 
 | Property | Value | Source |
 | --- | --- | --- |
-| Surface | `--surface-strong` (`#62625d`) | Ethan |
-| Text | `--on-strong` (cream `#f5f5f0`), 5.6:1 | derived |
-| Muted text | `--on-strong-muted` (90% cream), 4.9:1 | derived |
-| Hover | `--on-strong-wash` (sage `#3d423b`), cream 9.4:1 | Ethan |
-| Edge | `--on-strong-line` (14% cream) | derived |
+| Surface (light) | `--surface-strong` (`#8a8a85`) | Ethan |
+| Text (light) | `--on-strong` (`#111411`), 5.4:1 | derived |
+| Tiles (light) | `--tile-bg` (`#cbcac4`), ink 9.3:1, details 5.8:1 | Ethan |
+| Hover (light) | lightens: 15% cream on the surface, 30% on tiles | derived |
+| Surface (dark) | `#62625d`, cream text 5.6:1 | Ethan |
+| Tiles (dark) | 18% night on the surface, cream 7.0:1 | derived |
+| Hover (dark) | sage `#3d423b`, cream 9.4:1 | Ethan |
 
 ## Inputs
 
@@ -145,6 +147,11 @@ Its placeholder is greyer than any statement around it, because a placeholder as
 | Placeholder (strong) | 75% cream on a 12% night fill, 4.6:1 | derived |
 | Border (strong) | 60% cream, 3.2:1 | derived |
 | Hover and focus | border to full ink; focus adds the 2px ring | derived |
+
+### 15. The sage tint means "you"
+
+The user's bubble is the only place the sage-green tint appears, so it always means "this is what you said"; chips, badges, and tags use the neutral wash.
+The tokens are named `--bubble-tint`, `--bubble-tint-strong`, and `--bubble-line`, so the tint cannot be reused by accident.
 
 ## Open questions
 
