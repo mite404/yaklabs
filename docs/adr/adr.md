@@ -345,3 +345,9 @@ The eased darker base on chart bars did not work with the colour scheme, so bars
 2026-09-25 - Accepted.
 The compose box uses `#f8f8f6` (`--compose-bg`), one step brighter than the app's paper, so the place to type reads as the nearest, most active surface; the window around the app uses the same colour.
 
+## ADR-057 - Secondary text comes from the site's brand.css
+
+2026-09-25 - Accepted; amends ADR-050 for this token.
+yaklabs.ai loads a shared stylesheet, `/brand.css`, whose `--soft-ink` is `#565650`, while its pages override it (`#4a4a47` inline on the homepage, `#5c5c57` on meetkay.ai's careers page); secondary text adopts the brand file's value (6.4:1 on paper).
+Only this token changed; the brand file's other small differences (`--hairline` at 24%, no `--rust`) are left as they are.
+
