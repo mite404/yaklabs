@@ -371,6 +371,6 @@ Needs you option pills rest on brand.css's `--paper-deep` (`#e4e4df`, one step b
 ## ADR-061 - Submit announces readiness with motion, and fills only on hover
 
 2026-09-25 - Accepted.
-Once a choice is made, Submit stays an outline: a second outline fades in from 8px outside and closes onto the border in 450ms, its stroke thinning from 6px to 4px and then to 1px in the last frames so it settles invisibly into the border, so becoming available is a motion rather than a colour, and the moss fill is left for hover alone; before, a filled Submit and its moss hover were nearly the same.
+Once a choice is made, Submit stays an outline: a second outline fades in from 8px outside and closes onto the border in 450ms, its stroke thinning from 6px to 4px and then to 1px in the last frames, and then it disappears, handing off to the real border so two outlines never overlap, so becoming available is a motion rather than a colour, and the moss fill is left for hover alone; before, a filled Submit and its moss hover were nearly the same.
 It is CSS only (a pseudo-element created when `:disabled` stops matching starts the animation), drawn as an inset shadow because border widths snap to whole pixels; under reduced motion the outline simply appears.
 
