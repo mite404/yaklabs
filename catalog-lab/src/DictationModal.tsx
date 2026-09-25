@@ -245,7 +245,9 @@ export function DictationModal({
         <footer className="dictation-footer">
           <span className="muted">Typing is paused while recording</span>
           <div>
-            <button onClick={onCancel}>Cancel</button>
+            <button className="btn btn-sm" onClick={onCancel}>
+              Cancel
+            </button>
             <button
               ref={doneButton}
               className="dictation-done"

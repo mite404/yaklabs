@@ -185,7 +185,7 @@ export function CatalogCard({
           </span>
         </span>
         {selection.component !== "DataTable" && (
-          <button onClick={() => setShowTable(!showTable)}>
+          <button className="btn btn-sm" onClick={() => setShowTable(!showTable)}>
             {showTable ? "Show chart" : "View data table"} ↗
           </button>
         )}

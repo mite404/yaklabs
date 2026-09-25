@@ -176,7 +176,7 @@ export function InteractiveCard({
 
       <footer>
         <span>{props.source}</span>
-        <button aria-expanded={showRecipe} onClick={() => setShowRecipe(!showRecipe)}>
+        <button className="btn btn-sm" aria-expanded={showRecipe} onClick={() => setShowRecipe(!showRecipe)}>
           {showRecipe ? "Hide recipe" : "Show recipe"}
         </button>
       </footer>
