@@ -108,18 +108,28 @@ function Chart({ selection }: { selection: Selection }) {
   );
 }
 
-/** The only entry point for agent-selected UI. All content passes the catalog boundary. */
-export function CatalogCard({ payload }: { payload: unknown }) {
+/**
+ * The only entry point for agent-selected UI. All content passes the catalog boundary.
+ * @param context Host-owned placement, never part of the agent payload: "page" for the
+ * evaluation workbench, "thread" for a card inside a chat thread (ADR-023).
+ */
+export function CatalogCard({
+  payload,
+  context = "page",
+}: {
+  payload: unknown;
+  context?: "page" | "thread";
+}) {
   const result = resolve(payload);
   const [showTable, setShowTable] = useState(false);
   if (result.kind === "rejected")
     return (
-      <section className="card state">
+      <section className="card state" data-context={context}>
         <span className="state-symbol">↗</span>
         <p className="eyebrow">CATALOG LIMIT</p>
         <h2>We don’t have a safe view for this yet.</h2>
         <p>{result.reason}</p>
-        <p>
+        <p className="page-only">
           Try an approved view, or capture the missing capability below. We
           won’t substitute an unrelated chart.
         </p>
@@ -127,7 +137,7 @@ export function CatalogCard({ payload }: { payload: unknown }) {
     );
   if (result.kind === "empty")
     return (
-      <section className="card state">
+      <section className="card state" data-context={context}>
         <span className="state-symbol">∅</span>
         <p className="eyebrow">NO DATA</p>
         <h2>{result.title}</h2>
@@ -137,7 +147,7 @@ export function CatalogCard({ payload }: { payload: unknown }) {
   const { selection } = result;
   const { props } = selection;
   return (
-    <section className="card">
+    <section className="card" data-context={context}>
       <header className="card-heading">
         <div>
           <p className="eyebrow">
