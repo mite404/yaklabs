@@ -38,8 +38,10 @@
   --yak-slate: #62625d; /* dark mode: the lightest grey where cream text clears 4.5:1 */
 
   /* Semantic tokens: the only colours components use. */
-  --bg: var(--yak-paper);
-  --paper: color-mix(in srgb, var(--yak-paper) 45%, white); /* derived: raised surface */
+  /* The app surface is the site's own background; the page around it is a lighter step
+     (ADR-048). Text contrast is measured against --paper, the darker of the two. */
+  --bg: color-mix(in srgb, var(--yak-paper) 45%, white); /* derived: the window around the app */
+  --paper: var(--yak-paper); /* css: yaklabs.ai's page background, #f0efea */
   --ink: var(--yak-ink);
   --text-body: var(--yak-body); /* 7.7:1 on paper */
   --muted: color-mix(in srgb, var(--yak-ink) 72%, var(--yak-paper)); /* css step (0.72), solid; 5.7:1 */
@@ -54,7 +56,7 @@
   --bubble-line: var(--yak-sage-light);
   --data: var(--accent); /* chart marks */
   --data-deep: var(--yak-ink-display); /* the grounded base of bars */
-  /* Ethan: a warm mid grey; 3.0:1 on the page and 3.3:1 on cards, the 3:1 a ring needs. */
+  /* Ethan: a warm mid grey; 3.0:1 on the app surface and 3.3:1 on the page, the 3:1 a ring needs. */
   --focus: #8a8a85;
   --shadow: color-mix(in srgb, var(--yak-night) 10%, transparent);
   --shadow-strong: color-mix(in srgb, var(--yak-night) 20%, transparent);
