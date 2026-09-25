@@ -32,6 +32,8 @@
   --yak-green: #515e38;
   /* derived: the olive-tinted display ink from design pillar 3 ("header text green"). */
   --yak-ink-display: #22251e;
+  /* Ethan: a warm dark grey for surfaces that need the user's attention. */
+  --yak-slate: #51534b;
 
   /* Semantic tokens: the only colours components use. */
   --bg: var(--yak-paper);
@@ -57,6 +59,12 @@
   --warn-bg: #f4ecd9; /* derived: warm notice, harmonised with the paper */
   --warn-ink: #66511f; /* derived */
   --record: #b8432c; /* derived: recording dot */
+  /* A strong surface for what needs attention (the recap, "Needs you"), and its text. */
+  --surface-strong: var(--yak-slate); /* 7.4:1 against paper */
+  --on-strong: var(--yak-cream); /* 7.1:1 */
+  --on-strong-muted: color-mix(in srgb, var(--yak-cream) 85%, var(--yak-slate)); /* 5.7:1; 4.7:1 on hover */
+  --on-strong-wash: color-mix(in srgb, var(--yak-cream) 8%, var(--yak-slate)); /* hover */
+  --on-strong-line: color-mix(in srgb, var(--yak-cream) 14%, var(--yak-slate)); /* edge */
 
   --radius: 14px;
   --space: 24px;

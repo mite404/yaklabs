@@ -266,10 +266,22 @@
   pointer-events: auto;
   animation: recap-in 180ms ease-out;
 }
-/* A raised surface: the shadow lifts it off the conversation it overlays. */
+/* What needs attention sits on the strong surface, so it stands apart from every card in
+   the thread; the shadow lifts it off the conversation it overlays. Redefining the text
+   tokens here lets every rule inside adapt without colours of its own. */
+.recap,
+.recap-chip,
+.awaiting {
+  --ink: var(--on-strong);
+  --text-body: var(--on-strong);
+  --muted: var(--on-strong-muted);
+  --wash: var(--on-strong-wash);
+  --line: var(--on-strong-line);
+  background: var(--surface-strong);
+  color: var(--ink);
+}
 .recap,
 .awaiting {
-  background: var(--paper);
   border: 1px solid var(--line);
   border-radius: 12px;
   box-shadow: 0 6px 20px var(--shadow-strong);
@@ -343,7 +355,6 @@
   padding: 5px 12px;
   border-radius: 20px;
   border: 1px solid var(--line);
-  background: var(--paper);
   box-shadow: 0 2px 8px var(--shadow);
   font-size: 12px;
 }
@@ -440,8 +451,9 @@ button.awaiting-row:hover,
   padding: 0;
   border: none;
   border-radius: 6px;
-  background: var(--accent);
-  color: var(--paper);
+  /* Olive would vanish on the strong surface (1.1:1), so the send key inverts it. */
+  background: var(--ink);
+  color: var(--surface-strong);
   font-size: 13px;
   line-height: 1;
 }
