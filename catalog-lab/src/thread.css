@@ -89,15 +89,16 @@
 
 /* Fixed-height compose box: typing never resizes or moves it (ADR-003).
    Resets the lab's global textarea rule, which is sized for the JSON editor. */
+/* No divider: the compose box floats directly under the conversation. */
 .thread-compose {
-  padding: 12px var(--thread-gutter) 16px;
-  border-top: 1px solid var(--line);
+  padding: 4px var(--thread-gutter) 16px;
 }
 .compose-box {
   border: 1px solid var(--line);
   border-radius: 12px;
   padding: 10px 8px 6px 12px;
   background: var(--paper);
+  box-shadow: 0 2px 12px #20372b12;
 }
 .compose-box:focus-within {
   border-color: var(--accent);
