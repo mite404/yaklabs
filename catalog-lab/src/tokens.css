@@ -53,7 +53,8 @@
   --accent-ink: var(--yak-forest); /* text on the soft tints */
   --data: var(--accent); /* chart marks */
   --data-deep: var(--yak-ink-display); /* the grounded base of bars */
-  --focus: var(--yak-forest-deep); /* Ethan: the darkest hero green, 16:1 on paper */
+  /* Ethan: a warm mid grey; 3.0:1 on the page and 3.3:1 on cards, the 3:1 a ring needs. */
+  --focus: #8a8a85;
   --shadow: color-mix(in srgb, var(--yak-night) 10%, transparent);
   --shadow-strong: color-mix(in srgb, var(--yak-night) 20%, transparent);
   --scrim: color-mix(in srgb, var(--yak-paper) 72%, transparent);
@@ -195,7 +196,7 @@ button:hover {
   --muted: var(--on-strong-muted);
   --wash: var(--on-strong-wash);
   --line: var(--on-strong-line);
-  --focus: var(--on-strong); /* the dark green is 2.8:1 here, under the 3:1 a ring needs */
+  --focus: var(--on-strong); /* the page ring is 1.8:1 here, under the 3:1 a ring needs */
   background: var(--surface-strong);
   color: var(--ink);
 }
