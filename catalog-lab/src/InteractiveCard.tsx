@@ -26,6 +26,8 @@ import "./interactive.css";
 const TRANSITION_MS = 300;
 
 function prefersReducedMotion(): boolean {
+  // Runs during render, so it must survive environments without a window (server rendering, tests).
+  if (typeof window === "undefined") return false;
   return window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
 }
 

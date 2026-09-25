@@ -18,3 +18,10 @@ it("keeps the catalog boundary inside a thread: unsupported payloads never rende
   expect(html).toContain("We don’t have a safe view for this yet.");
   expect(html).toContain("Showing the exact values instead.");
 });
+
+it("keeps an interactive card's work collapsed until the user asks for it", () => {
+  const html = renderToStaticMarkup(<ChatThreadPanel thread={threads.profit} />);
+  expect(html).toContain("Show my work");
+  expect(html).toContain('aria-expanded="false"');
+  expect(html).not.toContain('class="work-steps"');
+});
