@@ -39,6 +39,8 @@ Nothing is built yet, so the cast is the set of ideas the prototypes will be mad
 
 - **The UI reports; the agent decides.** The panel used to hold three canned replies of its own. Now it only tells an `Agent` what happened and streams back whatever it says, so the same components can run against the lab stand-in today and a real model for the demo (ADR-041).
 
+- **A question to answer should look like a place to type.** In the "Needs you" card, row 2 looked like a third statement. It now uses a new text-field primitive with the button's outline and 4px corners, and a greyer placeholder, so "answer me" never reads as "pick me" (ADR-043).
+
 ## 4. Bloopers
 
 - **The docs were behind a locked door.** The environment's network policy blocked docs.meetkay.ai, so Kay's vocabulary was reconstructed from search snippets and Ramp's Glass. Everything inferred is labeled; verify before the interview.

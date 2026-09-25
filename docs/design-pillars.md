@@ -118,7 +118,7 @@ The gap is the token `--rest-gap`; the thread's bottom padding subtracts the com
 
 The thread's cards all sit on light paper, so anything that needs the user (the recap, a "Needs you" question) uses the strong surface, a warm grey, and stands apart without a badge or a colour of alarm.
 It is the lightest grey in its family where cream text still clears 4.5:1: softer greys either fail with light text or look disabled with dark text.
-Text on it is cream; muted text is cream mixed 90% with the surface, and hover darkens the row instead of lightening it, so muted text stays above 4.5:1.
+Text on it is cream; muted text is cream mixed 90% with the surface, and hover darkens the row to sage `#3d423b` instead of lightening it; light surfaces keep their lighter hover.
 Brand olive disappears on it, so actions on the strong surface invert to cream instead.
 
 | Property | Value | Source |
@@ -126,8 +126,25 @@ Brand olive disappears on it, so actions on the strong surface invert to cream i
 | Surface | `--surface-strong` (`#62625d`) | Ethan |
 | Text | `--on-strong` (cream `#f5f5f0`), 5.6:1 | derived |
 | Muted text | `--on-strong-muted` (90% cream), 4.9:1 | derived |
-| Hover | `--on-strong-wash` (14% night, darker), muted 5.8:1 | derived |
+| Hover | `--on-strong-wash` (sage `#3d423b`), cream 9.4:1 | Ethan |
 | Edge | `--on-strong-line` (14% cream) | derived |
+
+## Inputs
+
+### 14. A place to type is outlined, and its prompt is greyer
+
+A text field uses the outline button's 1px border and 4px corners, so it belongs to the same family as the button and never reads as plain text.
+Its placeholder is greyer than any statement around it, because a placeholder asks and a statement tells; on the strong surface a faint recessed fill keeps that greyer placeholder above 4.5:1.
+
+| Property | Value | Source |
+| --- | --- | --- |
+| Border | 1px, ink at 0.72 (as the button) | css |
+| Corners | 4px | css |
+| Padding | 5px × 10px, 13px text | derived |
+| Placeholder (paper) | `--muted`, 6.1:1 | derived |
+| Placeholder (strong) | 75% cream on a 12% night fill, 4.6:1 | derived |
+| Border (strong) | 60% cream, 3.2:1 | derived |
+| Hover and focus | border to full ink; focus adds the 2px ring | derived |
 
 ## Open questions
 

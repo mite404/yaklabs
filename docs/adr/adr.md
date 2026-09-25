@@ -260,6 +260,12 @@ The scripted lab stand-in (`labAgent.ts`) is the only fake left and is the defau
 ## ADR-042 - What needs attention sits on a strong surface
 
 2026-09-25 - Accepted.
-The recap and the "Needs you" card use a warm grey, `#62625d` (Ethan's pick), so they stand apart from every card in the thread, which all sit on the light paper; their text flips to cream (5.6:1), with muted text at 90% cream (4.9:1) and a hover that darkens rather than lightens, so muted text stays above 4.5:1 (5.8:1).
+The recap and the "Needs you" card use a warm grey, `#62625d` (Ethan's pick), so they stand apart from every card in the thread, which all sit on the light paper; their text flips to cream (5.6:1), with muted text at 90% cream (4.9:1) and a hover that darkens to `#3d423b` (Ethan's pick, the palette's sage) rather than lightening, so text stays well above 4.5:1 (cream 9.4:1); light surfaces keep their own lighter hover.
 It is the lightest grey in its family where cream text still passes: `#51534b` felt jarring, and `#8a8a85` failed with light text (3.2:1) and looked disabled with dark text.
 The cards redefine the text tokens locally instead of carrying colours of their own, and the olive send key inverts to cream because olive disappears on the grey.
+
+## ADR-043 - A text field primitive with the button's outline
+
+2026-09-25 - Accepted.
+Places to type use one shared `.field` class with the outline button's 1px border and 4px corners (ADR-035), so a field reads as part of the same family; surfaces tune it through `--field-*` tokens, and the strong surface is a reusable `.surface-strong` class rather than per-component colours.
+In the "Needs you" card, the typed answer uses it, with a placeholder greyer than the statements in rows 1 and 3 so a question to answer is not mistaken for a choice; a faint recessed fill keeps that greyer placeholder at 4.6:1, and the send key sits inside the field's right edge and takes room only once there is text.
