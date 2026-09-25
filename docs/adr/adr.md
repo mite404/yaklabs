@@ -94,7 +94,7 @@ The engine is Recharts (mature, shadcn's default) hidden behind the catalog, so 
 
 ## ADR-015 - Catalog components vary by options, split by purpose
 
-2026-09-25 - Proposed.
+2026-09-25 - Accepted.
 Variations such as reference lines, stacking, and annotations are optional, individually tested props on one component (e.g. `LineChart`), which the LLM fills as data and never as nested JSX, because props compose while variant components multiply.
 A new component is justified only when the purpose or data shape changes (e.g. `Sparkline` inline in text, or `BudgetVsActual`).
 
@@ -103,3 +103,21 @@ A new component is justified only when the purpose or data shape changes (e.g. `
 2026-09-25 - Watch.
 The line between "an option on an existing component" and "outside the catalog" will keep moving as users ask for things we did not predict.
 Every out-of-catalog fallback is logged with what was asked, and recurring requests are promoted to new options or components, so the catalog grows from real demand; revisit the fallback rate and the option budget per component regularly.
+
+## ADR-017 - Kay suggests skills from repeated patterns
+
+2026-09-25 - Accepted.
+When a user repeats a similar request, Kay suggests turning it into a skill, but only at a natural pause after a run completes, showing the evidence ("asked 3 times: Mon, Wed, today") and opening the draft as an editable recipe (ADR-008) before anything is saved.
+Suggestions offer "Not now" and "Don't suggest this" and are frequency-capped; this is ADR-016's feedback loop at the scale of one user, inspired by Hermes agent.
+
+## ADR-018 - "Previously on": a recap when the user returns
+
+2026-09-25 - Accepted.
+After time away (time since last input plus the window losing and regaining focus), a short outcomes-first recap of the last runs appears above the compose box, rendered from recorded events with links to evidence (ADR-005/006), inspired by Amp.
+It overlays the conversation without moving the input (ADR-003) and collapses into a "Recap" chip as soon as the user types.
+
+## ADR-019 - A pop-out Kay for work across threads
+
+2026-09-25 - Accepted.
+A pop-out chat outside the thread list, summoned anywhere by a global shortcut, handles side questions, status across threads and projects, and orchestration, inspired by Amp's Puck.
+Threads are for doing a piece of work and the pop-out is for talking about your work; when a side question becomes real work, it is handed off to a new thread visibly, and the user-facing name avoids the word "orchestrator".
