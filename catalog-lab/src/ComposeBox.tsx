@@ -1,4 +1,7 @@
-import { useRef, type FormEvent } from "react";
+import { useRef, type FormEvent, type KeyboardEvent } from "react";
+import { FilesIcon, ScreenIcon } from "./icons";
+import { Menu } from "./Menu";
+import { captureScreenshot } from "./screenshot";
 
 // Inline icons keep the lab dependency-free; strokes follow currentColor.
 function PaperclipIcon() {
@@ -40,13 +43,31 @@ export function ChartGlyph() {
   );
 }
 
-/** Context that will ride along with the next message, shown as a removable chip. */
-export type ComposeAttachment = { id: string; label: string };
+/** Context that will ride along with the next message, shown as a removable chip: a card
+ *  choice (ADR-030) or a file the user attached, such as a screenshot (ADR-063). */
+export type ComposeAttachment = { id: string; label: string; kind?: "card" | "file" };
+
+// Whether this browser can capture a screen, window or tab.
+function canCaptureScreen(): boolean {
+  return typeof navigator !== "undefined" && Boolean(navigator.mediaDevices?.getDisplayMedia);
+}
+
+// A small picture glyph for file chips, matching the chart glyph's weight.
+function FileGlyph() {
+  return (
+    <svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true">
+      <rect x="2" y="3" width="12" height="10" rx="1.5" fill="none" stroke="currentColor" strokeWidth="1.6" />
+      <path d="m4.5 11 3-3 2 2 1.5-1.5 1.5 1.5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+    </svg>
+  );
+}
 
 /**
  * The one compose field every chat surface uses (ADR-026): attach on the far left,
  * dictate then send on the right, and a fixed height so typing never moves it (ADR-003).
- * Attachment upload is not wired in the lab; the paperclip opens the file picker only.
+ * The paperclip opens a menu (ADR-063): add images and files (⌘U), or take a screenshot,
+ * the shortest path from "look at this" to the agent seeing it.
+ * @param onAttachFiles Receives picked files and screenshots; the host shows them as chips.
  * @param onDictate Opens dictation; the host shows the dictation modal (ADR-028).
  * @param disabled Pauses typing, e.g. while dictation is recording.
  * @param attachments Card choices that will be sent with the next message (ADR-030); they
@@ -61,6 +82,7 @@ export function ComposeBox({
   placeholder = "What would you like to do?",
   attachments = [],
   onRemoveAttachment,
+  onAttachFiles,
 }: {
   draft: string;
   onDraftChange: (value: string) => void;
@@ -70,16 +92,33 @@ export function ComposeBox({
   placeholder?: string;
   attachments?: ComposeAttachment[];
   onRemoveAttachment?: (id: string) => void;
+  onAttachFiles?: (files: File[]) => void;
 }) {
   const files = useRef<HTMLInputElement>(null);
 
+  async function screenshot() {
+    const file = await captureScreenshot();
+    if (file) onAttachFiles?.([file]);
+  }
+
+  // ⌘U (Ctrl+U elsewhere) adds files, as the menu's shortcut hint says.
+  function shortcut(event: KeyboardEvent) {
+    if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "u") {
+      event.preventDefault();
+      files.current?.click();
+    }
+  }
+
+  // A message can be just an attachment: a screenshot often says enough on its own.
+  const canSend = draft.trim() !== "" || attachments.length > 0;
+
   function submit(event: FormEvent) {
     event.preventDefault();
-    if (draft.trim()) onSend();
+    if (canSend) onSend();
   }
 
   return (
-    <form className="compose-box" onSubmit={submit}>
+    <form className="compose-box" onSubmit={submit} onKeyDown={shortcut}>
       <textarea
         aria-label="Message"
         placeholder={disabled ? "Recording…" : placeholder}
@@ -91,22 +130,47 @@ export function ComposeBox({
         }}
       />
       <div className="compose-bar">
-        <button
-          type="button"
-          className="compose-icon"
-          aria-label="Attach files"
-          title="Attach files"
-          disabled={disabled}
-          onClick={() => files.current?.click()}
-        >
-          <PaperclipIcon />
-        </button>
-        <input ref={files} type="file" multiple hidden tabIndex={-1} />
+        <Menu
+          label="Attach"
+          placement="above-start"
+          items={[
+            {
+              label: "Add images & files",
+              icon: <FilesIcon />,
+              shortcut: "⌘U",
+              onSelect: () => files.current?.click(),
+            },
+            {
+              label: "Take screenshot",
+              icon: <ScreenIcon />,
+              disabled: !canCaptureScreen(),
+              hint: canCaptureScreen() ? undefined : "This browser cannot capture the screen",
+              onSelect: () => void screenshot(),
+            },
+          ]}
+          trigger={(props) => (
+            <button {...props} type="button" className="compose-icon" aria-label="Attach" title="Attach" disabled={disabled}>
+              <PaperclipIcon />
+            </button>
+          )}
+        />
+        <input
+          ref={files}
+          type="file"
+          multiple
+          hidden
+          tabIndex={-1}
+          onChange={(event) => {
+            const picked = Array.from(event.target.files ?? []);
+            if (picked.length) onAttachFiles?.(picked);
+            event.target.value = "";
+          }}
+        />
         {attachments.length > 0 ? (
           <div className="compose-context" aria-label="Sent with your next message">
             {attachments.map((item) => (
               <span key={item.id} className="context-chip">
-                <ChartGlyph />
+                {item.kind === "file" ? <FileGlyph /> : <ChartGlyph />}
                 {item.label}
                 <button
                   type="button"
@@ -131,7 +195,7 @@ export function ComposeBox({
         >
           <MicIcon />
         </button>
-        <button type="submit" className="compose-send" disabled={disabled || !draft.trim()} aria-label="Send">
+        <button type="submit" className="compose-send" disabled={disabled || !canSend} aria-label="Send">
           ↑
         </button>
       </div>

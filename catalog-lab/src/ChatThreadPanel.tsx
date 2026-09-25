@@ -45,6 +45,15 @@ function UserTurn({ message }: { message: UserMessage }) {
           ))}
         </ul>
       )}
+      {message.files && message.files.length > 0 && (
+        <ul className="sent-context" aria-label="Files sent with this message">
+          {message.files.map((item) => (
+            <li key={item.id} className="context-chip">
+              {item.label}
+            </li>
+          ))}
+        </ul>
+      )}
       <time>{message.time}</time>
     </article>
   );
@@ -190,6 +199,9 @@ export function ChatThreadPanel({
   // Card choices waiting to be sent, latest per card only (ADR-031).
   const [pending, setPending] = useState<Record<string, CardAttachment>>({});
   const [reported, setReported] = useState(() => initialReported(thread.messages));
+  // Files and screenshots waiting to be sent with the next message (ADR-063).
+  const [files, setFiles] = useState<{ id: string; file: File }[]>([]);
+  const fileIds = useRef(0);
   // Only a valid question becomes a card; a malformed one goes back to the agent (ADR-040).
   const [checked] = useState(() =>
     thread.awaiting === undefined ? undefined : resolveAwaiting(thread.awaiting),
@@ -277,17 +289,24 @@ export function ChatThreadPanel({
       text: draft.trim(),
       time: "now",
       attachments,
+      files: files.map((item) => ({ id: item.id, label: item.file.name })),
     };
     setMessages((current) => [...current, sent]);
     setDraft("");
     setPeeking(false);
     setLastInputAt(clock);
     setPending({});
+    setFiles([]);
     setReported((current) => ({
       ...current,
       ...Object.fromEntries(attachments.map((item) => [item.turnId, item.state.measure])),
     }));
-    tell({ kind: "message", text: sent.text, attachments });
+    tell({
+      kind: "message",
+      text: sent.text,
+      attachments,
+      files: files.map(({ file }) => ({ name: file.name, type: file.type, size: file.size })),
+    });
   }
 
   // An answer to the agent's question is the user's next turn; the agent then carries on.
@@ -378,16 +397,23 @@ export function ChatThreadPanel({
             onSend={send}
             onDictate={() => setDictating(true)}
             disabled={dictating}
-            attachments={Object.values(pending).map((item) => ({
-              id: item.turnId,
-              label: item.label,
-            }))}
-            onRemoveAttachment={(id) =>
+            attachments={[
+              ...Object.values(pending).map((item) => ({ id: item.turnId, label: item.label, kind: "card" as const })),
+              ...files.map((item) => ({ id: item.id, label: item.file.name, kind: "file" as const })),
+            ]}
+            onRemoveAttachment={(id) => {
+              setFiles((current) => current.filter((item) => item.id !== id));
               setPending((current) => {
                 const next = { ...current };
                 delete next[id];
                 return next;
-              })
+              });
+            }}
+            onAttachFiles={(picked) =>
+              setFiles((current) => [
+                ...current,
+                ...picked.map((file) => ({ id: `file-${++fileIds.current}`, file })),
+              ])
             }
           />
         </div>

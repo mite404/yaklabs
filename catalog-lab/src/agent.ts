@@ -1,12 +1,16 @@
 import type { CardAttachment } from "./interactive";
 
+/** A file the user attached, described for the agent (the lab sends no file contents). */
+export type SharedFile = { name: string; type: string; size: number };
+
 /**
  * What the thread tells the agent (ADR-041). The UI only ever reports events; deciding what
  * to say back is the agent runtime's job, whether that is the lab stand-in or a real model.
  */
 export type AgentEvent =
-  /** The user sent a message, with any card choices riding along (ADR-030). */
-  | { kind: "message"; text: string; attachments: CardAttachment[] }
+  /** The user sent a message, with any card choices (ADR-030) and files, such as a
+   *  screenshot (ADR-063), riding along. A real runtime would upload the files themselves. */
+  | { kind: "message"; text: string; attachments: CardAttachment[]; files?: SharedFile[] }
   /** The user answered the agent's "Needs you" question (ADR-039). */
   | { kind: "answer"; text: string }
   /** The agent's question failed the schema, so it was never shown (ADR-040). The user never

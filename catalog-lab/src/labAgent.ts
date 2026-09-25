@@ -18,6 +18,10 @@ function wait(ms: number, signal: AbortSignal): Promise<void> {
 function replyText(event: AgentEvent): string | undefined {
   switch (event.kind) {
     case "message": {
+      if (event.attachments.length === 0 && event.files?.length) {
+        const names = event.files.map((file) => file.name).join(", ");
+        return `Got ${names}. In the lab I can't look inside files, but a real agent would read it with your message.`;
+      }
       if (event.attachments.length === 0) return undefined;
       const views = event.attachments.map((item) => item.label).join(" and ");
       return `Answering about ${views}, the view you set on the card. Saturday leads at every level, so the weekend carries the week.`;

@@ -11,6 +11,8 @@ export type ThreadMessage =
       time: string;
       /** Card choices sent with this message, shown as chips under it (ADR-030). */
       attachments?: CardAttachment[];
+      /** Files and screenshots sent with this message (ADR-063). */
+      files?: { id: string; label: string }[];
     }
   | {
       id: string;
