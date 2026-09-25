@@ -85,27 +85,10 @@ Around 100ms reads as instant, around 150 to 200ms reads as a soft arrival, and 
 
 ## Data visualisation
 
-### 10. Bars are grounded: a fixed 20px darker base
+### 10. Bars are flat
 
-Bars stay the data colour (olive `#515e38`) for most of their height and deepen over the bottom 20px to the olive-tinted display ink `#22251e`, like a soft shadow where they meet the axis.
-The band is a fixed 20px on every bar, not a percentage, so tall and short bars are grounded identically; bars shorter than 20px fade over their full height.
-The dark end uses the display ink so the gradient stays in one hue family (OKLCH 124°).
-The shade follows an ease-in-out curve (rule 11), so the band has no visible top edge.
-
-| Property | Value | Source |
-| --- | --- | --- |
-| Bar colour | `--data` (olive `#515e38`) | derived |
-| Base colour | `--data-deep` (display ink `#22251e`) | derived |
-| Band height | 20px, fixed | Ethan |
-| Band curve | smoothstep (ease-in-out), 9 stops | derived |
-| Top corners | 4px | derived (matches the button) |
-
-### 11. Ease gradients like motion
-
-A linear gradient that starts or stops inside a shape creates a faint false line where it begins, because the eye exaggerates any sudden change in the rate of change (Mach banding).
-Shape feathered gradients and shadows with an ease-in-out curve (smoothstep: zero slope at both ends), approximated with several colour stops, exactly as a camera move eases in and out.
-
-## Spacing
+Bars are one flat data colour with the button's 4px top corners; the darker eased base they used to have did not work with the colour scheme and was removed (ADR-055).
+Which colour the bars use is still open (see Open questions).
 
 ### 12. Cards come to rest 20px above the compose box
 
@@ -121,19 +104,18 @@ The gap is the token `--rest-gap`; the thread's bottom padding subtracts the com
 
 ## Surfaces
 
-### 13. Attention gets the strong surface (light and dark)
+### 13. Attention gets its own surface (light and dark)
 
-The thread's cards all sit on light paper, so anything that needs the user (the recap, a "Needs you" question) uses the strong surface, a warm grey, and stands apart without a badge or a colour of alarm.
-It is the lightest grey in its family where paper-coloured text still clears 4.5:1: softer greys either fail with light text or look disabled with dark text.
-Text on it is the paper colour; muted text is paper mixed 90% with the surface, and hover darkens the row halfway to the night green instead of lightening it; light surfaces keep their lighter hover.
-Brand olive disappears on it, so actions on the strong surface invert to paper instead.
+The thread's cards all sit on paper, so anything that needs the user (the Recap, a "Needs you" question) sits on the attention surface, a pale warm grey, and stands apart without a badge or a colour of alarm.
+Its choices are paper tiles, lighter than the card, so they separate by colour; hovering a row darkens it to a mid grey, where the usual inks fail, so the hovered row's text switches to the darkest ink.
+Green appears only as a button hover: Submit fills with the site's moss, as the outline button does.
 
 | Property | Value | Source |
 | --- | --- | --- |
-| Surface (light) | `--surface-strong` (`#8a8a85`) | Ethan |
-| Text (light) | `--on-strong` (`#111411`), 5.4:1 | derived |
-| Tiles (light) | `--tile-bg` (`#cbcac4`), ink 9.3:1, details 5.8:1 | Ethan |
-| Hover (light) | lightens: 15% paper on the surface, 30% on tiles | derived |
+| Surface (light) | `--attention-bg` (`#d6d5cf`), ink 10.4:1, soft-ink 4.6:1 | Ethan |
+| Tiles (light) | `--tile-bg` (`--paper`), 1.3:1 against the card, soft-ink 5.8:1 | derived |
+| Hover (light) | `--attention-hover` (`#8a8a85`), text to `#111411` at 5.4:1 | Ethan |
+| Focus (light) | ink ring, 10.4:1 (the page's grey ring is 2.3:1 here) | derived |
 | Surface (dark) | `#62625d`, paper text 5.3:1 | Ethan |
 | Tiles (dark) | 18% night on the surface, paper 6.6:1 | derived |
 | Hover (dark) | 50% night on the surface (`#3a3b37`), paper 9.8:1 | derived |
@@ -161,6 +143,8 @@ The user's bubble is the only place the sage-green tint appears, so it always me
 The tokens are named `--bubble-tint`, `--bubble-tint-strong`, and `--bubble-line`, so the tint cannot be reused by accident.
 
 ## Open questions
+
+- The bar colour: candidates are `#56564f` (6.4:1 on paper), `#252525` (13.3:1, reads as black), and `#c7cfba` (1.4:1, under the 3:1 a chart mark needs, and reserved for the user's bubble by pillar 15). Green is meant only for button hovers, which also rules out the current olive.
 
 - Rules 2 and 3 (and the display ink `#22251e`) rest on how the tint looked on a screen with a blue-light filter, which warms dark neutrals: re-check them with the filter off.
 - Ethan's warm greys (`#8a8a85`, `#cbcac4`) were picked on the same screen: keep them as deliberate choices, or re-pick them with the filter off.

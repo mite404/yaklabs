@@ -323,3 +323,25 @@ The button hover uses the declared near-black green `#111411` until the site's h
 2026-09-25 - Accepted.
 yaklabs.ai's rule is `.apply-jump:hover { background: var(--moss); border-color: var(--moss); color: var(--paper) }`, so the outline button now fills with `--moss` `#263b30` (paper text 10.4:1), and its border turns moss too, instantly, since only the fill and text colour are transitioned; this replaces the provisional `#111411` from ADR-051 and the measured `#242b24` from ADR-035.
 The button follows yaklabs.ai's `--moss`, not meetkay.ai's `#1d291f` (ADR-050), because it copies that site's button; which moss the product uses elsewhere stays open.
+
+## ADR-053 - The focus ring is for keyboard and assistive focus only
+
+2026-09-25 - Accepted.
+Browsers treat every focused text field as keyboard-focused, even after a click, so `:focus-visible` rang a clicked field; `inputModality.ts` now records whether focus last came from Tab or a pointer (`<html data-input>`), and a clicked field or compose box keeps its focused border without the ring.
+Tab and assistive tools (no pointer yet) still get the ring.
+
+## ADR-054 - The attention surface: pale card, paper tiles, dark hover
+
+2026-09-25 - Accepted; amends ADR-046.
+"Strong surface" is renamed the attention surface (`.attention-surface`, `--attention-*`); in light mode the Recap and Needs you cards are `#d6d5cf` with ink text, rows hover to `#8a8a85` with their text switched to `#111411` (the usual inks fail there), tiles are paper (the old `#cbcac4` was 1.1:1 against the new card), the focus ring inside is ink, and Submit fills with moss on hover.
+
+## ADR-055 - Bars are flat
+
+2026-09-25 - Accepted; supersedes design pillars 10 and 11.
+The eased darker base on chart bars did not work with the colour scheme, so bars are one flat data colour with 4px top corners; the bar colour itself is being chosen, and green is reserved for button hovers.
+
+## ADR-056 - The compose box is brighter than the app
+
+2026-09-25 - Accepted.
+The compose box uses `#f8f8f6` (`--compose-bg`), one step brighter than the app's paper, so the place to type reads as the nearest, most active surface; the window around the app uses the same colour.
+
