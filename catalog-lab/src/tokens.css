@@ -30,6 +30,8 @@
   /* derived: the declared sage's hue (OKLCH 124°) at L 0.46 / C 0.06, an olive that reads as
      green in flat UI and shares a hue with the sage tints; chosen over a forest-hue option. */
   --yak-green: #515e38;
+  /* derived: the olive-tinted display ink from design pillar 3 ("header text green"). */
+  --yak-ink-display: #22251e;
 
   /* Semantic tokens: the only colours components use. */
   --bg: var(--yak-paper);
@@ -47,6 +49,7 @@
   --accent-line: var(--yak-sage-light);
   --accent-ink: var(--yak-forest); /* text on the soft tints */
   --data: var(--accent); /* chart marks */
+  --data-deep: var(--yak-ink-display); /* the grounded base of bars */
   --focus: var(--accent);
   --shadow: color-mix(in srgb, var(--yak-night) 10%, transparent);
   --shadow-strong: color-mix(in srgb, var(--yak-night) 20%, transparent);

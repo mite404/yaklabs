@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import {
   Bar,
   BarChart,
@@ -9,6 +9,7 @@ import {
   YAxis,
 } from "recharts";
 import { CatalogCard } from "./CatalogCard";
+import { gradientBar } from "./GradientBar";
 import {
   attachmentLabel,
   fillSentence,
@@ -60,6 +61,7 @@ export function InteractiveCard({
       : 0;
   const [index, setIndex] = useState(initial);
   const [showRecipe, setShowRecipe] = useState(false);
+  const barShape = gradientBar(useId());
 
   // An invalid payload gets the same honest catalog-limit card as any other rejection.
   if (result.kind === "rejected") return <CatalogCard payload={null} context="thread" />;
@@ -128,7 +130,7 @@ export function InteractiveCard({
             <Bar
               dataKey="value"
               fill="var(--data)"
-              radius={[4, 4, 0, 0]}
+              shape={barShape}
               isAnimationActive={animate}
               animationDuration={TRANSITION_MS}
             />
