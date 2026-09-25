@@ -169,3 +169,9 @@ It floats directly under the conversation with no divider line above it, and kee
 2026-09-25 - Accepted.
 When a thread is still active and the user has sent nothing for 10 minutes or more, a recap of recorded outcomes appears above the compose box, "Needs you" items first, each jumping to its evidence turn (ADR-005/006, ADR-022), inspired by Amp's recap.
 It overlays the conversation without moving the input, collapses to a chip while the user types, stays dismissed for the current idle stretch, and uses no decorative ribbon or badge.
+
+## ADR-028 - Dictation takes over the thread as a modal
+
+2026-09-25 - Accepted.
+Tapping the mic opens a modal over the thread with a dimmed backdrop and a disabled compose box, which tells non-technical users plainly that typing is paused while recording.
+Its large waveform works like a DAW with the playhead locked to the center: new audio enters at the playhead and scrolls right to left, with a dotted line for the empty timeline ahead (after Amp's waveform); a live transcript preview, a microphone picker, Esc to cancel, and Enter or Done to insert complete it.
