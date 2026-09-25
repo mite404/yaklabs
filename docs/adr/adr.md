@@ -357,3 +357,9 @@ Only this token changed; the brand file's other small differences (`--hairline` 
 Bars, lines and legend keys use `#56564f` (`--yak-graphite`, Ethan's pick; 6.4:1 on paper), so green stays reserved for button hovers; `#252525` read as black and `#c7cfba` failed the 3:1 a chart mark needs and belongs to the user's bubble.
 The stepped slider stays olive for now, pending a decision on moving it to ink.
 
+## ADR-059 - Needs you parts from the Recap: paper card, grey pills, a header line
+
+2026-09-25 - Accepted; amends ADR-054 for Needs you.
+The Recap is done and keeps the pale attention card; Needs you now sits on the app's paper with its option pills in the attention grey `#d6d5cf` (hover still `#8a8a85`), and a line under its header marks the header as the fold control, with 8px between the header's hover fill and the line; folded, there is no line.
+Neither card shows a shadow on its top edge any more; the lift shows only below.
+
