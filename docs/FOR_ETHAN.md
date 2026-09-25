@@ -138,3 +138,45 @@ The film version: at a test screening, the useful question is not "did you like 
 If the audience cannot retell the story, the edit failed, however beautiful it looks.
 
 Say it in the interview in one line: "I don't ask users which chart they like; I give them a task and measure whether they got it right and how confident they were, because with AI the danger is confident misreading."
+
+### Continuity: every interactive surface reports back
+
+The moment a card becomes interactive, the agent and the user can end up looking at different things.
+The agent answered about gross profit; the user dragged the slider to net; the user asks "why did Saturday drop?"; the agent confidently explains a chart the user is no longer looking at.
+Nothing looks broken, which is what makes it the worst kind of legibility failure.
+
+The film version is continuity: the script supervisor makes sure the next shot matches what the audience last saw.
+Dragging the slider changed the set, so the next take has to know.
+
+The fix (ADR-030): the card's current state rides along with the user's next message as a visible, removable chip, the same rule as the skill chip (ADR-009).
+Silent context would also work technically, but then the user cannot see or control what the agent acts on.
+
+```ts
+// Sketch: what the next message carries when the user has moved a control.
+type OutgoingMessage = {
+  text: string; // "Why did Saturday drop?"
+  attachments: {
+    kind: "card-state";
+    turnId: string; // the card the state came from
+    label: string; // shown on the chip: "Net profit · Sep 14–20"
+    state: Record<string, string>; // { measure: "Net" }
+  }[];
+};
+```
+
+```mermaid
+sequenceDiagram
+  participant U as User
+  participant C as Card (Kay runtime)
+  participant K as Compose box
+  participant A as Agent
+  A->>C: chart + stepped slider (Gross)
+  U->>C: drags to Net
+  C->>C: chart and sentence update, no model call
+  C->>K: chip "Net profit · Sep 14–20"
+  U->>K: "Why did Saturday drop?"
+  K->>A: text + card state {measure: Net}
+  A->>U: answers about net profit
+```
+
+Say it in the interview: "When a surface is interactive, the agent has to know what the user changed, and the user has to see that the agent knows."

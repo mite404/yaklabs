@@ -175,3 +175,15 @@ It overlays the conversation without moving the input, collapses to a chip while
 2026-09-25 - Accepted.
 Tapping the mic opens a modal over the thread with a dimmed backdrop and a disabled compose box, which tells non-technical users plainly that typing is paused while recording.
 Its large waveform works like a DAW with the playhead locked to the center: new audio enters at the playhead and scrolls right to left, with a dotted line for the empty timeline ahead (after Amp's waveform); a live transcript preview, a microphone picker, Esc to cancel, and Enter or Done to insert complete it.
+
+## ADR-029 - Interactive cards react in the runtime, never through the model
+
+2026-09-25 - Accepted.
+Catalog cards may carry controls (switch, stepped slider, numeric slider) bound to precomputed data and to live text templates, and Kay's runtime updates the chart and the agent's sentence instantly on every change, with no model call per interaction (after marimo's reactive elements).
+Controls must fit the data (sliders need a numeric range or labeled stops; two meanings become a switch), the agent says when it translated a request into a different control, and a "Show recipe" view reveals the steps whose controls become skill settings (ADR-008, ADR-017).
+
+## ADR-030 - Every interactive surface reports its state back
+
+2026-09-25 - Accepted.
+When the user changes an interactive card or custom view, its current state attaches to their next message as a visible, removable chip (e.g. "Net profit · Sep 14-20"), so the agent answers about what the user is actually looking at.
+This applies to catalog cards and to model-written custom views alike (the typed export is the contract, after the "copy as JSON" pattern in Thariq Shihipar's HTML article), and it follows ADR-009: no hidden context, and the user always sees what the agent will act on.
