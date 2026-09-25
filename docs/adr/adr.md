@@ -200,3 +200,9 @@ This keeps users engaged and playing instead of checking out while reading walls
 Tier 1 is catalog cards, static or interactive: Kay's catalog builds them, the agent only describes data, controls, and live text, and everything invented is rejected (ADR-024, ADR-029); tier 2 is custom views, model-written HTML (after Thariq Shihipar's HTML article) for throwaway personal tools, sandboxed, styled with Kay's tokens, and visibly labeled as custom.
 Both tiers return the user's choices to the agent through the same visible chip (ADR-030, ADR-031), and custom views that keep recurring are promoted into tier 1 (ADR-016).
 Addendum: [04-interactive-surfaces.md](../04-interactive-surfaces.md).
+
+## ADR-033 - Brand type: Inter for the interface, Newsreader for display
+
+2026-09-25 - Accepted.
+Following yaklabs.ai's computed styles, Inter is the interface and body face and Newsreader the display face (headlines, wordmark, thread titles), exposed as `--font-text` and `--font-display` tokens with the site's fallback stacks.
+Both are SIL Open Font License fonts bundled from @fontsource with optical sizing, so the desktop app renders them offline; commercial fonts would never be committed, only referenced by name with a free fallback.
