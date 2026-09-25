@@ -14,21 +14,28 @@
   background: var(--bg);
   font-synthesis: none;
 
-  /* Brand palette. "css" = declared in yaklabs.ai's stylesheet (ground truth);
-     "photo" = picked from the hero image in Figma; "derived" = our choice. */
-  --yak-paper: #f0efea; /* css: page background */
-  --yak-ink: #252524; /* css: headings, button text */
-  --yak-body: #4a4a47; /* css: body copy (about 82% of the ink) */
-  --yak-night: #111411; /* css: near-black green */
-  --yak-sage-light: #c7cfba; /* css: the site's declared green */
-  --yak-blue: #95aac8; /* css: role unknown, kept for reference */
+  /* yaklabs.ai's own tokens, same names and values as its stylesheet (ADR-049). Two text
+     inks and two line weights: that is the whole contrast pattern. */
+  --paper: #f0efea; /* the app surface */
+  --paper-deep: #e4e4df; /* hover and inset fill */
+  --ink: #252524; /* headings, primary text: 13.3:1 on paper */
+  --soft-ink: #4a4a47; /* body and secondary text: 7.7:1 */
+  --blue: #95aac8; /* text selection */
+  --sage: #c7cfba; /* the user's bubble only (ADR-047) */
+  --chalk: #e5e8d9;
+  --moss: #263b30;
+  --rust: #a86f36;
+  --rule: rgba(37, 37, 36, 0.72); /* strong lines and outlines: 5.7:1 */
+  --hairline: rgba(37, 37, 36, 0.25); /* card borders and dividers */
+
+  /* Ours, where the site declares nothing: "css" = a literal in its stylesheet, "photo" =
+     picked from the hero image in Figma, "derived" = our choice, "Ethan" = Ethan's pick. */
+  --yak-night: #111411; /* css: the page body behind the shell */
   --yak-cream: #f5f5f0; /* photo: text on the dark hero */
-  --yak-forest-deep: #161d17; /* photo */
-  --yak-forest: #242b24; /* photo: dominant hero green; also the measured button hover fill */
-  --yak-moss: #303a36; /* photo */
-  --yak-sage: #3d423b; /* photo */
-  /* derived: the declared sage's hue (OKLCH 124°) at L 0.46 / C 0.06, an olive that reads as
-     green in flat UI and shares a hue with the sage tints; chosen over a forest-hue option. */
+  --yak-forest: #242b24; /* photo: dominant hero green; the button's hover fill */
+  --yak-sage-deep: #3d423b; /* photo: hover on dark surfaces */
+  /* derived: --sage's hue (OKLCH 124°) at L 0.46 / C 0.06, an olive that reads as green in
+     flat UI and shares a hue with the sage tint; chosen over a forest-hue option. */
   --yak-green: #515e38;
   /* derived: the olive-tinted display ink from design pillar 3 ("header text green"). */
   --yak-ink-display: #22251e;
@@ -37,30 +44,21 @@
   --yak-stone-light: #cbcac4; /* light mode: tiles, darker than the user's bubbles */
   --yak-slate: #62625d; /* dark mode: the lightest grey where cream text clears 4.5:1 */
 
-  /* Semantic tokens: the only colours components use. */
-  /* The app surface is the site's own background; the page around it is a lighter step
-     (ADR-048). Text contrast is measured against --paper, the darker of the two. */
-  --bg: color-mix(in srgb, var(--yak-paper) 45%, white); /* derived: the window around the app */
-  --paper: var(--yak-paper); /* css: yaklabs.ai's page background, #f0efea */
-  --ink: var(--yak-ink);
-  --text-body: var(--yak-body); /* 7.7:1 on paper */
-  --muted: color-mix(in srgb, var(--yak-ink) 72%, var(--yak-paper)); /* css step (0.72), solid; 5.7:1 */
-  --rule: color-mix(in srgb, var(--yak-ink) 21%, var(--yak-paper)); /* measured: dividers */
-  --line: color-mix(in srgb, var(--yak-ink) 12%, var(--yak-paper)); /* derived: card borders */
-  --wash: color-mix(in srgb, var(--yak-ink) 5%, var(--yak-paper)); /* derived: hover, insets */
+  /* Roles built on those: the window around the app, and the rest below. */
+  --bg: color-mix(in srgb, var(--paper) 45%, white); /* derived: the window around the app */
   --accent: var(--yak-green); /* 6.1:1 on paper and under cream text */
   --on-accent: var(--yak-cream);
   /* The user's bubble, and nothing else (ADR-047): the site's sage tint marks "you". */
-  --bubble-tint: color-mix(in srgb, var(--yak-sage-light) 40%, var(--yak-paper));
-  --bubble-tint-strong: color-mix(in srgb, var(--yak-sage-light) 75%, var(--yak-paper));
-  --bubble-line: var(--yak-sage-light);
+  --bubble-tint: color-mix(in srgb, var(--sage) 40%, var(--paper));
+  --bubble-tint-strong: color-mix(in srgb, var(--sage) 75%, var(--paper));
+  --bubble-line: var(--sage);
   --data: var(--accent); /* chart marks */
   --data-deep: var(--yak-ink-display); /* the grounded base of bars */
   /* Ethan: a warm mid grey; 3.0:1 on the app surface and 3.3:1 on the page, the 3:1 a ring needs. */
   --focus: #8a8a85;
   --shadow: color-mix(in srgb, var(--yak-night) 10%, transparent);
   --shadow-strong: color-mix(in srgb, var(--yak-night) 20%, transparent);
-  --scrim: color-mix(in srgb, var(--yak-paper) 72%, transparent);
+  --scrim: color-mix(in srgb, var(--paper) 72%, transparent);
   --warn-bg: #f4ecd9; /* derived: warm notice, harmonised with the paper */
   --warn-ink: #66511f; /* derived */
   --record: #b8432c; /* derived: recording dot */
@@ -75,12 +73,12 @@
   --on-strong-focus: var(--yak-night); /* 5.4:1 on the surface, 11:1 on a tile */
   --on-strong-inverse: var(--yak-cream); /* text on a filled action: 17:1 on night */
   --tile-bg: var(--yak-stone-light);
-  --tile-ink: var(--yak-ink); /* 9.3:1 */
-  --tile-muted: color-mix(in srgb, var(--yak-ink) 80%, var(--yak-stone-light)); /* 5.8:1 */
+  --tile-ink: var(--ink); /* 9.3:1 */
+  --tile-muted: color-mix(in srgb, var(--ink) 80%, var(--yak-stone-light)); /* 5.8:1 */
   --tile-wash: color-mix(in srgb, var(--yak-cream) 30%, var(--yak-stone-light)); /* hover */
   --tile-field-bg: transparent;
-  --tile-field-border: color-mix(in srgb, var(--yak-ink) 55%, var(--yak-stone-light)); /* 3.1:1 */
-  --tile-field-placeholder: color-mix(in srgb, var(--yak-ink) 72%, var(--yak-stone-light)); /* 4.7:1 */
+  --tile-field-border: color-mix(in srgb, var(--ink) 55%, var(--yak-stone-light)); /* 3.1:1 */
+  --tile-field-placeholder: color-mix(in srgb, var(--ink) 72%, var(--yak-stone-light)); /* 4.7:1 */
 
   --radius: 14px;
   --space: 24px;
@@ -102,7 +100,7 @@ a {
 }
 button {
   cursor: pointer;
-  border: 1px solid var(--line);
+  border: 1px solid var(--hairline);
   border-radius: 7px;
   background: white;
   color: var(--ink);
@@ -110,16 +108,16 @@ button {
   font-size: 13px;
 }
 button:hover {
-  background: var(--wash);
+  background: var(--paper-deep);
 }
 /* Outline button, after yaklabs.ai's "Apply for this role" (ADR-035): an ink outline at rest
    that fills with forest green on hover. Values are the site's computed styles except the
    hover fill, which is measured from a recording. The site has no delay: the "beat" before
    the fill is the 150ms ease transition itself. Timing is tokenised for iteration. */
 .btn {
-  --btn-border: color-mix(in srgb, var(--yak-ink) 72%, var(--yak-paper)); /* css: ink at 0.72 */
+  --btn-border: var(--rule); /* css: the site's outline is its rule */
   --btn-hover-bg: var(--yak-forest); /* measured from a hover recording: #242b24 */
-  --btn-hover-ink: var(--yak-paper);
+  --btn-hover-ink: var(--paper);
   --btn-duration: 150ms; /* css */
   --btn-delay: 0ms; /* css: none; kept as a token for iteration */
   --btn-ease: ease; /* css: the default curve */
@@ -162,8 +160,9 @@ button:hover {
    part of the same family. Surfaces tune it through the --field-* tokens (ADR-043). */
 .field {
   --field-bg: transparent;
-  --field-border: color-mix(in srgb, var(--yak-ink) 72%, var(--yak-paper)); /* as .btn */
-  --field-placeholder: var(--muted);
+  --field-border: var(--rule); /* as .btn */
+  /* A prompt is one step greyer than body text: the rule's ink (5.7:1), as pillar 14 asks. */
+  --field-placeholder: var(--rule);
   display: block;
   width: 100%;
   min-width: 0;
@@ -207,14 +206,14 @@ button:hover {
   --surface-strong: var(--yak-slate);
   --on-strong: var(--yak-cream); /* 5.6:1 */
   --on-strong-muted: color-mix(in srgb, var(--yak-cream) 90%, var(--yak-slate)); /* 4.9:1 */
-  --on-strong-wash: var(--yak-sage); /* Ethan: hover on dark surfaces; cream 9.4:1 */
+  --on-strong-wash: var(--yak-sage-deep); /* Ethan: hover on dark surfaces; cream 9.4:1 */
   --on-strong-line: color-mix(in srgb, var(--yak-cream) 14%, var(--yak-slate));
   --on-strong-focus: var(--yak-cream);
   --on-strong-inverse: var(--yak-slate); /* 5.6:1 on cream */
   --tile-bg: color-mix(in srgb, var(--yak-night) 18%, var(--yak-slate)); /* cream 7.0:1 */
   --tile-ink: var(--yak-cream);
   --tile-muted: color-mix(in srgb, var(--yak-cream) 90%, var(--yak-slate)); /* 6.1:1 */
-  --tile-wash: var(--yak-sage);
+  --tile-wash: var(--yak-sage-deep);
   --tile-field-bg: color-mix(in srgb, var(--yak-night) 12%, var(--yak-slate));
   --tile-field-border: color-mix(in srgb, var(--yak-cream) 60%, var(--yak-slate));
   --tile-field-placeholder: color-mix(in srgb, var(--yak-cream) 75%, var(--yak-slate));
@@ -224,10 +223,10 @@ button:hover {
    everything inside adapts without colours of its own. */
 .surface-strong {
   --ink: var(--on-strong);
-  --text-body: var(--on-strong);
-  --muted: var(--on-strong-muted);
-  --wash: var(--on-strong-wash);
-  --line: var(--on-strong-line);
+  --soft-ink: var(--on-strong-muted);
+  --paper-deep: var(--on-strong-wash);
+  --hairline: var(--on-strong-line);
+  --rule: var(--on-strong-line);
   --focus: var(--on-strong-focus);
   background: var(--surface-strong);
   color: var(--ink);
@@ -235,9 +234,8 @@ button:hover {
 /* A tile on the strong surface: its own fill and text, so choices stand apart by colour. */
 .surface-strong .tile {
   --ink: var(--tile-ink);
-  --text-body: var(--tile-ink);
-  --muted: var(--tile-muted);
-  --wash: var(--tile-wash);
+  --soft-ink: var(--tile-muted);
+  --paper-deep: var(--tile-wash);
   background: var(--tile-bg);
   color: var(--ink);
 }
@@ -272,9 +270,14 @@ a {
   color: var(--accent);
 }
 /* Body copy sits one step lighter than headings, as on yaklabs.ai. */
+/* Text selection, as on yaklabs.ai. */
+::selection {
+  background: var(--blue);
+  color: var(--ink);
+}
 p {
   line-height: 1.6;
-  color: var(--text-body);
+  color: var(--soft-ink);
 }
 h1,
 h2,
@@ -297,8 +300,8 @@ h3 {
   min-height: 100vh;
 }
 aside {
-  background: var(--wash);
-  border-right: 1px solid var(--line);
+  background: var(--paper-deep);
+  border-right: 1px solid var(--hairline);
   padding: 34px 20px;
   display: flex;
   flex-direction: column;
@@ -320,14 +323,14 @@ aside {
 }
 .workspace span {
   float: right;
-  background: var(--wash);
+  background: var(--paper-deep);
   padding: 2px 6px;
   border-radius: 4px;
 }
 .sidebar-label {
   font-size: 9px;
   letter-spacing: 1.1px;
-  color: var(--muted);
+  color: var(--soft-ink);
   margin-top: 24px;
 }
 nav {
@@ -343,7 +346,7 @@ nav button {
 }
 nav button span {
   float: right;
-  color: var(--muted);
+  color: var(--soft-ink);
 }
 nav button[aria-current] {
   background: white;
@@ -354,7 +357,7 @@ nav button[aria-current] {
   margin-top: auto;
   padding-top: 65px;
   font-size: 11px;
-  color: var(--muted);
+  color: var(--soft-ink);
 }
 .sidebar-note p {
   margin: 12px 0;
@@ -367,7 +370,7 @@ main {
 }
 .topbar {
   height: 84px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--hairline);
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -384,13 +387,13 @@ main {
   white-space: nowrap;
   border-radius: 30px;
   padding: 6px 10px;
-  background: var(--wash);
+  background: var(--paper-deep);
   color: var(--ink);
   align-self: flex-start;
 }
 .badge.neutral {
-  background: var(--wash);
-  color: var(--muted);
+  background: var(--paper-deep);
+  color: var(--soft-ink);
 }
 .intro {
   padding: 44px 0 24px;
@@ -411,10 +414,10 @@ h1 {
   margin-bottom: 16px;
 }
 h1 span {
-  color: var(--muted);
+  color: var(--soft-ink);
 }
 .intro > p:last-child {
-  color: var(--muted);
+  color: var(--soft-ink);
   font-size: 13px;
   max-width: 480px;
 }
@@ -422,9 +425,9 @@ h1 span {
   display: flex;
   align-items: center;
   gap: 15px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--hairline);
   border-radius: 10px;
-  background: var(--wash);
+  background: var(--paper-deep);
   padding: 17px 20px;
   margin-bottom: 22px;
 }
@@ -440,7 +443,7 @@ h1 span {
 .question small {
   font-size: 9px;
   letter-spacing: 1px;
-  color: var(--muted);
+  color: var(--soft-ink);
 }
 .question p {
   font-size: 13px;
@@ -460,7 +463,7 @@ h1 span {
 }
 .card {
   background: var(--paper);
-  border: 1px solid var(--line);
+  border: 1px solid var(--hairline);
   border-radius: var(--radius);
   overflow: hidden;
   min-width: 0;
@@ -495,14 +498,14 @@ h1 span {
   width: 100%;
 }
 .muted {
-  color: var(--muted);
+  color: var(--soft-ink);
 }
 footer {
   display: flex;
   justify-content: space-between;
   gap: 12px;
   align-items: center;
-  border-top: 1px solid var(--line);
+  border-top: 1px solid var(--hairline);
   padding: 18px 24px;
   font-size: 10px;
   line-height: 1.8;
@@ -516,22 +519,22 @@ footer button {
 }
 .evaluation-notes > p:not(.eyebrow) {
   font-size: 12px;
-  color: var(--muted);
+  color: var(--soft-ink);
 }
 .evaluation-notes ul {
   padding-left: 16px;
   font-size: 11px;
   line-height: 2.2;
-  color: var(--muted);
+  color: var(--soft-ink);
 }
 hr {
   border: 0;
-  border-top: 1px solid var(--line);
+  border-top: 1px solid var(--hairline);
   margin: 24px 0;
 }
 small {
   font-size: 9px;
-  color: var(--muted);
+  color: var(--soft-ink);
   letter-spacing: 1px;
 }
 .catalog-entry {
@@ -549,7 +552,7 @@ small {
 }
 .contract {
   margin: 16px 0;
-  color: var(--muted);
+  color: var(--soft-ink);
   font-size: 12px;
 }
 summary {
@@ -557,7 +560,7 @@ summary {
   padding: 8px 0;
 }
 pre {
-  background: var(--wash);
+  background: var(--paper-deep);
   padding: 18px;
   overflow: auto;
   font-size: 11px;
@@ -570,7 +573,7 @@ textarea {
   min-height: 100px;
   width: 100%;
   margin: 8px 0;
-  border: 1px solid var(--line);
+  border: 1px solid var(--hairline);
   border-radius: 8px;
   padding: 12px;
 }
@@ -580,7 +583,7 @@ label {
   margin-bottom: 8px;
 }
 .backlog {
-  border-top: 1px solid var(--line);
+  border-top: 1px solid var(--hairline);
   margin-top: 24px;
   padding: 28px 0;
   display: grid;
@@ -592,7 +595,7 @@ label {
 }
 .backlog p {
   font-size: 11px;
-  color: var(--muted);
+  color: var(--soft-ink);
   max-width: 320px;
 }
 .backlog details {
@@ -601,7 +604,7 @@ label {
 }
 .backlog input {
   width: 100%;
-  border: 1px solid var(--line);
+  border: 1px solid var(--hairline);
   padding: 10px;
   border-radius: 7px;
   margin-bottom: 10px;
@@ -619,8 +622,8 @@ label {
 }
 .endnote {
   font-size: 10px;
-  color: var(--muted);
-  border-top: 1px solid var(--line);
+  color: var(--soft-ink);
+  border-top: 1px solid var(--hairline);
   padding: 20px 0;
 }
 .state {
@@ -632,7 +635,7 @@ label {
 }
 .state p {
   font-size: 13px;
-  color: var(--muted);
+  color: var(--soft-ink);
 }
 .state-symbol {
   font-size: 30px;
@@ -660,13 +663,13 @@ table {
 }
 caption {
   text-align: left;
-  color: var(--muted);
+  color: var(--soft-ink);
   padding: 12px 0;
 }
 th,
 td {
   padding: 12px;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--hairline);
 }
 th {
   font-weight: 500;
@@ -676,7 +679,7 @@ td {
   font-variant-numeric: tabular-nums;
 }
 thead {
-  background: var(--wash);
+  background: var(--paper-deep);
 }
 @media (max-width: 1100px) {
   main {

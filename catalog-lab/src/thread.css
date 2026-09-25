@@ -18,7 +18,7 @@
   display: grid;
   grid-template-rows: auto minmax(0, 1fr) auto;
   background: var(--paper);
-  border: 1px solid var(--line);
+  border: 1px solid var(--hairline);
   border-radius: var(--radius);
   font-size: 15px;
   overflow: hidden;
@@ -33,7 +33,7 @@
 }
 .thread-header {
   padding: 14px var(--thread-gutter);
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--hairline);
 }
 /* The thread title is a display moment: brand serif (Newsreader). */
 .thread-header h2 {
@@ -83,7 +83,7 @@
 }
 .turn-user time {
   font-size: 11px;
-  color: var(--muted);
+  color: var(--soft-ink);
   font-variant-numeric: tabular-nums;
   padding-right: 4px;
 }
@@ -106,7 +106,7 @@
   padding: var(--compose-inset) var(--thread-gutter) 16px;
 }
 .compose-box {
-  border: 1px solid var(--line);
+  border: 1px solid var(--hairline);
   border-radius: 12px;
   padding: 10px 8px 6px 12px;
   background: var(--paper);
@@ -163,9 +163,9 @@
   gap: 6px;
   max-width: 100%;
   padding: 3px 4px 3px 9px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--hairline);
   border-radius: 999px;
-  background: var(--wash);
+  background: var(--paper-deep);
   color: var(--ink);
   font-size: 12px;
   white-space: nowrap;
@@ -183,7 +183,7 @@
   line-height: 1;
 }
 .context-chip button:hover {
-  background: var(--line);
+  background: var(--hairline);
 }
 @keyframes chip-in {
   from {
@@ -216,10 +216,10 @@
   border: none;
   border-radius: 8px;
   background: transparent;
-  color: var(--muted);
+  color: var(--soft-ink);
 }
 .compose-icon:hover {
-  background: var(--wash);
+  background: var(--paper-deep);
   color: var(--ink);
 }
 .compose-icon:disabled {
@@ -243,8 +243,8 @@
   background: var(--accent);
 }
 .compose-send:disabled {
-  background: var(--wash);
-  color: var(--muted);
+  background: var(--paper-deep);
+  color: var(--soft-ink);
   cursor: default;
 }
 
@@ -271,7 +271,7 @@
    apart from every card in the thread; the shadow lifts it off the conversation. */
 .recap,
 .awaiting {
-  border: 1px solid var(--line);
+  border: 1px solid var(--hairline);
   border-radius: 12px;
   box-shadow: 0 6px 20px var(--shadow-strong);
 }
@@ -297,12 +297,12 @@
   border: none;
   border-radius: 50%;
   background: transparent;
-  color: var(--muted);
+  color: var(--soft-ink);
   font-size: 18px;
   line-height: 1;
 }
 .recap-close:hover {
-  background: var(--wash);
+  background: var(--paper-deep);
   color: var(--ink);
 }
 .recap ul {
@@ -327,10 +327,10 @@
   line-height: 1.45;
 }
 .recap li button:hover {
-  background: var(--wash);
+  background: var(--paper-deep);
 }
 .recap-go {
-  color: var(--muted);
+  color: var(--soft-ink);
   opacity: 0;
 }
 .recap li button:hover .recap-go,
@@ -343,7 +343,7 @@
   gap: 6px;
   padding: 5px 12px;
   border-radius: 20px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--hairline);
   box-shadow: 0 2px 8px var(--shadow);
   font-size: 12px;
 }
@@ -370,7 +370,7 @@
   text-align: left;
 }
 .awaiting-header:hover {
-  background: var(--wash);
+  background: var(--paper-deep);
 }
 .awaiting-label {
   flex: none;
@@ -396,7 +396,7 @@
 .awaiting-chevron {
   margin-left: auto;
   display: inline-flex;
-  color: var(--muted);
+  color: var(--soft-ink);
 }
 .awaiting-question {
   margin: 4px 0 10px;
@@ -428,7 +428,7 @@
   cursor: pointer;
 }
 .awaiting-tile:hover {
-  background: var(--wash);
+  background: var(--paper-deep);
 }
 /* Keyboard focus sits inside the tile, where it clears 3:1 against the tile itself. */
 .awaiting-tile:focus-visible {
@@ -444,7 +444,7 @@
   margin-top: -0.5px;
   border: 1px solid transparent;
   border-radius: 4px;
-  color: var(--muted);
+  color: var(--soft-ink);
   font-size: 12px;
   font-variant-numeric: tabular-nums;
   transition:
@@ -452,7 +452,7 @@
     background-color var(--btn-duration, 150ms) ease;
 }
 .awaiting-tile:hover .awaiting-key {
-  border-color: var(--muted);
+  border-color: var(--soft-ink);
 }
 .awaiting-tile[data-selected] .awaiting-key {
   border-color: var(--ink);
@@ -468,7 +468,7 @@
   font-weight: 500;
 }
 .awaiting-detail {
-  color: var(--muted);
+  color: var(--soft-ink);
 }
 /* The typed answer: an outlined field (.field) inside its tile, so it reads as a place to
    type; the tile trims its padding so the field's text sits level with its number. */
@@ -492,7 +492,7 @@
 }
 .awaiting-action {
   padding: 6px 14px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--hairline);
   border-radius: 4px;
   background: transparent;
   color: var(--ink);
@@ -504,7 +504,7 @@
     opacity var(--btn-duration, 150ms) ease;
 }
 .awaiting-action:hover {
-  background: var(--wash);
+  background: var(--paper-deep);
 }
 .awaiting-submit {
   border-color: var(--ink);

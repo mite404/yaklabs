@@ -48,18 +48,18 @@ function Chart({ selection }: { selection: Selection }) {
   const props = selection.props;
   const axes = (
     <>
-      <CartesianGrid vertical={false} stroke="var(--line)" />
+      <CartesianGrid vertical={false} stroke="var(--hairline)" />
       <XAxis
         dataKey="label"
         tickLine={false}
         axisLine={false}
-        tick={{ fill: "var(--muted)", fontSize: 12 }}
+        tick={{ fill: "var(--soft-ink)", fontSize: 12 }}
       />
       <YAxis
         tickLine={false}
         axisLine={false}
         width={48}
-        tick={{ fill: "var(--muted)", fontSize: 12 }}
+        tick={{ fill: "var(--soft-ink)", fontSize: 12 }}
       />
       <Tooltip />
     </>

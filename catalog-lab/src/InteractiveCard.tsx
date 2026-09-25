@@ -110,12 +110,12 @@ export function InteractiveCard({
             margin={{ top: 12, right: 16, bottom: 4, left: 0 }}
             accessibilityLayer
           >
-            <CartesianGrid vertical={false} stroke="var(--line)" />
+            <CartesianGrid vertical={false} stroke="var(--hairline)" />
             <XAxis
               dataKey="label"
               tickLine={false}
               axisLine={false}
-              tick={{ fill: "var(--muted)", fontSize: 12 }}
+              tick={{ fill: "var(--soft-ink)", fontSize: 12 }}
             />
             <YAxis
               domain={[0, sharedMax(result.selection)]}
@@ -123,11 +123,11 @@ export function InteractiveCard({
               tickLine={false}
               axisLine={false}
               width={52}
-              tick={{ fill: "var(--muted)", fontSize: 12 }}
+              tick={{ fill: "var(--soft-ink)", fontSize: 12 }}
             />
             <Tooltip
               formatter={(value) => [formatUsd(Number(value)), stop.label]}
-              cursor={{ fill: "var(--wash)" }}
+              cursor={{ fill: "var(--paper-deep)" }}
             />
             <Bar
               dataKey="value"

@@ -30,7 +30,7 @@
 .stepped label {
   display: block;
   font-size: 11px;
-  color: var(--muted);
+  color: var(--soft-ink);
   margin-bottom: 6px;
 }
 .stepped input[type="range"] {
@@ -41,7 +41,7 @@
   height: 6px;
   margin: 0;
   border-radius: 3px;
-  background: linear-gradient(to right, var(--accent) var(--fill), var(--line) var(--fill));
+  background: linear-gradient(to right, var(--accent) var(--fill), var(--hairline) var(--fill));
   cursor: pointer;
 }
 .stepped input[type="range"]::-webkit-slider-thumb {
@@ -77,7 +77,7 @@
   border: none;
   border-radius: 6px;
   background: transparent;
-  color: var(--muted);
+  color: var(--soft-ink);
   font-size: 12px;
   white-space: nowrap;
 }
@@ -90,7 +90,7 @@
   margin-left: 6px;
 }
 .stops button:hover {
-  background: var(--wash);
+  background: var(--paper-deep);
   color: var(--ink);
 }
 .stops button[aria-pressed="true"] {
@@ -100,7 +100,7 @@
 .stop-description {
   margin: 2px 0 0;
   font-size: 12px;
-  color: var(--muted);
+  color: var(--soft-ink);
 }
 
 /* "Show my work": the same card one layer deeper, collapsed by default (ADR-008, ADR-036). */
@@ -108,7 +108,7 @@
   margin: 0 16px 12px;
   padding: 10px 12px 10px 30px;
   border-radius: 10px;
-  background: var(--wash);
+  background: var(--paper-deep);
   font-size: 12px;
   line-height: 1.7;
 }

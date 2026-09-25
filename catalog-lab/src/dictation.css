@@ -15,7 +15,7 @@
 .dictation {
   width: min(100%, 560px);
   background: var(--paper);
-  border: 1px solid var(--line);
+  border: 1px solid var(--hairline);
   border-radius: 16px;
   box-shadow: 0 18px 48px var(--shadow-strong);
   padding: 16px 18px 14px;
@@ -38,7 +38,7 @@
 }
 .dictation-time {
   font-weight: 400;
-  color: var(--muted);
+  color: var(--soft-ink);
   font-variant-numeric: tabular-nums;
 }
 .rec-dot {
@@ -72,7 +72,7 @@
   padding: 6px;
   list-style: none;
   background: var(--paper);
-  border: 1px solid var(--line);
+  border: 1px solid var(--hairline);
   border-radius: 12px;
   box-shadow: 0 10px 30px var(--shadow-strong);
 }
@@ -90,14 +90,14 @@
 }
 .device-picker li button:hover,
 .device-picker li button[aria-selected="true"] {
-  background: var(--wash);
+  background: var(--paper-deep);
 }
 .radio {
   flex: none;
   width: 14px;
   height: 14px;
   border-radius: 50%;
-  border: 1.5px solid var(--muted);
+  border: 1.5px solid var(--soft-ink);
 }
 [aria-selected="true"] > .radio {
   border-color: var(--accent);
@@ -110,7 +110,7 @@
   height: 112px;
   margin: 14px 0 12px;
   border-radius: 10px;
-  background: var(--wash);
+  background: var(--paper-deep);
 }
 
 /* Fixed height: new words never make the dialog grow or jump. */
