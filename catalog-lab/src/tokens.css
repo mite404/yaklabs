@@ -35,6 +35,7 @@
      our choice, "Ethan" = Ethan's pick. Nothing is sampled from pixels: the screen used for
      sampling had a blue-light filter (ADR-051). */
   --yak-night: #111411; /* css: the page body behind the shell */
+  --yak-paper-bright: #f8f8f6; /* Ethan: one step brighter than paper */
   /* derived: --sage's hue (OKLCH 124°) at L 0.46 / C 0.06, an olive that reads as green in
      flat UI and shares a hue with the sage tint; chosen over a forest-hue option. */
   --yak-green: #515e38;
@@ -44,7 +45,8 @@
   --yak-slate: #62625d; /* dark mode: the lightest grey where cream text clears 4.5:1 */
 
   /* Roles built on those: the window around the app, and the rest below. */
-  --bg: color-mix(in srgb, var(--paper) 45%, white); /* derived: the window around the app */
+  --bg: var(--yak-paper-bright); /* the window around the app */
+  --compose-bg: var(--yak-paper-bright); /* the compose box, brighter than the app (ADR-056) */
   --accent: var(--yak-green); /* 6.1:1 on paper and under cream text */
   --on-accent: var(--paper); /* css: the site's text on dark fills */
   /* The user's bubble, and nothing else (ADR-047): the site's sage tint marks "you". */
