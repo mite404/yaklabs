@@ -75,3 +75,13 @@ Problem 1, agent legibility, makes the strongest interview demo.
 - Bonus: building the demo on a small token-based system touches problem 2 for free.
 
 Runner-up: voice. It is distinctive, but convincing demos need a real model and real writing samples.
+
+## Update - first look at Kay (screenshot from the head of product's post)
+
+Interpretations marked "likely" are guesses from pixels.
+
+- Threads appear as browser-style tabs across the top.
+- Split pane: chat on the left, a built-in web browser with an address bar on the right. Confirms the split-pane DNA from Glass.
+- Compose bar: "What would you like to do?", attach, "Medium" (likely reasoning effort), "Allow" (likely a permission mode), "6%" (likely context usage), microphone for dictation, send.
+- A narrow icon rail on the left with the Kay logo.
+- The sample answer is roughly 600 words of dense aviation jargon, and the outcome the user cares about ("your seat was the right one... land first") is the last line. A strong before/after candidate for ADR-006 (outcomes first), framed as "here is what I would try".

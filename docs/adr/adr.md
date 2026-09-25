@@ -121,3 +121,21 @@ It overlays the conversation without moving the input (ADR-003) and collapses in
 2026-09-25 - Accepted.
 A pop-out chat outside the thread list, summoned anywhere by a global shortcut, handles side questions, status across threads and projects, and orchestration, inspired by Amp's Puck.
 Threads are for doing a piece of work and the pop-out is for talking about your work; when a side question becomes real work, it is handed off to a new thread visibly, and the user-facing name avoids the word "orchestrator".
+
+## ADR-020 - Edit and Remix open a linked new thread
+
+2026-09-25 - Accepted.
+Refining a skill or a chart/table starts a new thread so the original flow stays clean.
+Both threads link to each other ("Remixed from" / "Remixed to"), and finishing the remix offers "Use this in the original", which updates it as a named version (ADR-011), so forks never become orphans.
+
+## ADR-021 - User messages are high-contrast landmarks
+
+2026-09-25 - Accepted.
+The user's messages render as contained cards with a distinct fill and weight (contrast without loud colour), so they work as chapter headings when scrolling back.
+While scrolling through a long answer, the question it answers stays pinned at the top of the thread.
+
+## ADR-022 - The scrollbar is a map of the conversation
+
+2026-09-25 - Accepted.
+Each turn is a marker on the scrollbar; hover shows the request and a turn summary built from recorded events (ADR-005), and clicking jumps so the user's message lands vertically centered every time (eye trace), inspired by Zed's Delta.
+Markers are coloured by kind (user message, outcome, waiting on you), have generous hit targets, and support bookmarking.
