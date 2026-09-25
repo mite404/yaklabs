@@ -111,7 +111,7 @@ export function AwaitingInputCard({
           </h3>
           <div ref={options} className="awaiting-options" role="radiogroup" aria-labelledby="awaiting-question">
             {question.options.map((option, i) => (
-              <button key={option.label} className="awaiting-tile" onClick={() => select(i)} {...tile(i)}>
+              <button key={option.label} className="tile awaiting-tile" onClick={() => select(i)} {...tile(i)}>
                 <span className="awaiting-key">{i + 1}</span>
                 <span>
                   <span className="awaiting-option">{option.label}</span>
@@ -119,7 +119,7 @@ export function AwaitingInputCard({
                 </span>
               </button>
             ))}
-            <div className="awaiting-tile awaiting-answer" onClick={() => select(answerRow)} {...tile(answerRow)}>
+            <div className="tile awaiting-tile awaiting-answer" onClick={() => select(answerRow)} {...tile(answerRow)}>
               <span className="awaiting-key">{answerRow + 1}</span>
               <input
                 ref={field}
@@ -131,7 +131,7 @@ export function AwaitingInputCard({
                 aria-label={question.answer.placeholder}
               />
             </div>
-            <button className="awaiting-tile" onClick={() => select(elsewhereRow)} {...tile(elsewhereRow)}>
+            <button className="tile awaiting-tile" onClick={() => select(elsewhereRow)} {...tile(elsewhereRow)}>
               <span className="awaiting-key">{elsewhereRow + 1}</span>
               <span className="awaiting-option">{question.elsewhere ?? ELSEWHERE}</span>
             </button>

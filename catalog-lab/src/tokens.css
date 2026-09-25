@@ -32,9 +32,10 @@
   --yak-green: #515e38;
   /* derived: the olive-tinted display ink from design pillar 3 ("header text green"). */
   --yak-ink-display: #22251e;
-  /* Ethan: a warm grey for surfaces that need the user's attention; the lightest in its
-     family where cream text still clears 4.5:1 (#8a8a85 was softer but 3.2:1). */
-  --yak-slate: #62625d;
+  /* Ethan: warm greys for surfaces that need the user's attention (ADR-046). */
+  --yak-stone: #8a8a85; /* light mode */
+  --yak-stone-light: #cbcac4; /* light mode: tiles, darker than the user's bubbles */
+  --yak-slate: #62625d; /* dark mode: the lightest grey where cream text clears 4.5:1 */
 
   /* Semantic tokens: the only colours components use. */
   --bg: var(--yak-paper);
@@ -61,13 +62,23 @@
   --warn-bg: #f4ecd9; /* derived: warm notice, harmonised with the paper */
   --warn-ink: #66511f; /* derived */
   --record: #b8432c; /* derived: recording dot */
-  /* A strong surface for what needs attention (the recap, "Needs you"), and its text. */
-  --surface-strong: var(--yak-slate); /* 5.8:1 against paper */
-  --on-strong: var(--yak-cream); /* 5.6:1 */
-  --on-strong-muted: color-mix(in srgb, var(--yak-cream) 90%, var(--yak-slate)); /* 4.9:1; 5.8:1 on hover */
-  /* Ethan: hover on dark surfaces only (light surfaces keep --wash); cream 9.4:1 on it. */
-  --on-strong-wash: var(--yak-sage);
-  --on-strong-line: color-mix(in srgb, var(--yak-cream) 14%, var(--yak-slate)); /* edge */
+  /* The strong surface for what needs attention (the recap, "Needs you", ADR-042/046), its
+     text, and the tiles on it. Light mode: a mid grey with the darkest ink, since even the
+     regular ink is 4.4:1 on it, and light tiles; hovers lighten, as on every light surface. */
+  --surface-strong: var(--yak-stone);
+  --on-strong: var(--yak-night); /* 5.4:1 */
+  --on-strong-muted: var(--yak-night); /* nothing lighter clears 4.5:1 on this grey */
+  --on-strong-wash: color-mix(in srgb, var(--yak-cream) 15%, var(--yak-stone)); /* 6.6:1 */
+  --on-strong-line: color-mix(in srgb, var(--yak-night) 55%, var(--yak-stone));
+  --on-strong-focus: var(--yak-night); /* 5.4:1 on the surface, 11:1 on a tile */
+  --on-strong-inverse: var(--yak-cream); /* text on a filled action: 17:1 on night */
+  --tile-bg: var(--yak-stone-light);
+  --tile-ink: var(--yak-ink); /* 9.3:1 */
+  --tile-muted: color-mix(in srgb, var(--yak-ink) 80%, var(--yak-stone-light)); /* 5.8:1 */
+  --tile-wash: color-mix(in srgb, var(--yak-cream) 30%, var(--yak-stone-light)); /* hover */
+  --tile-field-bg: transparent;
+  --tile-field-border: color-mix(in srgb, var(--yak-ink) 55%, var(--yak-stone-light)); /* 3.1:1 */
+  --tile-field-placeholder: color-mix(in srgb, var(--yak-ink) 72%, var(--yak-stone-light)); /* 4.7:1 */
 
   --radius: 14px;
   --space: 24px;
@@ -188,6 +199,25 @@ button:hover {
   }
 }
 
+/* Dark mode (ADR-046): only the attention surfaces are themed so far. The dark card that
+   was tried in light mode is kept here: cream text, deeper tiles, and sage hovers. */
+:root[data-theme="dark"] {
+  --surface-strong: var(--yak-slate);
+  --on-strong: var(--yak-cream); /* 5.6:1 */
+  --on-strong-muted: color-mix(in srgb, var(--yak-cream) 90%, var(--yak-slate)); /* 4.9:1 */
+  --on-strong-wash: var(--yak-sage); /* Ethan: hover on dark surfaces; cream 9.4:1 */
+  --on-strong-line: color-mix(in srgb, var(--yak-cream) 14%, var(--yak-slate));
+  --on-strong-focus: var(--yak-cream);
+  --on-strong-inverse: var(--yak-slate); /* 5.6:1 on cream */
+  --tile-bg: color-mix(in srgb, var(--yak-night) 18%, var(--yak-slate)); /* cream 7.0:1 */
+  --tile-ink: var(--yak-cream);
+  --tile-muted: color-mix(in srgb, var(--yak-cream) 90%, var(--yak-slate)); /* 6.1:1 */
+  --tile-wash: var(--yak-sage);
+  --tile-field-bg: color-mix(in srgb, var(--yak-night) 12%, var(--yak-slate));
+  --tile-field-border: color-mix(in srgb, var(--yak-cream) 60%, var(--yak-slate));
+  --tile-field-placeholder: color-mix(in srgb, var(--yak-cream) 75%, var(--yak-slate));
+}
+
 /* The strong surface for what needs attention (ADR-042). It redefines the text tokens, so
    everything inside adapts without colours of its own. */
 .surface-strong {
@@ -196,16 +226,23 @@ button:hover {
   --muted: var(--on-strong-muted);
   --wash: var(--on-strong-wash);
   --line: var(--on-strong-line);
-  --focus: var(--on-strong); /* the page ring is 1.8:1 here, under the 3:1 a ring needs */
+  --focus: var(--on-strong-focus);
   background: var(--surface-strong);
   color: var(--ink);
 }
-/* A faint recessed fill keeps a placeholder visibly greyer than body text and still above
-   4.5:1 on the strong surface. */
+/* A tile on the strong surface: its own fill and text, so choices stand apart by colour. */
+.surface-strong .tile {
+  --ink: var(--tile-ink);
+  --text-body: var(--tile-ink);
+  --muted: var(--tile-muted);
+  --wash: var(--tile-wash);
+  background: var(--tile-bg);
+  color: var(--ink);
+}
 .surface-strong .field {
-  --field-bg: color-mix(in srgb, var(--yak-night) 12%, var(--surface-strong));
-  --field-border: color-mix(in srgb, var(--on-strong) 60%, var(--surface-strong)); /* 3.2:1 */
-  --field-placeholder: color-mix(in srgb, var(--on-strong) 75%, var(--surface-strong)); /* 4.6:1 */
+  --field-bg: var(--tile-field-bg);
+  --field-border: var(--tile-field-border);
+  --field-placeholder: var(--tile-field-placeholder);
 }
 
 /* Compact size for buttons inside cards and dialogs. */

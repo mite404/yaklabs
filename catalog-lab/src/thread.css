@@ -350,7 +350,6 @@
 /* "Needs you" (ADR-039, ADR-045): numbered tiles on the strong surface, a Skip and Submit
    pair, and a header that folds the card to one line. Everything lines up on a 12px inset. */
 .awaiting {
-  --tile-bg: color-mix(in srgb, var(--yak-night) 18%, var(--surface-strong)); /* cream 7.0:1 */
   padding: 4px 12px 12px;
 }
 .awaiting:not([data-open]) {
@@ -422,7 +421,6 @@
   padding: 8px;
   border: none;
   border-radius: 4px;
-  background: var(--tile-bg);
   text-align: left;
   font-size: 13px;
   line-height: 1.45;
@@ -459,7 +457,7 @@
 .awaiting-tile[data-selected] .awaiting-key {
   border-color: var(--ink);
   background: var(--ink);
-  color: var(--surface-strong);
+  color: var(--tile-bg);
   font-weight: 600;
 }
 .awaiting-option,
@@ -511,7 +509,7 @@
 .awaiting-submit {
   border-color: var(--ink);
   background: var(--ink);
-  color: var(--surface-strong);
+  color: var(--on-strong-inverse);
 }
 .awaiting-submit:hover {
   background: var(--ink);
