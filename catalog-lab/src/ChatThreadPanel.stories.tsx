@@ -47,8 +47,8 @@ export const AwaitingInputNarrow: Story = {
 };
 
 /** A malformed question never becomes a card (ADR-040): the error goes back to the agent,
- *  which streams a plain ask instead. Here the way out was written into the 60-character
- *  typed-answer row. */
+ *  which streams a plain ask instead. Here the way out was written into the one-line
+ *  typed-answer row, where it would not fit. */
 export const AwaitingInputMalformed: Story = { args: { thread: threads.malformed } };
 
 /** Only 4 minutes idle: no recap yet. */

@@ -200,8 +200,8 @@ export const threads: Record<string, Thread> = {
       elsewhere: "Chat about a plan to capture a different selection of sales data",
     },
   },
-  /** The same question, malformed: the way out was written into the 60-character typed-answer
-   *  row, so there is no card; the agent asks in plain words instead (ADR-040). */
+  /** The same question, malformed: the way out was written into the one-line typed-answer
+   *  row, too long to fit, so there is no card; the agent asks in plain words (ADR-040). */
   malformed: {
     ...fallbacks,
     awaiting: {

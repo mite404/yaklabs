@@ -1,6 +1,26 @@
 import { z } from "zod";
 
-const text = z.string().trim().min(1).max(160);
+// Limits come from the narrow (420px) card, measured at 1x: about 48 characters per line of
+// text, and 43 in the one-line typed-answer field. Up to four rows only look considered if
+// each stays this short; anything longer means the agent should ask in the thread (ADR-040).
+const LINE_CHARS = 48;
+const INPUT_CHARS = 40;
+const MAX_SENTENCES = 2;
+// Two short sentences: about three narrow lines.
+const SHORT_TEXT_CHARS = 120;
+
+// Sentence ends: terminal punctuation followed by a space or the end of the text.
+function sentenceCount(value: string): number {
+  return value.match(/[.!?]+(?=\s|$)/g)?.length ?? 1;
+}
+
+const oneLine = z.string().trim().min(1).max(LINE_CHARS);
+const shortText = z
+  .string()
+  .trim()
+  .min(1)
+  .max(SHORT_TEXT_CHARS)
+  .refine((value) => sentenceCount(value) <= MAX_SENTENCES, "Use at most two short sentences");
 
 /**
  * A question the agent is blocked on (ADR-039). The agent supplies the question, the branches
@@ -10,18 +30,18 @@ const text = z.string().trim().min(1).max(160);
  * Each row asks something different, so the card never asks "what do you want?" twice.
  */
 export const awaitingSchema = z.strictObject({
-  question: text,
+  question: shortText,
   options: z
     .array(
       z.strictObject({
-        label: z.string().trim().min(1).max(60),
-        detail: text.optional(),
+        label: oneLine,
+        detail: shortText.optional(),
       }),
     )
     .min(1)
     .max(4),
-  answer: z.strictObject({ placeholder: z.string().trim().min(1).max(60) }),
-  elsewhere: z.string().trim().min(1).max(80).optional(),
+  answer: z.strictObject({ placeholder: z.string().trim().min(1).max(INPUT_CHARS) }),
+  elsewhere: shortText.optional(),
 });
 
 /** A validated question the agent is waiting on. */
