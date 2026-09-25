@@ -300,3 +300,8 @@ The tokens are named `--bubble-*` so the tint cannot be reused elsewhere by acci
 The app's surface (the thread panel, its cards, and the compose box) uses `#f0efea`, yaklabs.ai's page background, and the window around the app takes the lighter step it used to have (`#f8f8f6`), so Kay reads as the same material as the website.
 Text contrast is now measured against `#f0efea`, the darker of the two; everything still passes, with the grey focus ring the closest at 3.0:1.
 
+## ADR-049 - Adopt yaklabs.ai's token names and contrast pattern
+
+2026-09-25 - Accepted.
+The core tokens now use the site's own names and values, read from its stylesheet: `--paper`, `--paper-deep`, `--ink`, `--soft-ink`, `--rule` (ink at 72%), `--hairline` (ink at 25%), `--blue`, `--sage`, `--chalk`, `--moss`, `--rust`; colours the site does not declare keep a `--yak-` prefix so their origin stays visible.
+The contrast pattern follows the site too: two text inks (headings `--ink`, everything else `--soft-ink`), two line weights (`--rule` for outlines, `--hairline` for borders), `--paper-deep` for hover and inset fills, and `--blue` text selection; this retires our `--muted`, `--line`, `--wash`, and `--text-body`, and corrects `--rule`, which we had at 21%.

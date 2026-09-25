@@ -37,7 +37,12 @@ The photo greens (`#161d17` to `#3d423b`) are for depth, overlays, and hover fil
 
 ### 6. Every colour goes through a semantic token
 
-Components use only semantic tokens (`--ink`, `--text-body`, `--muted`, `--line`, `--accent`, `--accent-soft`, `--btn-*`), never raw hex.
+Components use only named tokens, never raw hex. The core set uses yaklabs.ai's own names and values (`--paper`, `--paper-deep`, `--ink`, `--soft-ink`, `--rule`, `--hairline`, `--blue`, `--sage`, `--chalk`, `--moss`, `--rust`); colours the site does not declare carry a `--yak-` prefix, and roles such as `--accent`, `--bubble-*`, and `--btn-*` are built on top.
+
+### The site's contrast pattern: two inks, two lines
+
+yaklabs.ai uses two text inks and two line weights, and nothing else: `--ink` for headings (13.3:1 on paper), `--soft-ink` for body and all secondary text (7.7:1), `--rule` (ink at 72%) for strong lines and outlines (5.7:1), and `--hairline` (ink at 25%) for borders and dividers.
+We follow it exactly; a field's placeholder takes the rule's ink, one step greyer than body text, and text selection is `--blue` with ink, as on the site.
 The raw palette (`--yak-*`) exists only to feed the semantic layer, so rebranding is a one-block edit.
 
 ## Typography
@@ -143,7 +148,7 @@ Its placeholder is greyer than any statement around it, because a placeholder as
 | Border | 1px, ink at 0.72 (as the button) | css |
 | Corners | 4px | css |
 | Padding | 5px × 10px, 13px text | derived |
-| Placeholder (paper) | `--muted`, 5.7:1 | derived |
+| Placeholder (paper) | `--rule` (ink at 72%), 5.7:1 | css |
 | Placeholder (strong) | 75% cream on a 12% night fill, 4.6:1 | derived |
 | Border (strong) | 60% cream, 3.2:1 | derived |
 | Hover and focus | border to full ink; focus adds the 2px ring | derived |

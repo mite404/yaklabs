@@ -43,6 +43,8 @@ Nothing is built yet, so the cast is the set of ideas the prototypes will be mad
 
 - **Choose, then confirm.** The "Needs you" card used to send the moment a row was clicked. Now a click, number, or arrow only selects (the number fills in), and Enter or Submit sends, with Skip beside it, the way Claude and Amp ask questions. The header folds the card to one line so the thread above stays readable (ADR-045).
 
+- **Speak the site's language.** Our tokens now carry yaklabs.ai's own names and values (`--paper`, `--ink`, `--soft-ink`, `--rule`, `--hairline`, ...), read straight from its stylesheet, and follow its pattern of two inks and two line weights. Anything the site doesn't declare is prefixed `--yak-`, so you can tell at a glance what is theirs and what is ours (ADR-049).
+
 ## 4. Bloopers
 
 - **The docs were behind a locked door.** The environment's network policy blocked docs.meetkay.ai, so Kay's vocabulary was reconstructed from search snippets and Ramp's Glass. Everything inferred is labeled; verify before the interview.
@@ -63,6 +65,8 @@ Nothing is built yet, so the cast is the set of ideas the prototypes will be mad
 - **The 20px that was really 16.** The last card was meant to rest 20px above the compose box but measured 16 to 20px, because the thread scrolled to its end before the charts and fonts finished sizing, then stopped a few pixels short. Fix: while the thread is at its end, it stays there as content settles, and the padding subtracts the compose row's 4px inset so the visible gap is exactly 20px. Lesson: measure the resting state after everything has loaded, not the frame after mount.
 
 - **The question that vanished.** Writing "Chat about a plan to capture a different selection of sales data" into the typed-answer row broke the card: at 64 characters it passed the row's 60-character limit, so the strict schema dropped the whole question, as designed. It was also in the wrong row, which made rows 2 and 3 both ask "what do you want to chat about?". Fix: the way out got its own agent-worded field (`elsewhere`), and row 2 became a concrete question ("How many weeks ahead should it forecast?"). Lesson: fail-closed means a small content slip hides the whole card, so every row needs one clear job and a field of its own, and the rejection must go somewhere: back to the agent, which then asks in plain words (ADR-040).
+
+- **The network block that wasn't.** A handoff note said yaklabs.ai was blocked, and it was repeated as fact until Ethan pointed out the environment had full network access. It did; the note was from an older environment. Reading the real stylesheet then showed three of our labels were wrong, including a "css" 0.72 text step that the site only uses for lines. Lesson: re-verify inherited facts before building on them, especially ones that stop you from checking the source.
 
 ## 5. Director's Commentary
 
