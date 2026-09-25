@@ -112,7 +112,7 @@ Suggestions offer "Not now" and "Don't suggest this" and are frequency-capped; t
 
 ## ADR-018 - "Previously on": a recap when the user returns
 
-2026-09-25 - Accepted.
+2026-09-25 - Superseded by ADR-027.
 After time away (time since last input plus the window losing and regaining focus), a short outcomes-first recap of the last runs appears above the compose box, rendered from recorded events with links to evidence (ADR-005/006), inspired by Amp.
 It overlays the conversation without moving the input (ADR-003) and collapses into a "Recap" chip as soon as the user types.
 
@@ -157,3 +157,15 @@ This answers "can the goal be reached without A2UI?" with yes, and makes every f
 2026-09-25 - Accepted.
 The thread background stays dominant; the user's message is a soft tinted surface on top of it, right-aligned at up to 85% width with a hairline border and the time below, so it is recognised as "you" by shape and position rather than heavy contrast.
 A full-width dark treatment was tried and read as a section header; findability when scrolling back comes from the scrollbar map (ADR-022), and the question being answered still stays pinned at the top while scrolling a long answer.
+
+## ADR-026 - One compose box everywhere: attach left, dictate and send right
+
+2026-09-25 - Accepted.
+Every chat compose field is the shared `ComposeBox`: a paperclip attach button on the far left, and a microphone for dictation directly left of the send button.
+It floats directly under the conversation with no divider line above it, and keeps a fixed height so typing never moves it (ADR-003).
+
+## ADR-027 - Recap after ten idle minutes on an active thread
+
+2026-09-25 - Accepted.
+When a thread is still active and the user has sent nothing for 10 minutes or more, a recap of recorded outcomes appears above the compose box, "Needs you" items first, each jumping to its evidence turn (ADR-005/006, ADR-022), inspired by Amp's recap.
+It overlays the conversation without moving the input, collapses to a chip while the user types, stays dismissed for the current idle stretch, and uses no decorative ribbon or badge.
