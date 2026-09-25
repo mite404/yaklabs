@@ -88,7 +88,7 @@ Around 100ms reads as instant, around 150 to 200ms reads as a soft arrival, and 
 ### 10. Bars are flat
 
 Bars are one flat data colour with the button's 4px top corners; the darker eased base they used to have did not work with the colour scheme and was removed (ADR-055).
-Which colour the bars use is still open (see Open questions).
+Chart marks and their legend keys are graphite `#56564f` (6.4:1 on paper), a warm neutral, so green stays for button hovers (ADR-058).
 
 ### 12. Cards come to rest 20px above the compose box
 
@@ -144,7 +144,7 @@ The tokens are named `--bubble-tint`, `--bubble-tint-strong`, and `--bubble-line
 
 ## Open questions
 
-- The bar colour: candidates are `#56564f` (6.4:1 on paper), `#252525` (13.3:1, reads as black), and `#c7cfba` (1.4:1, under the 3:1 a chart mark needs, and reserved for the user's bubble by pillar 15). Green is meant only for button hovers, which also rules out the current olive.
+- Whether the stepped slider, dictation controls, links and the primary button should move from olive to ink, so green only appears on button hovers.
 
 - Rules 2 and 3 (and the display ink `#22251e`) rest on how the tint looked on a screen with a blue-light filter, which warms dark neutrals: re-check them with the filter off.
 - Ethan's warm greys (`#8a8a85`, `#cbcac4`) were picked on the same screen: keep them as deliberate choices, or re-pick them with the filter off.

@@ -351,3 +351,9 @@ The compose box uses `#f8f8f6` (`--compose-bg`), one step brighter than the app'
 yaklabs.ai loads a shared stylesheet, `/brand.css`, whose `--soft-ink` is `#565650`, while its pages override it (`#4a4a47` inline on the homepage, `#5c5c57` on meetkay.ai's careers page); secondary text adopts the brand file's value (6.4:1 on paper).
 Only this token changed; the brand file's other small differences (`--hairline` at 24%, no `--rust`) are left as they are.
 
+## ADR-058 - Chart marks are neutral graphite
+
+2026-09-25 - Accepted; completes ADR-055.
+Bars, lines and legend keys use `#56564f` (`--yak-graphite`, Ethan's pick; 6.4:1 on paper), so green stays reserved for button hovers; `#252525` read as black and `#c7cfba` failed the 3:1 a chart mark needs and belongs to the user's bubble.
+The stepped slider stays olive for now, pending a decision on moving it to ink.
+
