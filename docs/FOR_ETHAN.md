@@ -34,6 +34,8 @@ Nothing is built yet, so the cast is the set of ideas the prototypes will be mad
 
 - **The screenshots that looked like a phone.** Review captures were taken at 2x pixel density, tightly cropped around a 707px panel, so a desktop column read as a mobile app. They also hid a real bug: a fixed 720px panel height clipped the compose box in Storybook's preview. Lesson: judge UI at 1x, in a realistic window (1440x900), with its surroundings visible, because scale is only legible in context.
 
+- **Two tapes labelled "recap" and "RECAP".** `recap.ts` (rules) and `Recap.tsx` (component) sat in one folder. Linux treats them as different files, so every check passed in the cloud container; macOS ignores letter case by default, so `import "./Recap"` found `recap.ts` first and Storybook broke on Ethan's machine. Fix: rename to `recapRules.ts`, plus a test that fails if two modules ever differ only by case. Lesson: never let file names differ only by capitalization, and turn a bug into a guard, not just a fix.
+
 ## 5. Director's Commentary
 
 ### The agent only states intent; the design system does the rest
