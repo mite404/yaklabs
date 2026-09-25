@@ -33,6 +33,8 @@ Nothing is built yet, so the cast is the set of ideas the prototypes will be mad
 - **Nudge, don't center.** Centering an opened card (ADR-037) moved the frame even when nothing was hidden, and every component had to remember to ask for it. Now the thread only moves when a card would be clipped, and only far enough to rest 20px above the compose box, the same line the last card rests on (ADR-038).
 - **The recap reports; it never asks.** A "Needs you" line inside the recap mixed two jobs, "here is what happened" and "I need a decision", and hid the decision behind ten idle minutes. A blocked agent now asks right away in its own card, with numbered choices and a "Chat about something else" exit, and the recap goes back to reporting (ADR-039).
 
+- **A malformed question is the agent's problem to fix, not the user's to see.** When the card's check rejects a question, the error goes back to the agent, and the agent simply asks in plain words, streamed like any reply. The card either shows complete or not at all, and the user never reads a validation error (ADR-040).
+
 ## 4. Bloopers
 
 - **The docs were behind a locked door.** The environment's network policy blocked docs.meetkay.ai, so Kay's vocabulary was reconstructed from search snippets and Ramp's Glass. Everything inferred is labeled; verify before the interview.
@@ -52,7 +54,7 @@ Nothing is built yet, so the cast is the set of ideas the prototypes will be mad
 
 - **The 20px that was really 16.** The last card was meant to rest 20px above the compose box but measured 16 to 20px, because the thread scrolled to its end before the charts and fonts finished sizing, then stopped a few pixels short. Fix: while the thread is at its end, it stays there as content settles, and the padding subtracts the compose row's 4px inset so the visible gap is exactly 20px. Lesson: measure the resting state after everything has loaded, not the frame after mount.
 
-- **The question that vanished.** Writing "Chat about a plan to capture a different selection of sales data" into the typed-answer row broke the card: at 64 characters it passed the row's 60-character limit, so the strict schema dropped the whole question, as designed. It was also in the wrong row, which made rows 2 and 3 both ask "what do you want to chat about?". Fix: the way out got its own agent-worded field (`elsewhere`), and row 2 became a concrete question ("How many weeks ahead should it forecast?"). Lesson: fail-closed means a small content slip hides the whole card, so every row needs one clear job and a field of its own.
+- **The question that vanished.** Writing "Chat about a plan to capture a different selection of sales data" into the typed-answer row broke the card: at 64 characters it passed the row's 60-character limit, so the strict schema dropped the whole question, as designed. It was also in the wrong row, which made rows 2 and 3 both ask "what do you want to chat about?". Fix: the way out got its own agent-worded field (`elsewhere`), and row 2 became a concrete question ("How many weeks ahead should it forecast?"). Lesson: fail-closed means a small content slip hides the whole card, so every row needs one clear job and a field of its own, and the rejection must go somewhere: back to the agent, which then asks in plain words (ADR-040).
 
 ## 5. Director's Commentary
 
@@ -256,7 +258,8 @@ export const awaitingSchema = z.strictObject({
 flowchart TD
   A[Agent] -->|blocked on the user| Q{awaitingSchema}
   Q -->|valid| N["Needs you card<br/>1 branch · 2 concrete question · 3 the way out"]
-  Q -->|invalid| X[dropped, nothing half-shown]
+  Q -->|malformed| E[error goes back to the agent, never to the user]
+  E --> S[agent streams a plain ask in the thread]
   A -->|work recorded| R[Recap: outcomes only, after 10 idle minutes]
   N -->|while open| H[recap waits]
 ```

@@ -243,3 +243,9 @@ The thread panel enforces this for every component by watching each turn grow ri
 When the agent is blocked on the user, it emits a validated question (zod, fails closed) that floats above the compose box as a "Needs you" card with numbered choices after Claude Code's question prompt: the agent's branches, one concrete question answered by typing right in the card, and a way out that the agent may word for the moment ("Chat about a plan to ...") and the host otherwise fills with "Chat about something else", with keys 1 to N and no close button.
 Each row asks something different, so the card never asks "what do you want to talk about?" twice.
 The recap only reports what happened and never asks for anything, and the question shows as soon as the agent is blocked rather than after idle time, because being blocked is not an idle state; while a question is open, it takes the recap's place.
+
+## ADR-040 - A malformed question goes back to the agent, never to the user
+
+2026-09-25 - Accepted.
+A question that fails the schema never becomes a card, not even part of one, and the user never sees the error: the validation error goes back to the agent, which asks for what it needs in an ordinary streamed reply, so a blocked agent is never silently stuck.
+A bad question (irrelevant, or offering a path that makes no sense) should never be asked at all, which is the model's and the prompt's job; the schema only guards shape, and generation should be constrained to the same schema so a malformed one is rare.
