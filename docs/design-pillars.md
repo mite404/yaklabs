@@ -2,7 +2,8 @@
 
 Rules for building on-brand surfaces for Kay, reverse-engineered from yaklabs.ai and refined through prototyping.
 Each rule states what to do, then why.
-Sources are marked: **css** (declared in yaklabs.ai's stylesheet), **measured** (sampled from screenshots or recordings), **derived** (our choice), **estimated** (a guess awaiting a measurement).
+Sources are marked: **css** (declared in yaklabs.ai's stylesheet), **derived** (our choice), **Ethan** (Ethan's pick), **estimated** (a guess awaiting confirmation).
+No brand colour is sampled from screenshots or recordings: the screen used had a blue-light filter, and filters and colour profiles shift pixels (ADR-051).
 Decisions behind these rules live in `docs/adr/adr.md` (ADR-033 to ADR-035); tokens live in `catalog-lab/src/tokens.css`.
 
 ## Colour
@@ -33,7 +34,7 @@ Implement steps as solid colours (`color-mix`), not transparency, so text stays 
 ### 5. Green comes from one hue family
 
 The only green declared in the site's CSS is the sage `#c7cfba` (hue 124°); the UI accent `#515e38` is derived on that same hue so buttons, charts, chips, and bubbles read as one family.
-The photo greens (`#161d17` to `#3d423b`) are for depth, overlays, and hover fills, not for flat accents: at their darkness they read as black.
+Darker greens are mixed from the declared near-black green `#111411` rather than picked from the hero photo.
 
 ### 6. Every colour goes through a semantic token
 
@@ -67,7 +68,7 @@ At rest a button is only an outline; on hover the fill and text colour change ov
 | Rest fill | transparent | css |
 | Rest outline | 1px, ink at 0.72 (`rgba(37, 37, 36, 0.72)`) | css |
 | Rest text | ink `#252524` | css |
-| Hover fill | `#242b24` forest | measured (hover recording) |
+| Hover fill | `#111411` near-black green | css-declared colour; the hover rule itself is unconfirmed |
 | Hover text | off-white `#f0efea` | css |
 | Transition | `background-color 0.15s, color 0.15s` (border not animated) | css |
 | Easing | `ease` (the default) | css |
@@ -87,7 +88,7 @@ Around 100ms reads as instant, around 150 to 200ms reads as a soft arrival, and 
 
 Bars stay the data colour (olive `#515e38`) for most of their height and deepen over the bottom 20px to the olive-tinted display ink `#22251e`, like a soft shadow where they meet the axis.
 The band is a fixed 20px on every bar, not a percentage, so tall and short bars are grounded identically; bars shorter than 20px fade over their full height.
-The dark end uses the display ink rather than a photo green so the gradient stays in one hue family (OKLCH 124°).
+The dark end uses the display ink so the gradient stays in one hue family (OKLCH 124°).
 The shade follows an ease-in-out curve (rule 11), so the band has no visible top edge.
 
 | Property | Value | Source |
@@ -122,19 +123,19 @@ The gap is the token `--rest-gap`; the thread's bottom padding subtracts the com
 ### 13. Attention gets the strong surface (light and dark)
 
 The thread's cards all sit on light paper, so anything that needs the user (the recap, a "Needs you" question) uses the strong surface, a warm grey, and stands apart without a badge or a colour of alarm.
-It is the lightest grey in its family where cream text still clears 4.5:1: softer greys either fail with light text or look disabled with dark text.
-Text on it is cream; muted text is cream mixed 90% with the surface, and hover darkens the row to sage `#3d423b` instead of lightening it; light surfaces keep their lighter hover.
-Brand olive disappears on it, so actions on the strong surface invert to cream instead.
+It is the lightest grey in its family where paper-coloured text still clears 4.5:1: softer greys either fail with light text or look disabled with dark text.
+Text on it is the paper colour; muted text is paper mixed 90% with the surface, and hover darkens the row halfway to the night green instead of lightening it; light surfaces keep their lighter hover.
+Brand olive disappears on it, so actions on the strong surface invert to paper instead.
 
 | Property | Value | Source |
 | --- | --- | --- |
 | Surface (light) | `--surface-strong` (`#8a8a85`) | Ethan |
 | Text (light) | `--on-strong` (`#111411`), 5.4:1 | derived |
 | Tiles (light) | `--tile-bg` (`#cbcac4`), ink 9.3:1, details 5.8:1 | Ethan |
-| Hover (light) | lightens: 15% cream on the surface, 30% on tiles | derived |
-| Surface (dark) | `#62625d`, cream text 5.6:1 | Ethan |
-| Tiles (dark) | 18% night on the surface, cream 7.0:1 | derived |
-| Hover (dark) | sage `#3d423b`, cream 9.4:1 | Ethan |
+| Hover (light) | lightens: 15% paper on the surface, 30% on tiles | derived |
+| Surface (dark) | `#62625d`, paper text 5.3:1 | Ethan |
+| Tiles (dark) | 18% night on the surface, paper 6.6:1 | derived |
+| Hover (dark) | 50% night on the surface (`#3a3b37`), paper 9.8:1 | derived |
 
 ## Inputs
 
@@ -149,8 +150,8 @@ Its placeholder is greyer than any statement around it, because a placeholder as
 | Corners | 4px | css |
 | Padding | 5px × 10px, 13px text | derived |
 | Placeholder (paper) | `--rule` (ink at 72%), 5.7:1 | css |
-| Placeholder (strong) | 75% cream on a 12% night fill, 4.6:1 | derived |
-| Border (strong) | 60% cream, 3.2:1 | derived |
+| Placeholder (strong) | 78% paper on a 12% night fill, 4.6:1 | derived |
+| Border (strong) | 60% paper, 3.5:1 | derived |
 | Hover and focus | border to full ink; focus adds the 2px ring | derived |
 
 ### 15. The sage tint means "you"
@@ -160,5 +161,7 @@ The tokens are named `--bubble-tint`, `--bubble-tint-strong`, and `--bubble-line
 
 ## Open questions
 
-- The hover rule itself (it did not print): confirm the fill `#242b24` and that the border really stays unchanged on hover.
+- The hover rule itself (it did not print): confirm the fill (currently the declared `#111411`) and that the border really stays unchanged on hover.
+- Rules 2 and 3 (and the display ink `#22251e`) rest on how the tint looked on a screen with a blue-light filter, which warms dark neutrals: re-check them with the filter off.
+- Ethan's warm greys (`#8a8a85`, `#cbcac4`) were picked on the same screen: keep them as deliberate choices, or re-pick them with the filter off.
 - Where the declared `#111411` near-black green is used (likely the hero background) and where the declared soft blue `#95aac8` appears.

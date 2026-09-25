@@ -68,6 +68,8 @@ Nothing is built yet, so the cast is the set of ideas the prototypes will be mad
 
 - **The network block that wasn't.** A handoff note said yaklabs.ai was blocked, and it was repeated as fact until Ethan pointed out the environment had full network access. It did; the note was from an older environment. Reading the real stylesheet then showed three of our labels were wrong, including a "css" 0.72 text step that the site only uses for lines. Lesson: re-verify inherited facts before building on them, especially ones that stop you from checking the source.
 
+- **Colour-grading the reference.** Several brand colours were picked from screenshots and a screen recording taken on a display with a blue-light filter, which warms everything like a tungsten gel over the lens. The CSS values were fine, but the hero greens, the cream and the button's hover fill were measured through the gel. Fix: drop every pixel-sampled brand colour and keep only what the stylesheet declares (ADR-051). Lesson: sample from the source file, never from the monitor; a colourist never trusts a reference frame shot through a filter.
+
 ## 5. Director's Commentary
 
 ### The agent only states intent; the design system does the rest
