@@ -139,3 +139,9 @@ While scrolling through a long answer, the question it answers stays pinned at t
 2026-09-25 - Accepted.
 Each turn is a marker on the scrollbar; hover shows the request and a turn summary built from recorded events (ADR-005), and clicking jumps so the user's message lands vertically centered every time (eye trace), inspired by Zed's Delta.
 Markers are coloured by kind (user message, outcome, waiting on you), have generous hit targets, and support bookmarking.
+
+## ADR-023 - Catalog cards size to their panel, not the screen
+
+2026-09-25 - Accepted.
+Catalog components live inside a chat thread whose width depends on split panes, so they use container queries with three densities: compact (under ~480px), standard (~480-720px), and expanded (opened in the side pane).
+Inside a thread, cards drop page-level framing (no repeated question, no large headings), offer "Open in pane" for exploration, and reserve their final height before rendering so the conversation never jumps (ADR-003).
