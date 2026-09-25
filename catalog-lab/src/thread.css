@@ -53,23 +53,27 @@
   line-height: 1.6;
 }
 
-/* High-contrast user turn: a landmark when scrolling back (ADR-021). */
+/* The user's turn is a tinted surface resting on the thread background: recognisable
+   as "you" by shape and position (right-aligned bubble), not by heavy contrast (ADR-025). */
 .turn-user {
-  display: flex;
-  gap: 12px;
-  align-items: baseline;
-  background: var(--ink);
-  color: #f7f8f5;
-  border-radius: 10px;
-  padding: 12px 14px;
+  align-self: flex-end;
+  max-width: 85%;
+  display: grid;
+  justify-items: end;
+  gap: 4px;
 }
 .turn-user p {
-  flex: 1;
+  background: linear-gradient(135deg, #f1f6f0, #e6efe7);
+  border: 1px solid #d6e3d8;
+  border-radius: 12px;
+  padding: 10px 14px;
+  color: var(--ink);
 }
 .turn-user time {
   font-size: 11px;
-  color: #b9c7c1;
+  color: var(--muted);
   font-variant-numeric: tabular-nums;
+  padding-right: 4px;
 }
 
 .turn-agent {
