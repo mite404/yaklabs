@@ -1,0 +1,185 @@
+import { useState } from "react";
+import {
+  ResponsiveContainer,
+  LineChart as RechartsLineChart,
+  Line,
+  BarChart as RechartsBarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+} from "recharts";
+import { resolve, type DataProps, type Selection } from "./catalog";
+
+function DataTable({ props }: { props: DataProps }) {
+  return (
+    <div className="table-wrap">
+      <table>
+        <caption>
+          {props.title} · {props.unit}
+        </caption>
+        <thead>
+          <tr>
+            <th scope="col">Observation</th>
+            <th scope="col">Value ({props.unit})</th>
+          </tr>
+        </thead>
+        <tbody>
+          {props.rows.map((row, index) => (
+            <tr key={index}>
+              <th scope="row">{row.label}</th>
+              <td>
+                {row.value === null
+                  ? "Not recorded"
+                  : String(row.value)}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function Chart({ selection }: { selection: Selection }) {
+  const props = selection.props;
+  const axes = (
+    <>
+      <CartesianGrid vertical={false} stroke="var(--line)" />
+      <XAxis
+        dataKey="label"
+        tickLine={false}
+        axisLine={false}
+        tick={{ fill: "var(--muted)", fontSize: 12 }}
+      />
+      <YAxis
+        tickLine={false}
+        axisLine={false}
+        width={48}
+        tick={{ fill: "var(--muted)", fontSize: 12 }}
+      />
+      <Tooltip />
+    </>
+  );
+  return (
+    <div
+      className="chart"
+      role="img"
+      aria-label={`${props.title}. Values available in the data table.`}
+    >
+      <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+        {selection.component === "LineChart" ? (
+          <RechartsLineChart
+            data={props.rows}
+            margin={{ top: 20, right: 24, bottom: 10, left: 0 }}
+            accessibilityLayer
+          >
+            {axes}
+            <Line
+              dataKey="value"
+              name={props.unit}
+              type="linear"
+              stroke="var(--accent)"
+              strokeWidth={props.variant === "snapshot" ? 0 : 3}
+              dot={{ r: 4, fill: "var(--accent)", strokeWidth: 2 }}
+              connectNulls={false}
+              isAnimationActive={false}
+            />
+          </RechartsLineChart>
+        ) : (
+          <RechartsBarChart
+            data={props.rows}
+            margin={{ top: 20, right: 24, bottom: 10, left: 0 }}
+            accessibilityLayer
+          >
+            {axes}
+            <Bar
+              dataKey="value"
+              name={props.unit}
+              fill="var(--accent)"
+              radius={[4, 4, 0, 0]}
+              isAnimationActive={false}
+            />
+          </RechartsBarChart>
+        )}
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+/** The only entry point for agent-selected UI. All content passes the catalog boundary. */
+export function CatalogCard({ payload }: { payload: unknown }) {
+  const result = resolve(payload);
+  const [showTable, setShowTable] = useState(false);
+  if (result.kind === "rejected")
+    return (
+      <section className="card state">
+        <span className="state-symbol">↗</span>
+        <p className="eyebrow">CATALOG LIMIT</p>
+        <h2>We don’t have a safe view for this yet.</h2>
+        <p>{result.reason}</p>
+        <p>
+          Try an approved view, or capture the missing capability below. We
+          won’t substitute an unrelated chart.
+        </p>
+      </section>
+    );
+  if (result.kind === "empty")
+    return (
+      <section className="card state">
+        <span className="state-symbol">∅</span>
+        <p className="eyebrow">NO DATA</p>
+        <h2>{result.title}</h2>
+        <p>No observations were supplied. This is not a value of zero.</p>
+      </section>
+    );
+  const { selection } = result;
+  const { props } = selection;
+  return (
+    <section className="card">
+      <header className="card-heading">
+        <div>
+          <p className="eyebrow">
+            {selection.component} / {props.variant}
+          </p>
+          <h2>{props.title}</h2>
+        </div>
+        <span className="badge">Validated</span>
+      </header>
+      {result.kind === "fallback" && (
+        <p className="notice" role="status">
+          {result.reason}
+        </p>
+      )}
+      <div className="measure">
+        <span className="legend-dot" /> {props.unit}{" "}
+        <span className="muted">· supplied order</span>
+      </div>
+      {selection.component === "DataTable" || showTable ? (
+        <DataTable props={props} />
+      ) : (
+        <Chart selection={selection} />
+      )}
+      {props.rows.some((row) => row.value === null) && (
+        <p className="notice">
+          Missing observations remain gaps. No interpolation or zero-filling.
+        </p>
+      )}
+      <footer>
+        <span>
+          {props.source}
+          <br />
+          <span className="muted">
+            Source label supplied with data · not independently verified
+          </span>
+        </span>
+        {selection.component !== "DataTable" && (
+          <button onClick={() => setShowTable(!showTable)}>
+            {showTable ? "Show chart" : "View data table"} ↗
+          </button>
+        )}
+      </footer>
+    </section>
+  );
+}
