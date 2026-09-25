@@ -38,17 +38,12 @@ export const RecapAfterIdle: Story = {
   },
 };
 
-/** "Needs you" items lead the recap, ahead of completed work. */
-export const RecapNeedsYou: Story = {
-  args: {
-    thread: threads.fallbacks,
-    now: NOW,
-    activity: { active: true, lastUserInputAt: NOW - 25 * MINUTE },
-  },
-};
+/** The agent is blocked on a question (ADR-039): numbered choices above the compose box.
+ *  Pick the branch, type an answer in the card, or chat about something else. */
+export const AwaitingInput: Story = { args: { thread: threads.awaiting } };
 
-export const RecapNarrow: Story = {
-  args: { ...RecapNeedsYou.args, width: 420 },
+export const AwaitingInputNarrow: Story = {
+  args: { thread: threads.awaiting, width: 420 },
 };
 
 /** Only 4 minutes idle: no recap yet. */

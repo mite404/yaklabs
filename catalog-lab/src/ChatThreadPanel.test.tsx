@@ -25,3 +25,27 @@ it("keeps an interactive card's work collapsed until the user asks for it", () =
   expect(html).toContain('aria-expanded="false"');
   expect(html).not.toContain('class="work-steps"');
 });
+
+it("floats the agent's question above the compose box with numbered choices and no close button", () => {
+  const html = renderToStaticMarkup(<ChatThreadPanel thread={threads.awaiting} />);
+  expect(html).toContain('aria-label="Needs you"');
+  expect(html.match(/class="awaiting-key"/g)).toHaveLength(3);
+  expect(html).toContain("Request a forecast view");
+  expect(html).toContain('placeholder="Or tell me what to do instead"');
+  expect(html).toContain("Chat about something else");
+  expect(html).not.toContain("Dismiss");
+});
+
+it("never lets the recap ask for anything, even when the user has been away", () => {
+  const now = Date.UTC(2026, 8, 25, 9, 16);
+  const idle = { active: true, lastUserInputAt: now - 25 * 60_000 };
+  const blocked = renderToStaticMarkup(
+    <ChatThreadPanel thread={threads.awaiting} activity={idle} now={now} />,
+  );
+  expect(blocked).not.toContain('aria-label="Recap"');
+  const recap = renderToStaticMarkup(
+    <ChatThreadPanel thread={threads.fallbacks} activity={idle} now={now} />,
+  );
+  expect(recap).toContain('aria-label="Recap"');
+  expect(recap).not.toContain("Needs you");
+});

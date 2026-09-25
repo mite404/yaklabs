@@ -247,8 +247,9 @@
   cursor: default;
 }
 
-/* The dock overlay floats one card above the compose box: the recap (ADR-018). It shares
-   the scroll area's gutters so the card lines up with the conversation column. */
+/* The dock overlay floats one card above the compose box: the recap (ADR-018) or a
+   question the agent is waiting on (ADR-039). It shares the scroll area's gutters so the
+   card lines up with the conversation column. */
 .dock-overlay {
   position: absolute;
   left: 0;
@@ -260,18 +261,25 @@
   pointer-events: none;
 }
 .recap,
-.recap-chip {
+.recap-chip,
+.awaiting {
   pointer-events: auto;
   animation: recap-in 180ms ease-out;
 }
-.recap {
+/* A raised surface: the shadow lifts it off the conversation it overlays. */
+.recap,
+.awaiting {
   background: var(--paper);
   border: 1px solid var(--line);
   border-radius: 12px;
   box-shadow: 0 6px 20px var(--shadow-strong);
-  padding: 10px 8px 8px 14px;
+}
+.recap {
+  /* Rows carry their own 8px inset so their hover wash lines up with the header text. */
+  padding: 10px 8px 8px 6px;
 }
 .recap-header {
+  padding-left: 8px;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -306,10 +314,10 @@
 .recap li button {
   width: 100%;
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: baseline;
   gap: 10px;
-  padding: 7px 8px 7px 0;
+  padding: 7px 8px;
   border: none;
   border-radius: 8px;
   background: transparent;
@@ -319,22 +327,6 @@
 }
 .recap li button:hover {
   background: var(--wash);
-}
-.recap-kind {
-  font-size: 10px;
-  font-weight: 650;
-  letter-spacing: 0.4px;
-  border-radius: 20px;
-  padding: 2px 8px;
-  white-space: nowrap;
-}
-.recap-kind-done {
-  background: var(--accent-soft);
-  color: var(--accent-ink);
-}
-.recap-kind-needs-you {
-  background: var(--warn-bg);
-  color: var(--warn-ink);
 }
 .recap-go {
   color: var(--muted);
@@ -355,14 +347,108 @@
   box-shadow: 0 2px 8px var(--shadow);
   font-size: 12px;
 }
-.recap-count {
+/* "Needs you" (ADR-039): numbered choices after Claude Code's question prompt. Rows carry
+   an 8px inset so their hover wash frames the text, which aligns with the label above. */
+.awaiting {
+  padding: 12px 8px 8px 6px;
+}
+.awaiting-label {
+  display: inline-block;
+  margin: 0 0 8px 8px;
+  padding: 2px 8px;
+  border-radius: 20px;
   background: var(--warn-bg);
   color: var(--warn-ink);
-  border-radius: 10px;
-  padding: 0 6px;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 650;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
 }
+.awaiting-question {
+  margin: 0 8px 8px;
+  font-size: 14px;
+  font-weight: 550;
+  line-height: 1.45;
+  letter-spacing: 0;
+  color: var(--ink);
+}
+.awaiting-options {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 2px;
+}
+.awaiting-row {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+  padding: 7px 8px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  text-align: left;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--ink);
+}
+button.awaiting-row:hover,
+.awaiting-answer:focus-within {
+  background: var(--wash);
+}
+.awaiting-key {
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.awaiting-option,
+.awaiting-detail {
+  display: block;
+}
+.awaiting-option {
+  font-weight: 500;
+}
+.awaiting-detail {
+  color: var(--muted);
+}
+.awaiting-elsewhere {
+  font-weight: 400;
+  color: var(--muted);
+}
+/* The typed answer is a row like the others, not a boxed field, until it has focus. */
+.awaiting-answer input {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  font: inherit;
+  color: var(--ink);
+}
+.awaiting-answer input::placeholder {
+  color: var(--muted);
+}
+.awaiting-send {
+  align-self: center;
+  width: 24px;
+  height: 24px;
+  /* Overhangs the row's padding so the typed row is exactly as tall as the others. */
+  margin-block: -4px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: var(--accent);
+  color: var(--paper);
+  font-size: 13px;
+  line-height: 1;
+}
+.awaiting-send:disabled {
+  visibility: hidden;
+}
+
 @keyframes recap-in {
   from {
     opacity: 0;
@@ -387,6 +473,7 @@
   .context-chip,
   .recap,
   .recap-chip,
+  .awaiting,
   .turn[data-flash] {
     animation: none;
   }

@@ -28,6 +28,8 @@ export type Thread = {
   messages: ThreadMessage[];
   /** Structured outcomes recorded during the thread, shown after the user is away. */
   recap?: RecapItem[];
+  /** A question the agent is blocked on (ADR-039), validated before it is shown. */
+  awaiting?: unknown;
 };
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -79,6 +81,45 @@ export const profitCard = {
   },
 };
 
+// Edge cases: a single reading and a view the catalog does not have.
+const fallbacks: Thread = {
+  title: "Checking the edges",
+  messages: [
+    {
+      id: "u1",
+      role: "user",
+      time: "14:10",
+      text: scenarios.sparse.question,
+    },
+    {
+      id: "a1",
+      role: "agent",
+      time: "14:10",
+      text: "There is only one known reading, so I can't draw a trend honestly. Here are the exact values.",
+      payload: scenarios.sparse.payload,
+    },
+    {
+      id: "u2",
+      role: "user",
+      time: "14:12",
+      text: scenarios.unsupported.question,
+    },
+    {
+      id: "a2",
+      role: "agent",
+      time: "14:12",
+      text: "That view isn't in the catalog yet, so I haven't guessed at one.",
+      payload: scenarios.unsupported.payload,
+    },
+  ],
+  recap: [
+    {
+      text: "Showed the single reading as exact values instead of a trend.",
+      turnId: "a1",
+    },
+  ],
+};
+
 // Synthetic conversations: every payload comes from the shared fixtures,
 // so a card in a thread and a card in a story are the exact same input.
 export const threads: Record<string, Thread> = {
@@ -114,12 +155,10 @@ export const threads: Record<string, Thread> = {
     ],
     recap: [
       {
-        kind: "done",
         text: "Charted closed cases for Sep 14–20: peak of 62 on Saturday.",
         turnId: "a1",
       },
       {
-        kind: "done",
         text: "Compared teams: Support closed the most, 84 cases.",
         turnId: "a2",
       },
@@ -143,47 +182,19 @@ export const threads: Record<string, Thread> = {
       },
     ],
   },
-  fallbacks: {
-    title: "Checking the edges",
-    messages: [
-      {
-        id: "u1",
-        role: "user",
-        time: "14:10",
-        text: scenarios.sparse.question,
-      },
-      {
-        id: "a1",
-        role: "agent",
-        time: "14:10",
-        text: "There is only one known reading, so I can't draw a trend honestly. Here are the exact values.",
-        payload: scenarios.sparse.payload,
-      },
-      {
-        id: "u2",
-        role: "user",
-        time: "14:12",
-        text: scenarios.unsupported.question,
-      },
-      {
-        id: "a2",
-        role: "agent",
-        time: "14:12",
-        text: "That view isn't in the catalog yet, so I haven't guessed at one.",
-        payload: scenarios.unsupported.payload,
-      },
-    ],
-    recap: [
-      {
-        kind: "done",
-        text: "Showed the single reading as exact values instead of a trend.",
-        turnId: "a1",
-      },
-      {
-        kind: "needs-you",
-        text: "A forecast view isn't available yet. Decide whether to request it.",
-        turnId: "a2",
-      },
-    ],
+  fallbacks,
+  /** The fallbacks thread with the agent blocked on the user: whether to request the missing view. */
+  awaiting: {
+    ...fallbacks,
+    awaiting: {
+      question: "A forecast view isn't in the catalog yet. How should I handle it?",
+      options: [
+        {
+          label: "Request a forecast view",
+          detail: "I'll add it to the catalog backlog and keep showing exact values until it ships.",
+        },
+      ],
+      answer: { placeholder: "Or tell me what to do instead" },
+    },
   },
 };

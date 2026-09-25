@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { RECAP_IDLE_MS, formatIdle, orderRecap, shouldShowRecap } from "./recapRules";
+import { RECAP_IDLE_MS, formatIdle, shouldShowRecap } from "./recapRules";
 
 const lastUserInputAt = 1_000_000;
 
@@ -34,15 +34,6 @@ describe("shouldShowRecap", () => {
       }),
     ).toBe(true);
   });
-});
-
-it("puts items that need the user first, keeping order within a kind", () => {
-  const ordered = orderRecap([
-    { kind: "done", text: "a", turnId: "1" },
-    { kind: "needs-you", text: "b", turnId: "2" },
-    { kind: "done", text: "c", turnId: "3" },
-  ]);
-  expect(ordered.map((item) => item.text)).toEqual(["b", "a", "c"]);
 });
 
 it("formats idle time for the recap header", () => {

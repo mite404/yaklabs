@@ -1,13 +1,9 @@
-import { formatIdle, orderRecap, type RecapItem } from "./recapRules";
-
-const KIND_LABEL: Record<RecapItem["kind"], string> = {
-  "needs-you": "Needs you",
-  done: "Done",
-};
+import { formatIdle, type RecapItem } from "./recapRules";
 
 /**
  * "Previously on": an outcomes-first recap shown above the compose box after the user
  * has been away (ADR-018). Each item jumps to the turn that holds its evidence.
+ * It only reports what happened; questions for the user live in AwaitingInputCard (ADR-039).
  * When `collapsed`, it shrinks to a chip so it never competes with typing.
  */
 export function Recap({
@@ -25,13 +21,10 @@ export function Recap({
   onDismiss: () => void;
   onJump: (turnId: string) => void;
 }) {
-  const needsYou = items.filter((item) => item.kind === "needs-you").length;
-
   if (collapsed)
     return (
       <button className="recap-chip" onClick={onExpand}>
         Recap
-        {needsYou > 0 && <span className="recap-count">{needsYou}</span>}
       </button>
     );
 
@@ -47,12 +40,9 @@ export function Recap({
         </button>
       </header>
       <ul>
-        {orderRecap(items).map((item) => (
+        {items.map((item) => (
           <li key={item.turnId + item.text}>
             <button onClick={() => onJump(item.turnId)}>
-              <span className={`recap-kind recap-kind-${item.kind}`}>
-                {KIND_LABEL[item.kind]}
-              </span>
               <span className="recap-text">{item.text}</span>
               <span className="recap-go" aria-hidden="true">
                 →

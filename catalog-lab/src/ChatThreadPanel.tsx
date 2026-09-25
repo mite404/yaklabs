@@ -1,4 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { AwaitingInputCard } from "./AwaitingInputCard";
+import { resolveAwaiting } from "./awaiting";
 import { CatalogCard } from "./CatalogCard";
 import { ChartGlyph, ComposeBox } from "./ComposeBox";
 import { appendDictation } from "./dictation";
@@ -90,6 +92,11 @@ function simulatedReply(attachments: CardAttachment[]): string {
   return `Answering about ${views}, the view you set on the card. Saturday leads at every level, so the weekend carries the week.`;
 }
 
+// Lab-only stand-in for the agent picking up after the user answers its question.
+function simulatedAnswerReply(answer: string): string {
+  return `Got it: "${answer}". Carrying on from there.`;
+}
+
 // Delay before the simulated reply, so it reads as a response rather than an echo.
 const REPLY_DELAY_MS = 700;
 
@@ -108,11 +115,13 @@ function useClock(now?: number): number {
  * A vertical chat thread column: header, scrolling turns, and a compose box that never moves.
  * Text is capped at `--thread-measure` (80ch) inside a `--thread-gutter` (20px) on each side,
  * and embedded catalog cards adapt to the panel's width through container queries.
- * When the thread is active and the user has been away for 10+ minutes, a recap of
- * recorded outcomes floats above the compose box (ADR-018). Anything that grows inside
- * the thread is kept clear of the compose box and the recap (ADR-038).
+ * Above the compose box floats at most one card: a question the agent is blocked on
+ * (ADR-039), or else, when the thread is active and the user has been away for 10+ minutes,
+ * a recap of recorded outcomes (ADR-018). Anything that grows inside the thread is kept
+ * clear of both (ADR-038).
  * @param width Panel width in px; omit to use the measure plus gutters.
  * @param activity Thread state that drives the recap; omit and no recap is shown.
+ * A thread's awaiting question shows regardless: being blocked is not an idle state.
  * @param now Fixed clock for deterministic stories and tests; omit for live time.
  * @param dictationSource Audio for dictation: simulated (default) or the real microphone.
  * @param startDictating Open with dictation already recording (stories).
@@ -142,10 +151,12 @@ export function ChatThreadPanel({
   // Card choices waiting to be sent, latest per card only (ADR-031).
   const [pending, setPending] = useState<Record<string, CardAttachment>>({});
   const [reported, setReported] = useState(() => initialReported(thread.messages));
+  const [awaiting, setAwaiting] = useState(() => resolveAwaiting(thread.awaiting));
   const scroller = useRef<HTMLDivElement>(null);
   const dockOverlay = useRef<HTMLDivElement>(null);
 
   const recapVisible =
+    awaiting === undefined &&
     activity !== undefined &&
     lastInputAt !== undefined &&
     (thread.recap?.length ?? 0) > 0 &&
@@ -169,7 +180,7 @@ export function ChatThreadPanel({
 
   // The dock card overlays the conversation, so reserve its height below the last turn,
   // keeping a reader who was at the bottom still at the bottom.
-  const docked = recapVisible;
+  const docked = awaiting !== undefined || recapVisible;
   useLayoutEffect(() => {
     const el = scroller.current;
     const slot = dockOverlay.current;
@@ -238,6 +249,21 @@ export function ChatThreadPanel({
     );
   }
 
+  // An answer to the agent's question is the user's next turn; the agent then carries on.
+  function answer(text: string) {
+    setAwaiting(undefined);
+    setLastInputAt(clock);
+    setMessages((current) => [...current, { id: `local-${current.length}`, role: "user", text, time: "now" }]);
+    window.setTimeout(
+      () =>
+        setMessages((current) => [
+          ...current,
+          { id: `reply-${current.length}`, role: "agent", time: "now", text: simulatedAnswerReply(text) },
+        ]),
+      REPLY_DELAY_MS,
+    );
+  }
+
   function focusCompose() {
     requestAnimationFrame(() =>
       scroller.current
@@ -284,6 +310,18 @@ export function ChatThreadPanel({
         )}
       </div>
       <div className="thread-dock">
+        {awaiting !== undefined && (
+          <div className="dock-overlay" ref={dockOverlay}>
+            <AwaitingInputCard
+              question={awaiting}
+              onAnswer={answer}
+              onElsewhere={() => {
+                setAwaiting(undefined);
+                focusCompose();
+              }}
+            />
+          </div>
+        )}
         {recapVisible && (
           <div className="dock-overlay" ref={dockOverlay}>
             <Recap
