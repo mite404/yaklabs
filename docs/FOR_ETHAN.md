@@ -45,6 +45,9 @@ Nothing is built yet, so the cast is the set of ideas the prototypes will be mad
 
 - **Speak the site's language.** Our tokens now carry yaklabs.ai's own names and values (`--paper`, `--ink`, `--soft-ink`, `--rule`, `--hairline`, ...), read straight from its stylesheet, and follow its pattern of two inks and two line weights. Anything the site doesn't declare is prefixed `--yak-`, so you can tell at a glance what is theirs and what is ours (ADR-049).
 
+- **Primitives before polish.** Disclosure, Menu, Modal, CardHeader and IconButton now sit under every surface, each with its own story, so a new card or panel is assembled rather than invented (ADR-062). The attach menu (with a real screenshot) and the card share menu are the same Menu.
+- **Share the view, not the chat.** Each card can become a public page on its own; the card rides in the link and is validated again on arrival, so the catalog's safety travels with it (ADR-064).
+
 ## 4. Bloopers
 
 - **The docs were behind a locked door.** The environment's network policy blocked docs.meetkay.ai, so Kay's vocabulary was reconstructed from search snippets and Ramp's Glass. Everything inferred is labeled; verify before the interview.
@@ -69,6 +72,8 @@ Nothing is built yet, so the cast is the set of ideas the prototypes will be mad
 - **The network block that wasn't.** A handoff note said yaklabs.ai was blocked, and it was repeated as fact until Ethan pointed out the environment had full network access. It did; the note was from an older environment. Reading the real stylesheet then showed three of our labels were wrong, including a "css" 0.72 text step that the site only uses for lines. Lesson: re-verify inherited facts before building on them, especially ones that stop you from checking the source.
 
 - **Colour-grading the reference.** Several brand colours were picked from screenshots and a screen recording taken on a display with a blue-light filter, which warms everything like a tungsten gel over the lens. The CSS values were fine, but the hero greens, the cream and the button's hover fill were measured through the gel. Fix: drop every pixel-sampled brand colour and keep only what the stylesheet declares (ADR-051). Lesson: sample from the source file, never from the monitor; a colourist never trusts a reference frame shot through a filter.
+
+- **The stash that forgot the new files.** To test a commit alone, the working changes were stashed and restored with `git checkout stash -- path`, which brings back tracked files only; the new, untracked files live in a separate part of the stash, and dropping it hid them. They were recovered from git's object store, intact. Lesson: to test a commit in isolation, check it out in a throwaway worktree instead of juggling stashes.
 
 ## 5. Director's Commentary
 

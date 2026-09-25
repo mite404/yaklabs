@@ -374,3 +374,21 @@ Needs you option pills rest on brand.css's `--paper-deep` (`#e4e4df`, one step b
 Once a choice is made, Submit stays an outline: a second outline fades in from 8px outside and closes onto the border in 450ms, its stroke thinning from 6px to 4px and then to 1px in the last frames, and then it disappears, handing off to the real border so two outlines never overlap, so becoming available is a motion rather than a colour, and the moss fill is left for hover alone; before, a filled Submit and its moss hover were nearly the same.
 It is CSS only (a pseudo-element created when `:disabled` stops matching starts the animation), drawn as an inset shadow because border widths snap to whole pixels; under reduced motion the outline simply appears.
 
+## ADR-062 - Five primitives under every surface
+
+2026-09-25 - Accepted.
+Disclosure (accordion), Menu (popover), Modal, CardHeader and IconButton are shared primitives with their own Foundations stories, so every surface builds from the same parts: the Needs you fold is a Disclosure, dictation is a Modal, the compose attach and card share menus are Menus, and every card's top is a CardHeader with a flush divider.
+The Menu is fixed to the viewport beside its trigger and closes on scroll or resize, because the compose row and cards clip their overflow and would otherwise cut it off.
+
+## ADR-063 - Attach files or a screenshot from the compose box
+
+2026-09-25 - Accepted.
+The paperclip opens a menu with "Add images & files" (⌘U) and "Take screenshot"; the screenshot uses the browser's screen-capture prompt (the user picks what is shared), grabs one frame and stops, and attachments ride along with the next message as chips, which can be sent on their own.
+The goal is less friction in the feedback loop: showing the agent what you see should take one click, because non-technical people get better results, and enjoy the work more, when showing is easier than describing.
+
+## ADR-064 - Share one card as a public page
+
+2026-09-25 - Accepted.
+Every card has a share button that copies a link to, or opens, a standalone page showing only that component, never the conversation; the card travels in the link's fragment (which never reaches a server) and passes the same catalog check before rendering, so a garbled or edited link shows an honest notice, and interactive cards stay interactive.
+In the lab the page is `share.html` beside the app, or the Share/Public page story inside Storybook; making it public means deploying either one.
+
