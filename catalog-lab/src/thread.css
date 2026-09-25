@@ -541,16 +541,38 @@
 .awaiting-action:hover {
   background: var(--paper-deep);
 }
+/* Submit is an outline, never filled at rest (ADR-061). When a choice makes it available, a
+   second outline fades in from 8px outside and closes onto the border, so readiness is a
+   motion, not a colour; the fill is left for hover alone. CSS only: the pseudo-element is
+   created when :disabled stops matching, which starts the animation. */
 .awaiting-submit {
+  position: relative;
   border-color: var(--ink);
-  background: var(--ink);
-  color: var(--on-attention-inverse);
+}
+.awaiting-submit:not(:disabled)::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border: 1px solid var(--ink);
+  border-radius: 4px;
+  pointer-events: none;
+  animation: submit-ready 320ms cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+@keyframes submit-ready {
+  from {
+    inset: -9px;
+    border-radius: 12px; /* concentric with the 4px border, 8px out */
+    opacity: 0;
+  }
 }
 /* Green is kept for button hovers: Submit fills with the site's moss, as .btn does. */
 .attention-surface .awaiting-submit:hover:not(:disabled) {
   border-color: var(--moss);
   background: var(--moss);
   color: var(--paper); /* 10.4:1 */
+}
+.awaiting-submit:hover:not(:disabled)::after {
+  border-color: var(--moss);
 }
 .awaiting-submit:disabled {
   opacity: 0.4;
@@ -560,6 +582,9 @@
   .awaiting-key,
   .awaiting-action {
     transition: none;
+  }
+  .awaiting-submit:not(:disabled)::after {
+    animation: none;
   }
 }
 
