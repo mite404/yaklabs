@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { AwaitingInputCard } from "./AwaitingInputCard";
-import { resolveAwaiting } from "./awaiting";
+import { resolveAwaiting, type AwaitingInput } from "./awaiting";
 import { CatalogCard } from "./CatalogCard";
 import { ChartGlyph, ComposeBox } from "./ComposeBox";
 import { appendDictation } from "./dictation";
@@ -48,6 +48,35 @@ function UserTurn({ message }: { message: UserMessage }) {
   );
 }
 
+// Time between streamed words: fast enough to read as live, slow enough to see.
+const STREAM_WORD_MS = 45;
+
+function prefersReducedMotion(): boolean {
+  if (typeof window === "undefined") return false;
+  return window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+}
+
+// A reply that arrives word by word. Screen readers get the whole sentence once, not a
+// word at a time; reduced motion shows it whole.
+function StreamingText({ text }: { text: string }) {
+  const words = text.split(" ");
+  const [shown, setShown] = useState(0);
+  useEffect(() => {
+    if (prefersReducedMotion()) return setShown(words.length);
+    const id = window.setInterval(
+      () => setShown((count) => (count >= words.length ? count : count + 1)),
+      STREAM_WORD_MS,
+    );
+    return () => window.clearInterval(id);
+  }, [words.length]);
+  return (
+    <p>
+      <span className="visually-hidden">{text}</span>
+      <span aria-hidden="true">{words.slice(0, shown).join(" ")}</span>
+    </p>
+  );
+}
+
 // The agent's turn: prose first, then an optional catalog card sized by the panel.
 function AgentTurn({
   message,
@@ -62,7 +91,7 @@ function AgentTurn({
       data-turn-id={message.id}
       aria-label={`Agent, ${message.time}`}
     >
-      <p>{message.text}</p>
+      {message.stream ? <StreamingText text={message.text} /> : <p>{message.text}</p>}
       {message.payload !== undefined && (
         <CatalogCard payload={message.payload} context="thread" />
       )}
@@ -95,6 +124,15 @@ function simulatedReply(attachments: CardAttachment[]): string {
 // Lab-only stand-in for the agent picking up after the user answers its question.
 function simulatedAnswerReply(answer: string): string {
   return `Got it: "${answer}". Carrying on from there.`;
+}
+
+// Lab-only stand-in for the agent receiving a validation error for its question (ADR-040):
+// it asks in plain words instead, quoting its own question when that part was sound.
+function simulatedClarifyingAsk(payload: unknown): string {
+  const question = (payload as { question?: unknown } | null)?.question;
+  return typeof question === "string" && question.trim()
+    ? `${question.trim()} Tell me in a sentence or two and I'll carry on from there.`
+    : "I need a bit more context before I carry on. What would you like me to do next?";
 }
 
 // Delay before the simulated reply, so it reads as a response rather than an echo.
@@ -151,7 +189,13 @@ export function ChatThreadPanel({
   // Card choices waiting to be sent, latest per card only (ADR-031).
   const [pending, setPending] = useState<Record<string, CardAttachment>>({});
   const [reported, setReported] = useState(() => initialReported(thread.messages));
-  const [awaiting, setAwaiting] = useState(() => resolveAwaiting(thread.awaiting));
+  // Only a valid question becomes a card; a malformed one goes back to the agent (ADR-040).
+  const [checked] = useState(() =>
+    thread.awaiting === undefined ? undefined : resolveAwaiting(thread.awaiting),
+  );
+  const [awaiting, setAwaiting] = useState<AwaitingInput | undefined>(() =>
+    checked?.kind === "approved" ? checked.question : undefined,
+  );
   const scroller = useRef<HTMLDivElement>(null);
   const dockOverlay = useRef<HTMLDivElement>(null);
 
@@ -172,6 +216,28 @@ export function ChatThreadPanel({
     const el = scroller.current;
     if (el) el.scrollTop = el.scrollHeight;
   }, [messages]);
+
+  // The user never sees a malformed question or its error: the error goes to the agent, which
+  // replies with an ordinary streamed ask. The lab has no agent, so a stand-in answers.
+  useEffect(() => {
+    if (checked?.kind !== "malformed") return;
+    console.info(`[lab] sent to the agent: question rejected (${checked.reason})`);
+    const id = window.setTimeout(
+      () =>
+        setMessages((current) => [
+          ...current,
+          {
+            id: `clarify-${current.length}`,
+            role: "agent",
+            time: "now",
+            text: simulatedClarifyingAsk(thread.awaiting),
+            stream: true,
+          },
+        ]),
+      REPLY_DELAY_MS,
+    );
+    return () => window.clearTimeout(id);
+  }, [checked, thread.awaiting]);
 
   // Every card that grows inside the thread stays clear of the compose box (ADR-038).
   useEffect(() => {

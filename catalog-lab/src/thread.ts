@@ -20,6 +20,8 @@ export type ThreadMessage =
       payload?: unknown;
       /** An interactive catalog card (ADR-029), validated separately from static cards. */
       interactive?: unknown;
+      /** Arrives word by word, the way a live agent reply streams in. */
+      stream?: boolean;
     };
 
 /** A deterministic conversation used to evaluate cards in their real context. */
@@ -196,6 +198,21 @@ export const threads: Record<string, Thread> = {
       ],
       answer: { placeholder: "How many weeks ahead should it forecast?" },
       elsewhere: "Chat about a plan to capture a different selection of sales data",
+    },
+  },
+  /** The same question, malformed: the way out was written into the 60-character typed-answer
+   *  row, so there is no card; the agent asks in plain words instead (ADR-040). */
+  malformed: {
+    ...fallbacks,
+    awaiting: {
+      question: "A forecast view isn't in the catalog yet. How should I handle it?",
+      options: [
+        {
+          label: "Request a forecast view",
+          detail: "I'll add it to the catalog backlog and keep showing exact values until it ships.",
+        },
+      ],
+      answer: { placeholder: "Chat about a plan to capture a different selection of sales data" },
     },
   },
 };

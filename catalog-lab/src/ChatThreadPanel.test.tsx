@@ -36,6 +36,13 @@ it("floats the agent's question above the compose box with numbered choices and 
   expect(html).not.toContain("Dismiss");
 });
 
+it("shows no card and no error when the agent's question is malformed", () => {
+  const html = renderToStaticMarkup(<ChatThreadPanel thread={threads.malformed} />);
+  expect(html).not.toContain('aria-label="Needs you"');
+  expect(html).not.toContain("Chat about a plan to capture");
+  expect(html).not.toContain("answer.placeholder");
+});
+
 it("never lets the recap ask for anything, even when the user has been away", () => {
   const now = Date.UTC(2026, 8, 25, 9, 16);
   const idle = { active: true, lastUserInputAt: now - 25 * 60_000 };

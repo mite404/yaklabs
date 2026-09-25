@@ -27,8 +27,21 @@ export const awaitingSchema = z.strictObject({
 /** A validated question the agent is waiting on. */
 export type AwaitingInput = z.infer<typeof awaitingSchema>;
 
-/** Validates an agent's question; anything malformed is dropped rather than half-shown. */
-export function resolveAwaiting(payload: unknown): AwaitingInput | undefined {
+/** The outcome of checking an agent's question: a card to show, or the error for the agent. */
+export type AwaitingResult =
+  | { kind: "approved"; question: AwaitingInput }
+  | { kind: "malformed"; reason: string };
+
+/**
+ * Validates an agent's question (ADR-039, ADR-040). A malformed one never becomes a card, not
+ * even half of one, and the user never sees the error: `reason` goes back to the agent, which
+ * asks for what it needs in an ordinary streamed reply instead.
+ */
+export function resolveAwaiting(payload: unknown): AwaitingResult {
   const parsed = awaitingSchema.safeParse(payload);
-  return parsed.success ? parsed.data : undefined;
+  if (parsed.success) return { kind: "approved", question: parsed.data };
+  const reason = parsed.error.issues
+    .map((issue) => `${issue.path.join(".") || "question"}: ${issue.message}`)
+    .join("; ");
+  return { kind: "malformed", reason };
 }
