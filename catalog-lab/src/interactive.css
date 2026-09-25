@@ -1,7 +1,7 @@
 /* Interactive catalog card (ADR-029): sentence, chart, and control read top to bottom,
    with the control directly under what it changes, as in marimo's inline elements. */
 .interactive-card .card-heading {
-  padding-bottom: 2px;
+  margin-bottom: 10px;
 }
 
 /* The agent's sentence stays true while the user explores: live values update in place. */

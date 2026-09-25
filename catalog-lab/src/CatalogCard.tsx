@@ -10,7 +10,9 @@ import {
   CartesianGrid,
   Tooltip,
 } from "recharts";
+import { CardHeader } from "./CardHeader";
 import { resolve, type DataProps, type Selection } from "./catalog";
+import { ShareButton } from "./ShareButton";
 
 /** Bars are flat data colour with the button's 4px top corners; no gradient (ADR-055). */
 export const BAR_RADIUS = 4;
@@ -115,13 +117,16 @@ function Chart({ selection }: { selection: Selection }) {
  * The only entry point for agent-selected UI. All content passes the catalog boundary.
  * @param context Host-owned placement, never part of the agent payload: "page" for the
  * evaluation workbench, "thread" for a card inside a chat thread (ADR-023).
+ * @param shareable Show the share button (ADR-064); off on the public page itself.
  */
 export function CatalogCard({
   payload,
   context = "page",
+  shareable = true,
 }: {
   payload: unknown;
   context?: "page" | "thread";
+  shareable?: boolean;
 }) {
   const result = resolve(payload);
   const [showTable, setShowTable] = useState(false);
@@ -151,15 +156,16 @@ export function CatalogCard({
   const { props } = selection;
   return (
     <section className="card" data-context={context}>
-      <header className="card-heading">
-        <div>
-          <p className="eyebrow">
-            {selection.component} / {props.variant}
-          </p>
-          <h2>{props.title}</h2>
-        </div>
-        <span className="badge">Validated</span>
-      </header>
+      <CardHeader
+        eyebrow={`${selection.component} / ${props.variant}`}
+        title={props.title}
+        actions={
+          <>
+            <span className="badge">Validated</span>
+            {shareable && <ShareButton card={{ v: 1, kind: "catalog", payload }} />}
+          </>
+        }
+      />
       {result.kind === "fallback" && (
         <p className="notice" role="status">
           {result.reason}
@@ -188,8 +194,8 @@ export function CatalogCard({
           </span>
         </span>
         {selection.component !== "DataTable" && (
-          <button className="btn btn-sm" onClick={() => setShowTable(!showTable)}>
-            {showTable ? "Show chart" : "View data table"} ↗
+          <button className="btn btn-sm card-toggle" onClick={() => setShowTable(!showTable)}>
+            {showTable ? "Show chart" : "View data table"}
           </button>
         )}
       </footer>

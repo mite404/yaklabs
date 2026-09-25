@@ -502,7 +502,8 @@ h1 span {
   display: flex;
   justify-content: space-between;
   gap: 14px;
-  padding: 24px 24px 8px;
+  padding: 24px 24px 16px;
+  margin-bottom: 16px; /* the body starts clear of the header's flush line */
 }
 .card-heading h2 {
   font-size: 21px;
@@ -543,6 +544,12 @@ footer {
 footer button {
   font-size: 11px;
   white-space: nowrap;
+}
+/* A toggle keeps one width for both labels, centred, so it does not jump when it flips. */
+.card-toggle {
+  min-width: 9.5em;
+  justify-content: center;
+  text-align: center;
 }
 .evaluation-notes {
   padding: 20px 0;

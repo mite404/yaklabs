@@ -8,7 +8,9 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { CardHeader } from "./CardHeader";
 import { BAR_RADIUS, CatalogCard } from "./CatalogCard";
+import { ShareButton } from "./ShareButton";
 import {
   attachmentLabel,
   fillSentence,
@@ -43,15 +45,18 @@ function sharedMax(selection: InteractiveSelection): number {
  * An interactive catalog card (ADR-029): a stepped slider switches the measure, and the
  * chart and the agent's sentence update instantly without calling the model. Each choice
  * is reported through `onChoose` so it can ride along with the next message (ADR-030).
+ * @param shareable Show the share button (ADR-064); off on the public page itself.
  */
 export function InteractiveCard({
   payload,
   turnId,
   onChoose,
+  shareable = true,
 }: {
   payload: unknown;
   turnId: string;
   onChoose: (attachment: CardAttachment) => void;
+  shareable?: boolean;
 }) {
   const result = resolveInteractive(payload);
   const initial =
@@ -83,11 +88,10 @@ export function InteractiveCard({
 
   return (
     <section className="card interactive-card" data-context="thread">
-      <header className="card-heading">
-        <div>
-          <h2>{props.title}</h2>
-        </div>
-      </header>
+      <CardHeader
+        title={props.title}
+        actions={shareable && <ShareButton card={{ v: 1, kind: "interactive", payload }} />}
+      />
 
       <p className="live-sentence" aria-live="polite">
         {sentence.map((part, i) =>

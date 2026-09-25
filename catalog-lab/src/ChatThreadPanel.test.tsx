@@ -1,7 +1,9 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { expect, it } from "vitest";
 import { ChatThreadPanel } from "./ChatThreadPanel";
-import { threads } from "./thread";
+import { encodeCard } from "./share";
+import { ShareView } from "./ShareView";
+import { profitCard, threads } from "./thread";
 
 it("renders every turn and marks embedded cards as thread-placed", () => {
   const html = renderToStaticMarkup(<ChatThreadPanel thread={threads.trend} />);
@@ -62,4 +64,15 @@ it("never lets the recap ask for anything, even when the user has been away", ()
   );
   expect(recap).toContain('aria-label="Recap"');
   expect(recap).not.toContain("Needs you");
+});
+
+it("gives every card in the thread a share button, and the public page none", () => {
+  const thread = renderToStaticMarkup(<ChatThreadPanel thread={threads.trend} />);
+  expect(thread.match(/aria-label="Share this card"/g)).toHaveLength(2);
+  const page = renderToStaticMarkup(
+    <ShareView hash={"#" + encodeCard({ v: 1, kind: "interactive", payload: profitCard })} />,
+  );
+  expect(page).toContain("profit by day");
+  expect(page).not.toContain('aria-label="Share this card"');
+  expect(page).toContain("Only this view is shared, not the conversation.");
 });
