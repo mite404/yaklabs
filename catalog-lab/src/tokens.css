@@ -20,9 +20,9 @@
   --paper: #f0efea; /* the app surface */
   --paper-deep: #e4e4df; /* hover and inset fill */
   --ink: #252524; /* headings, primary text: 13.3:1 on paper */
-  /* Body and all secondary text, one step lighter than headings: meetkay.ai's value (Kay's
-     own site, which the product follows), not yaklabs.ai's #4a4a47. 5.8:1 on paper. */
-  --soft-ink: #5c5c57;
+  /* Body and all secondary text, one step lighter than headings: the value in the site's
+     shared brand.css (ADR-057), where its pages differ (#4a4a47, #5c5c57). 6.4:1 on paper. */
+  --soft-ink: #565650;
   --blue: #95aac8; /* text selection */
   --sage: #c7cfba; /* the user's bubble only (ADR-047) */
   --chalk: #e5e8d9;
