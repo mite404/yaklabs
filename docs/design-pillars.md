@@ -143,7 +143,7 @@ Its placeholder is greyer than any statement around it, because a placeholder as
 | Border | 1px, ink at 0.72 (as the button) | css |
 | Corners | 4px | css |
 | Padding | 5px × 10px, 13px text | derived |
-| Placeholder (paper) | `--muted`, 6.1:1 | derived |
+| Placeholder (paper) | `--muted`, 5.7:1 | derived |
 | Placeholder (strong) | 75% cream on a 12% night fill, 4.6:1 | derived |
 | Border (strong) | 60% cream, 3.2:1 | derived |
 | Hover and focus | border to full ink; focus adds the 2px ring | derived |

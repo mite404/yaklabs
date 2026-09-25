@@ -293,3 +293,10 @@ The dark card tried in light mode (`#62625d`, cream text, deeper tiles, sage hov
 2026-09-25 - Accepted.
 The sage-green tint of the user's bubble is reserved for that bubble, so the colour always means "this is what you said"; context chips, badges and tags use the neutral wash instead.
 The tokens are named `--bubble-*` so the tint cannot be reused elsewhere by accident.
+
+## ADR-048 - The app surface is the site's own background
+
+2026-09-25 - Accepted.
+The app's surface (the thread panel, its cards, and the compose box) uses `#f0efea`, yaklabs.ai's page background, and the window around the app takes the lighter step it used to have (`#f8f8f6`), so Kay reads as the same material as the website.
+Text contrast is now measured against `#f0efea`, the darker of the two; everything still passes, with the grey focus ring the closest at 3.0:1.
+
