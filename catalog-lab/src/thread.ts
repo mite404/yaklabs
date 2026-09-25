@@ -20,8 +20,8 @@ export type ThreadMessage =
       payload?: unknown;
       /** An interactive catalog card (ADR-029), validated separately from static cards. */
       interactive?: unknown;
-      /** Arrives word by word, the way a live agent reply streams in. */
-      stream?: boolean;
+      /** Still streaming in from the agent (ADR-041). */
+      streaming?: boolean;
     };
 
 /** A deterministic conversation used to evaluate cards in their real context. */

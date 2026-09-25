@@ -1,4 +1,5 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
+import type { Agent, AgentEvent } from "./agent";
 import { AwaitingInputCard } from "./AwaitingInputCard";
 import { resolveAwaiting, type AwaitingInput } from "./awaiting";
 import { CatalogCard } from "./CatalogCard";
@@ -6,6 +7,7 @@ import { ChartGlyph, ComposeBox } from "./ComposeBox";
 import { appendDictation } from "./dictation";
 import { DictationModal, type DictationSource } from "./DictationModal";
 import { InteractiveCard } from "./InteractiveCard";
+import { labAgent } from "./labAgent";
 import { resolveInteractive, type CardAttachment } from "./interactive";
 import { Recap } from "./Recap";
 import { shouldShowRecap } from "./recapRules";
@@ -48,36 +50,8 @@ function UserTurn({ message }: { message: UserMessage }) {
   );
 }
 
-// Time between streamed words: fast enough to read as live, slow enough to see.
-const STREAM_WORD_MS = 45;
-
-function prefersReducedMotion(): boolean {
-  if (typeof window === "undefined") return false;
-  return window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
-}
-
-// A reply that arrives word by word. Screen readers get the whole sentence once, not a
-// word at a time; reduced motion shows it whole.
-function StreamingText({ text }: { text: string }) {
-  const words = text.split(" ");
-  const [shown, setShown] = useState(0);
-  useEffect(() => {
-    if (prefersReducedMotion()) return setShown(words.length);
-    const id = window.setInterval(
-      () => setShown((count) => (count >= words.length ? count : count + 1)),
-      STREAM_WORD_MS,
-    );
-    return () => window.clearInterval(id);
-  }, [words.length]);
-  return (
-    <p>
-      <span className="visually-hidden">{text}</span>
-      <span aria-hidden="true">{words.slice(0, shown).join(" ")}</span>
-    </p>
-  );
-}
-
 // The agent's turn: prose first, then an optional catalog card sized by the panel.
+// While a reply is still streaming in, the turn is marked busy for assistive technology.
 function AgentTurn({
   message,
   onChoose,
@@ -90,8 +64,9 @@ function AgentTurn({
       className="turn turn-agent"
       data-turn-id={message.id}
       aria-label={`Agent, ${message.time}`}
+      aria-busy={message.streaming || undefined}
     >
-      {message.stream ? <StreamingText text={message.text} /> : <p>{message.text}</p>}
+      <p>{message.text}</p>
       {message.payload !== undefined && (
         <CatalogCard payload={message.payload} context="thread" />
       )}
@@ -115,28 +90,50 @@ function initialReported(messages: ThreadMessage[]): Record<string, string> {
   return seen;
 }
 
-// Lab-only stand-in for the agent, so the round trip is visible without a model.
-function simulatedReply(attachments: CardAttachment[]): string {
-  const views = attachments.map((item) => item.label).join(" and ");
-  return `Answering about ${views}, the view you set on the card. Saturday leads at every level, so the weekend carries the week.`;
-}
+/**
+ * Sends events to the agent and streams each reply into the thread as its own turn (ADR-041).
+ * Replies stop when the panel unmounts. Returns the function that sends an event.
+ */
+function useAgent(
+  agent: Agent,
+  setMessages: Dispatch<SetStateAction<ThreadMessage[]>>,
+): (event: AgentEvent) => () => void {
+  const replies = useRef(0);
+  const live = useRef(new Set<AbortController>());
 
-// Lab-only stand-in for the agent picking up after the user answers its question.
-function simulatedAnswerReply(answer: string): string {
-  return `Got it: "${answer}". Carrying on from there.`;
-}
+  useEffect(() => {
+    const controllers = live.current;
+    return () => controllers.forEach((controller) => controller.abort());
+  }, []);
 
-// Lab-only stand-in for the agent receiving a validation error for its question (ADR-040):
-// it asks in plain words instead, quoting its own question when that part was sound.
-function simulatedClarifyingAsk(payload: unknown): string {
-  const question = (payload as { question?: unknown } | null)?.question;
-  return typeof question === "string" && question.trim()
-    ? `${question.trim()} Tell me in a sentence or two and I'll carry on from there.`
-    : "I need a bit more context before I carry on. What would you like me to do next?";
+  return (event) => {
+    const controller = new AbortController();
+    const id = `reply-${++replies.current}`;
+    live.current.add(controller);
+    // Pure updaters (React may run them twice): append on the first chunk, then extend.
+    const write = (text: string, streaming: boolean) =>
+      setMessages((current) =>
+        current.some((message) => message.id === id)
+          ? current.map((message) =>
+              message.id === id && message.role === "agent"
+                ? { ...message, text: message.text + text, streaming }
+                : message,
+            )
+          : [...current, { id, role: "agent", time: "now", text, streaming }],
+      );
+    void (async () => {
+      let started = false;
+      for await (const chunk of agent.respond(event, controller.signal)) {
+        if (controller.signal.aborted) break;
+        write(chunk, true);
+        started = true;
+      }
+      if (started && !controller.signal.aborted) write("", false);
+      live.current.delete(controller);
+    })();
+    return () => controller.abort();
+  };
 }
-
-// Delay before the simulated reply, so it reads as a response rather than an echo.
-const REPLY_DELAY_MS = 700;
 
 // A live clock, or a fixed one when the host passes `now` (stories and tests).
 function useClock(now?: number): number {
@@ -163,6 +160,7 @@ function useClock(now?: number): number {
  * @param now Fixed clock for deterministic stories and tests; omit for live time.
  * @param dictationSource Audio for dictation: simulated (default) or the real microphone.
  * @param startDictating Open with dictation already recording (stories).
+ * @param agent Who answers: the scripted lab stand-in by default, or a real model (ADR-041).
  */
 export function ChatThreadPanel({
   thread,
@@ -171,6 +169,7 @@ export function ChatThreadPanel({
   now,
   dictationSource = "simulated",
   startDictating = false,
+  agent = labAgent,
 }: {
   thread: Thread;
   width?: number;
@@ -178,9 +177,11 @@ export function ChatThreadPanel({
   now?: number;
   dictationSource?: DictationSource;
   startDictating?: boolean;
+  agent?: Agent;
 }) {
   const clock = useClock(now);
   const [messages, setMessages] = useState(thread.messages);
+  const tell = useAgent(agent, setMessages);
   const [draft, setDraft] = useState("");
   const [lastInputAt, setLastInputAt] = useState(activity?.lastUserInputAt);
   const [dismissedAt, setDismissedAt] = useState<number>();
@@ -211,33 +212,20 @@ export function ChatThreadPanel({
       dismissedAt,
     });
 
-  // Open at the latest turn, the way a returning user expects to land.
+  // Open at the latest turn, and land on each new one. A reply growing as it streams is kept
+  // in view by the thread's own pinning, so a reader who scrolled up is not pulled back.
   useLayoutEffect(() => {
     const el = scroller.current;
     if (el) el.scrollTop = el.scrollHeight;
-  }, [messages]);
+  }, [messages.length]);
 
   // The user never sees a malformed question or its error: the error goes to the agent, which
-  // replies with an ordinary streamed ask. The lab has no agent, so a stand-in answers.
+  // asks again in an ordinary streamed reply (ADR-040).
   useEffect(() => {
     if (checked?.kind !== "malformed") return;
-    console.info(`[lab] sent to the agent: question rejected (${checked.reason})`);
-    const id = window.setTimeout(
-      () =>
-        setMessages((current) => [
-          ...current,
-          {
-            id: `clarify-${current.length}`,
-            role: "agent",
-            time: "now",
-            text: simulatedClarifyingAsk(thread.awaiting),
-            stream: true,
-          },
-        ]),
-      REPLY_DELAY_MS,
-    );
-    return () => window.clearTimeout(id);
-  }, [checked, thread.awaiting]);
+    return tell({ kind: "question-rejected", reason: checked.reason, question: thread.awaiting });
+    // Once per question: `tell` is recreated each render, and resending would repeat the ask.
+  }, [checked]);
 
   // Every card that grows inside the thread stays clear of the compose box (ADR-038).
   useEffect(() => {
@@ -295,24 +283,11 @@ export function ChatThreadPanel({
     setPeeking(false);
     setLastInputAt(clock);
     setPending({});
-    if (attachments.length === 0) return;
     setReported((current) => ({
       ...current,
       ...Object.fromEntries(attachments.map((item) => [item.turnId, item.state.measure])),
     }));
-    window.setTimeout(
-      () =>
-        setMessages((current) => [
-          ...current,
-          {
-            id: `reply-${current.length}`,
-            role: "agent",
-            time: "now",
-            text: simulatedReply(attachments),
-          },
-        ]),
-      REPLY_DELAY_MS,
-    );
+    tell({ kind: "message", text: sent.text, attachments });
   }
 
   // An answer to the agent's question is the user's next turn; the agent then carries on.
@@ -320,14 +295,7 @@ export function ChatThreadPanel({
     setAwaiting(undefined);
     setLastInputAt(clock);
     setMessages((current) => [...current, { id: `local-${current.length}`, role: "user", text, time: "now" }]);
-    window.setTimeout(
-      () =>
-        setMessages((current) => [
-          ...current,
-          { id: `reply-${current.length}`, role: "agent", time: "now", text: simulatedAnswerReply(text) },
-        ]),
-      REPLY_DELAY_MS,
-    );
+    tell({ kind: "answer", text });
   }
 
   function focusCompose() {
