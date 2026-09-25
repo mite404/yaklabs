@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { CatalogCard } from "./CatalogCard";
 import { ChartGlyph, ComposeBox } from "./ComposeBox";
 import { appendDictation } from "./dictation";
@@ -8,6 +8,7 @@ import { resolveInteractive, type CardAttachment } from "./interactive";
 import { Recap } from "./Recap";
 import { shouldShowRecap } from "./recapRules";
 import type { Thread, ThreadMessage } from "./thread";
+import { ThreadRevealProvider, revealInScroller } from "./threadReveal";
 import "./thread.css";
 
 type UserMessage = Extract<ThreadMessage, { role: "user" }>;
@@ -91,10 +92,6 @@ function simulatedReply(attachments: CardAttachment[]): string {
 
 // Delay before the simulated reply, so it reads as a response rather than an echo.
 const REPLY_DELAY_MS = 700;
-
-function prefersReducedMotion(): boolean {
-  return window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
-}
 
 // A live clock, or a fixed one when the host passes `now` (stories and tests).
 function useClock(now?: number): number {
@@ -241,16 +238,19 @@ export function ChatThreadPanel({
     );
   }
 
-  // Jump so the evidence lands vertically centered, every time (ADR-022 eye trace).
+  // Anything that expands inside the thread lands centered, never under the compose box (ADR-037).
+  // Stable, so an open card is revealed once, not again on every panel render.
+  const reveal = useCallback((elements: HTMLElement[]) => {
+    if (scroller.current) revealInScroller(scroller.current, elements);
+  }, []);
+
+  // Jump so the evidence lands vertically centered, every time (ADR-022 eye trace, ADR-037).
   function jump(turnId: string) {
     const turn = scroller.current?.querySelector<HTMLElement>(
       `[data-turn-id="${CSS.escape(turnId)}"]`,
     );
-    if (!turn) return;
-    turn.scrollIntoView({
-      block: "center",
-      behavior: prefersReducedMotion() ? "auto" : "smooth",
-    });
+    if (!turn || !scroller.current) return;
+    revealInScroller(scroller.current, [turn]);
     turn.dataset.flash = "true";
     window.setTimeout(() => delete turn.dataset.flash, FLASH_MS);
   }
@@ -265,13 +265,15 @@ export function ChatThreadPanel({
         <h2>{thread.title}</h2>
       </header>
       <div className="thread-scroll" ref={scroller}>
-        {messages.map((message) =>
-          message.role === "user" ? (
-            <UserTurn key={message.id} message={message} />
-          ) : (
-            <AgentTurn key={message.id} message={message} onChoose={choose} />
-          ),
-        )}
+        <ThreadRevealProvider value={reveal}>
+          {messages.map((message) =>
+            message.role === "user" ? (
+              <UserTurn key={message.id} message={message} />
+            ) : (
+              <AgentTurn key={message.id} message={message} onChoose={choose} />
+            ),
+          )}
+        </ThreadRevealProvider>
       </div>
       <div className="thread-dock">
         {recapVisible && (
