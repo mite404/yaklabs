@@ -80,9 +80,9 @@ function Chart({ selection }: { selection: Selection }) {
               dataKey="value"
               name={props.unit}
               type="linear"
-              stroke="var(--accent)"
+              stroke="var(--data)"
               strokeWidth={props.variant === "snapshot" ? 0 : 3}
-              dot={{ r: 4, fill: "var(--accent)", strokeWidth: 2 }}
+              dot={{ r: 4, fill: "var(--data)", strokeWidth: 2 }}
               connectNulls={false}
               isAnimationActive={false}
             />
@@ -97,7 +97,7 @@ function Chart({ selection }: { selection: Selection }) {
             <Bar
               dataKey="value"
               name={props.unit}
-              fill="var(--accent)"
+              fill="var(--data)"
               radius={[4, 4, 0, 0]}
               isAnimationActive={false}
             />

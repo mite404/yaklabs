@@ -127,7 +127,7 @@ export function InteractiveCard({
             />
             <Bar
               dataKey="value"
-              fill="var(--accent)"
+              fill="var(--data)"
               radius={[4, 4, 0, 0]}
               isAnimationActive={animate}
               animationDuration={TRANSITION_MS}

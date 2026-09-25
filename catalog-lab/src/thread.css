@@ -68,8 +68,8 @@
   gap: 4px;
 }
 .turn-user p {
-  background: linear-gradient(135deg, #f1f6f0, #e6efe7);
-  border: 1px solid #d6e3d8;
+  background: linear-gradient(135deg, var(--accent-soft), var(--accent-soft-strong));
+  border: 1px solid var(--accent-line);
   border-radius: 12px;
   padding: 10px 14px;
   color: var(--ink);
@@ -103,11 +103,11 @@
   border-radius: 12px;
   padding: 10px 8px 6px 12px;
   background: var(--paper);
-  box-shadow: 0 2px 12px #20372b12;
+  box-shadow: 0 2px 12px var(--shadow);
 }
 .compose-box:focus-within {
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px #27786226;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus) 16%, transparent);
 }
 .compose-box textarea {
   display: block;
@@ -157,8 +157,8 @@
   max-width: 100%;
   padding: 3px 4px 3px 9px;
   border-radius: 999px;
-  background: #eaf4ea;
-  color: #2f5f45;
+  background: var(--accent-soft);
+  color: var(--accent-ink);
   font-size: 12px;
   white-space: nowrap;
   animation: chip-in 180ms ease-out;
@@ -175,7 +175,7 @@
   line-height: 1;
 }
 .context-chip button:hover {
-  background: #d3e7d6;
+  background: var(--accent-soft-strong);
 }
 @keyframes chip-in {
   from {
@@ -228,7 +228,7 @@
   border-radius: 50%;
   border: none;
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent);
   font-size: 15px;
 }
 .compose-send:hover {
@@ -261,7 +261,7 @@
   background: var(--paper);
   border: 1px solid var(--line);
   border-radius: 12px;
-  box-shadow: 0 6px 20px #20372b1f;
+  box-shadow: 0 6px 20px var(--shadow-strong);
   padding: 10px 8px 8px 14px;
 }
 .recap-header {
@@ -322,12 +322,12 @@
   white-space: nowrap;
 }
 .recap-kind-done {
-  background: #eaf4ea;
-  color: #3b724e;
+  background: var(--accent-soft);
+  color: var(--accent-ink);
 }
 .recap-kind-needs-you {
-  background: #faf0d9;
-  color: #735a22;
+  background: var(--warn-bg);
+  color: var(--warn-ink);
 }
 .recap-go {
   color: var(--muted);
@@ -345,12 +345,12 @@
   border-radius: 20px;
   border: 1px solid var(--line);
   background: var(--paper);
-  box-shadow: 0 2px 8px #20372b14;
+  box-shadow: 0 2px 8px var(--shadow);
   font-size: 12px;
 }
 .recap-count {
-  background: #faf0d9;
-  color: #735a22;
+  background: var(--warn-bg);
+  color: var(--warn-ink);
   border-radius: 10px;
   padding: 0 6px;
   font-size: 11px;
@@ -370,10 +370,10 @@
 }
 @keyframes turn-flash {
   from {
-    box-shadow: 0 0 0 4px #27786240;
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--focus) 25%, transparent);
   }
   to {
-    box-shadow: 0 0 0 4px #27786200;
+    box-shadow: 0 0 0 4px transparent;
   }
 }
 @media (prefers-reduced-motion: reduce) {

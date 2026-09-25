@@ -10,15 +10,48 @@
   --font-display: "Newsreader Variable", Newsreader, Georgia, serif;
   font-family: var(--font-text);
   font-optical-sizing: auto;
-  color: #243b37;
-  background: #f7f8f5;
+  color: var(--ink);
+  background: var(--bg);
   font-synthesis: none;
-  --paper: #fff;
-  --ink: #243b37;
-  --muted: #687a74;
-  --accent: #277862;
-  --line: #e3e9e3;
-  --wash: #eef3ed;
+
+  /* Brand palette, sampled from yaklabs.ai. Components never use these directly. */
+  --yak-paper: #f0efeb; /* sampled: page background */
+  --yak-ink: #20201c; /* sampled: headings; body copy is this ink at ~74% */
+  --yak-cream: #f5f5f0; /* sampled: text on the dark hero */
+  --yak-forest-deep: #121c14; /* sampled: hero shadows */
+  --yak-forest: #1a231b; /* sampled: dominant hero green */
+  --yak-moss: #2e362d; /* sampled: hero mid-tone */
+  --yak-sage: #414740; /* sampled: hero light tone */
+  --yak-mist: #cdd4cd; /* sampled: hero highlights */
+  /* derived: the forest hue (148°) lifted to OKLCH L 0.44 / C 0.06 so it reads as green in
+     flat UI; the sampled forest is nearly as dark as the ink and reads as black. */
+  --yak-green: #3b5c40;
+
+  /* Semantic tokens: the only colours components use. Ink steps are solid tints,
+     matching the site's opacity steps without transparency artifacts. */
+  --bg: var(--yak-paper);
+  --paper: color-mix(in srgb, var(--yak-paper) 45%, white); /* derived: raised surface */
+  --ink: var(--yak-ink);
+  --text-body: color-mix(in srgb, var(--yak-ink) 74%, var(--yak-paper)); /* sampled step */
+  --muted: color-mix(in srgb, var(--yak-ink) 64%, var(--yak-paper)); /* derived: AA contrast */
+  --rule: color-mix(in srgb, var(--yak-ink) 21%, var(--yak-paper)); /* sampled: dividers */
+  --line: color-mix(in srgb, var(--yak-ink) 12%, var(--yak-paper)); /* derived: card borders */
+  --wash: color-mix(in srgb, var(--yak-ink) 5%, var(--yak-paper)); /* derived: hover, insets */
+  --accent: var(--yak-green); /* 6.5:1 on paper, 6.9:1 under cream text */
+  --on-accent: var(--yak-cream);
+  --accent-soft: color-mix(in srgb, var(--yak-green) 10%, var(--yak-paper)); /* chips, bubbles */
+  --accent-soft-strong: color-mix(in srgb, var(--yak-green) 18%, var(--yak-paper));
+  --accent-line: color-mix(in srgb, var(--yak-green) 26%, var(--yak-paper));
+  --accent-ink: var(--yak-forest); /* text on the soft tints */
+  --data: var(--yak-green); /* chart marks */
+  --focus: var(--yak-green);
+  --shadow: color-mix(in srgb, var(--yak-forest) 10%, transparent);
+  --shadow-strong: color-mix(in srgb, var(--yak-forest) 20%, transparent);
+  --scrim: color-mix(in srgb, var(--yak-paper) 72%, transparent);
+  --warn-bg: #f4ecd9; /* derived: warm notice, harmonised with the paper */
+  --warn-ink: #66511f; /* derived */
+  --record: #b8432c; /* derived: recording dot */
+
   --radius: 14px;
   --space: 24px;
 }
@@ -54,14 +87,16 @@ a:focus-visible,
 input:focus-visible,
 textarea:focus-visible,
 summary:focus-visible {
-  outline: 3px solid #a28232;
+  outline: 2px solid var(--focus);
   outline-offset: 3px;
 }
 a {
   color: var(--accent);
 }
+/* Body copy sits one step lighter than headings, as on yaklabs.ai. */
 p {
   line-height: 1.6;
+  color: var(--text-body);
 }
 h1,
 h2,
@@ -84,8 +119,8 @@ h3 {
   min-height: 100vh;
 }
 aside {
-  background: #eef2eb;
-  border-right: 1px solid #dde4dc;
+  background: var(--wash);
+  border-right: 1px solid var(--line);
   padding: 34px 20px;
   display: flex;
   flex-direction: column;
@@ -98,7 +133,7 @@ aside {
   font-family: var(--font-display);
   font-size: 24px;
   font-weight: 600;
-  color: #284b40;
+  color: var(--ink);
 }
 .workspace {
   margin-top: 38px;
@@ -107,7 +142,7 @@ aside {
 }
 .workspace span {
   float: right;
-  background: #dce5d9;
+  background: var(--accent-soft);
   padding: 2px 6px;
   border-radius: 4px;
 }
@@ -130,11 +165,11 @@ nav button {
 }
 nav button span {
   float: right;
-  color: #83968b;
+  color: var(--muted);
 }
 nav button[aria-current] {
   background: white;
-  box-shadow: 0 2px 8px #20372b06;
+  box-shadow: 0 2px 8px var(--shadow);
   font-weight: 650;
 }
 .sidebar-note {
@@ -171,13 +206,13 @@ main {
   white-space: nowrap;
   border-radius: 30px;
   padding: 6px 10px;
-  background: #eaf4ea;
-  color: #3b724e;
+  background: var(--accent-soft);
+  color: var(--accent-ink);
   align-self: flex-start;
 }
 .badge.neutral {
-  background: #eef1eb;
-  color: #65726a;
+  background: var(--wash);
+  color: var(--muted);
 }
 .intro {
   padding: 44px 0 24px;
@@ -198,7 +233,7 @@ h1 {
   margin-bottom: 16px;
 }
 h1 span {
-  color: #87958a;
+  color: var(--muted);
 }
 .intro > p:last-child {
   color: var(--muted);
@@ -211,12 +246,12 @@ h1 span {
   gap: 15px;
   border: 1px solid var(--line);
   border-radius: 10px;
-  background: #f0f3ec;
+  background: var(--wash);
   padding: 17px 20px;
   margin-bottom: 22px;
 }
 .avatar {
-  background: #fff;
+  background: var(--paper);
   width: 34px;
   height: 34px;
   border-radius: 50%;
@@ -344,7 +379,7 @@ summary {
   padding: 8px 0;
 }
 pre {
-  background: #eff3ee;
+  background: var(--wash);
   padding: 18px;
   overflow: auto;
   font-size: 11px;
@@ -395,11 +430,11 @@ label {
 }
 .primary {
   background: var(--accent);
-  color: white;
+  color: var(--on-accent);
   border-color: var(--accent);
 }
 .primary:hover {
-  background: #1c604d;
+  background: var(--yak-forest);
 }
 .backlog .muted {
   margin-top: 9px;
@@ -429,8 +464,8 @@ label {
 .notice {
   margin: 12px 24px;
   padding: 10px;
-  background: #faf4e4;
-  color: #735a22;
+  background: var(--warn-bg);
+  color: var(--warn-ink);
   font-size: 12px;
   border-radius: 7px;
 }

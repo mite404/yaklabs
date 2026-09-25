@@ -15,9 +15,9 @@ function readPalette(el: HTMLElement): Palette {
   const token = (name: string, fallback: string) =>
     style.getPropertyValue(name).trim() || fallback;
   return {
-    accent: token("--accent", "#277862"),
-    bar: token("--ink", "#243b37"),
-    future: token("--muted", "#687a74"),
+    accent: token("--yak-green", "#3b5c40"),
+    bar: token("--yak-ink", "#20201c"),
+    future: token("--yak-sage", "#414740"),
   };
 }
 
