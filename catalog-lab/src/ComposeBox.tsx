@@ -1,4 +1,4 @@
-import { useRef, useState, type FormEvent } from "react";
+import { useRef, type FormEvent } from "react";
 
 // Inline icons keep the lab dependency-free; strokes follow currentColor.
 function PaperclipIcon() {
@@ -34,21 +34,25 @@ function MicIcon() {
 /**
  * The one compose field every chat surface uses (ADR-026): attach on the far left,
  * dictate then send on the right, and a fixed height so typing never moves it (ADR-003).
- * Attachment upload and speech recognition are not wired in the lab; the controls
- * show placement, state, and labels only.
+ * Attachment upload is not wired in the lab; the paperclip opens the file picker only.
+ * @param onDictate Opens dictation; the host shows the dictation modal (ADR-028).
+ * @param disabled Pauses typing, e.g. while dictation is recording.
  */
 export function ComposeBox({
   draft,
   onDraftChange,
   onSend,
+  onDictate,
+  disabled = false,
   placeholder = "What would you like to do?",
 }: {
   draft: string;
   onDraftChange: (value: string) => void;
   onSend: () => void;
+  onDictate?: () => void;
+  disabled?: boolean;
   placeholder?: string;
 }) {
-  const [listening, setListening] = useState(false);
   const files = useRef<HTMLInputElement>(null);
 
   function submit(event: FormEvent) {
@@ -60,7 +64,8 @@ export function ComposeBox({
     <form className="compose-box" onSubmit={submit}>
       <textarea
         aria-label="Message"
-        placeholder={placeholder}
+        placeholder={disabled ? "Recording…" : placeholder}
+        disabled={disabled}
         value={draft}
         onChange={(event) => onDraftChange(event.target.value)}
         onKeyDown={(event) => {
@@ -73,6 +78,7 @@ export function ComposeBox({
           className="compose-icon"
           aria-label="Attach files"
           title="Attach files"
+          disabled={disabled}
           onClick={() => files.current?.click()}
         >
           <PaperclipIcon />
@@ -82,14 +88,14 @@ export function ComposeBox({
         <button
           type="button"
           className="compose-icon"
-          aria-label={listening ? "Stop dictation" : "Dictate"}
-          aria-pressed={listening}
-          title={listening ? "Stop dictation" : "Dictate"}
-          onClick={() => setListening(!listening)}
+          aria-label="Dictate"
+          title="Dictate"
+          disabled={disabled}
+          onClick={onDictate}
         >
           <MicIcon />
         </button>
-        <button type="submit" className="compose-send" disabled={!draft.trim()} aria-label="Send">
+        <button type="submit" className="compose-send" disabled={disabled || !draft.trim()} aria-label="Send">
           ↑
         </button>
       </div>

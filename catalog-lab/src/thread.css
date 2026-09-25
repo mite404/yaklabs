@@ -2,6 +2,9 @@
    column can be tuned without touching components. `ch` resolves against the panel's
    own 15px type, so 80ch means eighty characters of thread text. */
 .thread-panel {
+  /* Positioned container: overlays such as dictation are scoped to the panel. */
+  position: relative;
+  container: panel / inline-size;
   --thread-measure: 80ch;
   --thread-gutter: 20px;
   width: calc(var(--thread-measure) + 2 * var(--thread-gutter));
@@ -152,9 +155,10 @@
   background: var(--wash);
   color: var(--ink);
 }
-.compose-icon[aria-pressed="true"] {
-  background: #fbe9e5;
-  color: #a33b25;
+.compose-icon:disabled {
+  opacity: 0.4;
+  background: transparent;
+  cursor: default;
 }
 .compose-send {
   width: 30px;

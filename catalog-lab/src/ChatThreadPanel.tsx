@@ -1,6 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { CatalogCard } from "./CatalogCard";
 import { ComposeBox } from "./ComposeBox";
+import { appendDictation } from "./dictation";
+import { DictationModal, type DictationSource } from "./DictationModal";
 import { Recap } from "./Recap";
 import { shouldShowRecap } from "./recapRules";
 import type { Thread, ThreadMessage } from "./thread";
@@ -71,17 +73,23 @@ function useClock(now?: number): number {
  * @param width Panel width in px; omit to use the measure plus gutters.
  * @param activity Thread state that drives the recap; omit and no recap is shown.
  * @param now Fixed clock for deterministic stories and tests; omit for live time.
+ * @param dictationSource Audio for dictation: simulated (default) or the real microphone.
+ * @param startDictating Open with dictation already recording (stories).
  */
 export function ChatThreadPanel({
   thread,
   width,
   activity,
   now,
+  dictationSource = "simulated",
+  startDictating = false,
 }: {
   thread: Thread;
   width?: number;
   activity?: ThreadActivity;
   now?: number;
+  dictationSource?: DictationSource;
+  startDictating?: boolean;
 }) {
   const clock = useClock(now);
   const [messages, setMessages] = useState(thread.messages);
@@ -89,6 +97,7 @@ export function ChatThreadPanel({
   const [lastInputAt, setLastInputAt] = useState(activity?.lastUserInputAt);
   const [dismissedAt, setDismissedAt] = useState<number>();
   const [peeking, setPeeking] = useState(false);
+  const [dictating, setDictating] = useState(startDictating);
   const scroller = useRef<HTMLDivElement>(null);
   const recapSlot = useRef<HTMLDivElement>(null);
 
@@ -138,6 +147,18 @@ export function ChatThreadPanel({
     setDraft("");
     setPeeking(false);
     setLastInputAt(clock);
+  }
+
+  // Closing dictation returns focus to the text it fed, so the user can keep editing.
+  function endDictation(transcript?: string) {
+    if (transcript !== undefined) setDraft((current) => appendDictation(current, transcript));
+    setDictating(false);
+    requestAnimationFrame(() =>
+      scroller.current
+        ?.closest(".thread-panel")
+        ?.querySelector<HTMLTextAreaElement>(".compose-box textarea")
+        ?.focus(),
+    );
   }
 
   // Jump so the evidence lands vertically centered, every time (ADR-022 eye trace).
@@ -193,9 +214,18 @@ export function ChatThreadPanel({
               if (!value.trim()) setPeeking(false);
             }}
             onSend={send}
+            onDictate={() => setDictating(true)}
+            disabled={dictating}
           />
         </div>
       </div>
+      {dictating && (
+        <DictationModal
+          source={dictationSource}
+          onCancel={() => endDictation()}
+          onDone={(transcript) => endDictation(transcript)}
+        />
+      )}
     </section>
   );
 }

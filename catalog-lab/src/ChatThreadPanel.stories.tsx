@@ -68,3 +68,17 @@ export const InactiveThread: Story = {
     activity: { active: false, lastUserInputAt: NOW - 40 * MINUTE },
   },
 };
+
+/** Dictation takes over the thread: a large center-playhead waveform, typing paused. */
+export const Dictation: Story = {
+  args: { thread: threads.trend, startDictating: true },
+};
+
+export const DictationNarrow: Story = {
+  args: { thread: threads.trend, startDictating: true, width: 420 },
+};
+
+/** Uses your real microphone; the browser asks for permission first. */
+export const DictationLiveMicrophone: Story = {
+  args: { thread: threads.trend, startDictating: true, dictationSource: "microphone" },
+};
