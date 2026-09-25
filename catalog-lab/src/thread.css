@@ -1,0 +1,198 @@
+/* Chat thread panel: one vertical column. Text measure and gutters are tokens so the
+   column can be tuned without touching components. `ch` resolves against the panel's
+   own 15px type, so 80ch means eighty characters of thread text. */
+.thread-panel {
+  --thread-measure: 80ch;
+  --thread-gutter: 20px;
+  width: calc(var(--thread-measure) + 2 * var(--thread-gutter));
+  max-width: 100%;
+  height: 720px;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  font-size: 15px;
+  overflow: hidden;
+}
+
+/* Header and compose reserve the same scrollbar gutter as the scroll area,
+   so all three share one text column on every platform. */
+.thread-header,
+.thread-compose {
+  overflow: hidden;
+  scrollbar-gutter: stable;
+}
+.thread-header {
+  padding: 14px var(--thread-gutter);
+  border-bottom: 1px solid var(--line);
+}
+.thread-header h2 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+/* The scroll area is the size container for embedded cards (ADR-023).
+   A stable scrollbar gutter keeps content from shifting when the bar appears (ADR-003). */
+.thread-scroll {
+  container: thread / inline-size;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable;
+  padding: 20px var(--thread-gutter);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.turn p {
+  margin: 0;
+  line-height: 1.6;
+}
+
+/* High-contrast user turn: a landmark when scrolling back (ADR-021). */
+.turn-user {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+  background: var(--ink);
+  color: #f7f8f5;
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+.turn-user p {
+  flex: 1;
+}
+.turn-user time {
+  font-size: 11px;
+  color: #b9c7c1;
+  font-variant-numeric: tabular-nums;
+}
+
+.turn-agent {
+  display: grid;
+  gap: 12px;
+}
+
+/* Fixed-height compose box: typing never resizes or moves it (ADR-003).
+   Resets the lab's global textarea rule, which is sized for the JSON editor. */
+.thread-compose {
+  padding: 12px var(--thread-gutter) 16px;
+  border-top: 1px solid var(--line);
+}
+.compose-box {
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 10px 12px 8px;
+  background: var(--paper);
+}
+.compose-box:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px #27786226;
+}
+.compose-box textarea {
+  display: block;
+  width: 100%;
+  height: 44px;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  resize: none;
+  outline: none;
+  font-size: 15px;
+  line-height: 1.45;
+  color: var(--ink);
+  background: transparent;
+}
+.compose-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  font-size: 11px;
+}
+.compose-bar button {
+  width: 30px;
+  height: 30px;
+  flex: none;
+  padding: 0;
+  border-radius: 50%;
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  font-size: 15px;
+}
+.compose-bar button:disabled {
+  background: var(--wash);
+  color: var(--muted);
+  cursor: default;
+}
+
+/* Catalog cards inside a thread drop page-level framing: the question is already the
+   user turn above, and component names are developer vocabulary (ADR-023). */
+.card[data-context="thread"] {
+  border-radius: 12px;
+}
+.card[data-context="thread"] .card-heading {
+  padding: 14px 16px 4px;
+}
+.card[data-context="thread"] .card-heading .eyebrow,
+.card[data-context="thread"] .card-heading .badge {
+  display: none;
+}
+.card[data-context="thread"] .card-heading h2 {
+  font-size: 15px;
+  letter-spacing: -0.2px;
+  margin: 0;
+}
+.card[data-context="thread"] .measure {
+  padding: 0 16px 6px;
+}
+.card[data-context="thread"] .chart {
+  height: 200px;
+}
+.card[data-context="thread"] .notice {
+  margin: 8px 16px;
+}
+.card[data-context="thread"] .table-wrap {
+  max-height: 220px;
+  padding: 0 16px 12px;
+}
+.card[data-context="thread"] footer {
+  padding: 10px 16px;
+  font-size: 11px;
+  line-height: 1.5;
+}
+.card[data-context="thread"].state {
+  min-height: 0;
+  padding: 18px 16px;
+}
+.card[data-context="thread"].state h2 {
+  font-size: 15px;
+  margin-bottom: 6px;
+}
+.card[data-context="thread"].state .state-symbol,
+.card[data-context="thread"] .page-only {
+  display: none;
+}
+.card[data-context="thread"].state p {
+  margin-bottom: 6px;
+}
+
+/* Compact density: a narrow thread beside a split pane. */
+@container thread (max-width: 480px) {
+  .card[data-context="thread"] .chart {
+    height: 160px;
+  }
+  .card[data-context="thread"] footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .card[data-context="thread"] footer button {
+    align-self: flex-start;
+  }
+}
