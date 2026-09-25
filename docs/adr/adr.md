@@ -166,7 +166,7 @@ It floats directly under the conversation with no divider line above it, and kee
 
 ## ADR-027 - Recap after ten idle minutes on an active thread
 
-2026-09-25 - Accepted.
+2026-09-25 - Accepted; "Needs you" items moved out by ADR-039.
 When a thread is still active and the user has sent nothing for 10 minutes or more, a recap of recorded outcomes appears above the compose box, "Needs you" items first, each jumping to its evidence turn (ADR-005/006, ADR-022), inspired by Amp's recap.
 It overlays the conversation without moving the input, collapses to a chip while the user types, stays dismissed for the current idle stretch, and uses no decorative ribbon or badge.
 
@@ -227,6 +227,18 @@ Kay's job is to earn enough trust that non-technical users never need to check t
 
 ## ADR-037 - Anything that expands in the thread lands centered, never under the compose box
 
-2026-09-25 - Accepted.
+2026-09-25 - Superseded by ADR-038.
 When a card, accordion, or menu inside the thread expands, the thread scrolls so the newly shown content (with the control that toggles it) is fully visible and vertically centered in the visible band above the compose box and any recap overlay; content taller than the band starts at its top, and at the end of the thread it rests flush above the compose box rather than leaving an empty gap.
 The thread owns this one rule and components opt in through a `reveal` hook, and jumping to a turn uses the same calculation (ADR-022), so expanding and jumping always frame content the same way.
+
+## ADR-038 - An expanded card rests 20px above the compose box, like the last card
+
+2026-09-25 - Accepted.
+When a card inside the thread would be clipped by the compose box (or by the card docked above it), the thread scrolls just enough for the card's bottom to rest 20px above it, exactly where the last card in the thread rests; a card that already fits does not move, one taller than the view starts at its top, and the thread never scrolls up to reveal, because that would move away from the click.
+The thread panel enforces this for every component by watching each turn grow right after a click or key press inside it, so no component has to opt in; jump-to-turn still centers its target (ADR-022), because a jump is navigation, not an expansion.
+
+## ADR-039 - "Needs you": a question the agent waits on, separate from the recap
+
+2026-09-25 - Accepted.
+When the agent is blocked on the user, it emits a validated question (zod, fails closed) that floats above the compose box as a "Needs you" card with numbered choices after Claude Code's question prompt: the agent's branches, an answer typed right in the card, and a host-added "Chat about something else", with keys 1 to N and no close button.
+The recap only reports what happened and never asks for anything, and the question shows as soon as the agent is blocked rather than after idle time, because being blocked is not an idle state; while a question is open, it takes the recap's place.
