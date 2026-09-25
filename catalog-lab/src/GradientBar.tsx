@@ -4,6 +4,8 @@ import type { ReactElement } from "react";
 // so tall and short bars are grounded identically.
 const BASE_BAND_PX = 20;
 const CORNER_RADIUS = 4;
+// Enough stops for SVG's straight-line interpolation to trace the ease curve smoothly.
+const FEATHER_STOPS = 9;
 
 type BarGeometry = { x: number; y: number; width: number; height: number; index: number };
 
@@ -21,9 +23,17 @@ function topRoundedRect({ x, y, width, height }: BarGeometry): string {
   ].join(" ");
 }
 
+// Smoothstep (ease-in-out): zero slope at both ends of the band, so there is no kink
+// where the band begins. A linear ramp ends abruptly and the eye reads that change in
+// rate as a faint line (Mach banding).
+function feather(t: number): number {
+  return t * t * (3 - 2 * t);
+}
+
 /**
  * A Recharts `shape` for bars that stay the data colour for most of their height and
- * deepen over the bottom 20px toward `--data-deep`, a grounded base like a soft shadow.
+ * deepen over the bottom 20px toward `--data-deep` along an ease-in-out curve, a grounded
+ * base like a soft shadow.
  * Each bar gets its own gradient so the band is 20px on every bar; bars shorter than
  * the band fade over their full height.
  * @param idPrefix Unique per chart (e.g. from `useId`), so gradient ids never collide.
@@ -36,16 +46,28 @@ export function gradientBar(idPrefix: string) {
     if (!(bar.height > 0) || !(bar.width > 0)) return <g />;
     const id = `${safePrefix}-bar-${bar.index}`;
     const bandStart = Math.max(0, 1 - BASE_BAND_PX / bar.height);
+    const path = topRoundedRect(bar);
+    // The base shade is layered over the solid bar with eased opacity stops.
+    const stops = Array.from({ length: FEATHER_STOPS }, (_, i) => {
+      const t = i / (FEATHER_STOPS - 1);
+      return { offset: bandStart + t * (1 - bandStart), opacity: feather(t) };
+    });
     return (
       <g>
         <defs>
           <linearGradient id={id} x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor="var(--data)" />
-            <stop offset={bandStart} stopColor="var(--data)" />
-            <stop offset="1" stopColor="var(--data-deep)" />
+            {stops.map((stop) => (
+              <stop
+                key={stop.offset}
+                offset={stop.offset}
+                stopColor="var(--data-deep)"
+                stopOpacity={stop.opacity}
+              />
+            ))}
           </linearGradient>
         </defs>
-        <path d={topRoundedRect(bar)} fill={`url(#${id})`} />
+        <path d={path} fill="var(--data)" />
+        <path d={path} fill={`url(#${id})`} />
       </g>
     );
   };
