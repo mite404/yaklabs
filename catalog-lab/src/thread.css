@@ -276,7 +276,9 @@
 .awaiting {
   border: 1px solid var(--hairline);
   border-radius: 12px;
-  box-shadow: 0 6px 20px var(--shadow-strong);
+  /* Lift without a top edge: the shadow is inset by its own offset, so it never shows
+     above the card, only below and faintly at the sides. */
+  box-shadow: 0 8px 16px -8px var(--shadow-strong);
 }
 .recap {
   /* Rows carry their own 8px inset so their hover wash lines up with the header text. */
