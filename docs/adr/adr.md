@@ -206,3 +206,9 @@ Addendum: [04-interactive-surfaces.md](../04-interactive-surfaces.md).
 2026-09-25 - Accepted.
 Following yaklabs.ai's computed styles, Inter is the interface and body face and Newsreader the display face (headlines, wordmark, thread titles), exposed as `--font-text` and `--font-display` tokens with the site's fallback stacks.
 Both are SIL Open Font License fonts bundled from @fontsource with optical sizing, so the desktop app renders them offline; commercial fonts would never be committed, only referenced by name with a free fallback.
+
+## ADR-034 - Brand colour: sampled palette, semantic tokens, one derived green
+
+2026-09-25 - Accepted.
+The palette is sampled from yaklabs.ai: off-white paper `#f0efeb`, ink `#20201c`, and forest greens from the hero photo; body copy is the ink at about 74% (all three colour channels agree, so it is one ink at one opacity), implemented as solid tints rather than transparency.
+Components use only semantic tokens (`--text-body`, `--line`, `--accent`, `--accent-soft`, and so on), and the UI accent `#3b5c40` is derived on the forest's hue because the sampled forest reads as black in flat UI; it passes 6.5:1 on paper and 6.9:1 under cream text.
