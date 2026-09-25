@@ -1,8 +1,10 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { CatalogCard } from "./CatalogCard";
-import { ComposeBox } from "./ComposeBox";
+import { ChartGlyph, ComposeBox } from "./ComposeBox";
 import { appendDictation } from "./dictation";
 import { DictationModal, type DictationSource } from "./DictationModal";
+import { InteractiveCard } from "./InteractiveCard";
+import { resolveInteractive, type CardAttachment } from "./interactive";
 import { Recap } from "./Recap";
 import { shouldShowRecap } from "./recapRules";
 import type { Thread, ThreadMessage } from "./thread";
@@ -28,13 +30,29 @@ function UserTurn({ message }: { message: UserMessage }) {
       aria-label={`You, ${message.time}`}
     >
       <p>{message.text}</p>
+      {message.attachments && message.attachments.length > 0 && (
+        <ul className="sent-context" aria-label="Sent with this message">
+          {message.attachments.map((item) => (
+            <li key={item.turnId} className="context-chip">
+              <ChartGlyph />
+              {item.label}
+            </li>
+          ))}
+        </ul>
+      )}
       <time>{message.time}</time>
     </article>
   );
 }
 
 // The agent's turn: prose first, then an optional catalog card sized by the panel.
-function AgentTurn({ message }: { message: AgentMessage }) {
+function AgentTurn({
+  message,
+  onChoose,
+}: {
+  message: AgentMessage;
+  onChoose: (attachment: CardAttachment) => void;
+}) {
   return (
     <article
       className="turn turn-agent"
@@ -45,9 +63,34 @@ function AgentTurn({ message }: { message: AgentMessage }) {
       {message.payload !== undefined && (
         <CatalogCard payload={message.payload} context="thread" />
       )}
+      {message.interactive !== undefined && (
+        <InteractiveCard payload={message.interactive} turnId={message.id} onChoose={onChoose} />
+      )}
     </article>
   );
 }
+
+// What the agent last saw on each interactive card: the measure it chose itself.
+function initialReported(messages: ThreadMessage[]): Record<string, string> {
+  const seen: Record<string, string> = {};
+  for (const message of messages) {
+    if (message.role !== "agent" || message.interactive === undefined) continue;
+    const result = resolveInteractive(message.interactive);
+    if (result.kind !== "approved") continue;
+    const { stops, initial } = result.selection.props.control;
+    seen[message.id] = stops.find((stop) => stop.id === initial)?.label ?? "";
+  }
+  return seen;
+}
+
+// Lab-only stand-in for the agent, so the round trip is visible without a model.
+function simulatedReply(attachments: CardAttachment[]): string {
+  const views = attachments.map((item) => item.label).join(" and ");
+  return `Answering about ${views}, the view you set on the card. Saturday leads at every level, so the weekend carries the week.`;
+}
+
+// Delay before the simulated reply, so it reads as a response rather than an echo.
+const REPLY_DELAY_MS = 700;
 
 function prefersReducedMotion(): boolean {
   return window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
@@ -98,6 +141,9 @@ export function ChatThreadPanel({
   const [dismissedAt, setDismissedAt] = useState<number>();
   const [peeking, setPeeking] = useState(false);
   const [dictating, setDictating] = useState(startDictating);
+  // Card choices waiting to be sent, latest per card only (ADR-031).
+  const [pending, setPending] = useState<Record<string, CardAttachment>>({});
+  const [reported, setReported] = useState(() => initialReported(thread.messages));
   const scroller = useRef<HTMLDivElement>(null);
   const recapSlot = useRef<HTMLDivElement>(null);
 
@@ -139,14 +185,48 @@ export function ChatThreadPanel({
     return () => observer.disconnect();
   }, [recapVisible]);
 
+  // A choice is only news if it differs from what the agent last saw on that card.
+  function choose(attachment: CardAttachment) {
+    setPending((current) => {
+      const next = { ...current };
+      if (reported[attachment.turnId] === attachment.state.measure) delete next[attachment.turnId];
+      else next[attachment.turnId] = attachment;
+      return next;
+    });
+  }
+
   function send() {
-    setMessages([
-      ...messages,
-      { id: `local-${messages.length}`, role: "user", text: draft.trim(), time: "now" },
-    ]);
+    const attachments = Object.values(pending);
+    const sent: ThreadMessage = {
+      id: `local-${messages.length}`,
+      role: "user",
+      text: draft.trim(),
+      time: "now",
+      attachments,
+    };
+    setMessages((current) => [...current, sent]);
     setDraft("");
     setPeeking(false);
     setLastInputAt(clock);
+    setPending({});
+    if (attachments.length === 0) return;
+    setReported((current) => ({
+      ...current,
+      ...Object.fromEntries(attachments.map((item) => [item.turnId, item.state.measure])),
+    }));
+    window.setTimeout(
+      () =>
+        setMessages((current) => [
+          ...current,
+          {
+            id: `reply-${current.length}`,
+            role: "agent",
+            time: "now",
+            text: simulatedReply(attachments),
+          },
+        ]),
+      REPLY_DELAY_MS,
+    );
   }
 
   // Closing dictation returns focus to the text it fed, so the user can keep editing.
@@ -189,7 +269,7 @@ export function ChatThreadPanel({
           message.role === "user" ? (
             <UserTurn key={message.id} message={message} />
           ) : (
-            <AgentTurn key={message.id} message={message} />
+            <AgentTurn key={message.id} message={message} onChoose={choose} />
           ),
         )}
       </div>
@@ -216,6 +296,17 @@ export function ChatThreadPanel({
             onSend={send}
             onDictate={() => setDictating(true)}
             disabled={dictating}
+            attachments={Object.values(pending).map((item) => ({
+              id: item.turnId,
+              label: item.label,
+            }))}
+            onRemoveAttachment={(id) =>
+              setPending((current) => {
+                const next = { ...current };
+                delete next[id];
+                return next;
+              })
+            }
           />
         </div>
       </div>

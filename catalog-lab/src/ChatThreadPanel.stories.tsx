@@ -82,3 +82,11 @@ export const DictationNarrow: Story = {
 export const DictationLiveMicrophone: Story = {
   args: { thread: threads.trend, startDictating: true, dictationSource: "microphone" },
 };
+
+/** Interactive card (ADR-029): a stepped slider walks gross to net profit; the chart and
+ *  the agent's sentence update instantly, and the choice rides along with the next message. */
+export const InteractiveProfit: Story = { args: { thread: threads.profit } };
+
+export const InteractiveProfitNarrow: Story = {
+  args: { thread: threads.profit, width: 420 },
+};

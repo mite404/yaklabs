@@ -139,6 +139,63 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* Card context waiting to be sent (ADR-030): it takes the hint's place in the bar. */
+.compose-context {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  gap: 6px;
+  overflow: hidden;
+  padding-left: 2px;
+}
+.context-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  padding: 3px 4px 3px 9px;
+  border-radius: 999px;
+  background: #eaf4ea;
+  color: #2f5f45;
+  font-size: 12px;
+  white-space: nowrap;
+  animation: chip-in 180ms ease-out;
+}
+.context-chip button {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  font-size: 14px;
+  line-height: 1;
+}
+.context-chip button:hover {
+  background: #d3e7d6;
+}
+@keyframes chip-in {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+}
+/* Sent context stays visible under the message it went with. */
+.sent-context {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sent-context .context-chip {
+  padding-right: 9px;
+  animation: none;
+}
+
 .compose-icon {
   display: grid;
   place-items: center;
@@ -318,6 +375,7 @@
   }
 }
 @media (prefers-reduced-motion: reduce) {
+  .context-chip,
   .recap,
   .recap-chip,
   .turn[data-flash] {
