@@ -211,4 +211,4 @@ Both are SIL Open Font License fonts bundled from @fontsource with optical sizin
 
 2026-09-25 - Accepted.
 The palette comes from yaklabs.ai's declared CSS: off-white `#f0efea`, ink `#252524`, body copy as a solid `#4a4a47` (about 82% of the ink), a 0.72 ink step for meta text and borders (used here as a solid tint), and the declared sage `#c7cfba` for soft tints; hero-photo greens come from Ethan's Figma picks. (An earlier pixel-sampled pass read body copy as ink at 74% opacity; the CSS showed a solid grey.)
-Components use only semantic tokens (`--text-body`, `--line`, `--accent`, `--accent-soft`, and so on), and the UI accent `#3b5c40` is derived on the forest's hue because the sampled forest reads as black in flat UI; it passes 6.5:1 on paper and 6.9:1 under cream text.
+Components use only semantic tokens (`--text-body`, `--line`, `--accent`, `--accent-soft`, and so on), and the UI accent is an olive `#515e38` derived on the declared sage's hue (OKLCH 124°), chosen over a forest-hue green so that buttons, charts, chips, and bubbles share one hue; it passes 6.1:1 on paper and under cream text.
