@@ -92,7 +92,7 @@ export function AwaitingInputCard({
 
   return (
     <section
-      className="awaiting surface-strong"
+      className="awaiting attention-surface"
       aria-label="Needs you"
       data-open={open || undefined}
       onKeyDown={keys}

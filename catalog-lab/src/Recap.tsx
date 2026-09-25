@@ -23,13 +23,13 @@ export function Recap({
 }) {
   if (collapsed)
     return (
-      <button className="recap-chip surface-strong" onClick={onExpand}>
+      <button className="recap-chip attention-surface" onClick={onExpand}>
         Recap
       </button>
     );
 
   return (
-    <section className="recap surface-strong" aria-label="Recap" role="status">
+    <section className="recap attention-surface" aria-label="Recap" role="status">
       <header className="recap-header">
         <p>
           <strong>Recap</strong>

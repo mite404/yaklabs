@@ -271,7 +271,7 @@
   pointer-events: auto;
   animation: recap-in 180ms ease-out;
 }
-/* What needs attention sits on the strong surface (.surface-strong, ADR-042), so it stands
+/* What needs attention sits on the attention surface (.attention-surface, ADR-042), so it stands
    apart from every card in the thread; the shadow lifts it off the conversation. */
 .recap,
 .awaiting {
@@ -351,7 +351,7 @@
   box-shadow: 0 2px 8px var(--shadow);
   font-size: 12px;
 }
-/* "Needs you" (ADR-039, ADR-045): numbered tiles on the strong surface, a Skip and Submit
+/* "Needs you" (ADR-039, ADR-045): numbered tiles on the attention surface, a Skip and Submit
    pair, and a header that folds the card to one line. Everything lines up on a 12px inset. */
 .awaiting {
   padding: 4px 12px 12px;
@@ -434,6 +434,12 @@
 .awaiting-tile:hover {
   background: var(--paper-deep);
 }
+/* Hovered rows on the attention surface darken, so their text switches to the hover ink. */
+.attention-surface :is(.awaiting-tile, .recap li button, .awaiting-header, .awaiting-action, .recap-close):hover {
+  --ink: var(--attention-hover-ink);
+  --soft-ink: var(--attention-hover-ink);
+  color: var(--ink);
+}
 /* Keyboard focus sits inside the tile, where it clears 3:1 against the tile itself. */
 .awaiting-tile:focus-visible {
   outline: 2px solid var(--focus);
@@ -487,7 +493,7 @@
   margin-top: 0;
 }
 /* Skip and Submit, bottom right. Submit waits for a selection (and, for the typed answer,
-   some text); it is cream on the strong surface, where olive would disappear. */
+   some text); it is cream on the attention surface, where olive would disappear. */
 .awaiting-actions {
   display: flex;
   justify-content: flex-end;
@@ -513,11 +519,13 @@
 .awaiting-submit {
   border-color: var(--ink);
   background: var(--ink);
-  color: var(--on-strong-inverse);
+  color: var(--on-attention-inverse);
 }
-.awaiting-submit:hover {
-  background: var(--ink);
-  opacity: 0.9;
+/* Green is kept for button hovers: Submit fills with the site's moss, as .btn does. */
+.attention-surface .awaiting-submit:hover:not(:disabled) {
+  border-color: var(--moss);
+  background: var(--moss);
+  color: var(--paper); /* 10.4:1 */
 }
 .awaiting-submit:disabled {
   opacity: 0.4;

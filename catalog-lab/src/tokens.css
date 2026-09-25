@@ -39,9 +39,9 @@
   /* derived: --sage's hue (OKLCH 124°) at L 0.46 / C 0.06, an olive that reads as green in
      flat UI and shares a hue with the sage tint; chosen over a forest-hue option. */
   --yak-green: #515e38;
-  /* Ethan: warm greys for surfaces that need the user's attention (ADR-046). */
-  --yak-stone: #8a8a85; /* light mode */
-  --yak-stone-light: #cbcac4; /* light mode: tiles, darker than the user's bubbles */
+  /* Ethan: warm greys for surfaces that need the user's attention (ADR-046, ADR-054). */
+  --yak-stone-pale: #d6d5cf; /* light mode: the Recap and Needs you cards */
+  --yak-stone: #8a8a85; /* light mode: hover on those cards; also the focus ring */
   --yak-slate: #62625d; /* dark mode: the lightest grey where cream text clears 4.5:1 */
 
   /* Roles built on those: the window around the app, and the rest below. */
@@ -62,23 +62,27 @@
   --warn-bg: #f4ecd9; /* derived: warm notice, harmonised with the paper */
   --warn-ink: #66511f; /* derived */
   --record: #b8432c; /* derived: recording dot */
-  /* The strong surface for what needs attention (the recap, "Needs you", ADR-042/046), its
+  /* The attention surface for what needs attention (the recap, "Needs you", ADR-042/046), its
      text, and the tiles on it. Light mode: a mid grey with the darkest ink, since even the
      regular ink is 4.4:1 on it, and light tiles; hovers lighten, as on every light surface. */
-  --surface-strong: var(--yak-stone);
-  --on-strong: var(--yak-night); /* 5.4:1 */
-  --on-strong-muted: var(--yak-night); /* nothing lighter clears 4.5:1 on this grey */
-  --on-strong-wash: color-mix(in srgb, var(--paper) 15%, var(--yak-stone)); /* 6.5:1 */
-  --on-strong-line: color-mix(in srgb, var(--yak-night) 55%, var(--yak-stone));
-  --on-strong-focus: var(--yak-night); /* 5.4:1 on the surface, 11:1 on a tile */
-  --on-strong-inverse: var(--paper); /* text on a filled action: 16.1:1 on night */
-  --tile-bg: var(--yak-stone-light);
-  --tile-ink: var(--ink); /* 9.3:1 */
-  --tile-muted: color-mix(in srgb, var(--ink) 80%, var(--yak-stone-light)); /* 5.8:1 */
-  --tile-wash: color-mix(in srgb, var(--paper) 30%, var(--yak-stone-light)); /* hover */
+  --attention-bg: var(--yak-stone-pale);
+  --on-attention: var(--ink); /* 10.4:1 */
+  --on-attention-soft: var(--soft-ink); /* 4.6:1 */
+  --attention-hover: var(--yak-stone); /* Ethan */
+  /* Hovered rows darken to #8a8a85, where the usual inks fail (4.4:1, 1.9:1), so their text
+     switches to the darkest ink: 5.4:1. */
+  --attention-hover-ink: var(--yak-night);
+  --attention-line: var(--hairline);
+  --attention-focus: var(--ink); /* 10.4:1; the page's grey ring would be 2.3:1 here */
+  --on-attention-inverse: var(--paper); /* text on a filled action: 13.3:1 on ink */
+  /* Tiles are lighter than the card: the old #cbcac4 was 1.1:1 against it, and soft-ink failed. */
+  --tile-bg: var(--paper); /* 1.3:1 against the card */
+  --tile-ink: var(--ink); /* 13.3:1 */
+  --tile-muted: var(--soft-ink); /* 5.8:1 */
+  --tile-wash: var(--yak-stone);
   --tile-field-bg: transparent;
-  --tile-field-border: color-mix(in srgb, var(--ink) 55%, var(--yak-stone-light)); /* 3.1:1 */
-  --tile-field-placeholder: color-mix(in srgb, var(--ink) 72%, var(--yak-stone-light)); /* 4.7:1 */
+  --tile-field-border: var(--rule); /* 5.7:1 */
+  --tile-field-placeholder: var(--rule); /* 5.7:1 */
 
   --radius: 14px;
   --space: 24px;
@@ -206,44 +210,45 @@ button:hover {
 /* Dark mode (ADR-046): only the attention surfaces are themed so far. The dark card that
    was tried in light mode is kept here: paper text, deeper tiles, and darker hovers. */
 :root[data-theme="dark"] {
-  --surface-strong: var(--yak-slate);
-  --on-strong: var(--paper); /* 5.3:1 */
-  --on-strong-muted: color-mix(in srgb, var(--paper) 90%, var(--yak-slate)); /* 4.7:1 */
+  --attention-bg: var(--yak-slate);
+  --on-attention: var(--paper); /* 5.3:1 */
+  --on-attention-soft: color-mix(in srgb, var(--paper) 90%, var(--yak-slate)); /* 4.7:1 */
   /* derived: hover on dark surfaces, halfway to the night green; paper 9.8:1 */
-  --on-strong-wash: color-mix(in srgb, var(--yak-night) 50%, var(--yak-slate));
-  --on-strong-line: color-mix(in srgb, var(--paper) 14%, var(--yak-slate));
-  --on-strong-focus: var(--paper);
-  --on-strong-inverse: var(--yak-slate); /* 5.3:1 on paper */
+  --attention-hover: color-mix(in srgb, var(--yak-night) 50%, var(--yak-slate));
+  --attention-hover-ink: var(--paper); /* 9.8:1 */
+  --attention-line: color-mix(in srgb, var(--paper) 14%, var(--yak-slate));
+  --attention-focus: var(--paper);
+  --on-attention-inverse: var(--yak-slate); /* 5.3:1 on paper */
   --tile-bg: color-mix(in srgb, var(--yak-night) 18%, var(--yak-slate)); /* paper 6.6:1 */
   --tile-ink: var(--paper);
   --tile-muted: color-mix(in srgb, var(--paper) 90%, var(--yak-slate)); /* 5.8:1 */
-  --tile-wash: var(--on-strong-wash);
+  --tile-wash: var(--attention-hover);
   --tile-field-bg: color-mix(in srgb, var(--yak-night) 12%, var(--yak-slate));
   --tile-field-border: color-mix(in srgb, var(--paper) 60%, var(--yak-slate));
   --tile-field-placeholder: color-mix(in srgb, var(--paper) 78%, var(--yak-slate)); /* 4.6:1 */
 }
 
-/* The strong surface for what needs attention (ADR-042). It redefines the text tokens, so
+/* The attention surface for what needs attention (ADR-042). It redefines the text tokens, so
    everything inside adapts without colours of its own. */
-.surface-strong {
-  --ink: var(--on-strong);
-  --soft-ink: var(--on-strong-muted);
-  --paper-deep: var(--on-strong-wash);
-  --hairline: var(--on-strong-line);
-  --rule: var(--on-strong-line);
-  --focus: var(--on-strong-focus);
-  background: var(--surface-strong);
+.attention-surface {
+  --ink: var(--on-attention);
+  --soft-ink: var(--on-attention-soft);
+  --paper-deep: var(--attention-hover);
+  --hairline: var(--attention-line);
+  --rule: var(--attention-line);
+  --focus: var(--attention-focus);
+  background: var(--attention-bg);
   color: var(--ink);
 }
-/* A tile on the strong surface: its own fill and text, so choices stand apart by colour. */
-.surface-strong .tile {
+/* A tile on the attention surface: its own fill and text, so choices stand apart by colour. */
+.attention-surface .tile {
   --ink: var(--tile-ink);
   --soft-ink: var(--tile-muted);
   --paper-deep: var(--tile-wash);
   background: var(--tile-bg);
   color: var(--ink);
 }
-.surface-strong .field {
+.attention-surface .field {
   --field-bg: var(--tile-field-bg);
   --field-border: var(--tile-field-border);
   --field-placeholder: var(--tile-field-placeholder);
@@ -269,6 +274,11 @@ textarea:focus-visible,
 summary:focus-visible {
   outline: 2px solid var(--focus);
   outline-offset: 3px;
+}
+/* A clicked text field shows only its focused border, never the ring: the ring is for
+   keyboard and assistive focus (ADR-053, see inputModality.ts). */
+:root[data-input="pointer"] :is(input, textarea):focus-visible {
+  outline: none;
 }
 a {
   color: var(--accent);

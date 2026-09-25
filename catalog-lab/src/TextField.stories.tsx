@@ -8,10 +8,10 @@ const STATES: [string, string | undefined, string][] = [
   ["Filled", undefined, "The next 4 weeks"],
 ];
 
-function FieldStates({ placeholder, surface }: { placeholder: string; surface: "paper" | "strong" }) {
+function FieldStates({ placeholder, surface }: { placeholder: string; surface: "paper" | "attention" }) {
   return (
     <div
-      className={surface === "strong" ? "surface-strong" : undefined}
+      className={surface === "attention" ? "attention-surface" : undefined}
       style={{ display: "grid", gap: 20, padding: 32, background: surface === "paper" ? "var(--bg)" : undefined }}
     >
       {STATES.map(([name, preview, value]) => (
@@ -52,7 +52,7 @@ export const OnPaper: Story = {
   args: { placeholder: "How many weeks ahead should it forecast?", surface: "paper" },
 };
 
-/** On the strong surface: a faint recessed fill keeps the greyer placeholder readable. */
-export const OnStrongSurface: Story = {
-  args: { placeholder: "How many weeks ahead should it forecast?", surface: "strong" },
+/** Inside the Recap and Needs you cards, the grey surfaces for what needs the user's attention. */
+export const InsideRecapAndNeedsYou: Story = {
+  args: { placeholder: "How many weeks ahead should it forecast?", surface: "attention" },
 };
