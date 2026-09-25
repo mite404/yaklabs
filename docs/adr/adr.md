@@ -363,3 +363,8 @@ The stepped slider stays olive for now, pending a decision on moving it to ink.
 The Recap is done and keeps the pale attention card; Needs you now sits on the app's paper with its option pills in the attention grey `#d6d5cf` (hover still `#8a8a85`), and a line under its header marks the header as the fold control, with 8px between the header's hover fill and the line; folded, there is no line.
 Neither card shows a shadow on its top edge any more; the lift shows only below.
 
+## ADR-060 - Needs you options rest on paper-deep and hover to the attention grey
+
+2026-09-25 - Accepted; amends ADR-059.
+Needs you option pills rest on brand.css's `--paper-deep` (`#e4e4df`, one step below the card's paper) and hover to `#d6d5cf`, which is light enough that labels and details keep their usual inks (10.4:1 and 5.0:1); the header and Skip share that hover, and the Recap keeps its `#8a8a85` hover.
+
