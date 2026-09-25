@@ -193,3 +193,10 @@ This applies to catalog cards and to model-written custom views alike (the typed
 2026-09-25 - Accepted.
 Meaningful choices the user makes in any interactive surface (card controls, accepting or rejecting redline changes, pins, sorting on a bucket board) are fed back to the agent as structured, visible input, so the chat becomes a live feedback loop where the user steers by doing, not only by writing.
 This keeps users engaged and playing instead of checking out while reading walls of text, which serves the goal of turning them into creators; only meaningful choices count (no hovers or scrolls, and only a card's latest state), and every choice travels as a visible, removable chip (ADR-009, ADR-030).
+
+## ADR-032 - Two tiers of interactive surfaces
+
+2026-09-25 - Accepted.
+Tier 1 is catalog cards, static or interactive: Kay's catalog builds them, the agent only describes data, controls, and live text, and everything invented is rejected (ADR-024, ADR-029); tier 2 is custom views, model-written HTML (after Thariq Shihipar's HTML article) for throwaway personal tools, sandboxed, styled with Kay's tokens, and visibly labeled as custom.
+Both tiers return the user's choices to the agent through the same visible chip (ADR-030, ADR-031), and custom views that keep recurring are promoted into tier 1 (ADR-016).
+Addendum: [04-interactive-surfaces.md](../04-interactive-surfaces.md).
