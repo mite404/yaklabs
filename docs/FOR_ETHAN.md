@@ -8,6 +8,7 @@ We are preparing for a founding design-engineer interview at YakLabs, whose prod
 We picked one of the three problems in the posting - making agent work legible - and have been arguing our way to a set of interaction principles, recorded as ADRs in `docs/adr/adr.md`.
 The first code exists: `catalog-lab/`, a React + Storybook experiment where an agent may only pick from a strict catalog of chart and table cards.
 Next: fit those cards into a chat thread panel (ADR-023), then the site of working prototypes.
+The thread now keeps every expanded card 20px above the compose box (ADR-038), and a question the agent is blocked on gets its own "Needs you" card instead of hiding inside the recap (ADR-039).
 
 ## 2. Cast & Crew
 
@@ -29,6 +30,9 @@ Nothing is built yet, so the cast is the set of ideas the prototypes will be mad
 
 - **"Show my work", not "Show recipe", and always closed.** "Recipe" is our word, the builder's word; a teacher's "show your work" is the user's. It starts collapsed on every card because the goal is trust: like a finished cut, the audience watches the film, and the edit decision list exists for whoever asks (ADR-036).
 
+- **Nudge, don't center.** Centering an opened card (ADR-037) moved the frame even when nothing was hidden, and every component had to remember to ask for it. Now the thread only moves when a card would be clipped, and only far enough to rest 20px above the compose box, the same line the last card rests on (ADR-038).
+- **The recap reports; it never asks.** A "Needs you" line inside the recap mixed two jobs, "here is what happened" and "I need a decision", and hid the decision behind ten idle minutes. A blocked agent now asks right away in its own card, with numbered choices and a "Chat about something else" exit, and the recap goes back to reporting (ADR-039).
+
 ## 4. Bloopers
 
 - **The docs were behind a locked door.** The environment's network policy blocked docs.meetkay.ai, so Kay's vocabulary was reconstructed from search snippets and Ramp's Glass. Everything inferred is labeled; verify before the interview.
@@ -43,6 +47,10 @@ Nothing is built yet, so the cast is the set of ideas the prototypes will be mad
 - **A card that needed a window to exist.** The first test to render the interactive card outside a browser crashed, because it read `window` during render to check reduced motion. Kay is a desktop app, so users would never hit it, but a component should not assume its stage. Fix: guard the check and return the default.
 
 - **The accordion that opened offstage.** Opening "Show my work" grew the card downward while the scroll position stayed put, so 140 to 170px of the steps landed below the visible edge, behind the compose box, from every starting position. When the view did sometimes shift, that was the browser's scroll anchoring guessing, not a rule. Fix: the thread owns one reveal rule (ADR-037). Lesson: when something expands, decide who moves the camera; if nobody does, the browser will, inconsistently.
+
+- **The rule that only one card followed.** ADR-037 asked each component to call `reveal`, and only the interactive card did, so "View data table" still opened 31px under the compose box beside a split pane. Fix: the thread panel enforces the rule itself by watching every turn grow after a click (ADR-038). Lesson: a rule that depends on every component remembering it is a suggestion; put it where nothing can skip it.
+
+- **The 20px that was really 16.** The last card was meant to rest 20px above the compose box but measured 16 to 20px, because the thread scrolled to its end before the charts and fonts finished sizing, then stopped a few pixels short. Fix: while the thread is at its end, it stays there as content settles, and the padding subtracts the compose row's 4px inset so the visible gap is exactly 20px. Lesson: measure the resting state after everything has loaded, not the frame after mount.
 
 ## 5. Director's Commentary
 
@@ -192,39 +200,62 @@ Say it in the interview: "When a surface is interactive, the agent has to know w
 ### Reframe on the action: one rule for anything that expands
 
 A camera operator does not wait for the director to shout "tilt up" every time an actor stands; reframing on movement is the operator's standing job.
-In the thread, the scroller is the camera operator.
-Before this rule, each component expanded however it liked and the frame stayed where it was, so new content could open below the compose box, half hidden.
-
-Now the thread owns one calculation and every expanding thing calls it, the same way jump-to-turn does:
+In the thread, the scroller is the camera operator, and it now reframes on its own: no component has to ask.
 
 ```ts
-// catalog-lab/src/threadReveal.ts: center it if it fits, else start at its top, and never
-// scroll past either end of the thread.
-export function revealScrollTop({ target, viewHeight, maxScrollTop, margin = EDGE_MARGIN_PX }) {
-  const height = target.bottom - target.top;
-  const top =
-    height + 2 * margin <= viewHeight
-      ? target.top - (viewHeight - height) / 2
-      : target.top - margin;
-  return Math.round(Math.min(Math.max(top, 0), Math.max(maxScrollTop, 0)));
+// catalog-lab/src/threadReveal.ts: move only if the card is clipped, and only enough to rest
+// it 20px above the compose box; a card taller than the view starts at its top; never scroll up.
+export function nudgeScrollTop(target: Span, view: Viewport): number {
+  const bandBottom = view.scrollTop + view.height - view.insetBottom;
+  if (target.bottom <= bandBottom) return view.scrollTop;
+  const bottomAligned = target.bottom - view.height + view.insetBottom;
+  const topAligned = target.top - view.insetTop;
+  return clamp(Math.max(view.scrollTop, Math.min(bottomAligned, topAligned)), view.maxScrollTop);
 }
 ```
 
 ```mermaid
 sequenceDiagram
   participant U as User
-  participant C as Card
+  participant C as Any card
   participant T as Thread (scroller)
-  U->>C: clicks "Show my work"
-  C->>C: renders the steps (layout, before paint)
-  C->>T: reveal([steps, footer])
-  T->>T: measure span, subtract the recap overlay
-  T->>T: center it, or top-align if too tall, clamp to the ends
-  T-->>U: steps and "Hide my work" framed, nothing under the compose box
+  U->>T: pointerdown inside a turn (remembered)
+  U->>C: clicks "View data table"
+  C->>C: grows
+  T->>T: ResizeObserver: this turn grew within 1s of a click in it
+  T->>T: nudgeScrollTop(card, padding as the insets)
+  T-->>U: card bottom rests 20px above the compose box
 ```
 
 Two details make it hold up.
-The visible band is the scroller minus the recap overlay, so "centered" means centered in what the user can actually see.
-And the thread's `reveal` is a stable function, so an open card is framed once, not re-framed on every keystroke in the compose box.
+The insets come from the scroller's own padding, which already includes the dock card, so a nudged card lands exactly where the thread's last card rests: one resting line, not two.
+And growth nobody asked for (a chart sizing, a font loading) never nudges; it only keeps a thread that was at its end at its end.
 
-Say it in the interview: "Expansion is a camera move, so the thread owns it: one rule, reused by every component and by jump-to-turn, instead of each component guessing."
+Say it in the interview: "Expansion is a camera move, so the thread owns it, and it moves the camera as little as possible: only when something would be hidden, only as far as the resting line."
+
+### Separation of concerns: the recap reports, "Needs you" asks
+
+A "previously on" montage recaps the story; it never stops to ask the audience a question.
+When the recap carried a "Needs you" line, a blocked agent waited ten idle minutes to be noticed, and the user had to read history to find a decision.
+Now the question is its own validated payload, and the host always adds the exit.
+
+```ts
+// catalog-lab/src/awaiting.ts: the agent supplies the question and its branches; the host
+// renders them numbered and always appends "Chat about something else" (AwaitingInputCard.tsx).
+export const awaitingSchema = z.strictObject({
+  question: text,
+  options: z.array(z.strictObject({ label: ..., detail: text.optional() })).min(1).max(4),
+  answer: z.strictObject({ placeholder: ... }),
+});
+```
+
+```mermaid
+flowchart TD
+  A[Agent] -->|blocked on the user| Q{awaitingSchema}
+  Q -->|valid| N["Needs you card<br/>1 branch · 2 typed answer · 3 chat about something else"]
+  Q -->|invalid| X[dropped, nothing half-shown]
+  A -->|work recorded| R[Recap: outcomes only, after 10 idle minutes]
+  N -->|while open| H[recap waits]
+```
+
+Say it in the interview: "A recap is for catching up; a question is for deciding. Mixing them made the decision wait and made the history noisy."

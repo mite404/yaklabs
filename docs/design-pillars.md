@@ -98,6 +98,20 @@ The shade follows an ease-in-out curve (rule 11), so the band has no visible top
 A linear gradient that starts or stops inside a shape creates a faint false line where it begins, because the eye exaggerates any sudden change in the rate of change (Mach banding).
 Shape feathered gradients and shadows with an ease-in-out curve (smoothstep: zero slope at both ends), approximated with several colour stops, exactly as a camera move eases in and out.
 
+## Spacing
+
+### 12. Cards come to rest 20px above the compose box
+
+The last card in a thread rests 20px above the compose box, or 20px above the card docked over it, and any card that grows (a data table, "Show my work") is nudged to that same line instead of opening underneath.
+One resting line means the eye always finds new content in the same place, the way a lower third always sits at the same height on screen.
+The gap is the token `--rest-gap`; the thread's bottom padding subtracts the compose row's 4px focus-ring inset (`--compose-inset`) so the visible gap is exactly 20px.
+
+| Property | Value | Source |
+| --- | --- | --- |
+| Resting gap | 20px (`--rest-gap`) | Ethan |
+| Compose row inset | 4px (`--compose-inset`) | derived (fits the 3px focus ring) |
+| Nudge | smallest scroll; never upward | derived (ADR-038) |
+
 ## Open questions
 
 - The hover rule itself (it did not print): confirm the fill `#242b24` and that the border really stays unchanged on hover.
