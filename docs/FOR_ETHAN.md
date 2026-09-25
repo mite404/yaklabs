@@ -37,6 +37,8 @@ Nothing is built yet, so the cast is the set of ideas the prototypes will be mad
 
 - **Two short sentences, or it isn't a card.** Four rows only look considered if each one is brief, so the question and every detail are capped at two short sentences (120 characters, about three lines in the narrow card, measured). A question that needs more words is really the agent needing more context, so it asks in the thread instead. The caps come from the layout, not a guess: 48 characters per line, 43 in the one-line answer field.
 
+- **The UI reports; the agent decides.** The panel used to hold three canned replies of its own. Now it only tells an `Agent` what happened and streams back whatever it says, so the same components can run against the lab stand-in today and a real model for the demo (ADR-041).
+
 ## 4. Bloopers
 
 - **The docs were behind a locked door.** The environment's network policy blocked docs.meetkay.ai, so Kay's vocabulary was reconstructed from search snippets and Ramp's Glass. Everything inferred is labeled; verify before the interview.
@@ -267,3 +269,38 @@ flowchart TD
 ```
 
 Say it in the interview: "A recap is for catching up; a question is for deciding. Mixing them made the decision wait and made the history noisy."
+
+### One seam for a real model: the UI reports, the agent answers
+
+A film set does not care whether the voice on the other end of the walkie-talkie is the real director or a stand-in reading the script; it only needs the channel to work the same way.
+The thread panel now talks to the agent through one channel, `Agent`, and the lab's scripted stand-in is just one voice on it.
+
+```ts
+// catalog-lab/src/agent.ts: the only contract the thread knows.
+export type AgentEvent =
+  | { kind: "message"; text: string; attachments: CardAttachment[] }
+  | { kind: "answer"; text: string }
+  | { kind: "question-rejected"; reason: string; question: unknown };
+
+export type Agent = {
+  respond(event: AgentEvent, signal: AbortSignal): AsyncIterable<string>;
+};
+```
+
+```mermaid
+flowchart LR
+  subgraph UI[catalog-lab UI]
+    P[ChatThreadPanel] -->|AgentEvent| A{{Agent}}
+    A -->|text chunks| P
+  end
+  A -.today.-> L[labAgent.ts<br/>scripted stand-in]
+  A -.demo.-> R[real model runtime<br/>validates with awaiting.ts]
+```
+
+Two details make it hold up.
+A reply is an `AsyncIterable` of text chunks, which is exactly the shape a model's token stream already has, so a real agent is an adapter, not a rewrite.
+And the `AbortSignal` lets the panel stop a reply the moment it unmounts, so nothing streams into a thread nobody is looking at.
+
+To run the UI against a real model later: write an `Agent` whose `respond` calls a small server route (keeping the API key off the browser), stream its text back, and pass it as `<ChatThreadPanel agent={realAgent} />`.
+
+Say it in the interview: "The components never know who is answering; that is how the same UI is tested with a script and shipped with a model."

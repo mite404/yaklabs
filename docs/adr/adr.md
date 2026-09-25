@@ -250,3 +250,9 @@ The recap only reports what happened and never asks for anything, and the questi
 2026-09-25 - Accepted.
 A question that fails the schema never becomes a card, not even part of one, and the user never sees the error: the validation error goes back to the agent, which asks for what it needs in an ordinary streamed reply, so a blocked agent is never silently stuck.
 A bad question (irrelevant, or offering a path that makes no sense) should never be asked at all, which is the model's and the prompt's job; the schema only guards shape, and generation should be constrained to the same schema so a malformed one is rare.
+
+## ADR-041 - One seam between the thread and whatever answers it
+
+2026-09-25 - Accepted.
+The thread only reports events to an `Agent` (the user sent a message, answered a question, or the agent's question was rejected) and renders the reply that streams back as text chunks; it never decides what the agent says.
+The scripted lab stand-in (`labAgent.ts`) is the only fake left and is the default, so showing the UI with a real model means passing another `Agent`, with the question schema shared between that runtime and the UI (ADR-040).
