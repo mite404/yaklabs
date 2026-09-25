@@ -6,8 +6,8 @@ A living log of what we are building, why, and what we learned along the way.
 
 We are preparing for a founding design-engineer interview at YakLabs, whose product is Kay: a desktop AI workspace that turns non-technical knowledge workers into AI power users.
 We picked one of the three problems in the posting - making agent work legible - and have been arguing our way to a set of interaction principles, recorded as ADRs in `docs/adr/adr.md`.
-No prototype code exists yet.
-The site of working prototypes comes next, once the direction is locked.
+The first code exists: `catalog-lab/`, a React + Storybook experiment where an agent may only pick from a strict catalog of chart and table cards.
+Next: fit those cards into a chat thread panel (ADR-023), then the site of working prototypes.
 
 ## 2. Cast & Crew
 
@@ -88,3 +88,49 @@ The catalog is the show bible, written so well that a thousand guest directors -
 
 Senior-engineer takeaway: when output volume outgrows review capacity, stop reviewing outputs and start constraining inputs.
 Your `never` exhaustiveness check is the same idea in miniature: the compiler, not a reviewer, guarantees coverage.
+
+### Test screenings, not beauty contests
+
+The usual way to test a chart is to show two versions and ask "which do you prefer?"
+People pick the prettier one, and UX research keeps finding that preference and performance often disagree: the chart someone likes can be the one they misread.
+
+`catalog-lab` flips this.
+Every Storybook story is a scenario that carries the question a real user would ask, so the same fixture serves development and research:
+
+```ts
+// catalog-lab/src/fixtures.ts
+// Each scenario pairs a user question with a fixed agent payload,
+// so a test session never depends on a live model's mood.
+export const scenarios: Record<
+  string,
+  { label: string; question: string; payload: unknown }
+> = {
+  trend: {
+    label: "Weekly trend",
+    question: "How did closed cases change this week?",
+    payload: trend,
+  },
+  // ...snapshot, comparison, sparse, missing, empty, unsupported, unsafe
+};
+```
+
+```mermaid
+flowchart LR
+  S[Story<br/>fixed scenario] --> T[Task<br/>'find the highest value'<br/>'explain this gap']
+  T --> A{Answer right?}
+  T --> C{How sure?}
+  A --> M[Calibrated trust<br/>sure when right,<br/>unsure when data is missing]
+  C --> M
+  M -->|misread with high confidence| X[Design failed,<br/>however pretty]
+```
+
+Two measurements matter: task success (did they get it right?) and confidence (how sure were they?).
+Confidence is the one AI products forget.
+The dangerous user is not the confused one; it is the confidently wrong one, who reads a missing value as zero and acts on it.
+Good legibility produces calibrated trust: sure when the data supports it, unsure when it does not.
+That is the posting's "show too little and they cannot trust it" problem, measured.
+
+The film version: at a test screening, the useful question is not "did you like the cut?" but "what happened in act two?"
+If the audience cannot retell the story, the edit failed, however beautiful it looks.
+
+Say it in the interview in one line: "I don't ask users which chart they like; I give them a task and measure whether they got it right and how confident they were, because with AI the danger is confident misreading."
