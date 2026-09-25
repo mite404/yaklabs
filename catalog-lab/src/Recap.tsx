@@ -1,4 +1,4 @@
-import { formatIdle, orderRecap, type RecapItem } from "./recap";
+import { formatIdle, orderRecap, type RecapItem } from "./recapRules";
 
 const KIND_LABEL: Record<RecapItem["kind"], string> = {
   "needs-you": "Needs you",

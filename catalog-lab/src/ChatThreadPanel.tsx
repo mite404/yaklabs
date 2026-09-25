@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { CatalogCard } from "./CatalogCard";
 import { ComposeBox } from "./ComposeBox";
 import { Recap } from "./Recap";
-import { shouldShowRecap } from "./recap";
+import { shouldShowRecap } from "./recapRules";
 import type { Thread, ThreadMessage } from "./thread";
 import "./thread.css";
 

@@ -1,5 +1,5 @@
 import { scenarios } from "./fixtures";
-import type { RecapItem } from "./recap";
+import type { RecapItem } from "./recapRules";
 
 /** One turn in a thread; agent turns may carry a catalog payload the host validates. */
 export type ThreadMessage =

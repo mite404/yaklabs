@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { RECAP_IDLE_MS, formatIdle, orderRecap, shouldShowRecap } from "./recap";
+import { RECAP_IDLE_MS, formatIdle, orderRecap, shouldShowRecap } from "./recapRules";
 
 const lastUserInputAt = 1_000_000;
 
