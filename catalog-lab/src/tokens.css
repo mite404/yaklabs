@@ -27,9 +27,9 @@
   --yak-forest: #242b24; /* photo: dominant hero green */
   --yak-moss: #303a36; /* photo */
   --yak-sage: #3d423b; /* photo */
-  /* derived: the forest hue (OKLCH 148°) lifted to L 0.44 / C 0.06 so it reads as green
-     in flat UI; the photo greens are nearly as dark as the ink. */
-  --yak-green: #3b5c40;
+  /* derived: the declared sage's hue (OKLCH 124°) at L 0.46 / C 0.06, an olive that reads as
+     green in flat UI and shares a hue with the sage tints; chosen over a forest-hue option. */
+  --yak-green: #515e38;
 
   /* Semantic tokens: the only colours components use. */
   --bg: var(--yak-paper);
@@ -40,7 +40,7 @@
   --rule: color-mix(in srgb, var(--yak-ink) 21%, var(--yak-paper)); /* measured: dividers */
   --line: color-mix(in srgb, var(--yak-ink) 12%, var(--yak-paper)); /* derived: card borders */
   --wash: color-mix(in srgb, var(--yak-ink) 5%, var(--yak-paper)); /* derived: hover, insets */
-  --accent: var(--yak-green); /* 6.5:1 on paper, 6.9:1 under cream text */
+  --accent: var(--yak-green); /* 6.1:1 on paper and under cream text */
   --on-accent: var(--yak-cream);
   --accent-soft: color-mix(in srgb, var(--yak-sage-light) 40%, var(--yak-paper)); /* chips, bubbles */
   --accent-soft-strong: color-mix(in srgb, var(--yak-sage-light) 75%, var(--yak-paper));
