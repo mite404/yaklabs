@@ -58,7 +58,7 @@ Both are bundled locally (SIL Open Font License) so they render offline in the d
 
 ### 8. The outline button is the default
 
-At rest a button is only an outline; on hover the fill and text colour change over 150ms with the default `ease` curve, while the border stays put.
+At rest a button is only an outline; on hover the fill and text colour change over 150ms with the default `ease` curve, and the border switches to the fill colour instantly (it is not in the transition).
 
 | Property | Value | Source |
 | --- | --- | --- |
@@ -68,7 +68,8 @@ At rest a button is only an outline; on hover the fill and text colour change ov
 | Rest fill | transparent | css |
 | Rest outline | 1px, ink at 0.72 (`rgba(37, 37, 36, 0.72)`) | css |
 | Rest text | ink `#252524` | css |
-| Hover fill | `#111411` near-black green | css-declared colour; the hover rule itself is unconfirmed |
+| Hover fill | `--moss` (`#263b30`) | css (the site's hover rule) |
+| Hover outline | `--moss`, switches instantly | css |
 | Hover text | off-white `#f0efea` | css |
 | Transition | `background-color 0.15s, color 0.15s` (border not animated) | css |
 | Easing | `ease` (the default) | css |
@@ -161,7 +162,6 @@ The tokens are named `--bubble-tint`, `--bubble-tint-strong`, and `--bubble-line
 
 ## Open questions
 
-- The hover rule itself (it did not print): confirm the fill (currently the declared `#111411`) and that the border really stays unchanged on hover.
 - Rules 2 and 3 (and the display ink `#22251e`) rest on how the tint looked on a screen with a blue-light filter, which warms dark neutrals: re-check them with the filter off.
 - Ethan's warm greys (`#8a8a85`, `#cbcac4`) were picked on the same screen: keep them as deliberate choices, or re-pick them with the filter off.
 - Where the declared `#111411` near-black green is used (likely the hero background) and where the declared soft blue `#95aac8` appears.
