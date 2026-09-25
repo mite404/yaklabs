@@ -218,3 +218,9 @@ Components use only semantic tokens (`--text-body`, `--line`, `--accent`, `--acc
 2026-09-25 - Accepted.
 The default text button copies the site's "Apply for this role" button from its computed styles: 14px medium Inter, 10px × 22px padding, 4px corners, and an ink outline at 0.72 at rest, with the fill (forest `#242b24`, measured from a hover recording) and off-white text arriving over a 150ms `ease` transition on hover; the border does not animate.
 The site has no delay: the "beat" before the fill is the 150ms duration itself; duration, delay, easing, and colours stay tokens (`--btn-*`) as Ethan's starting point for design iteration.
+
+## ADR-036 - "Show my work", always collapsed by default
+
+2026-09-25 - Accepted.
+The toggle that reveals how an answer was produced is labelled "Show my work" (not "Show recipe", which is builder jargon), and it always starts collapsed, on every card, in every context.
+Kay's job is to earn enough trust that non-technical users never need to check the steps; the steps stay one click away for anyone who wants them, and are still the source for skill settings (ADR-008, ADR-017, ADR-029).
