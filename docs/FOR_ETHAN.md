@@ -27,6 +27,8 @@ Nothing is built yet, so the cast is the set of ideas the prototypes will be mad
 - **Autosave inside Kay, deliberate actions outside it.** Saving is never the user's job; consequences always are.
 - **TanStack versus shadcn is not either/or.** One is the engine, the other is the paint job; what keeps agent-built UI coherent is the catalog above both (see `docs/03-generative-ui-research.md`).
 
+- **"Show my work", not "Show recipe", and always closed.** "Recipe" is our word, the builder's word; a teacher's "show your work" is the user's. It starts collapsed on every card because the goal is trust: like a finished cut, the audience watches the film, and the edit decision list exists for whoever asks (ADR-036).
+
 ## 4. Bloopers
 
 - **The docs were behind a locked door.** The environment's network policy blocked docs.meetkay.ai, so Kay's vocabulary was reconstructed from search snippets and Ramp's Glass. Everything inferred is labeled; verify before the interview.
@@ -35,6 +37,10 @@ Nothing is built yet, so the cast is the set of ideas the prototypes will be mad
 - **The screenshots that looked like a phone.** Review captures were taken at 2x pixel density, tightly cropped around a 707px panel, so a desktop column read as a mobile app. They also hid a real bug: a fixed 720px panel height clipped the compose box in Storybook's preview. Lesson: judge UI at 1x, in a realistic window (1440x900), with its surroundings visible, because scale is only legible in context.
 
 - **Two tapes labelled "recap" and "RECAP".** `recap.ts` (rules) and `Recap.tsx` (component) sat in one folder. Linux treats them as different files, so every check passed in the cloud container; macOS ignores letter case by default, so `import "./Recap"` found `recap.ts` first and Storybook broke on Ethan's machine. Fix: rename to `recapRules.ts`, plus a test that fails if two modules ever differ only by case. Lesson: never let file names differ only by capitalization, and turn a bug into a guard, not just a fix.
+
+- **The screenshot that was a rerun.** Figma's screenshot service showed Sunday's bar at about 18px, while the live file said 119px. The live file was right (Sunday's gross profit is about $8.6k); the render was from an older save. Lesson: when two views of one thing disagree, check which is the source of truth before blaming the edit.
+
+- **A card that needed a window to exist.** The first test to render the interactive card outside a browser crashed, because it read `window` during render to check reduced motion. Kay is a desktop app, so users would never hit it, but a component should not assume its stage. Fix: guard the check and return the default.
 
 ## 5. Director's Commentary
 
