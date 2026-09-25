@@ -47,10 +47,10 @@
   --wash: color-mix(in srgb, var(--yak-ink) 5%, var(--yak-paper)); /* derived: hover, insets */
   --accent: var(--yak-green); /* 6.1:1 on paper and under cream text */
   --on-accent: var(--yak-cream);
-  --accent-soft: color-mix(in srgb, var(--yak-sage-light) 40%, var(--yak-paper)); /* chips, bubbles */
-  --accent-soft-strong: color-mix(in srgb, var(--yak-sage-light) 75%, var(--yak-paper));
-  --accent-line: var(--yak-sage-light);
-  --accent-ink: var(--yak-forest); /* text on the soft tints */
+  /* The user's bubble, and nothing else (ADR-047): the site's sage tint marks "you". */
+  --bubble-tint: color-mix(in srgb, var(--yak-sage-light) 40%, var(--yak-paper));
+  --bubble-tint-strong: color-mix(in srgb, var(--yak-sage-light) 75%, var(--yak-paper));
+  --bubble-line: var(--yak-sage-light);
   --data: var(--accent); /* chart marks */
   --data-deep: var(--yak-ink-display); /* the grounded base of bars */
   /* Ethan: a warm mid grey; 3.0:1 on the page and 3.3:1 on cards, the 3:1 a ring needs. */
@@ -281,7 +281,7 @@ aside {
 }
 .workspace span {
   float: right;
-  background: var(--accent-soft);
+  background: var(--wash);
   padding: 2px 6px;
   border-radius: 4px;
 }
@@ -345,8 +345,8 @@ main {
   white-space: nowrap;
   border-radius: 30px;
   padding: 6px 10px;
-  background: var(--accent-soft);
-  color: var(--accent-ink);
+  background: var(--wash);
+  color: var(--ink);
   align-self: flex-start;
 }
 .badge.neutral {

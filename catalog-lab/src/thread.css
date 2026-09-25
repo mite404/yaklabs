@@ -75,8 +75,8 @@
   gap: 4px;
 }
 .turn-user p {
-  background: linear-gradient(135deg, var(--accent-soft), var(--accent-soft-strong));
-  border: 1px solid var(--accent-line);
+  background: linear-gradient(135deg, var(--bubble-tint), var(--bubble-tint-strong));
+  border: 1px solid var(--bubble-line);
   border-radius: 12px;
   padding: 10px 14px;
   color: var(--ink);
@@ -163,9 +163,10 @@
   gap: 6px;
   max-width: 100%;
   padding: 3px 4px 3px 9px;
+  border: 1px solid var(--line);
   border-radius: 999px;
-  background: var(--accent-soft);
-  color: var(--accent-ink);
+  background: var(--wash);
+  color: var(--ink);
   font-size: 12px;
   white-space: nowrap;
   animation: chip-in 180ms ease-out;
@@ -182,7 +183,7 @@
   line-height: 1;
 }
 .context-chip button:hover {
-  background: var(--accent-soft-strong);
+  background: var(--line);
 }
 @keyframes chip-in {
   from {
