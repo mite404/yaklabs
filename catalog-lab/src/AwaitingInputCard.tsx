@@ -44,7 +44,7 @@ export function AwaitingInputCard({
   }
 
   return (
-    <section className="awaiting" aria-label="Needs you" onKeyDown={pick}>
+    <section className="awaiting surface-strong" aria-label="Needs you" onKeyDown={pick}>
       <p className="awaiting-label">Needs you</p>
       <h3 className="awaiting-question">{question.question}</h3>
       <ol className="awaiting-options">
@@ -62,15 +62,18 @@ export function AwaitingInputCard({
         <li>
           <form className="awaiting-row awaiting-answer" onSubmit={submit}>
             <span className="awaiting-key">{answerRow}</span>
-            <input
-              value={typed}
-              onChange={(event) => setTyped(event.target.value)}
-              placeholder={question.answer.placeholder}
-              aria-label={question.answer.placeholder}
-            />
-            <button type="submit" className="awaiting-send" disabled={!typed.trim()} aria-label="Send answer">
-              ↵
-            </button>
+            <span className="awaiting-field">
+              <input
+                className="field"
+                value={typed}
+                onChange={(event) => setTyped(event.target.value)}
+                placeholder={question.answer.placeholder}
+                aria-label={question.answer.placeholder}
+              />
+              <button type="submit" className="awaiting-send" disabled={!typed.trim()} aria-label="Send answer">
+                ↵
+              </button>
+            </span>
           </form>
         </li>
         <li>

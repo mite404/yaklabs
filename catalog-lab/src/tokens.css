@@ -64,8 +64,8 @@
   --surface-strong: var(--yak-slate); /* 5.8:1 against paper */
   --on-strong: var(--yak-cream); /* 5.6:1 */
   --on-strong-muted: color-mix(in srgb, var(--yak-cream) 90%, var(--yak-slate)); /* 4.9:1; 5.8:1 on hover */
-  /* Hover darkens: lightening would pull muted text under 4.5:1 on this grey. */
-  --on-strong-wash: color-mix(in srgb, var(--yak-night) 14%, var(--yak-slate));
+  /* Ethan: hover on dark surfaces only (light surfaces keep --wash); cream 9.4:1 on it. */
+  --on-strong-wash: var(--yak-sage);
   --on-strong-line: color-mix(in srgb, var(--yak-cream) 14%, var(--yak-slate)); /* edge */
 
   --radius: 14px;
@@ -144,6 +144,69 @@ button:hover {
   background: transparent;
   color: var(--ink);
 }
+/* Text field: the button's outline and 4px corners (ADR-035), so a place to type reads as
+   part of the same family. Surfaces tune it through the --field-* tokens (ADR-043). */
+.field {
+  --field-bg: transparent;
+  --field-border: color-mix(in srgb, var(--yak-ink) 72%, var(--yak-paper)); /* as .btn */
+  --field-placeholder: var(--muted);
+  display: block;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 5px 10px;
+  border: 1px solid var(--field-border);
+  border-radius: 4px; /* css: the button's corners */
+  background: var(--field-bg);
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.45;
+  transition: border-color var(--btn-duration, 150ms) ease;
+}
+.field::placeholder {
+  color: var(--field-placeholder);
+  opacity: 1;
+}
+.field:hover,
+.field[data-preview="hover"] {
+  border-color: var(--ink);
+}
+.field:focus-visible,
+.field[data-preview="focus"] {
+  border-color: var(--ink);
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+.field:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+@media (prefers-reduced-motion: reduce) {
+  .field {
+    transition-duration: 0ms;
+  }
+}
+
+/* The strong surface for what needs attention (ADR-042). It redefines the text tokens, so
+   everything inside adapts without colours of its own. */
+.surface-strong {
+  --ink: var(--on-strong);
+  --text-body: var(--on-strong);
+  --muted: var(--on-strong-muted);
+  --wash: var(--on-strong-wash);
+  --line: var(--on-strong-line);
+  --focus: var(--on-strong);
+  background: var(--surface-strong);
+  color: var(--ink);
+}
+/* A faint recessed fill keeps a placeholder visibly greyer than body text and still above
+   4.5:1 on the strong surface. */
+.surface-strong .field {
+  --field-bg: color-mix(in srgb, var(--yak-night) 12%, var(--surface-strong));
+  --field-border: color-mix(in srgb, var(--on-strong) 60%, var(--surface-strong)); /* 3.2:1 */
+  --field-placeholder: color-mix(in srgb, var(--on-strong) 75%, var(--surface-strong)); /* 4.6:1 */
+}
+
 /* Compact size for buttons inside cards and dialogs. */
 .btn-sm {
   padding: 6px 14px;

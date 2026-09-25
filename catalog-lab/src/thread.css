@@ -266,20 +266,8 @@
   pointer-events: auto;
   animation: recap-in 180ms ease-out;
 }
-/* What needs attention sits on the strong surface, so it stands apart from every card in
-   the thread; the shadow lifts it off the conversation it overlays. Redefining the text
-   tokens here lets every rule inside adapt without colours of its own. */
-.recap,
-.recap-chip,
-.awaiting {
-  --ink: var(--on-strong);
-  --text-body: var(--on-strong);
-  --muted: var(--on-strong-muted);
-  --wash: var(--on-strong-wash);
-  --line: var(--on-strong-line);
-  background: var(--surface-strong);
-  color: var(--ink);
-}
+/* What needs attention sits on the strong surface (.surface-strong, ADR-042), so it stands
+   apart from every card in the thread; the shadow lifts it off the conversation. */
 .recap,
 .awaiting {
   border: 1px solid var(--line);
@@ -406,8 +394,7 @@
   line-height: 1.45;
   color: var(--ink);
 }
-button.awaiting-row:hover,
-.awaiting-answer:focus-within {
+button.awaiting-row:hover {
   background: var(--wash);
 }
 .awaiting-key {
@@ -428,29 +415,34 @@ button.awaiting-row:hover,
   font-weight: 400;
   color: var(--muted);
 }
-/* The typed answer is a row like the others, not a boxed field, until it has focus. */
-.awaiting-answer input {
-  min-width: 0;
-  margin: 0;
-  padding: 0;
-  border: none;
-  outline: none;
-  background: transparent;
-  font: inherit;
-  color: var(--ink);
+/* The typed answer is an outlined field (.field), so it reads as a place to type rather
+   than a statement; its placeholder is greyer than the statements in rows 1 and 3.
+   The field carries its own box, so this row trims its padding to keep the text on the
+   same line as its number. */
+.awaiting-row.awaiting-answer {
+  grid-template-columns: 20px minmax(0, 1fr);
+  align-items: center;
+  padding-block: 3px;
 }
-.awaiting-answer input::placeholder {
-  color: var(--muted);
+/* The send key sits inside the field's right edge, so the outline spans the whole row. */
+.awaiting-field {
+  position: relative;
+}
+/* Room for the key only once there is something to send, so the placeholder keeps the
+   full width it was measured against (40 characters in the narrow card). */
+.awaiting-field .field:not(:placeholder-shown) {
+  padding-right: 34px;
 }
 .awaiting-send {
-  align-self: center;
-  width: 24px;
-  height: 24px;
-  /* Overhangs the row's padding so the typed row is exactly as tall as the others. */
-  margin-block: -4px;
+  position: absolute;
+  top: 50%;
+  right: 4px;
+  transform: translateY(-50%);
+  width: 22px;
+  height: 22px;
   padding: 0;
   border: none;
-  border-radius: 6px;
+  border-radius: 3px;
   /* Olive would vanish on the strong surface, so the send key inverts it to cream. */
   background: var(--ink);
   color: var(--surface-strong);
