@@ -116,16 +116,17 @@ The gap is the token `--rest-gap`; the thread's bottom padding subtracts the com
 
 ### 13. Attention gets the strong surface
 
-The thread's cards all sit on light paper, so anything that needs the user (the recap, a "Needs you" question) uses the strong surface, a warm dark grey, and stands apart without a badge or a colour of alarm.
-Text on it is cream; muted text is cream mixed 85% with the surface, so it still clears 4.5:1 on a hovered row.
-Brand olive disappears on it (1.1:1), so actions on the strong surface invert to cream instead.
+The thread's cards all sit on light paper, so anything that needs the user (the recap, a "Needs you" question) uses the strong surface, a warm grey, and stands apart without a badge or a colour of alarm.
+It is the lightest grey in its family where cream text still clears 4.5:1: softer greys either fail with light text or look disabled with dark text.
+Text on it is cream; muted text is cream mixed 90% with the surface, and hover darkens the row instead of lightening it, so muted text stays above 4.5:1.
+Brand olive disappears on it, so actions on the strong surface invert to cream instead.
 
 | Property | Value | Source |
 | --- | --- | --- |
-| Surface | `--surface-strong` (`#51534b`) | Ethan |
-| Text | `--on-strong` (cream `#f5f5f0`), 7.1:1 | derived |
-| Muted text | `--on-strong-muted` (85% cream), 5.7:1 | derived |
-| Hover | `--on-strong-wash` (8% cream) | derived |
+| Surface | `--surface-strong` (`#62625d`) | Ethan |
+| Text | `--on-strong` (cream `#f5f5f0`), 5.6:1 | derived |
+| Muted text | `--on-strong-muted` (90% cream), 4.9:1 | derived |
+| Hover | `--on-strong-wash` (14% night, darker), muted 5.8:1 | derived |
 | Edge | `--on-strong-line` (14% cream) | derived |
 
 ## Open questions

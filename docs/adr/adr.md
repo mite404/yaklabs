@@ -260,5 +260,6 @@ The scripted lab stand-in (`labAgent.ts`) is the only fake left and is the defau
 ## ADR-042 - What needs attention sits on a strong surface
 
 2026-09-25 - Accepted.
-The recap and the "Needs you" card use a warm dark grey, `#51534b` (Ethan's pick), so they stand apart from every card in the thread, which all sit on the light paper; their text flips to cream (7.1:1), with muted text at 85% cream (5.7:1, 4.7:1 on hover).
-The cards redefine the text tokens locally instead of carrying colours of their own, and the olive send key inverts to cream because olive on the dark grey is 1.1:1.
+The recap and the "Needs you" card use a warm grey, `#62625d` (Ethan's pick), so they stand apart from every card in the thread, which all sit on the light paper; their text flips to cream (5.6:1), with muted text at 90% cream (4.9:1) and a hover that darkens rather than lightens, so muted text stays above 4.5:1 (5.8:1).
+It is the lightest grey in its family where cream text still passes: `#51534b` felt jarring, and `#8a8a85` failed with light text (3.2:1) and looked disabled with dark text.
+The cards redefine the text tokens locally instead of carrying colours of their own, and the olive send key inverts to cream because olive disappears on the grey.
