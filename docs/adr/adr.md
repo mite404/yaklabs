@@ -256,3 +256,9 @@ A bad question (irrelevant, or offering a path that makes no sense) should never
 2026-09-25 - Accepted.
 The thread only reports events to an `Agent` (the user sent a message, answered a question, or the agent's question was rejected) and renders the reply that streams back as text chunks; it never decides what the agent says.
 The scripted lab stand-in (`labAgent.ts`) is the only fake left and is the default, so showing the UI with a real model means passing another `Agent`, with the question schema shared between that runtime and the UI (ADR-040).
+
+## ADR-042 - What needs attention sits on a strong surface
+
+2026-09-25 - Accepted.
+The recap and the "Needs you" card use a warm dark grey, `#51534b` (Ethan's pick), so they stand apart from every card in the thread, which all sit on the light paper; their text flips to cream (7.1:1), with muted text at 85% cream (5.7:1, 4.7:1 on hover).
+The cards redefine the text tokens locally instead of carrying colours of their own, and the olive send key inverts to cream because olive on the dark grey is 1.1:1.

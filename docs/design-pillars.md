@@ -112,6 +112,22 @@ The gap is the token `--rest-gap`; the thread's bottom padding subtracts the com
 | Compose row inset | 4px (`--compose-inset`) | derived (fits the 3px focus ring) |
 | Nudge | smallest scroll; never upward | derived (ADR-038) |
 
+## Surfaces
+
+### 13. Attention gets the strong surface
+
+The thread's cards all sit on light paper, so anything that needs the user (the recap, a "Needs you" question) uses the strong surface, a warm dark grey, and stands apart without a badge or a colour of alarm.
+Text on it is cream; muted text is cream mixed 85% with the surface, so it still clears 4.5:1 on a hovered row.
+Brand olive disappears on it (1.1:1), so actions on the strong surface invert to cream instead.
+
+| Property | Value | Source |
+| --- | --- | --- |
+| Surface | `--surface-strong` (`#51534b`) | Ethan |
+| Text | `--on-strong` (cream `#f5f5f0`), 7.1:1 | derived |
+| Muted text | `--on-strong-muted` (85% cream), 5.7:1 | derived |
+| Hover | `--on-strong-wash` (8% cream) | derived |
+| Edge | `--on-strong-line` (14% cream) | derived |
+
 ## Open questions
 
 - The hover rule itself (it did not print): confirm the fill `#242b24` and that the border really stays unchanged on hover.
