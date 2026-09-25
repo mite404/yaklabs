@@ -311,3 +311,9 @@ The contrast pattern follows the site too: two text inks (headings `--ink`, ever
 2026-09-25 - Accepted.
 The Design Engineer posting lives on meetkay.ai, Kay's product site, whose stylesheet declares the same token names with some different values; since Kay is the product, its values win.
 `--soft-ink` becomes meetkay.ai's `#5c5c57` (5.8:1 on paper) instead of yaklabs.ai's `#4a4a47`, so body and secondary text sit visibly one step lighter than headings, as on the posting; meetkay.ai also declares `--moss: #1d291f` (its filled submit button) and `--error: #9c3b2a`, not yet adopted.
+
+## ADR-051 - Brand colours come only from declared CSS, never from pixels
+
+2026-09-25 - Accepted.
+The screen used to sample colours had a blue-light filter, so every colour picked from screenshots or recordings as a brand fact is dropped: the hero-photo greens and cream and the measured button hover fill `#242b24`; this amends ADR-034, ADR-035 and ADR-046.
+The button hover uses the declared near-black green `#111411` until the site's hover rule is read from its stylesheet, text on dark fills uses the declared paper `#f0efea`, darker greens are mixed from declared values, and Ethan's warm greys stay as deliberate picks, flagged for a re-check with the filter off.
