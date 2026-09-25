@@ -216,5 +216,5 @@ Components use only semantic tokens (`--text-body`, `--line`, `--accent`, `--acc
 ## ADR-035 - Outline button after yaklabs.ai, as a starting point
 
 2026-09-25 - Accepted.
-The default text button copies the site's "Apply for this role" button: an ink outline at rest (ink at 0.72), filling with the forest `#242b24` (measured from a hover recording) and off-white text on hover after a short delay, over about 120ms, with slight 2px corners.
-The delay lives only on the hover rule so the fill arrives after a beat and leaves promptly; duration, delay, easing, and colours are tokens (`--btn-*`) because the site's real timing could not be read from a screenshot, and this is Ethan's starting point for design iteration.
+The default text button copies the site's "Apply for this role" button from its computed styles: 14px medium Inter, 10px × 22px padding, 4px corners, and an ink outline at 0.72 at rest, with the fill (forest `#242b24`, measured from a hover recording) and off-white text arriving over a 150ms `ease` transition on hover; the border does not animate.
+The site has no delay: the "beat" before the fill is the 150ms duration itself; duration, delay, easing, and colours stay tokens (`--btn-*`) as Ethan's starting point for design iteration.

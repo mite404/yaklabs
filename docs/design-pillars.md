@@ -52,26 +52,31 @@ Both are bundled locally (SIL Open Font License) so they render offline in the d
 
 ### 8. The outline button is the default
 
-At rest a button is only an outline; on hover it fills with a dark green after a short beat, then clears promptly when the pointer leaves.
-The delay belongs on the hover rule only, because a transition uses the destination state's timing: delay on the way in, none on the way out.
+At rest a button is only an outline; on hover the fill and text colour change over 150ms with the default `ease` curve, while the border stays put.
 
 | Property | Value | Source |
 | --- | --- | --- |
-| Size | about 164 × 39px at 15px text | measured |
-| Font | Inter, 15px, medium (500) | measured |
-| Padding | 9px × 22px (compact: 6px × 14px at 13px) | measured / derived |
-| Corners | 2px | measured |
-| Rest fill | transparent | measured |
+| Font | Inter, 14px, medium (500), normal letter-spacing | css |
+| Padding | 10px × 22px (compact: 6px × 14px at 13px) | css / derived |
+| Corners | 4px | css |
+| Rest fill | transparent | css |
 | Rest outline | 1px, ink at 0.72 (`rgba(37, 37, 36, 0.72)`) | css |
 | Rest text | ink `#252524` | css |
 | Hover fill | `#242b24` forest | measured (hover recording) |
 | Hover text | off-white `#f0efea` | css |
-| Transition duration | about 120ms | measured (~7 frames at 60Hz) |
-| Transition delay | 60ms, hover-in only | estimated |
+| Transition | `background-color 0.15s, color 0.15s` (border not animated) | css |
+| Easing | `ease` (the default) | css |
+| Delay | none | css |
 | Focus | 2px accent outline, 2px offset | derived |
 | Disabled | 45% opacity, no hover | derived |
 
+### 9. A perceived delay is often just duration
+
+The button seemed to pause before filling, but its CSS has no delay: a 150ms `ease` transition is long enough to register as "a beat, then it arrives" rather than a snap.
+Before adding a delay to make something feel deliberate, try a slightly longer duration; a real delay makes a control feel unresponsive.
+Around 100ms reads as instant, around 150 to 200ms reads as a soft arrival, and past about 300ms a hover starts to feel sluggish.
+
 ## Open questions
 
-- The exact transition delay and easing: read them from the site's stylesheet with the DevTools snippet in the conversation log, then replace the estimate above.
+- The hover rule itself (it did not print): confirm the fill `#242b24` and that the border really stays unchanged on hover.
 - Where the declared `#111411` near-black green is used (likely the hero background) and where the declared soft blue `#95aac8` appears.
