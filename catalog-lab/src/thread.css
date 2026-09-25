@@ -110,15 +110,14 @@
   border-radius: 12px;
   padding: 10px 8px 6px 12px;
   background: var(--compose-bg);
-  box-shadow: 0 2px 12px var(--shadow);
 }
 .compose-box:focus-within {
   border-color: var(--focus);
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus) 16%, transparent);
 }
-/* Clicked into, the compose box keeps its lift and focused border but drops the ring. */
+/* Clicked into, the compose box keeps its focused border but drops the ring. */
 :root[data-input="pointer"] .compose-box:focus-within {
-  box-shadow: 0 2px 12px var(--shadow);
+  box-shadow: none;
 }
 .compose-box textarea {
   display: block;
