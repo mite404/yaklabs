@@ -542,7 +542,7 @@
   background: var(--paper-deep);
 }
 /* Submit is an outline, never filled at rest (ADR-061). When a choice makes it available, a
-   second outline fades in from 8px outside, thinning from 6px to 4px, and closes onto the
+   second outline fades in from 8px outside, thinning from 6px to 4px and then to 1px, and closes onto the
    border in 450ms, so readiness is a
    motion, not a colour; the fill is left for hover alone. CSS only: the pseudo-element is
    created when :disabled stops matching, which starts the animation. */
@@ -557,7 +557,7 @@
   border-radius: 4px;
   /* Drawn as an inset shadow, not a border: border widths snap to whole pixels, so the
      3px-to-1px thinning would step instead of flowing. */
-  box-shadow: inset 0 0 0 4px var(--ink);
+  box-shadow: inset 0 0 0 1px var(--ink);
   pointer-events: none;
   animation: submit-ready 450ms cubic-bezier(0.2, 0.7, 0.2, 1);
 }
@@ -565,8 +565,13 @@
   from {
     inset: -9px;
     border-radius: 12px; /* concentric with the 4px border, 8px out */
-    box-shadow: inset 0 0 0 6px var(--ink); /* thins to 4px as it lands */
+    box-shadow: inset 0 0 0 6px var(--ink);
     opacity: 0;
+  }
+  /* 6px thins to 4px on the way in, then to the border's 1px in the last frames, so the
+     settled outline is indistinguishable from the border it lands on. */
+  80% {
+    box-shadow: inset 0 0 0 4px var(--ink);
   }
 }
 /* Green is kept for button hovers: Submit fills with the site's moss, as .btn does. */
@@ -576,7 +581,7 @@
   color: var(--paper); /* 10.4:1 */
 }
 .awaiting-submit:hover:not(:disabled)::after {
-  box-shadow: inset 0 0 0 4px var(--moss);
+  box-shadow: inset 0 0 0 1px var(--moss);
 }
 .awaiting-submit:disabled {
   opacity: 0.4;
