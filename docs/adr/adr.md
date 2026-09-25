@@ -210,5 +210,5 @@ Both are SIL Open Font License fonts bundled from @fontsource with optical sizin
 ## ADR-034 - Brand colour: sampled palette, semantic tokens, one derived green
 
 2026-09-25 - Accepted.
-The palette is sampled from yaklabs.ai: off-white paper `#f0efeb`, ink `#20201c`, and forest greens from the hero photo; body copy is the ink at about 74% (all three colour channels agree, so it is one ink at one opacity), implemented as solid tints rather than transparency.
+The palette comes from yaklabs.ai's declared CSS: off-white `#f0efea`, ink `#252524`, body copy as a solid `#4a4a47` (about 82% of the ink), a 0.72 ink step for meta text and borders (used here as a solid tint), and the declared sage `#c7cfba` for soft tints; hero-photo greens come from Ethan's Figma picks. (An earlier pixel-sampled pass read body copy as ink at 74% opacity; the CSS showed a solid grey.)
 Components use only semantic tokens (`--text-body`, `--line`, `--accent`, `--accent-soft`, and so on), and the UI accent `#3b5c40` is derived on the forest's hue because the sampled forest reads as black in flat UI; it passes 6.5:1 on paper and 6.9:1 under cream text.
