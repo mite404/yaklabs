@@ -212,3 +212,9 @@ Both are SIL Open Font License fonts bundled from @fontsource with optical sizin
 2026-09-25 - Accepted.
 The palette comes from yaklabs.ai's declared CSS: off-white `#f0efea`, ink `#252524`, body copy as a solid `#4a4a47` (about 82% of the ink), a 0.72 ink step for meta text and borders (used here as a solid tint), and the declared sage `#c7cfba` for soft tints; hero-photo greens come from Ethan's Figma picks. (An earlier pixel-sampled pass read body copy as ink at 74% opacity; the CSS showed a solid grey.)
 Components use only semantic tokens (`--text-body`, `--line`, `--accent`, `--accent-soft`, and so on), and the UI accent is an olive `#515e38` derived on the declared sage's hue (OKLCH 124°), chosen over a forest-hue green so that buttons, charts, chips, and bubbles share one hue; it passes 6.1:1 on paper and under cream text.
+
+## ADR-035 - Outline button after yaklabs.ai, as a starting point
+
+2026-09-25 - Accepted.
+The default text button copies the site's "Apply for this role" button: an ink outline at rest (ink at 0.72), filling with the declared near-black green `#111411` and off-white text on hover after a short delay, with slight 2px corners.
+The delay lives only on the hover rule so the fill arrives after a beat and leaves promptly; duration, delay, easing, and colours are tokens (`--btn-*`) because the site's real timing could not be read from a screenshot, and this is Ethan's starting point for design iteration.
