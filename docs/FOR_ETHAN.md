@@ -42,6 +42,8 @@ Nothing is built yet, so the cast is the set of ideas the prototypes will be mad
 
 - **A card that needed a window to exist.** The first test to render the interactive card outside a browser crashed, because it read `window` during render to check reduced motion. Kay is a desktop app, so users would never hit it, but a component should not assume its stage. Fix: guard the check and return the default.
 
+- **The accordion that opened offstage.** Opening "Show my work" grew the card downward while the scroll position stayed put, so 140 to 170px of the steps landed below the visible edge, behind the compose box, from every starting position. When the view did sometimes shift, that was the browser's scroll anchoring guessing, not a rule. Fix: the thread owns one reveal rule (ADR-037). Lesson: when something expands, decide who moves the camera; if nobody does, the browser will, inconsistently.
+
 ## 5. Director's Commentary
 
 ### The agent only states intent; the design system does the rest
@@ -186,3 +188,43 @@ sequenceDiagram
 ```
 
 Say it in the interview: "When a surface is interactive, the agent has to know what the user changed, and the user has to see that the agent knows."
+
+### Reframe on the action: one rule for anything that expands
+
+A camera operator does not wait for the director to shout "tilt up" every time an actor stands; reframing on movement is the operator's standing job.
+In the thread, the scroller is the camera operator.
+Before this rule, each component expanded however it liked and the frame stayed where it was, so new content could open below the compose box, half hidden.
+
+Now the thread owns one calculation and every expanding thing calls it, the same way jump-to-turn does:
+
+```ts
+// catalog-lab/src/threadReveal.ts: center it if it fits, else start at its top, and never
+// scroll past either end of the thread.
+export function revealScrollTop({ target, viewHeight, maxScrollTop, margin = EDGE_MARGIN_PX }) {
+  const height = target.bottom - target.top;
+  const top =
+    height + 2 * margin <= viewHeight
+      ? target.top - (viewHeight - height) / 2
+      : target.top - margin;
+  return Math.round(Math.min(Math.max(top, 0), Math.max(maxScrollTop, 0)));
+}
+```
+
+```mermaid
+sequenceDiagram
+  participant U as User
+  participant C as Card
+  participant T as Thread (scroller)
+  U->>C: clicks "Show my work"
+  C->>C: renders the steps (layout, before paint)
+  C->>T: reveal([steps, footer])
+  T->>T: measure span, subtract the recap overlay
+  T->>T: center it, or top-align if too tall, clamp to the ends
+  T-->>U: steps and "Hide my work" framed, nothing under the compose box
+```
+
+Two details make it hold up.
+The visible band is the scroller minus the recap overlay, so "centered" means centered in what the user can actually see.
+And the thread's `reveal` is a stable function, so an open card is framed once, not re-framed on every keystroke in the compose box.
+
+Say it in the interview: "Expansion is a camera move, so the thread owns it: one rule, reused by every component and by jump-to-turn, instead of each component guessing."
