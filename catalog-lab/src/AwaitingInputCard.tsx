@@ -1,13 +1,14 @@
 import { useState, type FormEvent, type KeyboardEvent } from "react";
 import type { AwaitingInput } from "./awaiting";
 
-// Always the last choice, added by the host: the user is never cornered into answering.
+// The way out when the agent does not word one for the moment: the user is never cornered.
 const ELSEWHERE = "Chat about something else";
 
 /**
  * "Needs you": the agent is blocked on a question, floating above the compose box (ADR-039).
- * Numbered choices, after Claude Code's question prompt: the agent's branches, a typed
- * answer written right in the card, and "Chat about something else". Keys 1 to N pick a row.
+ * Numbered choices, after Claude Code's question prompt: the agent's branches, a concrete
+ * question answered right in the card, and a way out ("Chat about something else", or the
+ * agent's wording for the moment). Keys 1 to N pick a row.
  * It has no close button; leaving is itself a choice, so the question is never silently lost.
  * @param onAnswer Sends a branch's label or the typed answer as the user's reply.
  * @param onElsewhere Sets the question aside and hands focus back to the compose box.
@@ -75,7 +76,9 @@ export function AwaitingInputCard({
         <li>
           <button className="awaiting-row" onClick={onElsewhere}>
             <span className="awaiting-key">{elsewhereRow}</span>
-            <span className="awaiting-option awaiting-elsewhere">{ELSEWHERE}</span>
+            <span className="awaiting-option awaiting-elsewhere">
+              {question.elsewhere ?? ELSEWHERE}
+            </span>
           </button>
         </li>
       </ol>

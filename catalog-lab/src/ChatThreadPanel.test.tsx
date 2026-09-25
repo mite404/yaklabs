@@ -31,8 +31,8 @@ it("floats the agent's question above the compose box with numbered choices and 
   expect(html).toContain('aria-label="Needs you"');
   expect(html.match(/class="awaiting-key"/g)).toHaveLength(3);
   expect(html).toContain("Request a forecast view");
-  expect(html).toContain('placeholder="Or tell me what to do instead"');
-  expect(html).toContain("Chat about something else");
+  expect(html).toContain('placeholder="How many weeks ahead should it forecast?"');
+  expect(html).toContain("Chat about a plan to capture a different selection of sales data");
   expect(html).not.toContain("Dismiss");
 });
 

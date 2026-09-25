@@ -194,7 +194,8 @@ export const threads: Record<string, Thread> = {
           detail: "I'll add it to the catalog backlog and keep showing exact values until it ships.",
         },
       ],
-      answer: { placeholder: "Or tell me what to do instead" },
+      answer: { placeholder: "How many weeks ahead should it forecast?" },
+      elsewhere: "Chat about a plan to capture a different selection of sales data",
     },
   },
 };
