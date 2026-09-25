@@ -41,7 +41,7 @@ Components use only named tokens, never raw hex. The core set uses yaklabs.ai's 
 
 ### The site's contrast pattern: two inks, two lines
 
-yaklabs.ai uses two text inks and two line weights, and nothing else: `--ink` for headings (13.3:1 on paper), `--soft-ink` for body and all secondary text (7.7:1), `--rule` (ink at 72%) for strong lines and outlines (5.7:1), and `--hairline` (ink at 25%) for borders and dividers.
+yaklabs.ai uses two text inks and two line weights, and nothing else: `--ink` for headings (13.3:1 on paper), `--soft-ink` for body and all secondary text (`#5c5c57` from meetkay.ai, 5.8:1), `--rule` (ink at 72%) for strong lines and outlines (5.7:1), and `--hairline` (ink at 25%) for borders and dividers.
 We follow it exactly; a field's placeholder takes the rule's ink, one step greyer than body text, and text selection is `--blue` with ink, as on the site.
 The raw palette (`--yak-*`) exists only to feed the semantic layer, so rebranding is a one-block edit.
 

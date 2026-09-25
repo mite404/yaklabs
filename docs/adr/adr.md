@@ -305,3 +305,9 @@ Text contrast is now measured against `#f0efea`, the darker of the two; everythi
 2026-09-25 - Accepted.
 The core tokens now use the site's own names and values, read from its stylesheet: `--paper`, `--paper-deep`, `--ink`, `--soft-ink`, `--rule` (ink at 72%), `--hairline` (ink at 25%), `--blue`, `--sage`, `--chalk`, `--moss`, `--rust`; colours the site does not declare keep a `--yak-` prefix so their origin stays visible.
 The contrast pattern follows the site too: two text inks (headings `--ink`, everything else `--soft-ink`), two line weights (`--rule` for outlines, `--hairline` for borders), `--paper-deep` for hover and inset fills, and `--blue` text selection; this retires our `--muted`, `--line`, `--wash`, and `--text-body`, and corrects `--rule`, which we had at 21%.
+
+## ADR-050 - Where yaklabs.ai and meetkay.ai differ, Kay's own site wins
+
+2026-09-25 - Accepted.
+The Design Engineer posting lives on meetkay.ai, Kay's product site, whose stylesheet declares the same token names with some different values; since Kay is the product, its values win.
+`--soft-ink` becomes meetkay.ai's `#5c5c57` (5.8:1 on paper) instead of yaklabs.ai's `#4a4a47`, so body and secondary text sit visibly one step lighter than headings, as on the posting; meetkay.ai also declares `--moss: #1d291f` (its filled submit button) and `--error: #9c3b2a`, not yet adopted.
