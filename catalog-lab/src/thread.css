@@ -7,6 +7,10 @@
   container: panel / inline-size;
   --thread-measure: 80ch;
   --thread-gutter: 20px;
+  /* Where a card comes to rest: this far above the compose box, or above the dock card. */
+  --rest-gap: 20px;
+  /* The compose row's top inset, which keeps the focus ring inside its clipped row. */
+  --compose-inset: 4px;
   width: calc(var(--thread-measure) + 2 * var(--thread-gutter));
   max-width: 100%;
   /* Fill the space the host gives the thread, but never overflow it. */
@@ -47,7 +51,10 @@
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
-  padding: 20px var(--thread-gutter) calc(20px + var(--recap-space, 0px));
+  /* The bottom padding lands the last card --rest-gap above the compose box or the dock
+     card: --dock-space is the dock card's height over the compose box (ADR-038). */
+  padding: 20px var(--thread-gutter)
+    calc(var(--rest-gap) - var(--compose-inset) + var(--dock-space, 0px));
   display: flex;
   flex-direction: column;
   gap: 20px;
@@ -96,7 +103,7 @@
    Resets the lab's global textarea rule, which is sized for the JSON editor. */
 /* No divider: the compose box floats directly under the conversation. */
 .thread-compose {
-  padding: 4px var(--thread-gutter) 16px;
+  padding: var(--compose-inset) var(--thread-gutter) 16px;
 }
 .compose-box {
   border: 1px solid var(--line);
@@ -240,9 +247,9 @@
   cursor: default;
 }
 
-/* Recap: "Previously on", floating above the compose box (ADR-018). The slot shares
+/* The dock overlay floats one card above the compose box: the recap (ADR-018). It shares
    the scroll area's gutters so the card lines up with the conversation column. */
-.recap-slot {
+.dock-overlay {
   position: absolute;
   left: 0;
   right: 0;

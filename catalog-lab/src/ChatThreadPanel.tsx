@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { CatalogCard } from "./CatalogCard";
 import { ChartGlyph, ComposeBox } from "./ComposeBox";
 import { appendDictation } from "./dictation";
@@ -8,7 +8,7 @@ import { resolveInteractive, type CardAttachment } from "./interactive";
 import { Recap } from "./Recap";
 import { shouldShowRecap } from "./recapRules";
 import type { Thread, ThreadMessage } from "./thread";
-import { ThreadRevealProvider, revealInScroller } from "./threadReveal";
+import { centerInScroller, keepExpansionsInView } from "./threadReveal";
 import "./thread.css";
 
 type UserMessage = Extract<ThreadMessage, { role: "user" }>;
@@ -109,7 +109,8 @@ function useClock(now?: number): number {
  * Text is capped at `--thread-measure` (80ch) inside a `--thread-gutter` (20px) on each side,
  * and embedded catalog cards adapt to the panel's width through container queries.
  * When the thread is active and the user has been away for 10+ minutes, a recap of
- * recorded outcomes floats above the compose box (ADR-018).
+ * recorded outcomes floats above the compose box (ADR-018). Anything that grows inside
+ * the thread is kept clear of the compose box and the recap (ADR-038).
  * @param width Panel width in px; omit to use the measure plus gutters.
  * @param activity Thread state that drives the recap; omit and no recap is shown.
  * @param now Fixed clock for deterministic stories and tests; omit for live time.
@@ -142,7 +143,7 @@ export function ChatThreadPanel({
   const [pending, setPending] = useState<Record<string, CardAttachment>>({});
   const [reported, setReported] = useState(() => initialReported(thread.messages));
   const scroller = useRef<HTMLDivElement>(null);
-  const recapSlot = useRef<HTMLDivElement>(null);
+  const dockOverlay = useRef<HTMLDivElement>(null);
 
   const recapVisible =
     activity !== undefined &&
@@ -161,26 +162,37 @@ export function ChatThreadPanel({
     if (el) el.scrollTop = el.scrollHeight;
   }, [messages]);
 
-  // The recap overlays the conversation, so reserve its height below the last turn,
+  // Every card that grows inside the thread stays clear of the compose box (ADR-038).
+  useEffect(() => {
+    if (scroller.current) return keepExpansionsInView(scroller.current);
+  }, []);
+
+  // The dock card overlays the conversation, so reserve its height below the last turn,
   // keeping a reader who was at the bottom still at the bottom.
+  const docked = recapVisible;
   useLayoutEffect(() => {
     const el = scroller.current;
-    const slot = recapSlot.current;
+    const slot = dockOverlay.current;
     if (!el) return;
     if (!slot) {
-      el.style.removeProperty("--recap-space");
+      el.style.removeProperty("--dock-space");
       return;
     }
     const reserve = () => {
       const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 4;
-      el.style.setProperty("--recap-space", `${slot.offsetHeight}px`);
+      // Layout offsets, not screen rects, so the card's slide-in animation can't skew them.
+      const card = slot.firstElementChild instanceof HTMLElement ? slot.firstElementChild.offsetTop : 0;
+      const composeInset = slot.nextElementSibling
+        ? parseFloat(getComputedStyle(slot.nextElementSibling).paddingTop) || 0
+        : 0;
+      el.style.setProperty("--dock-space", `${slot.offsetHeight - card + composeInset}px`);
       if (atBottom) el.scrollTop = el.scrollHeight;
     };
     reserve();
     const observer = new ResizeObserver(reserve);
     observer.observe(slot);
     return () => observer.disconnect();
-  }, [recapVisible]);
+  }, [docked]);
 
   // A choice is only news if it differs from what the agent last saw on that card.
   function choose(attachment: CardAttachment) {
@@ -226,10 +238,7 @@ export function ChatThreadPanel({
     );
   }
 
-  // Closing dictation returns focus to the text it fed, so the user can keep editing.
-  function endDictation(transcript?: string) {
-    if (transcript !== undefined) setDraft((current) => appendDictation(current, transcript));
-    setDictating(false);
+  function focusCompose() {
     requestAnimationFrame(() =>
       scroller.current
         ?.closest(".thread-panel")
@@ -238,19 +247,20 @@ export function ChatThreadPanel({
     );
   }
 
-  // Anything that expands inside the thread lands centered, never under the compose box (ADR-037).
-  // Stable, so an open card is revealed once, not again on every panel render.
-  const reveal = useCallback((elements: HTMLElement[]) => {
-    if (scroller.current) revealInScroller(scroller.current, elements);
-  }, []);
+  // Closing dictation returns focus to the text it fed, so the user can keep editing.
+  function endDictation(transcript?: string) {
+    if (transcript !== undefined) setDraft((current) => appendDictation(current, transcript));
+    setDictating(false);
+    focusCompose();
+  }
 
-  // Jump so the evidence lands vertically centered, every time (ADR-022 eye trace, ADR-037).
+  // Jump so the evidence lands vertically centered, every time (ADR-022 eye trace).
   function jump(turnId: string) {
     const turn = scroller.current?.querySelector<HTMLElement>(
       `[data-turn-id="${CSS.escape(turnId)}"]`,
     );
     if (!turn || !scroller.current) return;
-    revealInScroller(scroller.current, [turn]);
+    centerInScroller(scroller.current, turn);
     turn.dataset.flash = "true";
     window.setTimeout(() => delete turn.dataset.flash, FLASH_MS);
   }
@@ -265,19 +275,17 @@ export function ChatThreadPanel({
         <h2>{thread.title}</h2>
       </header>
       <div className="thread-scroll" ref={scroller}>
-        <ThreadRevealProvider value={reveal}>
-          {messages.map((message) =>
-            message.role === "user" ? (
-              <UserTurn key={message.id} message={message} />
-            ) : (
-              <AgentTurn key={message.id} message={message} onChoose={choose} />
-            ),
-          )}
-        </ThreadRevealProvider>
+        {messages.map((message) =>
+          message.role === "user" ? (
+            <UserTurn key={message.id} message={message} />
+          ) : (
+            <AgentTurn key={message.id} message={message} onChoose={choose} />
+          ),
+        )}
       </div>
       <div className="thread-dock">
         {recapVisible && (
-          <div className="recap-slot" ref={recapSlot}>
+          <div className="dock-overlay" ref={dockOverlay}>
             <Recap
               items={thread.recap ?? []}
               idleMs={clock - (lastInputAt ?? clock)}

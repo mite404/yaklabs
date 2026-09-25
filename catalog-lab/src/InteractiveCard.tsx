@@ -1,4 +1,4 @@
-import { useId, useLayoutEffect, useRef, useState } from "react";
+import { useId, useState } from "react";
 import {
   Bar,
   BarChart,
@@ -20,7 +20,6 @@ import {
   type CardAttachment,
   type InteractiveSelection,
 } from "./interactive";
-import { useThreadReveal } from "./threadReveal";
 import "./interactive.css";
 
 // Bars ease between stops so the eye can follow where the money went.
@@ -66,16 +65,6 @@ export function InteractiveCard({
   // Always starts collapsed: the answer earns trust on its own, the steps are there on demand (ADR-036).
   const [showWork, setShowWork] = useState(false);
   const barShape = gradientBar(useId());
-  const reveal = useThreadReveal();
-  const workSteps = useRef<HTMLOListElement>(null);
-  const footer = useRef<HTMLElement>(null);
-
-  // Opening the work centers the steps and their toggle in the thread, before paint.
-  useLayoutEffect(() => {
-    if (showWork && workSteps.current && footer.current)
-      reveal([workSteps.current, footer.current]);
-  }, [showWork, reveal]);
-
   // An invalid payload gets the same honest catalog-limit card as any other rejection.
   if (result.kind === "rejected") return <CatalogCard payload={null} context="thread" />;
 
@@ -182,14 +171,14 @@ export function InteractiveCard({
       </div>
 
       {showWork && (
-        <ol ref={workSteps} className="work-steps" aria-label="How I got this">
+        <ol className="work-steps" aria-label="How I got this">
           {props.steps.map((step) => (
             <li key={step}>{step}</li>
           ))}
         </ol>
       )}
 
-      <footer ref={footer}>
+      <footer>
         <span>{props.source}</span>
         <button className="btn btn-sm" aria-expanded={showWork} onClick={() => setShowWork(!showWork)}>
           {showWork ? "Hide my work" : "Show my work"}
