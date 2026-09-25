@@ -24,7 +24,7 @@
   --yak-blue: #95aac8; /* css: role unknown, kept for reference */
   --yak-cream: #f5f5f0; /* photo: text on the dark hero */
   --yak-forest-deep: #161d17; /* photo */
-  --yak-forest: #242b24; /* photo: dominant hero green */
+  --yak-forest: #242b24; /* photo: dominant hero green; also the measured button hover fill */
   --yak-moss: #303a36; /* photo */
   --yak-sage: #3d423b; /* photo */
   /* derived: the declared sage's hue (OKLCH 124°) at L 0.46 / C 0.06, an olive that reads as
@@ -91,10 +91,10 @@ button:hover {
    arriving, then clears promptly on the way out. Timing is tokenised for iteration. */
 .btn {
   --btn-border: color-mix(in srgb, var(--yak-ink) 72%, var(--yak-paper)); /* css: ink at 0.72 */
-  --btn-hover-bg: var(--yak-night); /* css: the declared near-black green */
+  --btn-hover-bg: var(--yak-forest); /* measured from a hover recording: #242b24 */
   --btn-hover-ink: var(--yak-paper);
-  --btn-duration: 200ms; /* estimated: timing is not visible in a screenshot */
-  --btn-delay: 60ms; /* estimated */
+  --btn-duration: 120ms; /* measured: ~7 frames at 60Hz */
+  --btn-delay: 60ms; /* estimated: the recording cannot show the delay */
   --btn-ease: ease-out;
   display: inline-flex;
   align-items: center;
