@@ -130,7 +130,7 @@ Both threads link to each other ("Remixed from" / "Remixed to"), and finishing t
 
 ## ADR-021 - User messages are high-contrast landmarks
 
-2026-09-25 - Accepted.
+2026-09-25 - Superseded by ADR-025.
 The user's messages render as contained cards with a distinct fill and weight (contrast without loud colour), so they work as chapter headings when scrolling back.
 While scrolling through a long answer, the question it answers stays pinned at the top of the thread.
 
@@ -151,3 +151,9 @@ Inside a thread, cards drop page-level framing (no repeated question, no large h
 2026-09-25 - Accepted.
 The agent selects exactly one catalog card with required and optional props and a meaning-bearing variant; one invented field rejects the whole card.
 This answers "can the goal be reached without A2UI?" with yes, and makes every failure loud and specific, which speeds up iteration; A2UI-style component trees and streaming stay out until a real need appears.
+
+## ADR-025 - User messages rest on the thread as tinted bubbles
+
+2026-09-25 - Accepted.
+The thread background stays dominant; the user's message is a soft tinted surface on top of it, right-aligned at up to 85% width with a hairline border and the time below, so it is recognised as "you" by shape and position rather than heavy contrast.
+A full-width dark treatment was tried and read as a section header; findability when scrolling back comes from the scrollbar map (ADR-022), and the question being answered still stays pinned at the top while scrolling a long answer.
