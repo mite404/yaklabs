@@ -35,6 +35,8 @@ Nothing is built yet, so the cast is the set of ideas the prototypes will be mad
 
 - **A malformed question is the agent's problem to fix, not the user's to see.** When the card's check rejects a question, the error goes back to the agent, and the agent simply asks in plain words, streamed like any reply. The card either shows complete or not at all, and the user never reads a validation error (ADR-040).
 
+- **Two short sentences, or it isn't a card.** Four rows only look considered if each one is brief, so the question and every detail are capped at two short sentences (120 characters, about three lines in the narrow card, measured). A question that needs more words is really the agent needing more context, so it asks in the thread instead. The caps come from the layout, not a guess: 48 characters per line, 43 in the one-line answer field.
+
 ## 4. Bloopers
 
 - **The docs were behind a locked door.** The environment's network policy blocked docs.meetkay.ai, so Kay's vocabulary was reconstructed from search snippets and Ramp's Glass. Everything inferred is labeled; verify before the interview.
