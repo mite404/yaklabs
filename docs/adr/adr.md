@@ -224,3 +224,9 @@ The site has no delay: the "beat" before the fill is the 150ms duration itself; 
 2026-09-25 - Accepted.
 The toggle that reveals how an answer was produced is labelled "Show my work" (not "Show recipe", which is builder jargon), and it always starts collapsed, on every card, in every context.
 Kay's job is to earn enough trust that non-technical users never need to check the steps; the steps stay one click away for anyone who wants them, and are still the source for skill settings (ADR-008, ADR-017, ADR-029).
+
+## ADR-037 - Anything that expands in the thread lands centered, never under the compose box
+
+2026-09-25 - Accepted.
+When a card, accordion, or menu inside the thread expands, the thread scrolls so the newly shown content (with the control that toggles it) is fully visible and vertically centered in the visible band above the compose box and any recap overlay; content taller than the band starts at its top, and at the end of the thread it rests flush above the compose box rather than leaving an empty gap.
+The thread owns this one rule and components opt in through a `reveal` hook, and jumping to a turn uses the same calculation (ADR-022), so expanding and jumping always frame content the same way.
