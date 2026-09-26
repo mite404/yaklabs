@@ -420,3 +420,9 @@ The label's fill moves from yak brown `#d0ae7e` to an orange `#d19456` (`--yak-o
 
 2026-09-26 - Accepted; amends ADR-059.
 The Recap and Needs attention cards' shadow moves 8px right as well as 8px down (`8px 8px 16px -8px`), so it shows equally on the bottom and right edges and not at all on the top or left, as if lit from the top left; before, the right side was barely darker than the surface (5 levels against 19 at the bottom), so the card looked lifted only at its bottom edge.
+
+## ADR-070 - The control you just clicked stays in view
+
+2026-09-26 - Accepted; amends ADR-038.
+When a click makes a card taller than the visible thread, the thread still starts the card at its top, unless that would leave the clicked control under the compose box; then it scrolls until the control rests 20px above the compose box, so a toggle such as "Show my work" can always be clicked again to hide.
+Before, opening the profit card's steps pushed "Hide my work" beneath the compose box, where a click landed in the text field.

@@ -77,6 +77,8 @@ Nothing is built yet, so the cast is the set of ideas the prototypes will be mad
 
 - **Colour-grading the reference.** Several brand colours were picked from screenshots and a screen recording taken on a display with a blue-light filter, which warms everything like a tungsten gel over the lens. The CSS values were fine, but the hero greens, the cream and the button's hover fill were measured through the gel. Fix: drop every pixel-sampled brand colour and keep only what the stylesheet declares (ADR-051). Lesson: sample from the source file, never from the monitor; a colourist never trusts a reference frame shot through a filter.
 
+- **The button that walked offstage.** Opening "Show my work" on the profit card made it taller than the view, and the reveal rule started tall cards at their top, so the footer, with "Hide my work" in it, ended up under the compose box: the element at the button's centre was the text field. The steps could be opened but not closed. Our automated clicks had passed because the test tool scrolls a button into view before clicking; a person can't. Fix: whatever was just clicked always stays in view (ADR-070). Lesson: test clicks at the real pointer position, and never move the camera off the actor who just spoke.
+
 - **The stash that forgot the new files.** To test a commit alone, the working changes were stashed and restored with `git checkout stash -- path`, which brings back tracked files only; the new, untracked files live in a separate part of the stash, and dropping it hid them. They were recovered from git's object store, intact. Lesson: to test a commit in isolation, check it out in a throwaway worktree instead of juggling stashes.
 
 ## 5. Director's Commentary

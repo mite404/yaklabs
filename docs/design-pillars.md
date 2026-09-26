@@ -99,6 +99,7 @@ Chart marks and their legend keys are graphite `#56564f` (6.4:1 on paper), a war
 
 The last card in a thread rests 20px above the compose box, or 20px above the card docked over it, and any card that grows (a data table, "Show my work") is nudged to that same line instead of opening underneath.
 One resting line means the eye always finds new content in the same place, the way a lower third always sits at the same height on screen.
+A card that grows taller than the view starts at its top, except that the control just clicked never leaves the view: "Hide my work" rests on that same line, with the steps above it (ADR-070).
 The gap is the token `--rest-gap`; the thread's bottom padding subtracts the compose row's 4px focus-ring inset (`--compose-inset`) so the visible gap is exactly 20px.
 
 | Property | Value | Source |
