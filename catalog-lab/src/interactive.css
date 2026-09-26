@@ -110,7 +110,9 @@
   border-radius: 10px;
   background: var(--paper-deep);
   font-size: 12px;
-  line-height: 1.7;
+  /* Whole pixels (not 1.7, 20.4px), so the list's height is whole and the reveal scroll, which
+     moves in whole pixels, lands the footer on the same pixel it started on (ADR-073). */
+  line-height: 20px;
 }
 
 @media (prefers-reduced-motion: reduce) {
