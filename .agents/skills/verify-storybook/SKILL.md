@@ -49,7 +49,10 @@ Run these first. They are cheap, and nothing below re-proves them.
 .agents/skills/verify-storybook/scripts/control-storybook.sh launch
 ```
 
-Ready when it prints `storybook: ready at http://127.0.0.1:6106/`. It starts
+Ready when it prints `storybook: ready at http://127.0.0.1:6106/`. It clears Storybook's build
+cache first, so every run serves the sources as they are now; a server left over from an earlier
+session once served the catalog as it was then, and a before/after comparison compared the old code
+with itself. It starts
 `storybook dev` on port 6106 (not 6006, so a human's `pnpm storybook` is untouched), refuses to
 start if a previous run's pid is alive or the port is taken, and waits for `/index.json` to list
 this repo's stories. For a second concurrent run, set both `VERIFY_RUN_ID=<name>` and

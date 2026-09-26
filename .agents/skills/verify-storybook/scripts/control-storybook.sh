@@ -39,6 +39,9 @@ cmd_launch() {
 
   echo "$port" >"$PORT_FILE"
   cd "$ROOT/apps/storybook"
+  # A verification run starts from a clean build: the cache once served the catalog as it was in an
+  # earlier session, and a before/after comparison then compared the old code with itself.
+  rm -rf "$ROOT/apps/storybook/node_modules/.cache/storybook"
   STORYBOOK_DISABLE_TELEMETRY=1 nohup "$ROOT/apps/storybook/node_modules/.bin/storybook" dev \
     -p "$port" --host 127.0.0.1 --ci --no-open >"$LOG_FILE" 2>&1 &
   echo $! >"$PID_FILE"
