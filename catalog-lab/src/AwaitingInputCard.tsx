@@ -116,12 +116,22 @@ export function AwaitingInputCard({
               </span>
             </button>
           ))}
+          {/* The radio and its field are siblings, since a radio may not contain a control;
+              the radio's hit area still covers the tile around the field (thread.css). */}
           <div
             className="tile awaiting-tile awaiting-answer"
-            onClick={() => select(answerRow)}
-            {...tile(answerRow)}
+            data-selected={selected === answerRow || undefined}
           >
-            <span className="awaiting-key">{answerRow + 1}</span>
+            <button
+              type="button"
+              className="awaiting-radio"
+              aria-label={question.answer.placeholder}
+              tabIndex={-1}
+              onClick={() => select(answerRow)}
+              {...tile(answerRow)}
+            >
+              <span className="awaiting-key">{answerRow + 1}</span>
+            </button>
             <input
               ref={field}
               className="field"

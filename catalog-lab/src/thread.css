@@ -481,11 +481,29 @@
 /* The typed answer: an outlined field (.field) inside its tile, so it reads as a place to
    type; the tile trims its padding so the field's text sits level with its number. */
 .awaiting-answer {
+  position: relative;
   align-items: center;
   padding-block: 4px;
 }
 .awaiting-answer .field {
+  position: relative; /* above the radio's hit area */
   padding-inline: 8px;
+}
+/* The row's radio: just its number badge, with the button look reset. Its hit area covers
+   the whole tile, so a click anywhere outside the field still selects the row. */
+.awaiting-answer .awaiting-radio {
+  display: grid;
+  padding: 0;
+  border: none;
+  border-radius: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+}
+.awaiting-radio::before {
+  content: "";
+  position: absolute;
+  inset: 0;
 }
 .awaiting-answer .awaiting-key {
   margin-top: 0;
