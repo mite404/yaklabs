@@ -10,6 +10,7 @@
  *   - Lines inside code blocks (``` fences) are never wrapped
  *   - Table rows (starting with |) are never wrapped (would break markdown)
  *   - Headings (starting with #) are never wrapped
+ *   - A leading YAML frontmatter block (--- ... ---) is never wrapped
  *   - All other lines over 100 bytes are wrapped at the nearest word boundary
  *
  * Why bytes, not characters?
@@ -18,13 +19,13 @@
  *   Using Buffer.byteLength() keeps our count in sync with the linter.
  */
 
-import { readFileSync, writeFileSync } from 'fs';
+import { readFileSync, writeFileSync } from "fs";
 
 const MAX_BYTES = 100;
 
 // Count bytes (not JS characters) to match what linters see
 function byteLen(str) {
-  return Buffer.byteLength(str, 'utf8');
+  return Buffer.byteLength(str, "utf8");
 }
 
 // Wrap a single line to under MAX_BYTES, splitting at word boundaries
@@ -43,9 +44,9 @@ function wrapLine(line) {
   // list marker or blockquote). Checked last so list/blockquote win.
   const indentMatch = line.match(/^(\s+)/);
 
-  let prefix = '';
+  let prefix = "";
   let content = line;
-  let contPrefix = '';
+  let contPrefix = "";
 
   if (bqMatch) {
     prefix = bqMatch[1];
@@ -54,7 +55,7 @@ function wrapLine(line) {
   } else if (listMatch) {
     prefix = listMatch[1] + listMatch[2];
     content = line.slice(prefix.length);
-    contPrefix = ' '.repeat(prefix.length);
+    contPrefix = " ".repeat(prefix.length);
   } else if (indentMatch) {
     // Keep the same indent on every wrapped line, so the continuation stays
     // visually attached to its parent list item / paragraph.
@@ -63,9 +64,9 @@ function wrapLine(line) {
     contPrefix = prefix;
   }
 
-  const words = content.split(' ');
+  const words = content.split(" ");
   const outputLines = [];
-  let current = '';
+  let current = "";
 
   for (const word of words) {
     const candidate = current ? `${current} ${word}` : word;
@@ -86,21 +87,24 @@ function wrapLine(line) {
 
 // Process a single file
 function processFile(filePath) {
-  const content = readFileSync(filePath, 'utf-8');
-  const lines = content.split('\n');
+  const content = readFileSync(filePath, "utf-8");
+  const lines = content.split("\n");
   const output = [];
   let inCodeBlock = false;
+  // YAML frontmatter (e.g. SKILL.md) breaks if a value wraps onto an unindented line.
+  const frontmatterEnd = lines[0] === "---" ? lines.indexOf("---", 1) : -1;
 
-  for (const line of lines) {
+  for (const [i, line] of lines.entries()) {
     // Toggle code block tracking when we hit a fence
-    if (line.trim().startsWith('```')) {
+    if (line.trim().startsWith("```")) {
       inCodeBlock = !inCodeBlock;
       output.push(line);
       continue;
     }
 
-    // Never touch lines inside code blocks, table rows, or headings
-    const isProtected = inCodeBlock || line.startsWith('|') || line.startsWith('#');
+    // Never touch frontmatter, lines inside code blocks, table rows, or headings
+    const isProtected =
+      i <= frontmatterEnd || inCodeBlock || line.startsWith("|") || line.startsWith("#");
 
     if (isProtected || byteLen(line) <= MAX_BYTES) {
       output.push(line);
@@ -112,10 +116,10 @@ function processFile(filePath) {
     }
   }
 
-  writeFileSync(filePath, output.join('\n'));
+  writeFileSync(filePath, output.join("\n"));
 
   // Report how many lines are still over limit (should only be tables/code)
-  const remaining = output.filter((l) => !l.startsWith('|') && byteLen(l) > MAX_BYTES).length;
+  const remaining = output.filter((l) => !l.startsWith("|") && byteLen(l) > MAX_BYTES).length;
 
   console.log(`✓ ${filePath} — ${remaining} long non-table lines remaining`);
 }
@@ -124,7 +128,7 @@ function processFile(filePath) {
 const files = process.argv.slice(2);
 
 if (files.length === 0) {
-  console.error('Usage: bun scripts/wrap-md.js <file.md> [file.md ...]');
+  console.error("Usage: bun scripts/wrap-md.js <file.md> [file.md ...]");
   process.exit(1);
 }
 
