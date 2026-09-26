@@ -1,7 +1,7 @@
 # Staged files only (ADR-086): every agent commit runs this, so it stays cheap.
 # Type checks, tests and the audits run in CI, where --no-verify cannot skip them.
+# The jobs run in order: oxlint's fixes must land before oxfmt formats the same files.
 pre-commit:
-  parallel: true
   jobs:
     - name: oxlint
       glob: "*.{ts,tsx,js,mjs,cjs}"
