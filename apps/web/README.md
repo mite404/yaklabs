@@ -61,6 +61,7 @@ Two scripts drive the app in headless Chromium and exit 1 on any failed step, wi
 and a `results.json` in the output directory (`.artifacts/web/<stamp>/` by default).
 
 ```sh
+rm -rf apps/web/node_modules/.vite              # optional: start from a cold Vite cache
 pnpm dev:web                                    # in one terminal
 node apps/web/scripts/web-check.mjs             # card, slider, reply, chip, reload, routes
 node apps/web/scripts/auth-check.mjs --base http://127.0.0.1:5174   # against a WorkOS-mode server

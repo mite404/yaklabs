@@ -36,14 +36,14 @@ page.on("console", (message) => {
   if (message.type() === "error") errors.push(message.text());
 });
 page.on("pageerror", (error) => errors.push(String(error)));
+// A dev server never answers 5xx on purpose; Vite's 504 "Outdated Optimize Dep" is the blank
+// first page after a fresh install, so the first load has to be clean, not the second.
+page.on("response", (response) => {
+  if (response.status() >= 500) errors.push(`${response.status()} ${response.url()}`);
+});
 const shot = (name) => page.screenshot({ path: path.join(OUT, `${name}.png`), fullPage: false });
 
 try {
-  // Vite's dependency optimizer rebuilds on the first visit and answers 504 for the chunks it
-  // just replaced; a second load after it settles is what a person sees.
-  await page.goto(`${BASE}/`, { waitUntil: "load" });
-  await page.waitForTimeout(6000);
-  errors.length = 0;
   await page.goto(`${BASE}/`, { waitUntil: "load" });
   const title = page.getByRole("heading", { name: "Last week's profit by day" });
   await title.waitFor({ timeout: 15_000 });
