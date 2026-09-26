@@ -53,6 +53,7 @@ export type TriggerProps = {
   "aria-haspopup": "menu";
   "aria-expanded": boolean;
   "aria-controls": string;
+  disabled: boolean;
   onClick: () => void;
 };
 
@@ -62,18 +63,22 @@ export type TriggerProps = {
  * arrow keys, runs an item on Enter or click, and closes on Escape, a click outside, a
  * choice, or a scroll or resize (so it never drifts from its trigger), handing focus back.
  * It is positioned against the viewport, so clipping containers cannot cut it off.
- * @param trigger Renders the button that opens the menu; spread the props onto it.
+ * @param trigger Renders the button that opens the menu; spread the props onto it. Pass a
+ * function defined outside the caller's render, so no component is created per render.
+ * @param disabled Disables the trigger, e.g. while the compose box is paused for dictation.
  */
 export function Menu({
   items,
   trigger,
   placement = "below-end",
   label,
+  disabled = false,
 }: {
   items: MenuItem[];
   trigger: (props: TriggerProps) => ReactNode;
   placement?: MenuPlacement;
   label: string;
+  disabled?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [style, setStyle] = useState<CSSProperties>();
@@ -127,6 +132,7 @@ export function Menu({
         "aria-haspopup": "menu",
         "aria-expanded": open,
         "aria-controls": id,
+        disabled,
         onClick: () => {
           if (!open && button.current) setStyle(positionFor(button.current, placement));
           setOpen(!open);

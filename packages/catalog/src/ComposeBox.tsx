@@ -1,6 +1,6 @@
 import { useRef, type FormEvent, type KeyboardEvent } from "react";
 import { FilesIcon, ScreenIcon } from "./icons";
-import { Menu } from "./Menu";
+import { Menu, type TriggerProps } from "./Menu";
 import { captureScreenshot } from "./screenshot";
 
 // Inline icons keep the lab dependency-free; strokes follow currentColor.
@@ -62,9 +62,22 @@ export function ChartGlyph() {
  *  choice (ADR-030) or a file the user attached, such as a screenshot (ADR-063). */
 export type ComposeAttachment = { id: string; label: string; kind?: "card" | "file" };
 
-// Whether this browser can capture a screen, window or tab.
+// Whether this browser can capture a screen, window or tab. `mediaDevices` is missing
+// outside a secure context, whatever its type says.
 function canCaptureScreen(): boolean {
-  return typeof navigator !== "undefined" && Boolean(navigator.mediaDevices?.getDisplayMedia);
+  return (
+    typeof navigator !== "undefined" &&
+    typeof navigator.mediaDevices?.getDisplayMedia === "function"
+  );
+}
+
+// The paperclip that opens the attach menu, wearing the props the menu hands its trigger.
+function renderAttachTrigger(props: TriggerProps) {
+  return (
+    <button {...props} type="button" className="compose-icon" aria-label="Attach" title="Attach">
+      <PaperclipIcon />
+    </button>
+  );
 }
 
 // A small picture glyph for file chips, matching the chart glyph's weight.
@@ -148,13 +161,16 @@ export function ComposeBox({
   }
 
   return (
+    // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- catches ⌘U bubbling from the box's own controls; jsx-a11y's docs say to disable for bubbled events
     <form className="compose-box" onSubmit={submit} onKeyDown={shortcut}>
       <textarea
         aria-label="Message"
         placeholder={disabled ? "Recording…" : placeholder}
         disabled={disabled}
         value={draft}
-        onChange={(event) => onDraftChange(event.target.value)}
+        onChange={(event) => {
+          onDraftChange(event.target.value);
+        }}
         onKeyDown={(event) => {
           if (event.key === "Enter" && !event.shiftKey) submit(event);
         }}
@@ -178,18 +194,8 @@ export function ComposeBox({
               onSelect: () => void screenshot(),
             },
           ]}
-          trigger={(props) => (
-            <button
-              {...props}
-              type="button"
-              className="compose-icon"
-              aria-label="Attach"
-              title="Attach"
-              disabled={disabled}
-            >
-              <PaperclipIcon />
-            </button>
-          )}
+          trigger={renderAttachTrigger}
+          disabled={disabled}
         />
         <input
           ref={files}
@@ -199,7 +205,7 @@ export function ComposeBox({
           tabIndex={-1}
           onChange={(event) => {
             const picked = Array.from(event.target.files ?? []);
-            if (picked.length) onAttachFiles?.(picked);
+            if (picked.length > 0) onAttachFiles?.(picked);
             event.target.value = "";
           }}
         />
