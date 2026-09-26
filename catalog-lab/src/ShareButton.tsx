@@ -22,9 +22,7 @@ export function ShareButton({ card }: { card: SharedCard }) {
 
   return (
     <span className="share">
-      <span className="share-status" role="status">
-        {copied ? "Link copied" : ""}
-      </span>
+      <output className="share-status">{copied ? "Link copied" : ""}</output>
       <Menu
         label="Share this card"
         placement="below-end"

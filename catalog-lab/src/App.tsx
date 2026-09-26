@@ -177,8 +177,8 @@ export function App() {
             <button className="primary" onClick={captureGap}>
               Capture catalog gap
             </button>
-            <p role="status" className="muted">
-              {gaps.length} captured this session · resets on reload
+            <p className="muted">
+              <output>{gaps.length} captured this session · resets on reload</output>
             </p>
           </div>
           {gaps.length > 0 && (

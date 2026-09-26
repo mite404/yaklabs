@@ -170,8 +170,8 @@ export function CatalogCard({
         }
       />
       {result.kind === "fallback" && (
-        <p className="notice" role="status">
-          {result.reason}
+        <p className="notice">
+          <output>{result.reason}</output>
         </p>
       )}
       <div className="measure">

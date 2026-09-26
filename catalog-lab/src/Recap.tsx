@@ -29,7 +29,12 @@ export function Recap({
     );
 
   return (
-    <section className="recap attention-surface" aria-label="Recap" role="status">
+    <section
+      className="recap attention-surface"
+      aria-label="Recap"
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- the recap holds a header, a list and buttons, which <output> (phrasing content only) may not contain
+      role="status"
+    >
       <header className="recap-header">
         <p>
           <strong>Recap</strong>
