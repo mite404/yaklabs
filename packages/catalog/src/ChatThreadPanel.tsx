@@ -20,7 +20,7 @@ import { InteractiveCard } from "./InteractiveCard";
 import { labAgent } from "./labAgent";
 import { resolveInteractive, type CardAttachment } from "./interactive";
 import { Recap } from "./Recap";
-import { shouldShowRecap } from "./recapRules";
+import { shouldShowRecap, type RecapItem } from "./recapRules";
 import type { Thread, ThreadMessage } from "./thread";
 import { centerInScroller, keepExpansionsInView } from "./threadReveal";
 import "./thread.css";
@@ -338,11 +338,14 @@ function useAwaiting(
 }
 
 // Every card that grows inside the thread stays clear of the compose box (ADR-038), and the
-// docked card's space is reserved for as long as it is there. The slot is held as state so
-// the reservation follows the element: when it mounts, leaves, or one card replaces another.
-function useDockLayout(
-  scroller: RefObject<HTMLDivElement | null>,
-): (slot: HTMLDivElement | null) => void {
+// docked card's space is reserved for as long as it is there. The hook owns the ref to the
+// scrolling thread it watches. The slot is held as state so the reservation follows the
+// element: when it mounts, leaves, or one card replaces another.
+function useDockLayout(): {
+  scroller: RefObject<HTMLDivElement | null>;
+  setDockSlot: (slot: HTMLDivElement | null) => void;
+} {
+  const scroller = useRef<HTMLDivElement>(null);
   const [dockSlot, setDockSlot] = useState<HTMLDivElement | null>(null);
   useEffect(() => {
     const el = scroller.current; // → the thread, mounted before any effect runs
@@ -352,7 +355,7 @@ function useDockLayout(
     const el = scroller.current;
     return el && dockSlot ? reserveDockSpace(el, dockSlot) : undefined;
   }, [scroller, dockSlot]);
-  return setDockSlot;
+  return { scroller, setDockSlot };
 }
 
 // The recap floats only while nothing else needs the dock and the user has been away (ADR-018).
@@ -379,13 +382,69 @@ function recapIsVisible(input: {
   );
 }
 
+// What the recap keeps for itself (ADR-018): the clock, when the user last spoke, whether they
+// dismissed it, and whether they peeked at it while a draft was open. `fold` puts it back behind
+// the draft; `noteInput` marks the user's turn, which restarts the idle clock.
+type RecapState = {
+  visible: boolean;
+  collapsed: boolean;
+  items: RecapItem[];
+  idleMs: number;
+  expand: () => void;
+  fold: () => void;
+  dismiss: () => void;
+  noteInput: () => void;
+};
+
+function useRecap(input: {
+  thread: Thread;
+  activity: ThreadActivity | undefined;
+  now: number | undefined;
+  awaiting: AwaitingInput | undefined;
+  draft: string;
+}): RecapState {
+  const { thread, activity, now, awaiting, draft } = input;
+  const clock = useClock(now);
+  const [lastInputAt, setLastInputAt] = useState(activity?.lastUserInputAt);
+  const [dismissedAt, setDismissedAt] = useState<number>();
+  const [peeking, setPeeking] = useState(false);
+  const items = thread.recap ?? []; // → RecapItem[]
+  return {
+    visible: recapIsVisible({
+      awaiting,
+      activity,
+      lastInputAt,
+      recapCount: items.length,
+      clock,
+      dismissedAt,
+    }),
+    collapsed: draft.trim() !== "" && !peeking,
+    items,
+    idleMs: clock - (lastInputAt ?? clock),
+    expand: () => {
+      setPeeking(true);
+    },
+    fold: () => {
+      setPeeking(false);
+    },
+    dismiss: () => {
+      setDismissedAt(clock);
+    },
+    noteInput: () => {
+      setLastInputAt(clock);
+    },
+  };
+}
+
 // Jump so the evidence lands vertically centered, every time (ADR-022 eye trace).
 function flashTurn(scroller: HTMLElement | null, turnId: string): void {
   const turn = scroller?.querySelector<HTMLElement>(`[data-turn-id="${CSS.escape(turnId)}"]`);
   if (!scroller || !turn) return;
   centerInScroller(scroller, turn);
   turn.dataset.flash = "true";
-  window.setTimeout(() => delete turn.dataset.flash, FLASH_MS);
+  window.setTimeout(() => {
+    delete turn.dataset.flash;
+  }, FLASH_MS);
 }
 
 // After a card or a modal hands back control, the caret returns to the compose box.
@@ -431,26 +490,14 @@ export function ChatThreadPanel({
   startDictating?: boolean;
   agent?: Agent;
 }) {
-  const clock = useClock(now);
   const [messages, setMessages] = useState(thread.messages);
   const tell = useAgent(agent, setMessages);
   const [draft, setDraft] = useState("");
-  const [lastInputAt, setLastInputAt] = useState(activity?.lastUserInputAt);
-  const [dismissedAt, setDismissedAt] = useState<number>();
-  const [peeking, setPeeking] = useState(false);
   const [dictating, setDictating] = useState(startDictating);
   const outbox = useOutbox(thread.messages);
   const [awaiting, setAwaiting] = useAwaiting(thread, tell);
-  const scroller = useRef<HTMLDivElement>(null);
-  const setDockSlot = useDockLayout(scroller);
-  const recapVisible = recapIsVisible({
-    awaiting,
-    activity,
-    lastInputAt,
-    recapCount: thread.recap?.length ?? 0,
-    clock,
-    dismissedAt,
-  });
+  const recap = useRecap({ thread, activity, now, awaiting, draft });
+  const { scroller, setDockSlot } = useDockLayout();
 
   function send() {
     const { attachments, files } = outbox.take();
@@ -464,8 +511,8 @@ export function ChatThreadPanel({
     };
     setMessages((current) => [...current, sent]);
     setDraft("");
-    setPeeking(false);
-    setLastInputAt(clock);
+    recap.fold();
+    recap.noteInput();
     tell({
       kind: "message",
       text: sent.text,
@@ -477,7 +524,7 @@ export function ChatThreadPanel({
   // An answer to the agent's question is the user's next turn; the agent then carries on.
   function answer(text: string) {
     setAwaiting(undefined);
-    setLastInputAt(clock);
+    recap.noteInput();
     setMessages((current) => [
       ...current,
       { id: `local-${current.length}`, role: "user", text, time: "now" },
@@ -488,7 +535,7 @@ export function ChatThreadPanel({
   // Editing the draft folds the recap back down once the text is gone.
   function editDraft(value: string) {
     setDraft(value);
-    if (!value.trim()) setPeeking(false);
+    if (!value.trim()) recap.fold();
   }
 
   // Closing dictation returns focus to the text it fed, so the user can keep editing.
@@ -501,7 +548,7 @@ export function ChatThreadPanel({
   return (
     <section
       className="thread-panel"
-      style={width ? { width } : undefined}
+      style={width === undefined ? undefined : { width }}
       aria-label={thread.title}
     >
       <header className="thread-header">
@@ -525,18 +572,14 @@ export function ChatThreadPanel({
             />
           </div>
         )}
-        {recapVisible && (
+        {recap.visible && (
           <div className="dock-overlay" ref={setDockSlot}>
             <Recap
-              items={thread.recap ?? []}
-              idleMs={clock - (lastInputAt ?? clock)}
-              collapsed={draft.trim() !== "" && !peeking}
-              onExpand={() => {
-                setPeeking(true);
-              }}
-              onDismiss={() => {
-                setDismissedAt(clock);
-              }}
+              items={recap.items}
+              idleMs={recap.idleMs}
+              collapsed={recap.collapsed}
+              onExpand={recap.expand}
+              onDismiss={recap.dismiss}
               onJump={(turnId) => {
                 flashTurn(scroller.current, turnId);
               }}
