@@ -19,7 +19,7 @@
   grid-template-rows: auto minmax(0, 1fr) auto;
   background: var(--paper);
   border: 1px solid var(--hairline);
-  border-radius: var(--radius);
+  border-radius: var(--radius-card);
   font-size: 15px;
   overflow: hidden;
 }
@@ -238,12 +238,12 @@
   padding: 0;
   border-radius: 50%;
   border: none;
-  background: var(--accent);
+  background: var(--olive);
   color: var(--on-accent);
   font-size: 15px;
 }
 .compose-send:hover {
-  background: var(--accent);
+  background: var(--olive);
 }
 .compose-send:disabled {
   background: var(--paper-deep);

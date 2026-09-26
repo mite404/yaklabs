@@ -83,8 +83,8 @@
   border: 1.5px solid var(--soft-ink);
 }
 [aria-selected="true"] > .radio {
-  border-color: var(--accent);
-  background: radial-gradient(var(--accent) 0 3.5px, transparent 4px);
+  border-color: var(--olive);
+  background: radial-gradient(var(--olive) 0 3.5px, transparent 4px);
 }
 
 .waveform {
@@ -139,8 +139,8 @@
 }
 .dictation-done,
 .dictation-done:hover {
-  background: var(--accent);
-  border-color: var(--accent);
+  background: var(--olive);
+  border-color: var(--olive);
   color: var(--on-accent);
 }
 .stop-square {

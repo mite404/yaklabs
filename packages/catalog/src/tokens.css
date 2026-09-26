@@ -52,7 +52,7 @@
   /* Roles built on those: the window around the app, and the rest below. */
   --bg: var(--yak-paper-bright); /* the window around the app */
   --compose-bg: var(--yak-paper-bright); /* the compose box, brighter than the app (ADR-056) */
-  --accent: var(--yak-green); /* 6.1:1 on paper and under cream text */
+  --olive: var(--yak-green); /* 6.1:1 on paper and under cream text */
   --on-accent: var(--paper); /* css: the site's text on dark fills */
   /* The user's bubble, and nothing else (ADR-047): the site's sage tint marks "you". */
   --bubble-tint: color-mix(in srgb, var(--sage) 40%, var(--paper));
@@ -97,7 +97,7 @@
   --awaiting-label-bg: var(--yak-orange);
   --awaiting-label-ink: var(--yak-brown-ink);
 
-  --radius: 14px;
+  --radius-card: 14px; /* the catalog card and the thread panel; shadcn owns --radius (ADR-082) */
   --space: 24px;
 }
 * {
@@ -297,7 +297,7 @@ summary:focus-visible {
   outline: none;
 }
 a {
-  color: var(--accent);
+  color: var(--olive);
 }
 /* Body copy sits one step lighter than headings, as on yaklabs.ai. */
 /* A clicked text field shows only its focused border, never the ring: the ring is for
@@ -437,7 +437,7 @@ main {
   font-size: 10px;
   letter-spacing: 1.5px;
   font-weight: 650;
-  color: var(--accent);
+  color: var(--olive);
   margin-bottom: 14px;
 }
 h1 {
@@ -499,7 +499,7 @@ h1 span {
 .card {
   background: var(--paper);
   border: 1px solid var(--hairline);
-  border-radius: var(--radius);
+  border-radius: var(--radius-card);
   overflow: hidden;
   min-width: 0;
 }
@@ -660,12 +660,12 @@ label {
   margin-bottom: 10px;
 }
 .primary {
-  background: var(--accent);
+  background: var(--olive);
   color: var(--on-accent);
-  border-color: var(--accent);
+  border-color: var(--olive);
 }
 .primary:hover {
-  background: color-mix(in srgb, var(--accent) 75%, var(--yak-night)); /* paper 7.9:1 */
+  background: color-mix(in srgb, var(--olive) 75%, var(--yak-night)); /* paper 7.9:1 */
 }
 .backlog .muted {
   margin-top: 9px;
@@ -690,7 +690,7 @@ label {
 .state-symbol {
   font-size: 30px;
   margin-bottom: 24px;
-  color: var(--accent);
+  color: var(--olive);
 }
 .notice {
   margin: 12px 24px;
