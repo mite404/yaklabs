@@ -16,7 +16,7 @@ export function ShareView({ hash }: { hash?: string }) {
   const [live, setLive] = useState(() =>
     typeof window === "undefined" ? "" : window.location.hash,
   );
-  useEffect(() => {
+  useEffect((): void | (() => void) => {
     if (hash !== undefined) return;
     const follow = () => setLive(window.location.hash);
     window.addEventListener("hashchange", follow);

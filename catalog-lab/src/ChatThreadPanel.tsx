@@ -153,7 +153,7 @@ function useAgent(
 // A live clock, or a fixed one when the host passes `now` (stories and tests).
 function useClock(now?: number): number {
   const [live, setLive] = useState(() => Date.now());
-  useEffect(() => {
+  useEffect((): void | (() => void) => {
     if (now !== undefined) return;
     const id = window.setInterval(() => setLive(Date.now()), CLOCK_TICK_MS);
     return () => window.clearInterval(id);
@@ -250,14 +250,14 @@ export function ChatThreadPanel({
   }, [checked]);
 
   // Every card that grows inside the thread stays clear of the compose box (ADR-038).
-  useEffect(() => {
+  useEffect((): void | (() => void) => {
     if (scroller.current) return keepExpansionsInView(scroller.current);
   }, []);
 
   // The dock card overlays the conversation, so reserve its height below the last turn,
   // keeping a reader who was at the bottom still at the bottom.
   const docked = awaiting !== undefined || recapVisible;
-  useLayoutEffect(() => {
+  useLayoutEffect((): void | (() => void) => {
     const el = scroller.current;
     const slot = dockOverlay.current;
     if (!el) return;

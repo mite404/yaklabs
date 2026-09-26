@@ -76,7 +76,7 @@ export function Menu({
   };
 
   // Focus the first available item on open; close on any click outside.
-  useEffect(() => {
+  useEffect((): void | (() => void) => {
     if (!open) return;
     list.current?.querySelector<HTMLButtonElement>("button:not(:disabled)")?.focus();
     const outside = (event: PointerEvent) => {

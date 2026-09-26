@@ -38,7 +38,7 @@ function useMicrophone(enabled: boolean, deviceId: string) {
   const [devices, setDevices] = useState<AudioDevice[]>([]);
   const [error, setError] = useState<string>();
 
-  useEffect(() => {
+  useEffect((): void | (() => void) => {
     if (!enabled) return;
     let stopped = false;
     let frame = 0;
@@ -97,7 +97,7 @@ function useSpeechTranscript(enabled: boolean) {
     (window as SpeechWindow).SpeechRecognition ?? (window as SpeechWindow).webkitSpeechRecognition;
   const supported = Recognizer !== undefined;
 
-  useEffect(() => {
+  useEffect((): void | (() => void) => {
     if (!enabled || !Recognizer) return;
     const recognizer = new Recognizer();
     recognizer.continuous = true;
