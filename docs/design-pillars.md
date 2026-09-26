@@ -114,12 +114,15 @@ The gap is the token `--rest-gap`; the thread's bottom padding subtracts the com
 The thread's cards all sit on paper, so anything that needs the user (the Recap, a "Needs you" question) sits on the attention surface, a pale warm grey, and stands apart without a badge or a colour of alarm.
 Its choices are paper tiles, lighter than the card, so they separate by colour; hovering a row darkens it to a mid grey, where the usual inks fail, so the hovered row's text switches to the darkest ink.
 Green appears only as a button hover: Submit fills with the site's moss, as the outline button does.
+The question card, labelled "Needs attention", is the exception: it sits on the app's paper with no grey fill at rest, its options, header and Skip fill with `--paper-deep` only on hover, and its label is a yak brown pill (ADR-067).
 
 | Property | Value | Source |
 | --- | --- | --- |
 | Surface (light) | `--attention-bg` (`#d6d5cf`), ink 10.4:1, soft-ink 4.6:1 | Ethan |
 | Tiles (light) | `--tile-bg` (`--paper`), 1.3:1 against the card, soft-ink 5.8:1 | derived |
 | Hover (light) | `--attention-hover` (`#8a8a85`), text to `#111411` at 5.4:1 | Ethan |
+| Question card rest / hover | no fill / `--paper-deep` (`#e4e4df`), ink 12.0:1, soft-ink 5.8:1 | Ethan |
+| Question label | `--yak-brown` (`#d0ae7e`) with `--yak-brown-ink` (`#3b2612`), 6.8:1 | Ethan |
 | Focus (light) | ink ring, 10.4:1 (the page's grey ring is 2.3:1 here) | derived |
 | Surface (dark) | `#62625d`, paper text 5.3:1 | Ethan |
 | Tiles (dark) | 18% night on the surface, paper 6.6:1 | derived |

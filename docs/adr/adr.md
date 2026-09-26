@@ -404,3 +404,9 @@ Colours that looked fine failed on measurement at least six times: `#8a8a85` wit
 2026-09-26 - Accepted.
 Parallel sessions may read a branch freely, but only one writes to it at a time, and write ownership passes explicitly, in a handoff that names the branch, its head commit and the open PR, so the new writer starts by checking the repo against it.
 Two sessions once pushed to the same branch and collided; read-only helpers such as the Figma token watcher never push, so they need no handoff.
+
+## ADR-067 - The question card is labelled "Needs attention" and fills only on hover
+
+2026-09-26 - Accepted; amends ADR-059 and ADR-060.
+The label reads "Needs attention" on a yak brown pill (`#d0ae7e`) with near-black brown text (`#3b2612`, 6.8:1), both Ethan's picks, replacing the faint warn colours.
+The card has no grey fill at rest: option pills lose their `--paper-deep` rest fill and take it as their hover instead (ink 12.0:1, soft-ink 5.8:1), the `#d6d5cf` hover is gone from this card (the Recap keeps it as its surface), and the header and Skip share the new hover; dark mode is unchanged.

@@ -50,6 +50,7 @@ Nothing is built yet, so the cast is the set of ideas the prototypes will be mad
 - **Share the view, not the chat.** Each card can become a public page on its own; the card rides in the link and is validated again on arrival, so the catalog's safety travels with it (ADR-064).
 - **Taste proposes, numbers dispose.** The eye adapts to whatever it is looking at, so a colour that feels fine can still be unreadable; a cinematographer trusts the light meter, not the monitor. Every colour is now measured against each surface it touches, hover included, and a failing pick is flagged with its ratio before it ships (ADR-065).
 - **One editor holds the cut.** Anyone can watch the dailies, but only one editor works on the timeline at a time, or two people's changes overwrite each other. Parallel sessions read the branch freely; one writes, and handing over the branch is an explicit handoff with its head commit and open PR (ADR-066).
+- **Fill is for the hand, not the rest.** The question card's options used to sit in grey pills even when nobody touched them, so the card looked busy before it was read. Now it rests on plain paper and a row fills only under the pointer, like a spotlight that follows the actor instead of lighting the whole stage; its label says "Needs attention" on a yak brown pill (ADR-067).
 
 ## 4. Bloopers
 
