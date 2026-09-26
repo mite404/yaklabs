@@ -142,6 +142,9 @@ function initialReported(messages: ThreadMessage[]): Record<string, string> {
   return seen;
 }
 
+// What the thread says when a reply never arrives, so the user is not left waiting on a bubble.
+const REPLY_FAILED = "I couldn't finish that reply. Try again in a moment.";
+
 /**
  * Sends events to the agent and streams each reply into the thread as its own turn (ADR-041).
  * Replies stop when the panel unmounts. Returns the function that sends an event.
@@ -180,13 +183,23 @@ function useAgent(
     };
     void (async () => {
       let started = false;
-      for await (const chunk of agent.respond(event, controller.signal)) {
-        if (controller.signal.aborted) break;
-        write(chunk, true);
-        started = true;
+      try {
+        for await (const chunk of agent.respond(event, controller.signal)) {
+          if (controller.signal.aborted) break;
+          write(chunk, true);
+          started = true;
+        }
+        if (started && !controller.signal.aborted) write("", false);
+      } catch (error: unknown) {
+        // A reply that breaks off (the gateway refused, the network dropped) ends the turn in
+        // plain words rather than leaving a bubble streaming forever; the cause stays in the
+        // console, never in the thread (ADR-040).
+        // oxlint-disable-next-line no-console -- the one place the thread reports a failed reply
+        console.warn("[thread] reply failed:", error);
+        if (!controller.signal.aborted) write(started ? "" : REPLY_FAILED, false);
+      } finally {
+        live.current.delete(controller);
       }
-      if (started && !controller.signal.aborted) write("", false);
-      live.current.delete(controller);
     })();
     return () => {
       controller.abort();

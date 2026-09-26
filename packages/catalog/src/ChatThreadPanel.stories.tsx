@@ -1,4 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, userEvent, within } from "storybook/test";
+import type { Agent } from "./agent";
 import { ChatThreadPanel } from "./ChatThreadPanel";
 import { threads } from "./thread";
 
@@ -89,4 +91,24 @@ export const InteractiveProfit: Story = { args: { thread: threads.profit } };
 
 export const InteractiveProfitNarrow: Story = {
   args: { thread: threads.profit, width: 420 },
+};
+
+// An agent whose reply breaks off before a word arrives: a refused gateway, a dropped line.
+const brokenAgent: Agent = {
+  respond(): AsyncIterable<string> {
+    throw new Error("The gateway replied 401");
+  },
+};
+
+/** A reply that fails ends the turn in plain words instead of a bubble that streams forever. */
+export const ReplyFails: Story = {
+  args: { thread: threads.trend, agent: brokenAgent },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.type(canvas.getByRole("textbox", { name: "Message" }), "And next week?{Enter}");
+    await expect(
+      await canvas.findByText("I couldn't finish that reply. Try again in a moment."),
+    ).toBeVisible();
+    await expect(canvas.queryByRole("article", { busy: true })).toBeNull();
+  },
 };
