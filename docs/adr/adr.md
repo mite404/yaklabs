@@ -444,3 +444,27 @@ The source line and the button share a 17px line, so the 52px footer places the 
 2026-09-26 - Accepted; completes ADR-072.
 The steps use a 20px line instead of 1.7 (20.4px), so the list is a whole number of pixels tall (140px for six steps); the reveal scroll moves in whole pixels, so the footer now lands exactly where it started (625.58px before opening and after), where the 154.34px list left it 0.34px lower and could round the whole footer down a row.
 Toggling also re-renders the card's chart, which redraws its bars without moving a pixel; memoizing it is logged in `docs/LATER.md`.
+
+## ADR-074 - Kay's architecture, as published
+
+2026-09-26 - Watch.
+From YakLabs' own pages (job posts, DPA, Data Use, Privacy Policy; details and sources in `docs/05-kay-stack-and-data.md`): one TypeScript monorepo holds a React desktop app, a local daemon, cloud services and plugins; the cloud is an API and an inference gateway on Fly.io with managed Postgres, Cloudflare at the edge, and WorkOS for sign-in, and conversations, files and credentials never leave the user's device.
+The desktop shell is probably Electron but unconfirmed, and Rust or Go appears only as a nice-to-have for the harness role; revisit if the interview says otherwise.
+
+## ADR-075 - The slice keeps conversations on the device
+
+2026-09-26 - Proposed.
+Kay's DPA makes on-device storage "the primary control": conversations, files, notes and credentials stay local, and hosted prompts pass through a gateway that writes nothing down, so the slice stores conversations in the browser (IndexedDB) and sends to the cloud only what Kay's cloud holds (usage metadata without content).
+This rules out backends that persist message history by default, such as Convex's agent component (`@convex-dev/agent`) and its persistent text streaming helper, unless storage is turned off.
+
+## ADR-076 - The slice mirrors Kay's process split
+
+2026-09-26 - Proposed.
+The chat UI never runs the agent loop: a Web Worker stands in for Kay's daemon (the loop, the tools, the local conversation store), talking to the UI only through messages across the `Agent` seam, and a separate gateway holds the model key and streams replies.
+Moving to Kay would then mean replacing the worker with their daemon and our gateway with theirs, with no change to the UI; the honest limit is that a browser tab cannot run while closed or reach the file system and shell, which is what makes Kay's daemon proactive.
+
+## ADR-077 - The slice's backend is a small standalone service, not router-attached server functions
+
+2026-09-26 - Proposed; pending Ethan's choice.
+Kay's backend is separate services that the desktop app calls over HTTPS, and an Electron app has no web server to attach server functions to, so Next.js App Router server functions are the wrong shape; the closest match is a standalone TypeScript service (for example Hono) with Postgres, which deploys to Fly.io or Cloudflare Workers (Kay's own hosts), so no other host such as Railway is needed.
+Convex is the fast alternative: it can host the whole runtime (its actions run up to 10 minutes, and `@convex-dev/workflow` handles longer work), but its document-relational model differs from Kay's Postgres rows, its agent component stores message history by default (see ADR-075), and running the loop on a server moves it off the user's machine, the opposite of Kay; if chosen, use it fully and keep it behind the `Agent` seam and a usage interface.
