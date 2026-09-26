@@ -25,7 +25,7 @@ function useThread(): Thread {
   useEffect(() => {
     let live = true;
     const runtime = startRuntime({ agent: env.agent });
-    void navigator.storage.persist?.();
+    void navigator.storage.persist();
     const open = async () => {
       try {
         const [{ storage }, conversation] = await Promise.all([
