@@ -16,7 +16,8 @@
     "format": "oxfmt --write",
     "format:check": "oxfmt --check",
     "fallow": "fallow",
-    "fallow:audit": "fallow audit"
+    "fallow:audit": "fallow audit",
+    "prepare": "lefthook install --reset-hooks-path"
   },
   "devDependencies": {
     "@yaklabs/config": "workspace:*",
