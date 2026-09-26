@@ -34,6 +34,7 @@ What would let Kay's team drop the lab into their TypeScript monorepo (see `docs
 
 Each one starts from a design decision and carries it one layer down, into a neighbouring role's work; pick two or three.
 
+- **Visual regression and accessibility checks in CI** (Design Engineer: Infrastructure, which asks for "state catalogs, screenshot and visual regression tests, and accessibility checks in CI"). Playwright screenshots across the Storybook states plus axe; the chosen day-4 extra (ADR-086), and it contains the next one.
 - **A theme that fails contrast cannot ship** (Design Engineer: Infrastructure). ADR-065 as a test over every text and UI pair in every theme.
 - **A catalog MCP server** (Developer Experience). `list_components`, `validate_card`, `preview_card`, so agents building UI use the design system correctly.
 - **An evaluation loop** (AI Harnesses). Run a real model against the catalog, measure how often cards validate and where they fail, tighten the schema, show the rate improve.
