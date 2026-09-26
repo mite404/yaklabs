@@ -54,3 +54,21 @@ pnpm --filter web build      # build/client, served by the gateway Worker as sta
 `catalog` cascade layer between Tailwind's preflight and its utilities, so the catalog keeps
 its element styles while a class on a shadcn primitive still wins (ADR-082). The theme is the
 root's `data-theme`, set by `src/theme.ts` and booted from the prerendered shell.
+
+## Prove it in a browser
+
+Two scripts drive the app in headless Chromium and exit 1 on any failed step, with screenshots
+and a `results.json` in the output directory (`.artifacts/web/<stamp>/` by default).
+
+```sh
+pnpm dev:web                                    # in one terminal
+node apps/web/scripts/web-check.mjs             # card, slider, reply, chip, reload, routes
+node apps/web/scripts/auth-check.mjs --base http://127.0.0.1:5174   # against a WorkOS-mode server
+```
+
+`web-check.mjs` proves the vertical slice: the profit card renders, the slider reaches Net profit,
+the reply names that view, the sent message carries the chip, and every turn survives a reload
+from SQLite in the browser's private file system. `auth-check.mjs` proves the sign-in gate: a
+signed-out visit leaves for WorkOS with the registered callback and the wanted path in `state`,
+while `/share.html` and `/callback` stay public. The last results and screenshots sit in
+`docs/trail/evidence/`.

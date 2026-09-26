@@ -80,7 +80,7 @@
   ],
   "overrides": [
     {
-      "files": ["scripts/**/*.js"],
+      "files": ["scripts/**/*.js", "apps/*/scripts/**/*.mjs"],
       "rules": {
         "typescript/no-unsafe-member-access": "off",
         "typescript/no-unsafe-call": "off",
