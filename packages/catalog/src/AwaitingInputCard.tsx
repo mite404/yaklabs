@@ -55,10 +55,11 @@ export function AwaitingInputCard({
   // Number keys and arrows select, Enter sends (Space or a click also selects a tile).
   // While typing only Enter is ours; the header and the action buttons keep their own Enter.
   function keys(event: KeyboardEvent) {
-    const target = event.target as HTMLElement;
     if (!open) return;
+    const target = event.target; // → EventTarget: a tile, the field, the header or an action
     const typing = target instanceof HTMLInputElement;
-    const ownEnter = target.closest(".disclosure-header, .awaiting-actions") !== null;
+    const ownEnter =
+      target instanceof Element && target.closest(".disclosure-header, .awaiting-actions") !== null;
     if (event.key === "Enter") {
       if (ownEnter) return;
       submit();
@@ -70,13 +71,18 @@ export function AwaitingInputCard({
     event.preventDefault();
   }
 
+  // A branch or the way out. The typed answer is a field, not a radio, so each radio carries its
+  // row's number and the row count, and is announced as the badge shows it ("3 of 3").
   const tile = (row: number) => ({
     role: "radio" as const,
     "aria-checked": selected === row,
+    "aria-posinset": row + 1,
+    "aria-setsize": rows,
     "data-selected": selected === row || undefined,
   });
 
   return (
+    // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- keys bubble here from the card's buttons and field; jsx-a11y's docs say to disable for bubbled events
     <section
       className="awaiting attention-surface"
       aria-label="Needs attention"
@@ -85,7 +91,9 @@ export function AwaitingInputCard({
     >
       <Disclosure
         open={open}
-        onToggle={() => setOpen(!open)}
+        onToggle={() => {
+          setOpen(!open);
+        }}
         summary={
           <>
             <span className="awaiting-label">Needs attention</span>
@@ -106,7 +114,9 @@ export function AwaitingInputCard({
             <button
               key={option.label}
               className="tile awaiting-tile"
-              onClick={() => select(i)}
+              onClick={() => {
+                select(i);
+              }}
               {...tile(i)}
             >
               <span className="awaiting-key">{i + 1}</span>
@@ -116,25 +126,32 @@ export function AwaitingInputCard({
               </span>
             </button>
           ))}
-          <div
+          {/* A radio cannot hold a text field, so this row is a label around one: a click
+              anywhere on the tile focuses the field, and focusing it selects the row. */}
+          <label
             className="tile awaiting-tile awaiting-answer"
-            onClick={() => select(answerRow)}
-            {...tile(answerRow)}
+            data-selected={selected === answerRow || undefined}
           >
             <span className="awaiting-key">{answerRow + 1}</span>
             <input
               ref={field}
               className="field"
               value={typed}
-              onFocus={() => setSelected(answerRow)}
-              onChange={(event) => setTyped(event.target.value)}
+              onFocus={() => {
+                setSelected(answerRow);
+              }}
+              onChange={(event) => {
+                setTyped(event.target.value);
+              }}
               placeholder={question.answer.placeholder}
               aria-label={question.answer.placeholder}
             />
-          </div>
+          </label>
           <button
             className="tile awaiting-tile"
-            onClick={() => select(elsewhereRow)}
+            onClick={() => {
+              select(elsewhereRow);
+            }}
             {...tile(elsewhereRow)}
           >
             <span className="awaiting-key">{elsewhereRow + 1}</span>
