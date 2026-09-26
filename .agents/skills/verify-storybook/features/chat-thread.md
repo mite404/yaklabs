@@ -35,10 +35,15 @@ Preconditions:
   `button "Send"` is `[disabled]`. Type a message; Send enables. Press Enter to send.
 - **Attach.** Click `button "Attach"`. It becomes `[expanded]` and `menu "Attach"` lists
   `menuitem "Add images & files ⌘U"` and `menuitem "Take screenshot"`. Escape closes it.
-- **Recap.** Load `thread-chat-thread-panel--recap-after-idle` and compare with
-  `--recently-active` (no recap) and `--inactive-thread`.
-- **Awaiting input.** Load `thread-chat-thread-panel--awaiting-input`. The card offers numbered
-  choices and a free-text answer labelled `How many weeks ahead should it forecast?`.
+- **Recap.** Load `thread-chat-thread-panel--recap-after-idle`. `region "Recap"` holds a `status`
+  reading `Recap · 12 min since your last message`, `button "Dismiss recap"`, and one button per
+  recorded outcome. Compare with `--recently-active` (no recap) and `--inactive-thread`.
+- **Awaiting input.** Load `thread-chat-thread-panel--awaiting-input`. `region "Needs attention"`
+  holds `radiogroup "A forecast view isn't in the catalog yet. How should I handle it?"` with
+  `radio "1 Request a forecast view …"`, the typed answer `textbox "How many weeks ahead should it
+  forecast?"` and `radio "3 Chat about a plan to capture a different selection of sales data"`;
+  `button "Submit"` is `[disabled]` until a row is selected. Number keys and the arrows select a
+  row, focusing the textbox selects row 2, and Enter sends the selection.
   `--awaiting-input-malformed` must show a safe notice, not a broken card.
 - **Interactive card.** Load `thread-chat-thread-panel--interactive-profit`.
   `region "Last week's sales"` holds `heading "Last week's profit by day"` and
@@ -55,8 +60,10 @@ Preconditions:
   Ctrl+U.
 - `Take screenshot` calls `getDisplayMedia`, which headless Chromium cannot grant. Opening the
   menu is provable; capturing is verified-unreachable here.
-- The awaiting-input free-text option was a `role="radio"` wrapping an `input` (axe
-  `nested-interactive`). If you touch `AwaitingInputCard`, re-run `pnpm test:stories` and
-  re-read this recipe's handles against the new markup.
+- The typed-answer row is a `<label>` around its textbox, not a radio: a radio cannot contain a
+  control (axe `nested-interactive`). So the group has two radios and a textbox; the radios carry
+  `aria-posinset` and `aria-setsize` so they count all three rows. Its `data-selected` still marks
+  the chosen row. If you touch `AwaitingInputCard`, re-run `pnpm test:stories` and re-read this
+  recipe's handles against the new markup.
 - `--dock-space` is set from JavaScript, so the compose box position depends on a rendered dock.
   Screenshot after the story settles, not on first paint.

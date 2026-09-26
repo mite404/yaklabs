@@ -37,8 +37,10 @@ Preconditions:
   `table "A clearer view of the week · cases"` appears with `columnheader "Observation"`,
   `columnheader "Value (cases)"` and rows `"Mon 24"` through `"Sun 58"`; the toggle becomes
   `button "Show chart"`. Click it and the image returns.
-- **Exact values.** Load `catalog-approved-answers--exact-values`. The table is shown first. Its
-  scroll wrapper must be reachable with Tab (axe `scrollable-region-focusable`).
+- **Exact values.** Load `catalog-approved-answers--exact-values`. The table is shown first,
+  inside `region "A clearer view of the week · cases"`, which scrolls within a capped height:
+  Saturday and Sunday start below the fold. Tab reaches the region (axe
+  `scrollable-region-focusable`), and End scrolls it to the last row.
 - **Sparse fallback.** Load `catalog-approved-answers--sparse-fallback`. A `status` reads
   `A trend needs at least two known observations. Showing the exact values instead.` above the
   table.
