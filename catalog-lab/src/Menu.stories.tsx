@@ -20,7 +20,7 @@ export const Attach: Story = {
       { label: "Add images & files", icon: <FilesIcon />, shortcut: "⌘U", onSelect: () => {} },
       { label: "Take screenshot", icon: <ScreenIcon />, onSelect: () => {} },
     ],
-    trigger: (props) => (
+    renderTrigger: (props) => (
       <button {...props} className="btn btn-sm" style={{ marginTop: 120 }}>
         Attach
       </button>
@@ -37,7 +37,7 @@ export const Share: Story = {
       { label: "Copy public link", icon: <LinkIcon />, onSelect: () => {} },
       { label: "Open public page", icon: <ExternalIcon />, onSelect: () => {} },
     ],
-    trigger: (props) => (
+    renderTrigger: (props) => (
       <IconButton {...props} label="Share this card">
         <ShareIcon />
       </IconButton>

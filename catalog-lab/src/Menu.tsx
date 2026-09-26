@@ -50,16 +50,16 @@ type TriggerProps = {
  * arrow keys, runs an item on Enter or click, and closes on Escape, a click outside, a
  * choice, or a scroll or resize (so it never drifts from its trigger), handing focus back.
  * It is positioned against the viewport, so clipping containers cannot cut it off.
- * @param trigger Renders the button that opens the menu; spread the props onto it.
+ * @param renderTrigger Renders the button that opens the menu; spread the props onto it.
  */
 export function Menu({
   items,
-  trigger,
+  renderTrigger,
   placement = "below-end",
   label,
 }: {
   items: MenuItem[];
-  trigger: (props: TriggerProps) => ReactNode;
+  renderTrigger: (props: TriggerProps) => ReactNode;
   placement?: MenuPlacement;
   label: string;
 }) {
@@ -115,7 +115,7 @@ export function Menu({
 
   return (
     <span className="menu-anchor" ref={root}>
-      {trigger({
+      {renderTrigger({
         ref: button,
         "aria-haspopup": "menu",
         "aria-expanded": open,

@@ -178,7 +178,7 @@ export function ComposeBox({
               onSelect: () => void screenshot(),
             },
           ]}
-          trigger={(props) => (
+          renderTrigger={(props) => (
             <button
               {...props}
               type="button"

@@ -36,7 +36,7 @@ export function ShareButton({ card }: { card: SharedCard }) {
             onSelect: () => window.open(shareLink(card), "_blank", "noopener"),
           },
         ]}
-        trigger={(props) => (
+        renderTrigger={(props) => (
           <IconButton {...props} label="Share this card">
             <ShareIcon />
           </IconButton>
