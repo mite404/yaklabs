@@ -107,6 +107,9 @@ importers:
       jose:
         specifier: ^6.2.12
         version: 6.2.12
+      zod:
+        specifier: 'catalog:'
+        version: 4.6.5
     devDependencies:
       '@cloudflare/workers-types':
         specifier: ^5.20260926.1
@@ -123,9 +126,6 @@ importers:
       wrangler:
         specifier: ^4.141.0
         version: 4.141.0(@cloudflare/workers-types@5.20260926.1)(@types/node@26.6.3)
-      zod:
-        specifier: 'catalog:'
-        version: 4.6.5
 
   apps/storybook:
     devDependencies:
