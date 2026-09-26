@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import {
   ResponsiveContainer,
   LineChart as RechartsLineChart,
@@ -17,11 +17,15 @@ import { ShareButton } from "./ShareButton";
 /** Bars are flat data colour with the button's 4px top corners; no gradient (ADR-055). */
 export const BAR_RADIUS = 4;
 
+// The table scrolls inside a capped height, so its wrapper is a named region that takes focus:
+// otherwise rows below the fold are out of reach without a mouse (axe scrollable-region-focusable).
 function DataTable({ props }: { props: DataProps }) {
+  const caption = useId();
   return (
-    <div className="table-wrap">
+    // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- a scroll region must take focus to scroll by keyboard (WCAG 2.1.1)
+    <section className="table-wrap" aria-labelledby={caption} tabIndex={0}>
       <table>
-        <caption>
+        <caption id={caption}>
           {props.title} · {props.unit}
         </caption>
         <thead>
@@ -39,7 +43,7 @@ function DataTable({ props }: { props: DataProps }) {
           ))}
         </tbody>
       </table>
-    </div>
+    </section>
   );
 }
 
@@ -66,6 +70,7 @@ function Chart({ selection }: { selection: Selection }) {
   return (
     <div
       className="chart"
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- a live Recharts SVG cannot be an <img>; role="img" names the drawing
       role="img"
       aria-label={`${props.title}. Values available in the data table.`}
     >
@@ -163,8 +168,8 @@ export function CatalogCard({
         }
       />
       {result.kind === "fallback" && (
-        <p className="notice" role="status">
-          {result.reason}
+        <p className="notice">
+          <output>{result.reason}</output>
         </p>
       )}
       <div className="measure">
@@ -189,7 +194,12 @@ export function CatalogCard({
           </span>
         </span>
         {selection.component !== "DataTable" && (
-          <button className="btn btn-sm card-toggle" onClick={() => setShowTable(!showTable)}>
+          <button
+            className="btn btn-sm card-toggle"
+            onClick={() => {
+              setShowTable(!showTable);
+            }}
+          >
             {showTable ? "Show chart" : "View data table"}
           </button>
         )}
