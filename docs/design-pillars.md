@@ -82,7 +82,7 @@ At rest a button is only an outline; on hover the fill and text colour change ov
 | Focus | 2px accent outline, 2px offset | derived |
 | Disabled | 45% opacity, no hover | derived |
 
-### 8b. A toggle never moves when its label flips
+### 17. A toggle never moves when its label flips
 
 A button that switches between two labels keeps one whole-pixel width (128px, the widest label) and shares a whole-pixel line with the text beside it, so nothing in the footer shifts between states, not even by a rounded pixel (ADR-072).
 
