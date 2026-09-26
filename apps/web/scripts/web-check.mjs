@@ -250,8 +250,9 @@ try {
     el.scrollLeft = 0;
   });
 
-  // A third lane, then the first dragged by its grip to the end of the row: past the card's
-  // centre a skeleton marks the slot it would take, and the drop lands it there.
+  // A third lane, then the first one taken by its title bar and carried to the end of the
+  // row: a copy of it floats under the pointer, the lane itself waits dimmed and slides to the
+  // slot it would take, and the drop lands it there.
   await page.evaluate(() => {
     const target = document.querySelector('[aria-label="Compose canvas"]');
     const data = new DataTransfer();
@@ -265,50 +266,81 @@ try {
   const labelsBefore = await canvas
     .locator("article")
     .evaluateAll((els) => els.map((el) => el.getAttribute("aria-label")));
-  const grip = canvas.getByRole("button", { name: /^Move / }).first();
-  const gripBox = await grip.boundingBox();
-  const laneBoxes = await canvas
+  const laneWidths = await canvas
     .locator("article")
     .evaluateAll((els) => els.map((el) => el.getBoundingClientRect().width));
-  await page.mouse.move(gripBox.x + gripBox.width / 2, gripBox.y + gripBox.height / 2);
-  await page.mouse.down();
-  await page.mouse.move(gripBox.x + laneBoxes[0] + 16 + 60, gripBox.y + 4, { steps: 6 });
-  const skeleton = await canvas.locator("[data-skeleton]").evaluateAll((els) => {
-    const probe = document.createElement("i");
-    probe.style.color = "var(--data)";
-    document.body.append(probe);
-    const data = getComputedStyle(probe).color;
-    probe.remove();
-    return els.map((el) => ({
-      border: getComputedStyle(el).borderTopColor,
-      width: el.getBoundingClientRect().width,
-      data,
-    }));
-  });
-  // The row is wider than the pane, so bring the skeleton's slot into view for the picture, once
-  // the neighbours have finished sliding aside.
   await canvas.evaluate((el) => {
-    el.scrollLeft = el.querySelector("[data-skeleton]").offsetLeft - 24;
+    el.scrollLeft = 0;
   });
+  const titleBar = canvas.locator("article").first().locator(".thread-header");
+  const titleBox = await titleBar.boundingBox();
+  const grabHand = await titleBar.evaluate((el) => getComputedStyle(el).cursor);
+  const laneBox = await canvas.locator("article").first().boundingBox();
+  await page.mouse.move(titleBox.x + 40, titleBox.y + titleBox.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(titleBox.x + 40 + 300, titleBox.y + 30, { steps: 6 });
   await page.waitForTimeout(250);
+  const lift = await page.evaluate(
+    ([expectedLeft, laneWidth]) => {
+      const ghost = document.querySelector("[data-ghost]");
+      const lifted = document.querySelector("[data-lifted]");
+      if (!ghost || !lifted) return { ghost: Boolean(ghost), lifted: Boolean(lifted) };
+      const ghostBox = ghost.getBoundingClientRect();
+      return {
+        ghost: true,
+        lifted: true,
+        ghostOpacity: getComputedStyle(ghost).opacity,
+        liftedOpacity: getComputedStyle(lifted).opacity,
+        ghostFollows: Math.abs(ghostBox.left - expectedLeft) < 2,
+        ghostWidth: Math.abs(ghostBox.width - laneWidth) < 1,
+        sameTitle: ghost.getAttribute("aria-label") === lifted.getAttribute("aria-label"),
+        inPlace: new DOMMatrix(getComputedStyle(lifted).transform).e === 0,
+      };
+    },
+    [laneBox.x + 300, laneWidths[0]],
+  );
   await shot("canvas-reorder");
   record(
-    "a lifted lane shows a skeleton of itself in the neutral mark colour at the slot it would take",
-    skeleton.length === 1 &&
-      skeleton[0].border === skeleton[0].data &&
-      Math.abs(skeleton[0].width - laneBoxes[0]) < 1,
-    skeleton[0] ? `${skeleton[0].border}, ${Math.round(skeleton[0].width)}px wide` : "no skeleton",
+    "a lane's title bar shows a hand, and lifting it floats a copy under the pointer while the lane waits dimmed",
+    grabHand === "grab" &&
+      lift.ghost &&
+      lift.lifted &&
+      lift.ghostOpacity === "0.85" &&
+      lift.liftedOpacity === "0.35" &&
+      lift.ghostFollows &&
+      lift.ghostWidth &&
+      lift.sameTitle &&
+      lift.inPlace,
+    `cursor ${grabHand}; ${JSON.stringify(lift)}`,
   );
-  await page.mouse.move(gripBox.x + laneBoxes[0] + laneBoxes[1] + 32 + 60, gripBox.y + 4, {
-    steps: 6,
-  });
+  await page.mouse.move(titleBox.x + 40 + laneWidths[0] + 16 + 60, titleBox.y + 30, { steps: 6 });
+  await page.waitForTimeout(250);
+  const slid = await page.evaluate(
+    (expected) =>
+      Math.abs(
+        new DOMMatrix(getComputedStyle(document.querySelector("[data-lifted]")).transform).e -
+          expected,
+      ) < 1,
+    laneWidths[1] + 16,
+  );
+  record(
+    "past a neighbour's centre the dimmed lane slides into the slot it would take",
+    slid,
+    `expected a slide of ${Math.round(laneWidths[1] + 16)}px`,
+  );
+  await page.mouse.move(
+    titleBox.x + 40 + laneWidths[0] + laneWidths[1] + 32 + 60,
+    titleBox.y + 30,
+    { steps: 6 },
+  );
   await page.mouse.up();
   const labelsAfter = await canvas
     .locator("article")
     .evaluateAll((els) => els.map((el) => el.getAttribute("aria-label")));
   record(
-    "a lane dragged past its neighbours lands at the end of the row",
-    labelsAfter.join("|") === [labelsBefore[1], labelsBefore[2], labelsBefore[0]].join("|"),
+    "a lane carried past its neighbours lands at the end of the row, and the copy is gone",
+    labelsAfter.join("|") === [labelsBefore[1], labelsBefore[2], labelsBefore[0]].join("|") &&
+      (await page.locator("[data-ghost]").count()) === 0,
     labelsAfter.map((label) => label.slice(0, 12)).join(" → "),
   );
 

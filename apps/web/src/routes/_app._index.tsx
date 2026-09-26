@@ -187,7 +187,7 @@ function Workspace({ runtime, conversation }: { runtime: Runtime; conversation: 
           />
         </div>
       </ResizablePanel>
-      {/* Above the panes, or the canvas's own stacking context would cover its hit area. */}
+      {/* Above the panes, so nothing positioned in them can cover its hit area. */}
       <ResizableHandle
         aria-label="Resize the thread and the canvas"
         className="drag-hint z-10"

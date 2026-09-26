@@ -8,8 +8,6 @@
 @layer components {
   /* The canvas is a dotted field (ADR-089): open ground that invites something to be put down. */
   .canvas {
-    /* Its own stacking context, so the skeleton can sit under the lanes without leaving it. */
-    isolation: isolate;
     background-color: var(--bg);
     background-image: radial-gradient(var(--hairline) 1px, transparent 1px);
     background-size: 18px 18px;
@@ -48,25 +46,28 @@
     opacity: 1;
   }
 
-  /* A lane on its way to another slot (ADR-089): the lanes it passes slide aside, the lane
-     itself rides the pointer, lifted by a shadow, and a skeleton of it in the chart's neutral
-     mark colour holds the slot it would take. */
+  /* A lane on its way to another slot (ADR-089): a hand over its title bar says it can be
+     taken; once lifted, a copy of it floats under the pointer with a shadow, the lane itself
+     waits dimmed in the slot it would take, and the lanes it passes slide aside. */
+  .lane :is(.thread-header, .card-heading),
+  [data-grip] {
+    cursor: grab;
+  }
+  html[data-dragging="lane"],
+  html[data-dragging="lane"] .lane {
+    cursor: grabbing;
+  }
   .lane-shift {
     transition: transform 150ms ease;
   }
   [data-lifted] {
-    z-index: 10;
-    transition: none;
-    filter: drop-shadow(0 8px 16px var(--shadow-strong));
+    opacity: 0.35;
   }
-  .lane-skeleton {
-    position: absolute;
-    /* Under the lanes: a neighbour sliding aside passes over it, not through a tint. */
-    z-index: -1;
-    box-sizing: border-box;
-    border: 1px solid var(--data);
-    border-radius: var(--radius-card);
-    background: color-mix(in srgb, var(--data) 18%, transparent);
+  .lane-ghost {
+    position: fixed;
+    z-index: 50;
+    opacity: 0.85;
+    filter: drop-shadow(0 8px 16px var(--shadow-strong));
     pointer-events: none;
   }
   @media (prefers-reduced-motion: reduce) {
