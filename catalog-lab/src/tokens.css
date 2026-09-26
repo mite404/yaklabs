@@ -45,8 +45,8 @@
   --yak-stone-pale: #d6d5cf; /* light mode: the Recap and Needs you cards */
   --yak-stone: #8a8a85; /* light mode: hover on those cards; also the focus ring */
   --yak-slate: #62625d; /* dark mode: the lightest grey where cream text clears 4.5:1 */
-  /* Ethan: the "Needs attention" label, a yak brown pill with near-black brown text (6.8:1). */
-  --yak-brown: #d0ae7e;
+  /* Ethan: the "Needs attention" label, a caution orange pill with near-black brown text (5.5:1). */
+  --yak-orange: #d19456;
   --yak-brown-ink: #3b2612;
 
   /* Roles built on those: the window around the app, and the rest below. */
@@ -94,7 +94,7 @@
   --awaiting-bg: var(--paper);
   --awaiting-tile-bg: transparent;
   --awaiting-hover: var(--paper-deep); /* resolved here, before .attention-surface remaps it */
-  --awaiting-label-bg: var(--yak-brown);
+  --awaiting-label-bg: var(--yak-orange);
   --awaiting-label-ink: var(--yak-brown-ink);
 
   --radius: 14px;

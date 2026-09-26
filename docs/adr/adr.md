@@ -410,3 +410,8 @@ Two sessions once pushed to the same branch and collided; read-only helpers such
 2026-09-26 - Accepted; amends ADR-059 and ADR-060.
 The label reads "Needs attention" on a yak brown pill (`#d0ae7e`) with near-black brown text (`#3b2612`, 6.8:1), both Ethan's picks, replacing the faint warn colours.
 The card has no grey fill at rest: option pills lose their `--paper-deep` rest fill and take it as their hover instead (ink 12.0:1, soft-ink 5.8:1), the `#d6d5cf` hover is gone from this card (the Recap keeps it as its surface), and the header and Skip share the new hover; dark mode is unchanged.
+
+## ADR-068 - The Needs attention pill is caution orange
+
+2026-09-26 - Accepted; amends ADR-067.
+The label's fill moves from yak brown `#d0ae7e` to an orange `#d19456` (`--yak-orange`, Ethan's pick) so it reads as caution, not decoration, while the text stays `#3b2612` (5.5:1 on the new fill).
