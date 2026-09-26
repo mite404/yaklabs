@@ -148,7 +148,7 @@ try {
   const canvas = page.getByRole("region", { name: "Compose canvas" });
   record(
     "the canvas opens empty and invites a drop",
-    await canvas.getByText("Drag a highlight here").isVisible(),
+    await canvas.getByText("Drag a text selection or card").isVisible(),
   );
 
   // A highlight dragged out of the thread arrives as plain text on the drop.
@@ -177,12 +177,125 @@ try {
     .locator(".card-heading")
     .first();
   await heading.scrollIntoViewIfNeeded();
-  await heading.dragTo(canvas.getByText("Drop here for another lane"));
+  await heading.dragTo(canvas.getByText("Drag a text selection or card"));
   await canvas.locator("article").nth(1).locator(".card").waitFor({ timeout: 10_000 });
   await shot("canvas-lanes");
   record(
     "a card dragged by its header opens large in its own lane",
     await canvas.locator("article").nth(1).getByRole("slider").isVisible(),
+  );
+
+  // The gap after a lane drags its width; the hint line lights where the pointer is.
+  const separator = canvas.getByRole("separator", { name: /^Resize / }).first();
+  const separatorBox = await separator.boundingBox();
+  const laneWidthBefore = (await lane.boundingBox()).width;
+  const hoverY = separatorBox.y + separatorBox.height * 0.3;
+  await page.mouse.move(separatorBox.x + separatorBox.width / 2, hoverY);
+  // The line fades in over 120ms; read it once it has arrived.
+  for (let i = 0; i < 5; i++) {
+    const shown = await separator.evaluate(
+      (el) => getComputedStyle(el, "::before").opacity === "1",
+    );
+    if (shown) break;
+    await page.waitForTimeout(100);
+  }
+  const hint = await separator.evaluate((el, y) => {
+    const style = getComputedStyle(el, "::before");
+    return { opacity: style.opacity, centre: parseFloat(el.style.getPropertyValue("--hint-y")), y };
+  }, hoverY - separatorBox.y);
+  record(
+    "the hint line shows on hover, centred on the pointer",
+    hint.opacity === "1" && Math.abs(hint.centre - hint.y) < 2,
+    `opacity ${hint.opacity}, centre ${Math.round(hint.centre)} for pointer at ${Math.round(hint.y)}`,
+  );
+  await page.mouse.down();
+  await page.mouse.move(separatorBox.x + 140, hoverY, { steps: 6 });
+  await page.mouse.up();
+  const laneWidthAfter = (await lane.boundingBox()).width;
+  record(
+    "a lane's width drags by the gap after it",
+    laneWidthAfter > laneWidthBefore + 100,
+    `${Math.round(laneWidthBefore)} → ${Math.round(laneWidthAfter)}px`,
+  );
+  await page.mouse.move(10, 10);
+
+  // Two lanes outgrow the pane; the row pans by a sideways wheel, and by a vertical one over
+  // the ground between and after the lanes.
+  const openSpace = canvas.getByText("Drag a text selection or card");
+  const openBox = await openSpace.boundingBox();
+  await page.mouse.move(openBox.x + openBox.width / 2, openBox.y - 40);
+  await page.mouse.wheel(0, 160);
+  const panned = await canvas.evaluate((el) => ({
+    overflow: el.scrollWidth > el.clientWidth,
+    left: el.scrollLeft,
+  }));
+  record(
+    "the row pans sideways once lanes outgrow the pane",
+    panned.overflow && panned.left > 100,
+    `scrolled ${Math.round(panned.left)}px`,
+  );
+  await canvas.evaluate((el) => {
+    el.scrollLeft = 0;
+  });
+
+  // A third lane, then the first dragged by its grip to the end of the row: past the card's
+  // centre a skeleton marks the slot it would take, and the drop lands it there.
+  await page.evaluate(() => {
+    const target = document.querySelector('[aria-label="Compose canvas"]');
+    const data = new DataTransfer();
+    data.setData("text/plain", "Sunday holds the margin");
+    for (const type of ["dragover", "drop"])
+      target.dispatchEvent(
+        new DragEvent(type, { bubbles: true, cancelable: true, dataTransfer: data }),
+      );
+  });
+  await canvas.locator("article").nth(2).locator(".thread-panel").waitFor({ timeout: 10_000 });
+  const labelsBefore = await canvas
+    .locator("article")
+    .evaluateAll((els) => els.map((el) => el.getAttribute("aria-label")));
+  const grip = canvas.getByRole("button", { name: /^Move / }).first();
+  const gripBox = await grip.boundingBox();
+  const laneBoxes = await canvas
+    .locator("article")
+    .evaluateAll((els) => els.map((el) => el.getBoundingClientRect().width));
+  await page.mouse.move(gripBox.x + gripBox.width / 2, gripBox.y + gripBox.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(gripBox.x + laneBoxes[0] + 16 + 60, gripBox.y + 4, { steps: 6 });
+  const skeleton = await canvas.locator("[data-skeleton]").evaluateAll((els) => {
+    const probe = document.createElement("i");
+    probe.style.color = "var(--data)";
+    document.body.append(probe);
+    const data = getComputedStyle(probe).color;
+    probe.remove();
+    return els.map((el) => ({
+      border: getComputedStyle(el).borderTopColor,
+      width: el.getBoundingClientRect().width,
+      data,
+    }));
+  });
+  // The row is wider than the pane, so bring the skeleton's slot into view for the picture.
+  await canvas.evaluate((el) => {
+    el.scrollLeft = el.querySelector("[data-skeleton]").offsetLeft - 24;
+  });
+  await shot("canvas-reorder");
+  record(
+    "a lifted lane shows a skeleton of itself in the neutral mark colour at the slot it would take",
+    skeleton.length === 1 &&
+      skeleton[0].border === skeleton[0].data &&
+      Math.abs(skeleton[0].width - laneBoxes[0]) < 1,
+    skeleton[0] ? `${skeleton[0].border}, ${Math.round(skeleton[0].width)}px wide` : "no skeleton",
+  );
+  await page.mouse.move(gripBox.x + laneBoxes[0] + laneBoxes[1] + 32 + 60, gripBox.y + 4, {
+    steps: 6,
+  });
+  await page.mouse.up();
+  const labelsAfter = await canvas
+    .locator("article")
+    .evaluateAll((els) => els.map((el) => el.getAttribute("aria-label")));
+  record(
+    "a lane dragged past its neighbours lands at the end of the row",
+    labelsAfter.join("|") === [labelsBefore[1], labelsBefore[2], labelsBefore[0]].join("|"),
+    labelsAfter.map((label) => label.slice(0, 12)).join(" → "),
   );
 
   const handle = page.locator('[data-slot="resizable-handle"]');
@@ -204,14 +317,33 @@ try {
 
   await page.reload({ waitUntil: "load" });
   await canvas.locator("article .thread-panel").first().waitFor({ timeout: 15_000 });
+  await page.waitForTimeout(500);
+  const labelsReloaded = await canvas
+    .locator("article")
+    .evaluateAll((els) => els.map((el) => el.getAttribute("aria-label")));
   record(
-    "thread lanes survive a reload and card lanes do not",
-    (await canvas.locator("article").count()) === 1,
+    "thread lanes survive a reload in the order they were left, and card lanes do not",
+    labelsReloaded.join("|") === [labelsBefore[2], labelsBefore[0]].join("|"),
+    labelsReloaded.map((label) => label.slice(0, 12)).join(" → "),
   );
-  await canvas.getByRole("button", { name: /^Close / }).click();
+  await canvas
+    .getByRole("button", { name: /^Close / })
+    .first()
+    .click();
   await page.reload({ waitUntil: "load" });
-  await canvas.getByText("Drag a highlight here").waitFor({ timeout: 15_000 });
-  record("a closed lane stays closed", (await canvas.locator("article").count()) === 0);
+  await canvas.locator("article .thread-panel").first().waitFor({ timeout: 15_000 });
+  await page.waitForTimeout(500);
+  const closedOnce = (await canvas.locator("article").count()) === 1;
+  await canvas
+    .getByRole("button", { name: /^Close / })
+    .first()
+    .click();
+  await page.reload({ waitUntil: "load" });
+  await canvas.getByText("Drag a text selection or card").waitFor({ timeout: 15_000 });
+  record(
+    "a closed lane stays closed",
+    closedOnce && (await canvas.locator("article").count()) === 0,
+  );
 
   await page.goto(`${BASE}/lab`, { waitUntil: "load" });
   await page.getByText("Useful answers.").waitFor({ timeout: 10_000 });

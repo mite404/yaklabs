@@ -8,8 +8,20 @@ import {
   ResizablePanelGroup,
 } from "@yaklabs/ui/components/resizable";
 import { useEffect, useState } from "react";
-import { hide, laneId, loadHidden, quoteFor, titleFor, type Drop } from "../canvas";
+import {
+  hide,
+  laneId,
+  loadHidden,
+  loadOrder,
+  moveItem,
+  quoteFor,
+  saveOrder,
+  sortByOrder,
+  titleFor,
+  type Drop,
+} from "../canvas";
 import { Canvas, type LaneView } from "../components/canvas";
+import { trackHintLine } from "../components/divider";
 import { env } from "../env";
 import { useSession } from "../session";
 
@@ -25,7 +37,7 @@ type Thread =
 // A lane on the canvas (ADR-089): another thread of this project, or a card opened large.
 type Lane =
   | { id: string; kind: "thread"; conversation: Conversation; draft: string }
-  | { id: string; kind: "artifact"; card: SharedCard };
+  | { id: string; kind: "artifact"; card: SharedCard; title: string };
 
 export function meta() {
   return [{ title: "Kay" }];
@@ -59,9 +71,18 @@ function useThread(): Thread {
   return thread;
 }
 
-// The canvas's lanes: every other conversation the worker holds, oldest first, less the ones
-// closed by hand, plus the cards opened large during this visit.
-function useLanes(runtime: Runtime): [Lane[], (drop: Drop) => void, (id: string) => void] {
+// What the canvas can do to its lanes.
+type LaneActions = {
+  lanes: Lane[];
+  drop: (drop: Drop) => void;
+  close: (id: string) => void;
+  move: (id: string, to: number) => void;
+};
+
+// The canvas's lanes: every other conversation the worker holds, in the order they were left
+// (oldest first for the rest), less the ones closed by hand, plus the cards opened large during
+// this visit.
+function useLanes(runtime: Runtime): LaneActions {
   const [lanes, setLanes] = useState<Lane[]>([]);
   useEffect(() => {
     let live = true;
@@ -75,7 +96,7 @@ function useLanes(runtime: Runtime): [Lane[], (drop: Drop) => void, (id: string)
       const conversations = await Promise.all(ids.map((id) => runtime.open(id))); // → Conversation[]
       if (live)
         setLanes(
-          conversations.map((conversation) => ({
+          sortByOrder(conversations, loadOrder()).map((conversation) => ({
             id: conversation.id,
             kind: "thread",
             conversation,
@@ -91,7 +112,10 @@ function useLanes(runtime: Runtime): [Lane[], (drop: Drop) => void, (id: string)
 
   async function add(drop: Drop) {
     if (drop.kind === "card") {
-      setLanes((current) => [...current, { id: laneId(), kind: "artifact", card: drop.card }]);
+      setLanes((current) => [
+        ...current,
+        { id: laneId(), kind: "artifact", card: drop.card, title: drop.title },
+      ]);
       return;
     }
     const id = laneId();
@@ -107,7 +131,16 @@ function useLanes(runtime: Runtime): [Lane[], (drop: Drop) => void, (id: string)
     setLanes((current) => current.filter((lane) => lane.id !== id));
   }
 
-  return [lanes, (drop) => void add(drop), close];
+  // A slot off either end is no move at all.
+  function move(id: string, to: number) {
+    const from = lanes.findIndex((lane) => lane.id === id);
+    if (from === -1 || to < 0 || to >= lanes.length) return;
+    const moved = moveItem(lanes, from, to); // → Lane[]
+    saveOrder(moved.filter((lane) => lane.kind === "thread").map((lane) => lane.id));
+    setLanes(moved);
+  }
+
+  return { lanes, drop: (drop) => void add(drop), close, move };
 }
 
 function Artifact({ card }: { card: SharedCard }) {
@@ -122,7 +155,7 @@ function Artifact({ card }: { card: SharedCard }) {
 // length, the canvas takes what is dropped on it.
 function Workspace({ runtime, conversation }: { runtime: Runtime; conversation: Conversation }) {
   const session = useSession();
-  const [lanes, drop, close] = useLanes(runtime);
+  const { lanes, drop, close, move } = useLanes(runtime);
   const views: LaneView[] = lanes.map((lane) =>
     lane.kind === "thread"
       ? {
@@ -137,7 +170,7 @@ function Workspace({ runtime, conversation }: { runtime: Runtime; conversation: 
             />
           ),
         }
-      : { id: lane.id, title: "Card", node: <Artifact card={lane.card} /> },
+      : { id: lane.id, title: lane.title, node: <Artifact card={lane.card} /> },
   );
   return (
     <ResizablePanelGroup orientation="horizontal" className="h-full">
@@ -156,13 +189,15 @@ function Workspace({ runtime, conversation }: { runtime: Runtime; conversation: 
       </ResizablePanel>
       <ResizableHandle
         aria-label="Resize the thread and the canvas"
-        className="transition-colors hover:bg-olive data-[resize-handle-active]:bg-olive"
+        className="drag-hint"
+        onPointerMove={trackHintLine}
       />
       <ResizablePanel minSize="20">
         <Canvas
           lanes={views}
           onDrop={drop}
           onClose={close}
+          onMove={move}
           onBlank={() => {
             drop({ kind: "text", text: "" });
           }}
