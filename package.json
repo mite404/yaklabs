@@ -8,7 +8,13 @@
     "lint": "oxlint catalog-lab scripts",
     "format": "oxfmt catalog-lab scripts",
     "format:check": "oxfmt --check catalog-lab scripts",
-    "fallow": "fallow"
+    "typecheck": "npm run typecheck --workspaces",
+    "test": "npm test --workspaces",
+    "test:unit": "npm run test:unit --workspaces",
+    "test:stories": "npm run test:stories --workspaces",
+    "build-storybook": "npm run build-storybook --workspaces",
+    "fallow": "fallow",
+    "fallow:audit": "fallow audit"
   },
   "devDependencies": {
     "fallow": "^3.28.0",
