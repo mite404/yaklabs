@@ -24,6 +24,7 @@ Legal pages change: re-read the sources before quoting them in the interview.
 | Desktop shell | Electron, **inferred** and unconfirmed: a Node-heavy TypeScript stack with a daemon, and an app data folder named after the app (`~/Library/Application Support/Yak/`) | Privacy Policy §6, job posts |
 | Systems language | Rust or Go is a nice-to-have for the AI Harnesses role only ("Systems-language experience (Rust, Go) alongside TypeScript"); nothing says the backend uses it | AI Harnesses post |
 | Hosted services | "the API, the inference gateway", plus Cloudflare-hosted "OAuth broker, downloads, release operations, build cache, website, and careers" | DPA Annex III, Data Use |
+| Inference gateway | **Bifrost**, an open-source LLM gateway written in Go (by Maxim AI), self-hosted on Fly.io: "Our inference gateway is not a sub-processor. It runs Bifrost, open-source software we self-host on Fly.io." It offers one OpenAI-compatible API across 20+ providers and can be configured from a file, which fits the DPA's no-storage setting "re-applied from a fixed file on every restart" | Data Use |
 | Hosting and database | Fly.io: "Application hosting and managed PostgreSQL", Ashburn, Virginia | Data Use, DPA Annex III |
 | Edge | Cloudflare: website delivery, the OAuth broker, software update delivery | Data Use |
 | Sign-in | WorkOS (the downloads site redirects through WorkOS AuthKit); the DPA's Annex III still says Clerk, so the annex is stale and the Data Use page, which the DPA calls authoritative, wins | Data Use, downloads.meetkay.ai |
@@ -93,7 +94,7 @@ Legal pages change: re-read the sources before quoting them in the interview.
 
 **Business model: Kay resells inference.** "No API keys, no model to pick, no setup file" plus the DPA's metered usage records ("computed cost ... metering usage for billing") and the Stripe sub-processor mean customers pay Kay directly and Kay pays the model providers (Fireworks by default); bringing your own key is the optional exception.
 
-**Voice.** ElevenLabs "is no longer a sub-processor", so Kay used ElevenLabs for hosted voice and moved away from it; Deepgram is announced for hosted transcription, and local transcription is also offered. Worth asking about in the interview, since the slice uses voice (ADR-079).
+**Voice.** "ElevenLabs is no longer a sub-processor. Until 11 August 2026 it provided our hosted speech-to-text ... Deepgram is the announced replacement" (Data Use page); on-device transcription is also offered. So ElevenLabs did Kay's transcription, not speech output, and nothing published mentions Kay speaking replies aloud. Worth asking about in the interview, since the slice reads replies aloud (ADR-079).
 
 **Electron or Tauri: undecided, roughly even.** Nothing published names the desktop shell.
 
