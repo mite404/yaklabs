@@ -17,4 +17,6 @@ export type {
   Notice,
   StorageKind,
 } from "./protocol";
+export { startRuntime } from "./runtime";
+export type { Runtime, Session } from "./runtime";
 export type { ConversationStore } from "./store";
