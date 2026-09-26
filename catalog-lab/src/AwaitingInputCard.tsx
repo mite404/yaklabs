@@ -77,6 +77,7 @@ export function AwaitingInputCard({
   });
 
   return (
+    // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- a delegated shortcut: number, arrow and Enter keys bubble up from the tiles, field and buttons inside; the section never takes focus
     <section
       className="awaiting attention-surface"
       aria-label="Needs attention"

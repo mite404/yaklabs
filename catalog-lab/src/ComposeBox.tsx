@@ -148,6 +148,7 @@ export function ComposeBox({
   }
 
   return (
+    // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- a delegated shortcut: ⌘U bubbles up from whichever control inside has focus; the form never takes focus
     <form className="compose-box" onSubmit={submit} onKeyDown={shortcut}>
       <textarea
         aria-label="Message"
