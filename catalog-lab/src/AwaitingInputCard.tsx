@@ -55,8 +55,8 @@ export function AwaitingInputCard({
   // Number keys and arrows select, Enter sends (Space or a click also selects a tile).
   // While typing only Enter is ours; the header and the action buttons keep their own Enter.
   function keys(event: KeyboardEvent) {
-    const target = event.target as HTMLElement;
-    if (!open) return;
+    const target = event.target;
+    if (!open || !(target instanceof HTMLElement)) return;
     const typing = target instanceof HTMLInputElement;
     const ownEnter = target.closest(".disclosure-header, .awaiting-actions") !== null;
     if (event.key === "Enter") {

@@ -112,17 +112,18 @@ export function keepExpansionsInView(scroller: HTMLElement): () => void {
 
   const resized = new ResizeObserver((entries) => {
     for (const entry of entries) {
-      const turn = entry.target as HTMLElement;
+      const turn = entry.target;
+      if (!(turn instanceof HTMLElement)) continue;
       const before = heights.get(turn);
       const after = entry.borderBoxSize[0]?.blockSize ?? turn.offsetHeight;
       heights.set(turn, after);
       if (before === undefined || after <= before) continue;
+      const recent = interaction;
       const asked =
-        interaction !== undefined &&
-        performance.now() - interaction.at <= INTERACTION_WINDOW_MS &&
-        turn.contains(interaction.target);
-      if (asked)
-        nudgeInScroller(scroller, [interaction!.target.closest<HTMLElement>(".card") ?? turn]);
+        recent !== undefined &&
+        performance.now() - recent.at <= INTERACTION_WINDOW_MS &&
+        turn.contains(recent.target);
+      if (asked) nudgeInScroller(scroller, [recent.target.closest<HTMLElement>(".card") ?? turn]);
       else if (pinned) scroller.scrollTop = scroller.scrollHeight;
     }
   });

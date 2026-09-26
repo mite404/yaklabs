@@ -80,10 +80,10 @@ export function Menu({
     if (!open) return;
     list.current?.querySelector<HTMLButtonElement>("button:not(:disabled)")?.focus();
     const outside = (event: PointerEvent) => {
-      if (!root.current?.contains(event.target as Node)) close(false);
+      if (!(event.target instanceof Node && root.current?.contains(event.target))) close(false);
     };
     const away = (event: Event) => {
-      if (!list.current?.contains(event.target as Node)) close(false);
+      if (!(event.target instanceof Node && list.current?.contains(event.target))) close(false);
     };
     document.addEventListener("pointerdown", outside);
     window.addEventListener("scroll", away, true);
@@ -106,7 +106,7 @@ export function Menu({
     const enabled = Array.from(
       list.current?.querySelectorAll<HTMLButtonElement>("button:not(:disabled)") ?? [],
     );
-    const at = enabled.indexOf(document.activeElement as HTMLButtonElement);
+    const at = enabled.findIndex((item) => item === document.activeElement);
     const step = event.key === "ArrowDown" ? 1 : -1;
     enabled[(at + step + enabled.length) % enabled.length]?.focus();
   }
