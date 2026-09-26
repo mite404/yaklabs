@@ -46,7 +46,7 @@ export function Modal({
   className?: string;
   children: ReactNode;
 }) {
-  const dialog = useRef<HTMLElement>(null);
+  const dialog = useRef<HTMLDialogElement>(null);
   const opener = useRef<Element | null>(null);
 
   // Remember what had focus and take it, so Escape and Tab work at once; give it back on close.
@@ -71,17 +71,17 @@ export function Modal({
 
   return (
     <div className="modal-backdrop">
-      <section
+      <dialog
         ref={dialog}
+        open
         className={className ? `modal ${className}` : "modal"}
-        role="dialog"
         aria-modal="true"
         aria-labelledby={labelledBy}
         tabIndex={-1}
         onKeyDown={keys}
       >
         {children}
-      </section>
+      </dialog>
     </div>
   );
 }

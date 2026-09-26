@@ -130,6 +130,17 @@
   backdrop-filter: blur(3px);
   animation: modal-fade 160ms ease-out;
 }
+/* The native <dialog>, shown in place with `open`: its browser defaults (absolute position,
+   auto margins, 1em padding, system colours) reset to a plain box the backdrop centres.
+   Zero specificity, so a variant such as .dictation still sets its own width and padding. */
+:where(dialog.modal) {
+  position: static;
+  width: auto;
+  height: auto;
+  margin: 0;
+  padding: 0;
+  color: inherit;
+}
 .modal {
   background: var(--paper);
   border: 1px solid var(--hairline);
