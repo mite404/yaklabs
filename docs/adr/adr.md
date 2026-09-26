@@ -12,7 +12,7 @@ It is the product's core promise, it shows timing, hierarchy, and progressive di
 
 ## ADR-002 - Treat Glass as inferred DNA for Kay
 
-2026-09-24 - Accepted.
+2026-09-24 - Superseded by ADR-078 (the docs are now read; see `docs/05-kay-stack-and-data.md`).
 The Kay docs were unreachable from this environment, so Kay's vocabulary and surfaces come from search snippets, with Ramp's Glass as the likely ancestor.
 Anything inferred from Glass is labeled as inferred and must be checked against docs.meetkay.ai before the interview.
 
@@ -444,3 +444,85 @@ The source line and the button share a 17px line, so the 52px footer places the 
 2026-09-26 - Accepted; completes ADR-072.
 The steps use a 20px line instead of 1.7 (20.4px), so the list is a whole number of pixels tall (140px for six steps); the reveal scroll moves in whole pixels, so the footer now lands exactly where it started (625.58px before opening and after), where the 154.34px list left it 0.34px lower and could round the whole footer down a row.
 Toggling also re-renders the card's chart, which redraws its bars without moving a pixel; memoizing it is logged in `docs/LATER.md`.
+
+## ADR-074 - Kay's architecture, as published
+
+2026-09-26 - Watch.
+From YakLabs' own pages (job posts, DPA, Data Use, Privacy Policy; details and sources in `docs/05-kay-stack-and-data.md`): one TypeScript monorepo holds a React desktop app, a local daemon, cloud services and plugins; the cloud is an API and an inference gateway on Fly.io with managed Postgres, Cloudflare at the edge, and WorkOS for sign-in, and conversations, files and credentials never leave the user's device.
+The desktop shell is probably Electron but unconfirmed, and Rust or Go appears only as a nice-to-have for the harness role; revisit if the interview says otherwise.
+
+## ADR-075 - The slice keeps conversations on the device
+
+2026-09-26 - Proposed.
+Kay's DPA makes on-device storage "the primary control": conversations, files, notes and credentials stay local, and hosted prompts pass through a gateway that writes nothing down, so the slice stores conversations in the browser (see ADR-081) and sends to the cloud only what Kay's cloud holds (usage metadata without content).
+This rules out backends that persist message history by default, such as Convex's agent component (`@convex-dev/agent`) and its persistent text streaming helper, unless storage is turned off.
+
+## ADR-076 - The slice mirrors Kay's process split
+
+2026-09-26 - Proposed.
+The chat UI never runs the agent loop: a Web Worker stands in for Kay's daemon (the loop, the tools, the local conversation store), talking to the UI only through messages across the `Agent` seam, and a separate gateway holds the model key and streams replies.
+Moving to Kay would then mean replacing the worker with their daemon and our gateway with theirs, with no change to the UI; the honest limit is that a browser tab cannot run while closed or reach the file system and shell, which is what makes Kay's daemon proactive.
+
+## ADR-077 - The slice's backend is a small standalone service, not router-attached server functions
+
+2026-09-26 - Accepted (Ethan): the service is Hono on Cloudflare Workers (ADR-085).
+Kay's backend is separate services that the desktop app calls over HTTPS, and an Electron app has no web server to attach server functions to, so Next.js App Router server functions are the wrong shape; the closest match is a standalone TypeScript service (for example Hono) with Postgres, which deploys to Fly.io or Cloudflare Workers (Kay's own hosts), so no other host such as Railway is needed.
+Convex is the fast alternative: it can host the whole runtime (its actions run up to 10 minutes, and `@convex-dev/workflow` handles longer work), but its document-relational model differs from Kay's Postgres rows, its agent component stores message history by default (see ADR-075), and running the loop on a server moves it off the user's machine, the opposite of Kay; if chosen, use it fully and keep it behind the `Agent` seam and a usage interface.
+
+## ADR-078 - Shape the slice as a Kay plugin
+
+2026-09-26 - Proposed; amends ADR-002 and ADR-074.
+Kay's docs (docs.meetkay.ai, now reachable, so ADR-002's reliance on Glass as a stand-in is no longer needed) say Kay is "a small stable core plus a set of extensions", where first-party integrations are plugins that contribute tools, integrations, `scheme://` resources, bundled skills and Pages ("full React apps hosted inside Kay's workspace"), and Kay runs on macOS only today.
+So the slice is packaged the way a plugin would be: the catalog cards as a Page, the catalog as tools the agent calls, and the card rules as a bundled `SKILL.md`, which makes "how would this ship in Kay?" a one-sentence answer; the private plugin SDK is out of reach, so this mirrors the contract's shape rather than using it.
+
+## ADR-079 - Voice first: Kay can read its last reply aloud
+
+2026-09-26 - Proposed.
+Kay's quickstart promises "Download it, sign in, and start talking", so the slice doubles down on voice: dictation already exists (ADR-028), and now, when a reply finishes streaming, a small semi-transparent hint appears above the compose box, "Press ⌘T to hear me" (T for talk; Ctrl+T on Windows), clickable as well as keyboard-driven, which reads back only the last completed reply (for a card, its one-sentence summary); a speaker button in the compose area does the same, instead of one under every message.
+The hint is a non-blocking toast, not a modal, so it never takes focus from typing, and it goes away when the user types or after a few seconds; ⌘T is free inside Kay's desktop app, but browsers keep it for a new tab and never pass it to the page, so the web slice uses ⌘⇧H ("hear"; Ctrl+Shift+H on Windows), which Chromium leaves to the page, and the hint shows whichever key works where it runs; speech goes through the gateway with the ElevenLabs key held server-side and nothing stored, with the browser's built-in voice as an on-device fallback, and the hint's text must pass 4.5:1 against the thread behind it (ADR-065).
+
+## ADR-080 - The slice's gateway can be Kay's own: Bifrost
+
+2026-09-26 - Watch: deferred by ADR-085; Bifrost can sit behind the Hono gateway later without changing the browser side.
+Kay's Data Use page names its inference gateway: "It runs Bifrost, open-source software we self-host on Fly.io", an LLM gateway written in Go with one OpenAI-compatible API across providers; running the same image on Fly.io (`fly deploy --image docker.io/maximhq/bifrost:latest`, configured from `config.json`) makes the slice's gateway the same software on the same host as Kay's.
+Bifrost's docs settle the three open questions: Anthropic chat streams, and ElevenLabs is supported for speech output (streamed) and for transcription (not streamed), while Deepgram is not a provider; browser access is set by `allowed_origins` (default `*`, so it must be narrowed); and `enforce_auth_on_inference` with virtual keys, each with a budget and a rate limit, keeps the provider keys on the gateway, though a key used from the browser is visible in the page, so its budget must be small; the dashboard needs its password and setup token before the app is public.
+Its content settings mirror Kay's DPA almost word for word: `disable_content_logging: true` keeps metadata only, and `allow_per_request_content_storage_override: false` means no request can opt back into storage.
+
+## ADR-081 - The slice stores its data in SQLite, in the browser's private file system
+
+2026-09-26 - Accepted (Ethan); completes ADR-075.
+Conversations are saved as markdown files and indexed in SQLite (the official WebAssembly build, `@sqlite.org/sqlite-wasm`), both kept in the Origin Private File System (OPFS), a folder the browser gives only this site; that mirrors Kay's local storage (transcripts as markdown, a local database of text and vectors) and its promise that conversations never leave the device, and it removes any hosted database from the slice.
+SQLite's fast OPFS mode works only inside a Web Worker, so the worker that stands in for Kay's daemon (ADR-076) owns the database; the page asks the browser to keep the data (`navigator.storage.persist()`), and clearing site data still wipes it, as deleting Kay's application data folder would.
+
+## ADR-082 - New UI uses shadcn/ui and Tailwind, kept on-brand by construction
+
+2026-09-26 - Accepted (Ethan); corrects an undecided drift.
+The research note recommended shadcn primitives (`docs/03-generative-ui-research.md`), but `catalog-lab` was built in hand-written CSS without that ever being decided; from now on, new UI is built with shadcn/ui and Tailwind v4 (faster, and agents write both fluently), while the existing catalog components keep their verified CSS and move across only when touched, with before and after screenshots, since a rewrite would put 73 ADRs of checked details at risk.
+Three things keep agent-written UI from looking like everyone's defaults: (1) a token bridge, where shadcn's theme variables (`--background`, `--foreground`, `--border`, `--ring`, `--primary`, `--radius`) and Tailwind's `@theme` map to the Kay tokens, so anything an agent writes comes out in Kay's paper, ink, hairlines and 4px corners; (2) a rules file the agents read, a `SKILL.md` under `.claude/skills/` (which Kay also reads, so it doubles as the plugin's bundled skill, ADR-078) saying tokens only and never raw hex, green only on button hovers, outline buttons by default, and contrast checked in numbers (ADR-065); (3) a guard that fails the build, a lint rule or test that rejects raw colour values in components, extending the contrast guard, so an agent cannot drift without breaking the build.
+
+## ADR-083 - The frontend is React Router as a single-page app, with no server rendering
+
+2026-09-26 - Accepted (Ethan).
+The app is React Router in framework mode (the mode Ethan knows) with `ssr: false`, built by Vite into static files: the Web Worker, the browser's private file system and SQLite in WebAssembly exist only in the browser, and Kay's own interface is a static bundle loaded from disk, so a server-rendering framework (Next.js, TanStack Start, or React Router with `ssr` on) would add a server the slice never uses.
+Loaders are `clientLoader`s; Better-T-Stack's React Router template turns server rendering on by default, so `ssr: false` is set and `@react-router/node`, `@react-router/serve` and the `start` script are removed; one dedicated Web Worker, started with Vite's `new Worker(new URL(...), { type: "module" })`, owns the agent loop and SQLite through the `opfs-sahpool` storage mode, which needs no cross-origin isolation headers.
+
+## ADR-084 - Sign-in is WorkOS AuthKit in the browser, with no auth server of our own
+
+2026-09-26 - Accepted (Ethan).
+Kay signs users in with WorkOS, so the slice does too, through `@workos-inc/authkit-react`, the browser-only SDK: WorkOS hosts the sign-in page and stores the users, and `getAccessToken()` hands the app a token; a layout route's `clientLoader` sends signed-out visitors to sign-in, and every protected route nests under it.
+The site's address must be on WorkOS's allowed origins list, and before relying on the deployed site, check in WorkOS's docs how token refresh works outside localhost, where AuthKit's `devMode` keeps tokens in `localStorage`.
+
+## ADR-085 - The gateway is one Hono app on Cloudflare Workers
+
+2026-09-26 - Accepted (Ethan); settles ADR-077, defers ADR-080.
+A single Hono app (Ethan's familiar framework) on Cloudflare Workers is the slice's only server: it verifies the WorkOS access token on every request against WorkOS's public signing keys, holds the Anthropic and ElevenLabs keys as Worker secrets, streams replies and speech back, and stores nothing, which keeps Kay's gateway promise and means only signed-in users can spend the model budget.
+The static site deploys to Cloudflare as well, possibly from the same Worker; Kay's own gateway, Bifrost on Fly.io (ADR-080), can go behind this Worker later without changing the browser side.
+
+## ADR-086 - The slice's wiring, tooling and one extra
+
+2026-09-26 - Accepted (Ethan); completes ADR-083 to ADR-085.
+One Cloudflare Worker, deployed with `wrangler`, serves both the static React Router build (`assets` with `not_found_handling: "single-page-application"`) and the Hono API under `/api`, so there is one deploy, one origin, no CORS setup and one allowed origin in WorkOS; Better-T-Stack scaffolds only the frontend (backend and auth None), because choosing its Workers runtime forces Alchemy, a beta tool built on Effect, and makes the web app render on a server, and the gateway comes from Hono's own `cloudflare-workers` template, with WorkOS AuthKit added by hand.
+The browser calls the gateway through Hono's typed client (`hc<typeof app>`), and the UI and the Web Worker talk through one zod-checked message union (growing from `AgentEvent`), checked on arrival like the catalog; tRPC and oRPC are ruled out because three streaming routes, one of them audio, do not repay an RPC layer (oRPC is the one to revisit if the API grows).
+Tauri is deferred and can be added later with `create-better-t-stack add --addons tauri`; storage sits behind a `ConversationStore` interface (save, list, search, read), so a desktop build swaps OPFS and SQLite in WebAssembly for native SQLite on disk with one new adapter.
+Linting and formatting use Oxc (Oxlint 1.85 and Oxfmt 0.70, which sorts Tailwind classes), run by Lefthook on staged files only, since every agent commit runs the hook; type checks, tests and the raw-colour guard (ADR-082) run in the build and CI, where `--no-verify` cannot skip them.
+The day-4 extra becomes visual regression and accessibility checks in CI (Playwright screenshots across the Storybook states, plus axe), which matches the Design Engineer: Infrastructure post's "state catalogs, screenshot and visual regression tests, and accessibility checks in CI" and contains the contrast guard.

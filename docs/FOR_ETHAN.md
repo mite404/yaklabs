@@ -63,6 +63,9 @@ Nothing is built yet, so the cast is the set of ideas the prototypes will be mad
   that blocks unrelated work gets skipped with `--no-verify` within a day.
 - **Vitest 4, on purpose.** Storybook's stable test addon supports Vitest 3 and 4; only a
   Storybook 11 alpha accepts 5. Stable tools under the proof layer beat the newest version.
+- **Read the fine print; it is the architecture diagram.** Kay's legal pages say more about its build than any tech-detection plugin: the DPA names the hosts (Fly.io, Cloudflare), the database (Postgres), the app data folder, and the rule that conversations never leave the device. The slice follows that rule (ADR-075) and mirrors the process split, with a Web Worker as the daemon's stand-in (ADR-076). The reference lives in `docs/05-kay-stack-and-data.md`.
+
+- **The slice is a location shoot, not a studio build.** Kay's app is a desktop "studio" with a daemon backstage; the web slice recreates the same blocking on location: React Router as a static single-page app for the stage (ADR-083), a Web Worker as the daemon backstage, owning the agent loop and SQLite in the browser's private file system (ADR-081), WorkOS at the door (ADR-084), and one Hono Worker on Cloudflare as the gateway that holds the keys and keeps nothing (ADR-085, ADR-086). Every piece maps to a part of Kay, so moving to their stack is recasting, not rewriting.
 
 ## 4. Bloopers
 
@@ -107,6 +110,8 @@ Nothing is built yet, so the cast is the set of ideas the prototypes will be mad
 - **The card with no last page.** Opening "Show my work" on the profit card made it taller than the view, and the reveal rule started tall cards at their top, so the steps ran on under the compose box and the card's bottom edge never appeared. A first fix only kept the button in view, which missed the point: without the bottom edge, a non-technical person can't tell the card has finished, so they hunt for a way to close it or wait for the agent to say more. Fix: an expanded card always scrolls until its bottom edge rests 20px above whatever covers it (ADR-071). Lesson: the end of the content is information too, like the end credits that tell an audience the film is over.
 
 - **The credit that twitched.** The source line ("Demo store sales · Sep 14-20", the card's photo credit) seemed to shift between the open and closed card. Two causes: the interactive card's button lacked the fixed-width toggle class, so "Hide my work" was 6px narrower than "Show my work"; and the footer used fractional sizes (a 16.5px text line, a 30.89px button), so a browser could round the text and the button to different pixels at different scroll positions. Fix: one 128px toggle width and a shared 17px line (ADR-072). Lesson: a pixel of drift between two states reads as unfinished; lock continuity like a script supervisor, and measure both states rather than eyeballing one.
+
+- **Two versions of the same contract.** The DPA's sub-processor annex names Clerk for sign-in; the live Data Use page, which the DPA itself calls authoritative, names WorkOS, and the downloads site does redirect through WorkOS. Lesson: when two official documents disagree, find the one that says which governs, then check the live system.
 
 - **The stash that forgot the new files.** To test a commit alone, the working changes were stashed and restored with `git checkout stash -- path`, which brings back tracked files only; the new, untracked files live in a separate part of the stash, and dropping it hid them. They were recovered from git's object store, intact. Lesson: to test a commit in isolation, check it out in a throwaway worktree instead of juggling stashes.
 
