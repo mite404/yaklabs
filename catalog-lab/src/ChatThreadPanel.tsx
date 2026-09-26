@@ -235,6 +235,7 @@ export function ChatThreadPanel({
   useLayoutEffect(() => {
     const el = scroller.current;
     if (el) el.scrollTop = el.scrollHeight;
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies -- the turn count is the trigger: the effect reads the scroller, and runs again each time a turn is added
   }, [messages.length]);
 
   // The user never sees a malformed question or its error: the error goes to the agent, which
@@ -261,7 +262,7 @@ export function ChatThreadPanel({
     const el = scroller.current;
     const slot = dockOverlay.current;
     if (!el) return;
-    if (!slot) {
+    if (!docked || !slot) {
       el.style.removeProperty("--dock-space");
       return;
     }
