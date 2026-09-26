@@ -432,3 +432,9 @@ Before, opening the profit card's steps pushed "Hide my work" beneath the compos
 2026-09-26 - Accepted; supersedes ADR-070 and amends ADR-038.
 When a click grows a card and its bottom is clipped by any surface (the compose box, or the Recap or Needs attention card docked over the thread), the thread scrolls up until the card's bottom edge rests 20px above that surface, even if the card's top leaves the view; a card that is not clipped does not move.
 The bottom edge is the signal that everything in the card has been shown: without it, a non-technical person is left wondering how to close the card, or waiting for the agent to say more.
+
+## ADR-072 - Card footers are laid out in whole pixels, and toggles never change width
+
+2026-09-26 - Accepted.
+Every card toggle ("Show my work" / "Hide my work", "View data table" / "Show chart") is 128px wide, which fits the widest label, so the button stays put when its label flips; before, it moved 6px (and 1.7px on catalog cards).
+The source line and the button share a 17px line, so the 52px footer places the text exactly 7px inside the 31px button, and both snap to the same pixel rows at any scroll position; before, fractional sizes (a 16.5px text line, a 30.89px button) let a browser round the text a pixel differently between the open and closed card.

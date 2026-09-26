@@ -82,6 +82,10 @@ At rest a button is only an outline; on hover the fill and text colour change ov
 | Focus | 2px accent outline, 2px offset | derived |
 | Disabled | 45% opacity, no hover | derived |
 
+### 8b. A toggle never moves when its label flips
+
+A button that switches between two labels keeps one whole-pixel width (128px, the widest label) and shares a whole-pixel line with the text beside it, so nothing in the footer shifts between states, not even by a rounded pixel (ADR-072).
+
 ### 9. A perceived delay is often just duration
 
 The button seemed to pause before filling, but its CSS has no delay: a 150ms `ease` transition is long enough to register as "a beat, then it arrives" rather than a snap.
