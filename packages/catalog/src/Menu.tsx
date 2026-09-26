@@ -1,5 +1,5 @@
 import {
-  useEffect,
+  useCallback,
   useId,
   useRef,
   useState,
@@ -36,7 +36,19 @@ function positionFor(trigger: HTMLElement, placement: MenuPlacement): CSSPropert
     : { position: "fixed", right: window.innerWidth - rect.right, top: rect.bottom + OFFSET_PX };
 }
 
-type TriggerProps = {
+// Whether an event happened inside `container`. A window-level event, such as a resize, has no
+// node to be inside of, so it never did.
+function isInside(container: Node | null, target: EventTarget | null): boolean {
+  return container !== null && target instanceof Node && container.contains(target);
+}
+
+// The items the arrow keys move between, in order.
+function enabledItems(list: HTMLElement): HTMLButtonElement[] {
+  return Array.from(list.querySelectorAll<HTMLButtonElement>("button:not(:disabled)"));
+}
+
+/** What a menu hands its trigger: spread these props onto the button that opens it. */
+export type TriggerProps = {
   ref: Ref<HTMLButtonElement>;
   "aria-haspopup": "menu";
   "aria-expanded": boolean;
@@ -68,22 +80,21 @@ export function Menu({
   const id = useId();
   const root = useRef<HTMLSpanElement>(null);
   const button = useRef<HTMLButtonElement>(null);
-  const list = useRef<HTMLUListElement>(null);
 
   const close = (refocus = true) => {
     setOpen(false);
     if (refocus) button.current?.focus();
   };
 
-  // Focus the first available item on open; close on any click outside.
-  useEffect(() => {
-    if (!open) return;
-    list.current?.querySelector<HTMLButtonElement>("button:not(:disabled)")?.focus();
+  // The list exists only while the menu is open. Mounted, it focuses its first available item
+  // and closes the menu on a click outside it, or on any scroll or resize; unmounted, it stops.
+  const whileOpen = useCallback((list: HTMLUListElement) => {
+    enabledItems(list)[0]?.focus();
     const outside = (event: PointerEvent) => {
-      if (!root.current?.contains(event.target as Node)) close(false);
+      if (!isInside(root.current, event.target)) setOpen(false);
     };
     const away = (event: Event) => {
-      if (!list.current?.contains(event.target as Node)) close(false);
+      if (!isInside(list, event.target)) setOpen(false);
     };
     document.addEventListener("pointerdown", outside);
     window.addEventListener("scroll", away, true);
@@ -93,9 +104,9 @@ export function Menu({
       window.removeEventListener("scroll", away, true);
       window.removeEventListener("resize", away);
     };
-  }, [open]);
+  }, []);
 
-  function keys(event: KeyboardEvent) {
+  function keys(event: KeyboardEvent<HTMLUListElement>) {
     if (event.key === "Escape") {
       event.preventDefault();
       close();
@@ -103,10 +114,8 @@ export function Menu({
     }
     if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
     event.preventDefault();
-    const enabled = Array.from(
-      list.current?.querySelectorAll<HTMLButtonElement>("button:not(:disabled)") ?? [],
-    );
-    const at = enabled.indexOf(document.activeElement as HTMLButtonElement);
+    const enabled = enabledItems(event.currentTarget); // → HTMLButtonElement[]
+    const at = enabled.findIndex((item) => item === document.activeElement); // → -1 when none
     const step = event.key === "ArrowDown" ? 1 : -1;
     enabled[(at + step + enabled.length) % enabled.length]?.focus();
   }
@@ -126,7 +135,7 @@ export function Menu({
       {open && (
         <ul
           id={id}
-          ref={list}
+          ref={whileOpen}
           className="menu"
           data-placement={placement}
           style={style}
