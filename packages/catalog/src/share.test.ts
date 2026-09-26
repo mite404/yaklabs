@@ -3,6 +3,10 @@ import { decodeCard, encodeCard, shareLink, type SharedCard } from "./share";
 import { profitCard } from "./thread";
 
 const card: SharedCard = { v: 1, kind: "interactive", payload: profitCard };
+// A link from a build that knows a card kind this one does not. `encodeCard` only takes a
+// `SharedCard`, so the fragment is spelled out: base64url of plain ASCII JSON, unpadded.
+const unknownKind =
+  "#c=" + btoa(JSON.stringify({ v: 1, kind: "chat", payload: {} })).replace(/=+$/, "");
 
 it("round-trips a card through a link fragment, including non-ASCII text", () => {
   const withDash: SharedCard = { v: 1, kind: "catalog", payload: { title: "Sep 14–20 · €" } };
@@ -13,7 +17,7 @@ it("round-trips a card through a link fragment, including non-ASCII text", () =>
 it("returns nothing for a fragment that is missing, garbled or of an unknown kind", () => {
   expect(decodeCard("")).toBeUndefined();
   expect(decodeCard("#c=not-base64-json")).toBeUndefined();
-  expect(decodeCard("#" + encodeCard({ ...card, kind: "chat" as "catalog" }))).toBeUndefined();
+  expect(decodeCard(unknownKind)).toBeUndefined();
 });
 
 it("links to share.html in the app and to the public-page story inside Storybook", () => {
@@ -21,13 +25,13 @@ it("links to share.html in the app and to the public-page story inside Storybook
     href: "https://kay.example/lab/",
     pathname: "/lab/",
     origin: "https://kay.example",
-  } as Location;
+  };
   expect(shareLink(card, app)).toMatch(/^https:\/\/kay\.example\/lab\/share\.html#c=/);
   const storybook = {
     href: "http://localhost:6006/iframe.html?id=x",
     pathname: "/iframe.html",
     origin: "http://localhost:6006",
-  } as Location;
+  };
   expect(shareLink(card, storybook)).toMatch(
     /^http:\/\/localhost:6006\/iframe\.html\?id=share-public-page--from-link&viewMode=story#c=/,
   );

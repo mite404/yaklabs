@@ -1,5 +1,18 @@
+import { z } from "zod";
+
+// The envelope a link carries. The payload stays opaque here: the card's own catalog check
+// validates it before anything renders (ADR-064).
+const sharedCardSchema = z.object({
+  v: z.literal(1),
+  kind: z.enum(["catalog", "interactive"]),
+  payload: z.unknown(),
+});
+
 /** A single card, shared on its own: the kind of card and the agent's payload for it. */
-export type SharedCard = { v: 1; kind: "catalog" | "interactive"; payload: unknown };
+export type SharedCard = z.infer<typeof sharedCardSchema>;
+
+// The parts of a location a share link is built from.
+type LinkBase = Pick<Location, "href" | "pathname" | "origin">;
 
 // The link's fragment: everything after `#c=` is the card. Fragments never reach a server,
 // so the card's data stays between the people who have the link.
@@ -31,10 +44,11 @@ export function decodeCard(hash: string): SharedCard | undefined {
   const fragment = hash.replace(/^#/, "");
   if (!fragment.startsWith(PREFIX)) return undefined;
   try {
-    const card = JSON.parse(fromBase64Url(fragment.slice(PREFIX.length)));
-    if (card?.v !== 1 || (card.kind !== "catalog" && card.kind !== "interactive")) return undefined;
-    return card as SharedCard;
+    const json: unknown = JSON.parse(fromBase64Url(fragment.slice(PREFIX.length))); // → unknown
+    const card = sharedCardSchema.safeParse(json); // → SharedCard, or why it is not one
+    return card.success ? card.data : undefined;
   } catch {
+    // Not base64 or not JSON: a garbled link.
     return undefined;
   }
 }
@@ -44,7 +58,7 @@ export function decodeCard(hash: string): SharedCard | undefined {
  * fragment. Inside Storybook it points at the Share/Public page story, so it works there
  * and in a published Storybook; in the app it points at share.html beside the app.
  */
-export function shareLink(card: SharedCard, at: Location = window.location): string {
+export function shareLink(card: SharedCard, at: LinkBase = window.location): string {
   const fragment = encodeCard(card);
   if (at.pathname.endsWith("/iframe.html"))
     return `${at.origin}${at.pathname}?id=share-public-page--from-link&viewMode=story#${fragment}`;
