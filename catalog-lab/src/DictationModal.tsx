@@ -32,6 +32,19 @@ type SpeechWindow = Window & {
 // How often the visible timer and simulated transcript refresh.
 const CLOCK_MS = 250;
 
+// The browser's microphones as picker entries; one the browser leaves unnamed gets a number.
+function audioInputs(all: MediaDeviceInfo[]): AudioDevice[] {
+  return all
+    .filter((device) => device.kind === "audioinput")
+    .map((device, index) => ({
+      id: device.deviceId,
+      label:
+        device.deviceId === "default"
+          ? "System Default"
+          : device.label || `Microphone ${index + 1}`,
+    }));
+}
+
 // Live input: a real microphone stream measured by an AnalyserNode.
 function useMicrophone(enabled: boolean, deviceId: string) {
   const level = useRef(0);
@@ -44,10 +57,16 @@ function useMicrophone(enabled: boolean, deviceId: string) {
     let frame = 0;
     let stream: MediaStream | undefined;
     let context: AudioContext | undefined;
-    navigator.mediaDevices
-      .getUserMedia({ audio: deviceId === "default" ? true : { deviceId: { exact: deviceId } } })
-      .then(async (granted) => {
-        if (stopped) return granted.getTracks().forEach((track) => track.stop());
+    const request = navigator.mediaDevices.getUserMedia({
+      audio: deviceId === "default" ? true : { deviceId: { exact: deviceId } },
+    });
+    const listen = async () => {
+      try {
+        const granted = await request;
+        if (stopped) {
+          granted.getTracks().forEach((track) => track.stop());
+          return;
+        }
         stream = granted;
         context = new AudioContext();
         const analyser = context.createAnalyser();
@@ -60,25 +79,16 @@ function useMicrophone(enabled: boolean, deviceId: string) {
           frame = requestAnimationFrame(measure);
         };
         measure();
-        const all = await navigator.mediaDevices.enumerateDevices();
-        const inputs = all.filter((device) => device.kind === "audioinput");
-        setDevices(
-          inputs.map((device, index) => ({
-            id: device.deviceId,
-            label:
-              device.deviceId === "default"
-                ? "System Default"
-                : device.label || `Microphone ${index + 1}`,
-          })),
-        );
-      })
-      .catch((reason: Error) =>
+        setDevices(audioInputs(await navigator.mediaDevices.enumerateDevices()));
+      } catch (reason) {
         setError(
-          reason.name === "NotAllowedError"
+          reason instanceof Error && reason.name === "NotAllowedError"
             ? "Microphone access was blocked. Allow it in your browser settings to dictate."
             : "No microphone could be opened.",
-        ),
-      );
+        );
+      }
+    };
+    void listen();
     return () => {
       stopped = true;
       cancelAnimationFrame(frame);
