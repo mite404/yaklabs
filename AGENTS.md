@@ -8,9 +8,9 @@ These are common instructions for Ethan's agents across all scenarios.
 - Never manually modify changelog.md files or any files that are marked as auto-generated.
 - When writing or editing Markdown files, keep every physical line at or under 100 columns, wrapping
   longer lines at word boundaries.
-  A pre-commit hook enforces this deterministically (`.husky/pre-commit` runs the global `wrap-md`
-  script), leaving code fences, tables, and headings intact - so this is the rule to follow, not
-  one-sentence-per-line.
+  A pre-commit hook enforces this deterministically (`.husky/pre-commit` runs `scripts/wrap-md.js`
+  on staged markdown through lint-staged), leaving code fences, tables, and headings intact - so
+  this is the rule to follow, not one-sentence-per-line.
 - When making technical decisions, do not give much weight to development cost.
   Instead prefer quality, simplicity, robustness, scalability, and long-term maintainability.
   "Development cost" here means a human-scale effort estimate.
