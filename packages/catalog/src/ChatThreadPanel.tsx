@@ -6,6 +6,7 @@ import {
   useState,
   type Dispatch,
   type Ref,
+  type RefObject,
   type SetStateAction,
 } from "react";
 import type { Agent, AgentEvent } from "./agent";
@@ -225,6 +226,178 @@ function useClock(now?: number): number {
   return now ?? live;
 }
 
+// One turn of either role; each new one brings the thread to its end (see `landOn`).
+function Turn({
+  message,
+  onChoose,
+}: {
+  message: ThreadMessage;
+  onChoose: (attachment: CardAttachment) => void;
+}) {
+  return message.role === "user" ? (
+    <UserTurn ref={landOn} message={message} />
+  ) : (
+    <AgentTurn ref={landOn} message={message} onChoose={onChoose} />
+  );
+}
+
+// What rides along with the next message: card choices, latest per card (ADR-031), and files
+// or screenshots (ADR-063). `reported` is what the agent last saw on each card, so a choice
+// is only news when it differs from it.
+type Outbox = {
+  pending: CardAttachment[];
+  files: { id: string; file: File }[];
+  /** The compose box's chips, cards first. */
+  attachments: { id: string; label: string; kind: "card" | "file" }[];
+  choose: (attachment: CardAttachment) => void;
+  remove: (id: string) => void;
+  attach: (picked: File[]) => void;
+  /** Empties the outbox for a send and remembers what the agent now knows of each card. */
+  take: () => { attachments: CardAttachment[]; files: { id: string; file: File }[] };
+};
+
+function useOutbox(initial: ThreadMessage[]): Outbox {
+  const [pending, setPending] = useState<Record<string, CardAttachment>>({});
+  const [reported, setReported] = useState(() => initialReported(initial));
+  const [files, setFiles] = useState<{ id: string; file: File }[]>([]);
+  const fileIds = useRef(0);
+
+  const choose = (attachment: CardAttachment) => {
+    setPending((current) => {
+      const next = { ...current };
+      if (reported[attachment.turnId] === attachment.state.measure) delete next[attachment.turnId];
+      else next[attachment.turnId] = attachment;
+      return next;
+    });
+  };
+  const remove = (id: string) => {
+    setFiles((current) => current.filter((item) => item.id !== id));
+    setPending((current) => {
+      const next = { ...current };
+      delete next[id];
+      return next;
+    });
+  };
+  const attach = (picked: File[]) => {
+    setFiles((current) => [
+      ...current,
+      ...picked.map((file) => ({ id: `file-${++fileIds.current}`, file })),
+    ]);
+  };
+  const take = () => {
+    const attachments = Object.values(pending); // → CardAttachment[]
+    setPending({});
+    setFiles([]);
+    setReported((current) => ({
+      ...current,
+      ...Object.fromEntries(attachments.map((item) => [item.turnId, item.state.measure])),
+    }));
+    return { attachments, files };
+  };
+
+  return {
+    pending: Object.values(pending),
+    files,
+    attachments: [
+      ...Object.values(pending).map((item) => ({
+        id: item.turnId,
+        label: item.label,
+        kind: "card" as const,
+      })),
+      ...files.map((item) => ({ id: item.id, label: item.file.name, kind: "file" as const })),
+    ],
+    choose,
+    remove,
+    attach,
+    take,
+  };
+}
+
+// Only a valid question becomes a card; a malformed one goes back to the agent, which asks
+// again in an ordinary streamed reply, and the user never sees the error (ADR-040). `checked`
+// is settled on the first render, so the report runs once per question; the Effect Event
+// reads the latest `tell`, recreated each render, without making that a reason to ask again.
+function useAwaiting(
+  thread: Thread,
+  tell: (event: AgentEvent) => () => void,
+): [AwaitingInput | undefined, Dispatch<SetStateAction<AwaitingInput | undefined>>] {
+  const [checked] = useState(() =>
+    thread.awaiting === undefined ? undefined : resolveAwaiting(thread.awaiting),
+  );
+  const [awaiting, setAwaiting] = useState<AwaitingInput | undefined>(() =>
+    checked?.kind === "approved" ? checked.question : undefined,
+  );
+  const reportMalformed = useEffectEvent((reason: string) =>
+    tell({ kind: "question-rejected", reason, question: thread.awaiting }),
+  );
+  useEffect(
+    () => (checked?.kind === "malformed" ? reportMalformed(checked.reason) : undefined),
+    [checked],
+  );
+  return [awaiting, setAwaiting];
+}
+
+// Every card that grows inside the thread stays clear of the compose box (ADR-038), and the
+// docked card's space is reserved for as long as it is there. The slot is held as state so
+// the reservation follows the element: when it mounts, leaves, or one card replaces another.
+function useDockLayout(
+  scroller: RefObject<HTMLDivElement | null>,
+): (slot: HTMLDivElement | null) => void {
+  const [dockSlot, setDockSlot] = useState<HTMLDivElement | null>(null);
+  useEffect(() => {
+    const el = scroller.current; // → the thread, mounted before any effect runs
+    return el ? keepExpansionsInView(el) : undefined;
+  }, [scroller]);
+  useLayoutEffect(() => {
+    const el = scroller.current;
+    return el && dockSlot ? reserveDockSpace(el, dockSlot) : undefined;
+  }, [scroller, dockSlot]);
+  return setDockSlot;
+}
+
+// The recap floats only while nothing else needs the dock and the user has been away (ADR-018).
+function recapIsVisible(input: {
+  awaiting: AwaitingInput | undefined;
+  activity: ThreadActivity | undefined;
+  lastInputAt: number | undefined;
+  recapCount: number;
+  clock: number;
+  dismissedAt: number | undefined;
+}): boolean {
+  const { awaiting, activity, lastInputAt, recapCount, clock, dismissedAt } = input;
+  return (
+    awaiting === undefined &&
+    activity !== undefined &&
+    lastInputAt !== undefined &&
+    recapCount > 0 &&
+    shouldShowRecap({
+      now: clock,
+      lastUserInputAt: lastInputAt,
+      active: activity.active,
+      dismissedAt,
+    })
+  );
+}
+
+// Jump so the evidence lands vertically centered, every time (ADR-022 eye trace).
+function flashTurn(scroller: HTMLElement | null, turnId: string): void {
+  const turn = scroller?.querySelector<HTMLElement>(`[data-turn-id="${CSS.escape(turnId)}"]`);
+  if (!scroller || !turn) return;
+  centerInScroller(scroller, turn);
+  turn.dataset.flash = "true";
+  window.setTimeout(() => delete turn.dataset.flash, FLASH_MS);
+}
+
+// After a card or a modal hands back control, the caret returns to the compose box.
+function focusComposeIn(scroller: HTMLElement | null): void {
+  requestAnimationFrame(() =>
+    scroller
+      ?.closest(".thread-panel")
+      ?.querySelector<HTMLTextAreaElement>(".compose-box textarea")
+      ?.focus(),
+  );
+}
+
 /**
  * A vertical chat thread column: header, scrolling turns, and a compose box that never moves.
  * Text is capped at `--thread-measure` (80ch) inside a `--thread-gutter` (20px) on each side,
@@ -266,71 +439,21 @@ export function ChatThreadPanel({
   const [dismissedAt, setDismissedAt] = useState<number>();
   const [peeking, setPeeking] = useState(false);
   const [dictating, setDictating] = useState(startDictating);
-  // Card choices waiting to be sent, latest per card only (ADR-031).
-  const [pending, setPending] = useState<Record<string, CardAttachment>>({});
-  const [reported, setReported] = useState(() => initialReported(thread.messages));
-  // Files and screenshots waiting to be sent with the next message (ADR-063).
-  const [files, setFiles] = useState<{ id: string; file: File }[]>([]);
-  const fileIds = useRef(0);
-  // Only a valid question becomes a card; a malformed one goes back to the agent (ADR-040).
-  const [checked] = useState(() =>
-    thread.awaiting === undefined ? undefined : resolveAwaiting(thread.awaiting),
-  );
-  const [awaiting, setAwaiting] = useState<AwaitingInput | undefined>(() =>
-    checked?.kind === "approved" ? checked.question : undefined,
-  );
+  const outbox = useOutbox(thread.messages);
+  const [awaiting, setAwaiting] = useAwaiting(thread, tell);
   const scroller = useRef<HTMLDivElement>(null);
-  // The docked card's overlay, held as state so the space reserved for it follows the element
-  // itself: when it mounts, when it leaves, and when one card is swapped for the other.
-  const [dockSlot, setDockSlot] = useState<HTMLDivElement | null>(null);
-
-  const recapVisible =
-    awaiting === undefined &&
-    activity !== undefined &&
-    lastInputAt !== undefined &&
-    (thread.recap?.length ?? 0) > 0 &&
-    shouldShowRecap({
-      now: clock,
-      lastUserInputAt: lastInputAt,
-      active: activity.active,
-      dismissedAt,
-    });
-
-  // The user never sees a malformed question or its error: the error goes to the agent, which
-  // asks again in an ordinary streamed reply (ADR-040). `checked` is settled on the first render,
-  // so this runs once per question; the Effect Event reads the latest `tell`, which is recreated
-  // each render, without making that a reason to ask again.
-  const reportMalformed = useEffectEvent((reason: string) =>
-    tell({ kind: "question-rejected", reason, question: thread.awaiting }),
-  );
-  useEffect(
-    () => (checked?.kind === "malformed" ? reportMalformed(checked.reason) : undefined),
-    [checked],
-  );
-
-  // Every card that grows inside the thread stays clear of the compose box (ADR-038).
-  useEffect(() => {
-    const el = scroller.current; // → the thread, mounted before any effect runs
-    return el ? keepExpansionsInView(el) : undefined;
-  }, []);
-
-  useLayoutEffect(() => {
-    const el = scroller.current;
-    return el && dockSlot ? reserveDockSpace(el, dockSlot) : undefined;
-  }, [dockSlot]);
-
-  // A choice is only news if it differs from what the agent last saw on that card.
-  function choose(attachment: CardAttachment) {
-    setPending((current) => {
-      const next = { ...current };
-      if (reported[attachment.turnId] === attachment.state.measure) delete next[attachment.turnId];
-      else next[attachment.turnId] = attachment;
-      return next;
-    });
-  }
+  const setDockSlot = useDockLayout(scroller);
+  const recapVisible = recapIsVisible({
+    awaiting,
+    activity,
+    lastInputAt,
+    recapCount: thread.recap?.length ?? 0,
+    clock,
+    dismissedAt,
+  });
 
   function send() {
-    const attachments = Object.values(pending);
+    const { attachments, files } = outbox.take();
     const sent: ThreadMessage = {
       id: `local-${messages.length}`,
       role: "user",
@@ -343,12 +466,6 @@ export function ChatThreadPanel({
     setDraft("");
     setPeeking(false);
     setLastInputAt(clock);
-    setPending({});
-    setFiles([]);
-    setReported((current) => ({
-      ...current,
-      ...Object.fromEntries(attachments.map((item) => [item.turnId, item.state.measure])),
-    }));
     tell({
       kind: "message",
       text: sent.text,
@@ -368,31 +485,17 @@ export function ChatThreadPanel({
     tell({ kind: "answer", text });
   }
 
-  function focusCompose() {
-    requestAnimationFrame(() =>
-      scroller.current
-        ?.closest(".thread-panel")
-        ?.querySelector<HTMLTextAreaElement>(".compose-box textarea")
-        ?.focus(),
-    );
+  // Editing the draft folds the recap back down once the text is gone.
+  function editDraft(value: string) {
+    setDraft(value);
+    if (!value.trim()) setPeeking(false);
   }
 
   // Closing dictation returns focus to the text it fed, so the user can keep editing.
   function endDictation(transcript?: string) {
     if (transcript !== undefined) setDraft((current) => appendDictation(current, transcript));
     setDictating(false);
-    focusCompose();
-  }
-
-  // Jump so the evidence lands vertically centered, every time (ADR-022 eye trace).
-  function jump(turnId: string) {
-    const turn = scroller.current?.querySelector<HTMLElement>(
-      `[data-turn-id="${CSS.escape(turnId)}"]`,
-    );
-    if (!turn || !scroller.current) return;
-    centerInScroller(scroller.current, turn);
-    turn.dataset.flash = "true";
-    window.setTimeout(() => delete turn.dataset.flash, FLASH_MS);
+    focusComposeIn(scroller.current);
   }
 
   return (
@@ -405,13 +508,9 @@ export function ChatThreadPanel({
         <h2>{thread.title}</h2>
       </header>
       <div className="thread-scroll" ref={scroller}>
-        {messages.map((message) =>
-          message.role === "user" ? (
-            <UserTurn key={message.id} ref={landOn} message={message} />
-          ) : (
-            <AgentTurn key={message.id} ref={landOn} message={message} onChoose={choose} />
-          ),
-        )}
+        {messages.map((message) => (
+          <Turn key={message.id} message={message} onChoose={outbox.choose} />
+        ))}
       </div>
       <div className="thread-dock">
         {awaiting !== undefined && (
@@ -421,7 +520,7 @@ export function ChatThreadPanel({
               onAnswer={answer}
               onElsewhere={() => {
                 setAwaiting(undefined);
-                focusCompose();
+                focusComposeIn(scroller.current);
               }}
             />
           </div>
@@ -438,48 +537,24 @@ export function ChatThreadPanel({
               onDismiss={() => {
                 setDismissedAt(clock);
               }}
-              onJump={jump}
+              onJump={(turnId) => {
+                flashTurn(scroller.current, turnId);
+              }}
             />
           </div>
         )}
         <div className="thread-compose">
           <ComposeBox
             draft={draft}
-            onDraftChange={(value) => {
-              setDraft(value);
-              if (!value.trim()) setPeeking(false);
-            }}
+            onDraftChange={editDraft}
             onSend={send}
             onDictate={() => {
               setDictating(true);
             }}
             disabled={dictating}
-            attachments={[
-              ...Object.values(pending).map((item) => ({
-                id: item.turnId,
-                label: item.label,
-                kind: "card" as const,
-              })),
-              ...files.map((item) => ({
-                id: item.id,
-                label: item.file.name,
-                kind: "file" as const,
-              })),
-            ]}
-            onRemoveAttachment={(id) => {
-              setFiles((current) => current.filter((item) => item.id !== id));
-              setPending((current) => {
-                const next = { ...current };
-                delete next[id];
-                return next;
-              });
-            }}
-            onAttachFiles={(picked) => {
-              setFiles((current) => [
-                ...current,
-                ...picked.map((file) => ({ id: `file-${++fileIds.current}`, file })),
-              ]);
-            }}
+            attachments={outbox.attachments}
+            onRemoveAttachment={outbox.remove}
+            onAttachFiles={outbox.attach}
           />
         </div>
       </div>

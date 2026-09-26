@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import type { Agent } from "./agent";
 import { ChatThreadPanel } from "./ChatThreadPanel";
 import { threads } from "./thread";
@@ -76,6 +76,21 @@ export const Dictation: Story = {
   args: { thread: threads.trend, startDictating: true },
 };
 
+/** An open microphone picker takes Escape first; the next Escape cancels dictation itself. */
+export const DictationPickerEscapes: Story = {
+  args: { thread: threads.trend, startDictating: true },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(canvas.getByRole("button", { name: /System Default/ }));
+    await expect(canvas.getByRole("listbox", { name: "Choose microphone" })).toBeVisible();
+    await userEvent.keyboard("{Escape}");
+    await expect(canvas.queryByRole("listbox", { name: "Choose microphone" })).toBeNull();
+    await expect(canvas.getByRole("dialog")).toBeVisible();
+    await userEvent.keyboard("{Escape}");
+    await expect(canvas.queryByRole("dialog")).toBeNull();
+  },
+};
+
 export const DictationNarrow: Story = {
   args: { thread: threads.trend, startDictating: true, width: 420 },
 };
@@ -109,6 +124,8 @@ export const ReplyFails: Story = {
     await expect(
       await canvas.findByText("I couldn't finish that reply. Try again in a moment."),
     ).toBeVisible();
-    await expect(canvas.queryByRole("article", { busy: true })).toBeNull();
+    await waitFor(async () => {
+      await expect(canvas.queryByRole("article", { busy: true })).toBeNull();
+    });
   },
 };

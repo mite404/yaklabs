@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { awaitingSchema, resolveAwaiting } from "./awaiting";
+import { awaitingSchema, resolveAwaiting, rowForKey } from "./awaiting";
 import { threads } from "./thread";
 
 // The thread's question, parsed once so each test can vary one field of a known-good card.
@@ -66,4 +66,22 @@ describe("every row stays short enough for four to look considered", () => {
 it("names what broke in a malformed question, so the agent can ask another way", () => {
   const result = resolveAwaiting(threads.malformed.awaiting);
   expect(result.kind === "malformed" && result.reason).toMatch(/^answer\.placeholder: /);
+});
+
+describe("rowForKey", () => {
+  it("steps down and up, wrapping at the ends", () => {
+    expect(rowForKey("ArrowDown", undefined, 3)).toBe(0);
+    expect(rowForKey("ArrowDown", 2, 3)).toBe(0);
+    expect(rowForKey("ArrowUp", undefined, 3)).toBe(2);
+    expect(rowForKey("ArrowUp", 0, 3)).toBe(2);
+  });
+
+  it("picks a row by its badge number and nothing for other keys", () => {
+    expect(rowForKey("1", undefined, 3)).toBe(0);
+    expect(rowForKey("3", 0, 3)).toBe(2);
+    expect(rowForKey("4", 0, 3)).toBeUndefined();
+    expect(rowForKey("0", 0, 3)).toBeUndefined();
+    expect(rowForKey("Enter", 0, 3)).toBeUndefined();
+    expect(rowForKey("a", 0, 3)).toBeUndefined();
+  });
 });

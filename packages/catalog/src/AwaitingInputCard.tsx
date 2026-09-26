@@ -1,3 +1,4 @@
+import { rowForKey } from "./awaiting";
 import { useRef, useState, type KeyboardEvent } from "react";
 import type { AwaitingInput } from "./awaiting";
 import { Disclosure } from "./Disclosure";
@@ -57,17 +58,17 @@ export function AwaitingInputCard({
   function keys(event: KeyboardEvent) {
     if (!open) return;
     const target = event.target; // → EventTarget: a tile, the field, the header or an action
-    const typing = target instanceof HTMLInputElement;
     const ownEnter =
       target instanceof Element && target.closest(".disclosure-header, .awaiting-actions") !== null;
     if (event.key === "Enter") {
       if (ownEnter) return;
       submit();
-    } else if (typing) return;
-    else if (event.key === "ArrowDown") select(((selected ?? -1) + 1) % rows);
-    else if (event.key === "ArrowUp") select(((selected ?? rows) - 1 + rows) % rows);
-    else if (Number(event.key) >= 1 && Number(event.key) <= rows) select(Number(event.key) - 1);
-    else return;
+    } else {
+      if (target instanceof HTMLInputElement) return;
+      const row = rowForKey(event.key, selected, rows); // → number | undefined
+      if (row === undefined) return;
+      select(row);
+    }
     event.preventDefault();
   }
 

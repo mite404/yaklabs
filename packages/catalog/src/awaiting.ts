@@ -65,3 +65,18 @@ export function resolveAwaiting(payload: unknown): AwaitingResult {
     .join("; ");
   return { kind: "malformed", reason };
 }
+
+/**
+ * The row a key picks in the card's list (ADR-045): the arrows step around it and a digit
+ * picks by badge number; any other key picks nothing.
+ */
+export function rowForKey(
+  key: string,
+  selected: number | undefined,
+  rows: number,
+): number | undefined {
+  if (key === "ArrowDown") return ((selected ?? -1) + 1) % rows;
+  if (key === "ArrowUp") return ((selected ?? rows) - 1 + rows) % rows;
+  const digit = Number(key); // → NaN for anything but a digit key
+  return digit >= 1 && digit <= rows ? digit - 1 : undefined;
+}

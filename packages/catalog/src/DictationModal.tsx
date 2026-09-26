@@ -57,6 +57,104 @@ function useSpeechTranscript(enabled: boolean) {
   return { text, supported };
 }
 
+type Microphone = ReturnType<typeof useMicrophone>;
+type Speech = ReturnType<typeof useSpeechTranscript>;
+
+// What the modal shows for its source: the devices, the transcript so far, the level to draw,
+// and a notice when the browser cannot deliver part of it.
+type DictationView = {
+  devices: AudioDevice[];
+  transcript: string;
+  read: () => number;
+  notice: string | undefined;
+};
+
+const NO_SPEECH_NOTICE =
+  "The waveform is live, but this browser has no speech service, so no text will appear.";
+
+function viewFor(
+  live: boolean,
+  microphone: Microphone,
+  speech: Speech,
+  elapsed: number,
+  startedAt: number,
+): DictationView {
+  if (!live) {
+    return {
+      devices: SIMULATED_DEVICES,
+      transcript: simulatedTranscript(elapsed),
+      read: () => simulatedLevel(performance.now() - startedAt),
+      notice: undefined,
+    };
+  }
+  return {
+    devices: microphone.devices,
+    transcript: speech.text,
+    read: microphone.read,
+    notice: microphone.error ?? (speech.supported ? undefined : NO_SPEECH_NOTICE),
+  };
+}
+
+// The modal handles Tab and Escape; an open microphone picker takes Escape first, and Enter
+// anywhere but on a button finishes the recording.
+function keyAction(
+  key: string,
+  picking: boolean,
+  onButton: boolean,
+): "close-picker" | "done" | undefined {
+  if (key === "Escape" && picking) return "close-picker";
+  if (key === "Enter" && !onButton) return "done";
+  return undefined;
+}
+
+// The microphone list: a button naming the current device, and a listbox while it is open.
+function DevicePicker({
+  devices,
+  deviceId,
+  open,
+  onToggle,
+  onPick,
+}: {
+  devices: AudioDevice[];
+  deviceId: string;
+  open: boolean;
+  onToggle: () => void;
+  onPick: (id: string) => void;
+}) {
+  const device = devices.find((item) => item.id === deviceId) ?? {
+    id: "default",
+    label: "System Default",
+  };
+  return (
+    <div className="device-picker">
+      <button aria-haspopup="listbox" aria-expanded={open} onClick={onToggle}>
+        {device.label} <span aria-hidden="true">▾</span>
+      </button>
+      {open && (
+        // Options sit directly in the listbox: an <li> there fails axe's listitem rule.
+        // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- a <select> cannot draw these radio-dot rows; this is the ARIA listbox pattern
+        <div className="device-list" role="listbox" aria-label="Choose microphone">
+          {devices.map((item) => (
+            <button
+              key={item.id}
+              className="device-option"
+              // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- <option> is valid only inside a <select>, which this list cannot be
+              role="option"
+              aria-selected={item.id === deviceId}
+              onClick={() => {
+                onPick(item.id);
+              }}
+            >
+              <span className="radio" aria-hidden="true" />
+              {item.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /**
  * Full-attention dictation: a modal over the thread that makes clear typing is paused
  * while recording, with a large center-playhead waveform, a live transcript preview,
@@ -91,29 +189,20 @@ export function DictationModal({
     };
   }, [startedAt]);
 
-  const devices = live ? microphone.devices : SIMULATED_DEVICES;
-  const device = devices.find((item) => item.id === deviceId) ?? {
-    id: "default",
-    label: "System Default",
-  };
-  const transcript = live ? speech.text : simulatedTranscript(elapsed);
-  const read = live ? microphone.read : () => simulatedLevel(performance.now() - startedAt);
-  const notice =
-    microphone.error ??
-    (live && !speech.supported
-      ? "The waveform is live, but this browser has no speech service, so no text will appear."
-      : undefined);
+  const { devices, transcript, read, notice } = viewFor(
+    live,
+    microphone,
+    speech,
+    elapsed,
+    startedAt,
+  ); // → DictationView
 
-  // The modal handles Tab and Escape; an open microphone picker takes Escape first.
   function onKeyDown(event: KeyboardEvent<HTMLElement>) {
-    if (event.key === "Escape" && picking) {
-      event.preventDefault();
-      setPicking(false);
-    }
-    if (event.key === "Enter" && !(event.target instanceof HTMLButtonElement)) {
-      event.preventDefault();
-      onDone(transcript);
-    }
+    const action = keyAction(event.key, picking, event.target instanceof HTMLButtonElement);
+    if (action === undefined) return;
+    event.preventDefault();
+    if (action === "close-picker") setPicking(false);
+    else onDone(transcript);
   }
 
   return (
@@ -129,39 +218,18 @@ export function DictationModal({
           Listening
           <span className="dictation-time">{formatElapsed(elapsed)}</span>
         </p>
-        <div className="device-picker">
-          <button
-            aria-haspopup="listbox"
-            aria-expanded={picking}
-            onClick={() => {
-              setPicking(!picking);
-            }}
-          >
-            {device.label} <span aria-hidden="true">▾</span>
-          </button>
-          {picking && (
-            // Options sit directly in the listbox: an <li> there fails axe's listitem rule.
-            // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- a <select> cannot draw these radio-dot rows; this is the ARIA listbox pattern
-            <div className="device-list" role="listbox" aria-label="Choose microphone">
-              {devices.map((item) => (
-                <button
-                  key={item.id}
-                  className="device-option"
-                  // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- <option> is valid only inside a <select>, which this list cannot be
-                  role="option"
-                  aria-selected={item.id === deviceId}
-                  onClick={() => {
-                    setDeviceId(item.id);
-                    setPicking(false);
-                  }}
-                >
-                  <span className="radio" aria-hidden="true" />
-                  {item.label}
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
+        <DevicePicker
+          devices={devices}
+          deviceId={deviceId}
+          open={picking}
+          onToggle={() => {
+            setPicking(!picking);
+          }}
+          onPick={(id) => {
+            setDeviceId(id);
+            setPicking(false);
+          }}
+        />
       </header>
 
       <Waveform read={read} />
