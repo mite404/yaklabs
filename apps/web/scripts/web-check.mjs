@@ -201,12 +201,24 @@ try {
   }
   const hint = await separator.evaluate((el, y) => {
     const style = getComputedStyle(el, "::before");
-    return { opacity: style.opacity, centre: parseFloat(el.style.getPropertyValue("--hint-y")), y };
+    return {
+      opacity: style.opacity,
+      centre: parseFloat(el.style.getPropertyValue("--hint-y")),
+      y,
+      image: style.backgroundImage,
+    };
   }, hoverY - separatorBox.y);
+  // Full ink for 20px either side of the pointer, gone by 50px: the stops appear either as
+  // calc() offsets or, once resolved, as px positions around the centre.
+  const stops = [...hint.image.matchAll(/(-?\d+(?:\.\d+)?)px/g)].map((m) => Number(m[1]));
+  const stopAt = (n) => stops.some((v) => Math.abs(v - n) < 1);
+  const profile =
+    (stopAt(20) && stopAt(50)) ||
+    [-50, -20, 20, 50].every((offset) => stopAt(hint.centre + offset));
   record(
-    "the hint line shows on hover, centred on the pointer",
-    hint.opacity === "1" && Math.abs(hint.centre - hint.y) < 2,
-    `opacity ${hint.opacity}, centre ${Math.round(hint.centre)} for pointer at ${Math.round(hint.y)}`,
+    "the hint line shows on hover, centred on the pointer, holding 20px and gone by 50px",
+    hint.opacity === "1" && Math.abs(hint.centre - hint.y) < 2 && profile,
+    `opacity ${hint.opacity}, centre ${Math.round(hint.centre)} for pointer at ${Math.round(hint.y)}; stops ${stops.join(" ")}`,
   );
   await page.mouse.down();
   await page.mouse.move(separatorBox.x + 140, hoverY, { steps: 6 });
@@ -307,6 +319,20 @@ try {
   // Grab it a fifth of the way down, not at a handle in the middle.
   const grabY = handleBox.y + handleBox.height * 0.2;
   await page.mouse.move(handleBox.x + handleBox.width / 2, grabY);
+  await page.waitForTimeout(250);
+  const handleHint = await handle.evaluate(
+    (el, y) => ({
+      opacity: getComputedStyle(el, "::before").opacity,
+      centre: parseFloat(el.style.getPropertyValue("--hint-y")),
+      y,
+    }),
+    grabY - handleBox.y,
+  );
+  record(
+    "the thread/canvas divider shows the same hint at the pointer's height",
+    handleHint.opacity === "1" && Math.abs(handleHint.centre - handleHint.y) < 2,
+    `opacity ${handleHint.opacity}, centre ${Math.round(handleHint.centre)} for pointer at ${Math.round(handleHint.y)}`,
+  );
   await page.mouse.down();
   await page.mouse.move(handleBox.x - 160, grabY, { steps: 8 });
   await page.mouse.up();

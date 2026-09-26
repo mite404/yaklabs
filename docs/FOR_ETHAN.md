@@ -437,6 +437,13 @@ Nothing is built yet, so the cast is the set of ideas the prototypes will be mad
   session, so both sides of the comparison were the old code. Fix: `launch` now clears that cache
   before it starts. Lesson: a comparison is only as good as the certainty that the two sides
   differ in the way you think.
+- **The divider under the floor.** Ethan asked where the hint line's fade began, and proving the
+  new profile meant hovering the real divider between thread and canvas, which the lever had
+  never done: it had only measured the gaps between lanes. The divider's hint never lit. Giving
+  the canvas its own stacking context, for the skeleton to sit under the lanes, had put the
+  canvas above the divider's hit area, so the pointer landed on the canvas instead. Fix: the
+  divider sits one layer up, and the lever now hovers it too. Lesson: a measurement that skips
+  a surface is a promise about that surface nobody has checked.
 - **Refs are not for rendering.** The lane drag measured its slots into a ref at pointer-down and
   the render read them back to place the skeleton. The React lint refused: a ref read during
   render can leave the screen behind the data. The measurement moved into state beside the move it

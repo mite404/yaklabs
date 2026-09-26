@@ -187,9 +187,10 @@ function Workspace({ runtime, conversation }: { runtime: Runtime; conversation: 
           />
         </div>
       </ResizablePanel>
+      {/* Above the panes, or the canvas's own stacking context would cover its hit area. */}
       <ResizableHandle
         aria-label="Resize the thread and the canvas"
-        className="drag-hint"
+        className="drag-hint z-10"
         onPointerMove={trackHintLine}
       />
       <ResizablePanel minSize="20">
