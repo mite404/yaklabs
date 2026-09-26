@@ -1,0 +1,22 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  // One Worker serves the static React Router build and the API, so the site has one origin
+  // (ADR-086).
+  "name": "yaklabs",
+  "main": "src/worker.ts",
+  "compatibility_date": "2026-09-25",
+  "compatibility_flags": ["nodejs_compat"],
+  "assets": {
+    // Built by `pnpm --filter web build`; it must exist before `wrangler dev` or a deploy.
+    "directory": "../web/build/client",
+    // Any path that is not a file gets index.html, and the app's router takes it from there.
+    "not_found_handling": "single-page-application",
+    // Only the API runs the Worker; every other request is a static file.
+    "run_worker_first": ["/api/*"],
+  },
+  // The WorkOS client id is public (the browser bundle carries it too), so it lives here: a
+  // deploy replaces dashboard variables with these. The Anthropic key is a secret, set with
+  // `wrangler secret put ANTHROPIC_API_KEY` or in the dashboard, and never written here.
+  "vars": { "WORKOS_CLIENT_ID": "" },
+  "observability": { "enabled": true },
+}

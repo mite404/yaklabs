@@ -6,6 +6,17 @@
       "dependsOn": ["^build"],
       "outputs": ["build/**", "dist/**"]
     },
+    // The Worker's dry run bundles the web build as its static assets (ADR-086).
+    "gateway#build": {
+      "dependsOn": ["web#build"],
+      "outputs": ["dist/**"]
+    },
+    // The runtime ships source and takes only the gateway's types, so its build waits on
+    // nothing; inheriting ^build would wait on gateway#build, which waits on web#build, which
+    // waits on the runtime.
+    "@yaklabs/runtime#build": {
+      "dependsOn": []
+    },
     "build-storybook": {
       "outputs": ["storybook-static/**"]
     },
