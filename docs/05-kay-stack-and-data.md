@@ -88,3 +88,16 @@ Legal pages change: re-read the sources before quoting them in the interview.
 **Other facts:** MCP support exists in internal testing but is not in the released build; Kay picks the model for each task and asks before anything consequential (sending, changing a file, spending money); updates download in the background and install only on "Restart to update"; the app is signed and notarized as Big Wombat LLC, distributed as a `.dmg`; Google can be connected through the user's own OAuth client (a "Desktop app" client type).
 
 **What this means for the slice:** our lab can be shaped as a Kay plugin: its cards as a Page (a React app), its catalog as tools, and its rules as a bundled skill; and its "Needs attention" card and fail-closed catalog already follow Kay's "the agent proposes, the human grants" model (ADR-078).
+
+## Inferences worth stating carefully
+
+**Business model: Kay resells inference.** "No API keys, no model to pick, no setup file" plus the DPA's metered usage records ("computed cost ... metering usage for billing") and the Stripe sub-processor mean customers pay Kay directly and Kay pays the model providers (Fireworks by default); bringing your own key is the optional exception.
+
+**Voice.** ElevenLabs "is no longer a sub-processor", so Kay used ElevenLabs for hosted voice and moved away from it; Deepgram is announced for hosted transcription, and local transcription is also offered. Worth asking about in the interview, since the slice uses voice (ADR-079).
+
+**Electron or Tauri: undecided, roughly even.** Nothing published names the desktop shell.
+
+- *For Electron:* "deep TypeScript and Node" in the Developer Experience post, and an app data folder named after the app (`~/Library/Application Support/Yak/`), Electron's default; Tauri defaults to a reverse-domain identifier, though either can be overridden.
+- *For Tauri:* Rust is a nice-to-have for the harness role; and Kay has a separate daemon, so TypeScript plugins could run in a Node or Bun process beside a Rust shell (Tauri calls such helpers "sidecars"), with plugin Pages in the web view either way.
+- *Not evidence:* a DuckDuckGo AI summary claiming "Yak AI is built using Tauri" merges unrelated products (Yaak, an API client built with Tauri, and OpenYak); its sources do not mention Kay or YakLabs.
+- *How to settle it:* an Electron app contains `Contents/Frameworks/Electron Framework.framework`; a Tauri app on macOS renders in WebKit, Safari's engine, so the slice should be checked in WebKit either way.
