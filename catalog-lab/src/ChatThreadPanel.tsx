@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useEffectEvent,
   useLayoutEffect,
   useRef,
   useState,
@@ -237,11 +238,15 @@ export function ChatThreadPanel({
   }, [messages.length]);
 
   // The user never sees a malformed question or its error: the error goes to the agent, which
-  // asks again in an ordinary streamed reply (ADR-040).
-  useEffect(() => {
+  // asks again in an ordinary streamed reply (ADR-040). Once per question: `tell` is recreated
+  // each render, so it is read through an effect event; as a dependency it would abort and
+  // resend the reply on every streamed chunk.
+  const rejectQuestion = useEffectEvent((reason: string) =>
+    tell({ kind: "question-rejected", reason, question: thread.awaiting }),
+  );
+  useEffect((): void | (() => void) => {
     if (checked?.kind !== "malformed") return;
-    return tell({ kind: "question-rejected", reason: checked.reason, question: thread.awaiting });
-    // Once per question: `tell` is recreated each render, and resending would repeat the ask.
+    return rejectQuestion(checked.reason);
   }, [checked]);
 
   // Every card that grows inside the thread stays clear of the compose box (ADR-038).
