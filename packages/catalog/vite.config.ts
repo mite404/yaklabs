@@ -2,14 +2,8 @@
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite";
 
-// Two pages: the lab, and the public page that shows one shared card (ADR-064).
-// Stories run from apps/storybook; only the node unit tests live here.
+// Only the node unit tests run here; stories run from apps/storybook and pages from apps/web.
 export default defineConfig({
   plugins: [react()],
-  build: {
-    rollupOptions: {
-      input: { main: "index.html", share: "share.html" },
-    },
-  },
   test: { include: ["src/**/*.test.{ts,tsx}"] },
 });

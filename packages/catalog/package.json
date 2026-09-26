@@ -3,6 +3,7 @@
   "private": true,
   "type": "module",
   "exports": {
+    ".": "./src/index.ts",
     "./agent": "./src/agent.ts",
     "./catalog": "./src/catalog.ts",
     "./inputModality": "./src/inputModality.ts",
@@ -12,8 +13,6 @@
     "./tokens.css": "./src/tokens.css"
   },
   "scripts": {
-    "dev": "vite --host 0.0.0.0",
-    "build": "vite build",
     "test": "vitest run",
     "test:unit": "vitest run",
     "typecheck": "tsc --noEmit"

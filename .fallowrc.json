@@ -3,8 +3,7 @@
   "$schema": "./node_modules/fallow/schema.json",
   // scripts/*.js are pasted into the DevTools console, so nothing imports them.
   "entry": [
-    "packages/catalog/src/main.tsx",
-    "packages/catalog/src/shareMain.tsx",
+    "packages/catalog/src/index.ts",
     "apps/web/src/root.tsx",
     "apps/web/src/routes.ts",
     "apps/web/src/routes/*.tsx",
