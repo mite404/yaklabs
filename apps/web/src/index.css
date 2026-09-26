@@ -4,3 +4,12 @@
 @layer theme, base, catalog, components, utilities;
 @import "@yaklabs/ui/globals.css";
 @import "@yaklabs/catalog/tokens.css" layer(catalog);
+
+@layer components {
+  /* The canvas is a dotted field (ADR-089): open ground that invites something to be put down. */
+  .canvas {
+    background-color: var(--bg);
+    background-image: radial-gradient(var(--hairline) 1px, transparent 1px);
+    background-size: 18px 18px;
+  }
+}

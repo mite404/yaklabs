@@ -9,10 +9,19 @@ The agent loop and the conversation store run in a Web Worker from `@yaklabs/run
 
 | Path          | What it shows                                                   | Sign-in   |
 | ------------- | --------------------------------------------------------------- | --------- |
-| `/`           | The thread: the profit card, the slider, the compose box        | required  |
+| `/`           | The thread beside the compose canvas (ADR-089)                  | required  |
 | `/lab`        | The evaluation workbench: fixtures through the same validation  | required  |
 | `/share.html` | One shared card from the link's fragment (ADR-064)              | public    |
 | `/callback`   | Where WorkOS sends visitors back; the provider finishes sign-in | public    |
+
+A rail on the left holds the Kay mark, Thread and Lab, and at its foot the theme and the account.
+On `/`, the thread sits beside the compose canvas: drag a highlight out of the thread onto the
+canvas to start a new thread of the same project with the highlight quoted in its compose box, or
+drag a card by its header to see it large in a lane of its own. Open space always remains at the
+end of the row for the next drop, and the divider between the thread and the canvas drags anywhere
+along its length. Thread lanes persist with their conversations; a lane closed by its × stays
+closed (`kay.canvas.hidden` in localStorage), and card lanes last the visit. The model is
+`src/canvas.ts`, the surface `src/components/canvas.tsx`.
 
 "Required" applies only when the build has sign-in turned on (below).
 
