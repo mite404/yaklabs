@@ -1,6 +1,6 @@
-# catalog-lab Storybook verification map
+# Catalog Storybook verification map
 
-This directory is the maintained source for verifying catalog-lab's UI components through
+This directory is the maintained source for verifying the catalog package's UI components through
 Storybook. Read this index, then use the matching feature file as the recipe.
 
 ## Baseline preconditions
@@ -19,7 +19,7 @@ Storybook. Read this index, then use the matching feature file as the recipe.
   component renders in several stories and layouts, so CSS classes and positions are not stable.
 - Stories are stateless between page loads. Reload the story to reset; nothing persists.
 - Render proof: `node .agents/skills/verify-storybook/scripts/shoot.mjs <story-id>...`.
-- Interaction proof: a `play` function in the story, run by `npm run test:stories`.
+- Interaction proof: a `play` function in the story, run by `pnpm test:stories`.
 
 ## Proof and skip reporting
 
@@ -46,7 +46,7 @@ and `Gotchas`.
 
 ## Full sweep
 
-To check everything rather than one change, run `npm run test:stories` (all 40 stories render,
+To check everything rather than one change, run `pnpm test:stories` (all 40 stories render,
 play, and pass axe), then walk this map top to bottom with `shoot.mjs` for the visual pass. A
 sweep reports per feature: verified, verified-unreachable with the blocking permission, or failed
 with the observed state. A feature with no line is not covered.

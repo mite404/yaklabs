@@ -1,0 +1,15 @@
+/* Kay's stylesheet styles bare elements, so it sits in its own layer: above Tailwind's
+   preflight, which would otherwise reset the catalog's buttons and headings, and below the
+   utilities, so a class on a shadcn primitive still wins (ADR-082). */
+@layer theme, base, catalog, components, utilities;
+@import "@yaklabs/ui/globals.css";
+@import "@yaklabs/catalog/tokens.css" layer(catalog);
+
+@layer components {
+  /* The canvas is a dotted field (ADR-089): open ground that invites something to be put down. */
+  .canvas {
+    background-color: var(--bg);
+    background-image: radial-gradient(var(--hairline) 1px, transparent 1px);
+    background-size: 18px 18px;
+  }
+}

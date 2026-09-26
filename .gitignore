@@ -1,6 +1,17 @@
 node_modules/
 dist/
+build/
 storybook-static/
+.react-router/
+.turbo/
+.wrangler/
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
+.env
+.env.*
+!.env.example
+*.tsbuildinfo
 .amp/
 .rumdl_cache
 .fallow/

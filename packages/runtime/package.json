@@ -1,0 +1,30 @@
+{
+  "name": "@yaklabs/runtime",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:unit": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.128.0",
+    "@sqlite.org/sqlite-wasm": "^3.53.4-build1",
+    "@yaklabs/catalog": "workspace:*",
+    "hono": "^4.13.9",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "@vitest/browser-playwright": "catalog:",
+    "@yaklabs/config": "workspace:*",
+    "gateway": "workspace:*",
+    "playwright": "catalog:",
+    "typescript": "catalog:",
+    "vite": "catalog:",
+    "vitest": "catalog:"
+  }
+}
