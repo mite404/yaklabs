@@ -438,3 +438,9 @@ The bottom edge is the signal that everything in the card has been shown: withou
 2026-09-26 - Accepted.
 Every card toggle ("Show my work" / "Hide my work", "View data table" / "Show chart") is 128px wide, which fits the widest label, so the button stays put when its label flips; before, it moved 6px (and 1.7px on catalog cards).
 The source line and the button share a 17px line, so the 52px footer places the text exactly 7px inside the 31px button, and both snap to the same pixel rows at any scroll position; before, fractional sizes (a 16.5px text line, a 30.89px button) let a browser round the text a pixel differently between the open and closed card.
+
+## ADR-073 - Show my work's steps are whole pixels tall
+
+2026-09-26 - Accepted; completes ADR-072.
+The steps use a 20px line instead of 1.7 (20.4px), so the list is a whole number of pixels tall (140px for six steps); the reveal scroll moves in whole pixels, so the footer now lands exactly where it started (625.58px before opening and after), where the 154.34px list left it 0.34px lower and could round the whole footer down a row.
+Toggling also re-renders the card's chart, which redraws its bars without moving a pixel; memoizing it is logged in `docs/LATER.md`.

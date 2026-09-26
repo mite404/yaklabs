@@ -15,6 +15,7 @@ Each item says what it is and what it waits on; when one starts, it moves into a
 ## Engineering
 
 - **A real model behind the `Agent` seam.** Replace the scripted lab agent with a real model through a small server route that keeps the key off the browser (ADR-041); screenshots then need real file upload, since today attachments only ride along in the browser (ADR-063).
+- **Memoize the interactive card's chart.** Toggling "Show my work" re-renders the whole card, so Recharts swaps 14 SVG groups although the data is unchanged; memoizing the chart stops that. It moves no pixels, so it is tidying, not a fix (ADR-073).
 - **Link Storybook to Figma.** Add `@storybook/addon-designs` so each story shows its Figma frame (node 20:2 in file `7CUcz6R7OEjSrfMcNW6A7D`).
 - **Publish Storybook to Chromatic.** A shareable URL for the component lab, with visual diffs on each push.
 - **Automate the Figma token watcher.** It only runs when someone fires it; a GitHub Action that triggers when `catalog-lab/src/tokens.css` changes would keep the Figma variables in sync on its own.
