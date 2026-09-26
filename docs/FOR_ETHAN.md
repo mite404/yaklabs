@@ -54,6 +54,8 @@ Nothing is built yet, so the cast is the set of ideas the prototypes will be mad
 
 - **Read the fine print; it is the architecture diagram.** Kay's legal pages say more about its build than any tech-detection plugin: the DPA names the hosts (Fly.io, Cloudflare), the database (Postgres), the app data folder, and the rule that conversations never leave the device. The slice follows that rule (ADR-075) and mirrors the process split, with a Web Worker as the daemon's stand-in (ADR-076). The reference lives in `docs/05-kay-stack-and-data.md`.
 
+- **The slice is a location shoot, not a studio build.** Kay's app is a desktop "studio" with a daemon backstage; the web slice recreates the same blocking on location: React Router as a static single-page app for the stage (ADR-083), a Web Worker as the daemon backstage, owning the agent loop and SQLite in the browser's private file system (ADR-081), WorkOS at the door (ADR-084), and one Hono Worker on Cloudflare as the gateway that holds the keys and keeps nothing (ADR-085, ADR-086). Every piece maps to a part of Kay, so moving to their stack is recasting, not rewriting.
+
 ## 4. Bloopers
 
 - **The docs were behind a locked door.** The environment's network policy blocked docs.meetkay.ai, so Kay's vocabulary was reconstructed from search snippets and Ramp's Glass. Everything inferred is labeled; verify before the interview.
