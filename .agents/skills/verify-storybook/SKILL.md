@@ -93,7 +93,9 @@ node .agents/skills/verify-storybook/scripts/shoot.mjs \
 
 Each story prints `PASS <id>` or `FAIL <id>` with the reason, then the paths of
 `<id>.png` and `<id>.aria.yml`. FAIL means the story threw, logged `console.error`, showed
-Storybook's error overlay, or rendered nothing. Pass `--width 420` for the narrow layouts.
+Storybook's error overlay, or rendered nothing. Pass `--width 420` for the narrow layouts and
+`--theme dark` to shoot under `data-theme="dark"` (ADR-090); shoot both when a change touches
+tokens.
 
 **Interaction proof** (click, type, open, close): encode it as a `play` function in the story, then
 run `pnpm test:stories`. A play function is proof that reruns in CI forever; a manual click is

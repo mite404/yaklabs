@@ -33,19 +33,22 @@ function parseArgs(argv) {
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === "--out") args.out = path.resolve(argv[++i]);
     else if (argv[i] === "--width") args.width = Number(argv[++i]);
+    else if (argv[i] === "--theme") args.theme = argv[++i];
     else args.ids.push(argv[i]);
   }
   return args;
 }
 
-async function shoot(page, base, id, out) {
+async function shoot(page, base, id, out, theme) {
   const errors = [];
   const onConsole = (msg) => msg.type() === "error" && errors.push(`console: ${msg.text()}`);
   const onPageError = (err) => errors.push(`pageerror: ${err.message}`);
   page.on("console", onConsole);
   page.on("pageerror", onPageError);
 
-  await page.goto(`${base}/iframe.html?id=${id}&viewMode=story`);
+  // The theme global drives the preview's decorator, which sets the root's data-theme.
+  const globals = theme ? `&globals=theme:${theme}` : "";
+  await page.goto(`${base}/iframe.html?id=${id}&viewMode=story${globals}`);
   const root = page.locator("#storybook-root");
   await root.waitFor({ state: "attached" });
   // Storybook shows its error overlay instead of throwing, so look for it explicitly.
@@ -73,7 +76,7 @@ async function shoot(page, base, id, out) {
 
 const args = parseArgs(process.argv.slice(2));
 if (args.ids.length === 0) {
-  console.error("usage: shoot.mjs <story-id>... [--out dir] [--width px]");
+  console.error("usage: shoot.mjs <story-id>... [--out dir] [--width px] [--theme light|dark]");
   process.exit(2);
 }
 mkdirSync(args.out, { recursive: true });
@@ -82,7 +85,7 @@ const base = `http://127.0.0.1:${readPort()}`;
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: args.width, height: 900 } });
 const results = [];
-for (const id of args.ids) results.push(await shoot(page, base, id, args.out));
+for (const id of args.ids) results.push(await shoot(page, base, id, args.out, args.theme));
 await browser.close();
 
 for (const r of results) {
