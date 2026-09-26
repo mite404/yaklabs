@@ -197,10 +197,15 @@ export function DictationModal({
             {device.label} <span aria-hidden="true">▾</span>
           </button>
           {picking && (
-            <ul role="listbox" aria-label="Choose microphone">
+            <ul
+              // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role, jsx-a11y/no-noninteractive-element-to-interactive-role -- a native <select> cannot draw the picker's rows (a radio mark beside each device), so the list takes the listbox role
+              role="listbox"
+              aria-label="Choose microphone"
+            >
               {devices.map((item) => (
                 <li key={item.id}>
                   <button
+                    // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- <option> only works inside a <select>; each row is a button so a click or Enter picks it
                     role="option"
                     aria-selected={item.id === deviceId}
                     onClick={() => {

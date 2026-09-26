@@ -73,6 +73,7 @@ function Chart({ selection }: { selection: Selection }) {
   return (
     <div
       className="chart"
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- the chart is live Recharts SVG, not an image file; role="img" names the drawing as one image
       role="img"
       aria-label={`${props.title}. Values available in the data table.`}
     >
