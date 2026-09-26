@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
+import { expect, userEvent, within } from "storybook/test";
 import { Modal } from "./Modal";
 
 // A container the modal covers, as the thread panel is for dictation.
@@ -52,5 +53,20 @@ const meta = {
 export default meta;
 type Story = StoryObj<typeof meta>;
 
-/** Covers only its container, with a scrim; dictation is built on this (ADR-062). */
-export const Default: Story = {};
+/**
+ * Covers only its container, with a scrim; dictation is built on this (ADR-062).
+ * Opening moves focus into the dialog, so Escape closes it at once and focus returns.
+ */
+export const Default: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(canvas.getByRole("button", { name: "Cancel" }));
+    const opener = canvas.getByRole("button", { name: "Open modal" });
+    await userEvent.click(opener);
+    const dialog = canvas.getByRole("dialog", { name: "Pause the thread?" });
+    await expect(dialog.contains(document.activeElement)).toBe(true);
+    await userEvent.keyboard("{Escape}");
+    await expect(canvas.queryByRole("dialog")).toBeNull();
+    await expect(opener).toHaveFocus();
+  },
+};
