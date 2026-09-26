@@ -16,3 +16,4 @@ export type {
   Notice,
   StorageKind,
 } from "./protocol";
+export type { ConversationStore } from "./store";
