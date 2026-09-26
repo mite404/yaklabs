@@ -398,3 +398,9 @@ In the lab the page is `share.html` beside the app, or the Share/Public page sto
 2026-09-26 - Accepted.
 Every colour change is checked in numbers, not by eye: text needs at least 4.5:1, and UI parts and graphics (rings, outlines, chart marks) at least 3:1, measured against every surface the colour touches, including hover, selected and dark mode; a requested colour that fails is flagged with its ratio, and the nearest passing option, before it ships.
 Colours that looked fine failed on measurement at least six times: `#8a8a85` with light text (3.2:1, ADR-042), the grey focus ring on the attention card (1.8:1, ADR-044), the regular ink on the `#8a8a85` hover (4.4:1, ADR-046), sage as a chart mark (ADR-058), and olive (2.0:1) and soft ink (2.1:1) on that same hover; taste proposes, numbers dispose.
+
+## ADR-066 - One writer per branch
+
+2026-09-26 - Accepted.
+Parallel sessions may read a branch freely, but only one writes to it at a time, and write ownership passes explicitly, in a handoff that names the branch, its head commit and the open PR, so the new writer starts by checking the repo against it.
+Two sessions once pushed to the same branch and collided; read-only helpers such as the Figma token watcher never push, so they need no handoff.
