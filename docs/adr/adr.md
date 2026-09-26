@@ -483,6 +483,7 @@ The hint is a non-blocking toast, not a modal, so it never takes focus from typi
 
 ## ADR-080 - The slice's gateway can be Kay's own: Bifrost
 
-2026-09-26 - Proposed; amends ADR-077.
-Kay's Data Use page names its inference gateway: "It runs Bifrost, open-source software we self-host on Fly.io", an LLM gateway written in Go with one OpenAI-compatible API across providers, deployable as a Docker image with file-based configuration.
-Running Bifrost on Fly.io for the slice would make its gateway the same software on the same host as Kay's, which beats a hand-written Hono route as an integration story; a small Hono route stays the fallback for anything Bifrost does not proxy (to be checked: Deepgram or ElevenLabs voice, and browser CORS), and the gateway needs its own access control so a public URL does not spend our model key.
+2026-09-26 - Proposed; amends ADR-077; Bifrost's docs checked.
+Kay's Data Use page names its inference gateway: "It runs Bifrost, open-source software we self-host on Fly.io", an LLM gateway written in Go with one OpenAI-compatible API across providers; running the same image on Fly.io (`fly deploy --image docker.io/maximhq/bifrost:latest`, configured from `config.json`) makes the slice's gateway the same software on the same host as Kay's.
+Bifrost's docs settle the three open questions: Anthropic chat streams, and ElevenLabs is supported for speech output (streamed) and for transcription (not streamed), while Deepgram is not a provider; browser access is set by `allowed_origins` (default `*`, so it must be narrowed); and `enforce_auth_on_inference` with virtual keys, each with a budget and a rate limit, keeps the provider keys on the gateway, though a key used from the browser is visible in the page, so its budget must be small; the dashboard needs its password and setup token before the app is public.
+Its content settings mirror Kay's DPA almost word for word: `disable_content_logging: true` keeps metadata only, and `allow_per_request_content_storage_override: false` means no request can opt back into storage.

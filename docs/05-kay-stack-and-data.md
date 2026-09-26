@@ -102,3 +102,17 @@ Legal pages change: re-read the sources before quoting them in the interview.
 - *For Tauri:* Rust is a nice-to-have for the harness role; and Kay has a separate daemon, so TypeScript plugins could run in a Node or Bun process beside a Rust shell (Tauri calls such helpers "sidecars"), with plugin Pages in the web view either way.
 - *Not evidence:* a DuckDuckGo AI summary claiming "Yak AI is built using Tauri" merges unrelated products (Yaak, an API client built with Tauri, and OpenYak); its sources do not mention Kay or YakLabs.
 - *How to settle it:* an Electron app contains `Contents/Frameworks/Electron Framework.framework`; a Tauri app on macOS renders in WebKit, Safari's engine, so the slice should be checked in WebKit either way.
+
+## Bifrost, checked against its docs (docs.getbifrost.ai)
+
+| Question | Answer |
+| --- | --- |
+| Streams Claude? | Yes: the Anthropic provider supports chat and chat streaming |
+| Voice | ElevenLabs: speech output (`/v1/audio/speech`, streamed) and transcription (`/v1/audio/transcriptions`, not streamed). **Deepgram is not a Bifrost provider**, so Kay presumably reaches Deepgram through another path |
+| Browser calls (CORS) | `client.allowed_origins`, default `["*"]`; set it to the demo's origin |
+| Access control | `enforce_auth_on_inference: true` plus virtual keys, each with a budget (USD over a window) and a rate limit; raw provider keys never leave the gateway |
+| Content storage | `disable_content_logging: true` keeps metadata only; `allow_per_request_content_storage_override: false` makes that global setting authoritative, the same promise as Kay's DPA ("no individual request can opt back into storage"); observability connectors have their own flag |
+| Fly.io | A deployment guide: `fly deploy --image docker.io/maximhq/bifrost:latest`, or build from source |
+| Before going public | Set the dashboard password and a `setup_token` first; serve behind TLS (Fly terminates it) |
+
+**Dictation today** uses the browser's built-in speech recognition (`webkitSpeechRecognition` in `DictationModal.tsx`). In Chrome that usually sends audio to Google's servers, which does not match Kay's on-device or gateway-only rule, and a de-Googled Chromium such as Helium may not offer it at all; ElevenLabs transcription through the gateway (record, then transcribe) is the fit with Kay's architecture.
