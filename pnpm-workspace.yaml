@@ -4,6 +4,7 @@ packages:
 allowBuilds:
   esbuild: true
   lefthook: true
+  workerd: true
 catalog:
   "@storybook/addon-a11y": ^10.6.0
   "@storybook/addon-vitest": ^10.6.0
