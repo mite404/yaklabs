@@ -30,7 +30,7 @@ it("keeps an interactive card's work collapsed until the user asks for it", () =
 
 it("floats the agent's question above the compose box with numbered choices and no close button", () => {
   const html = renderToStaticMarkup(<ChatThreadPanel thread={threads.awaiting} />);
-  expect(html).toContain('aria-label="Needs you"');
+  expect(html).toContain('aria-label="Needs attention"');
   expect(html.match(/class="awaiting-key"/g)).toHaveLength(3);
   expect(html).toContain("Request a forecast view");
   expect(html).toContain('placeholder="How many weeks ahead should it forecast?"');
@@ -47,7 +47,7 @@ it("waits for a choice: Submit stays disabled until a tile is selected, Skip is 
 
 it("shows no card and no error when the agent's question is malformed", () => {
   const html = renderToStaticMarkup(<ChatThreadPanel thread={threads.malformed} />);
-  expect(html).not.toContain('aria-label="Needs you"');
+  expect(html).not.toContain('aria-label="Needs attention"');
   expect(html).not.toContain("Chat about a plan to capture");
   expect(html).not.toContain("answer.placeholder");
 });
@@ -63,7 +63,7 @@ it("never lets the recap ask for anything, even when the user has been away", ()
     <ChatThreadPanel thread={threads.fallbacks} activity={idle} now={now} />,
   );
   expect(recap).toContain('aria-label="Recap"');
-  expect(recap).not.toContain("Needs you");
+  expect(recap).not.toContain("Needs attention");
 });
 
 it("gives every card in the thread a share button, and the public page none", () => {

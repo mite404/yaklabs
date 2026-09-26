@@ -378,8 +378,8 @@
   margin: 0;
   padding: 2px 8px;
   border-radius: 20px;
-  background: var(--warn-bg);
-  color: var(--warn-ink);
+  background: var(--awaiting-label-bg);
+  color: var(--awaiting-label-ink);
   font-size: 10px;
   font-weight: 650;
   letter-spacing: 0.4px;
@@ -402,7 +402,7 @@
   letter-spacing: 0;
   color: var(--ink);
 }
-/* Options are separated by fill, not outlines: each is its own tile. */
+/* Options rest unfilled on the card; each fills only on hover (ADR-067). */
 .awaiting-options {
   display: grid;
   gap: 4px;
@@ -464,7 +464,7 @@
 .awaiting-tile[data-selected] .awaiting-key {
   border-color: var(--ink);
   background: var(--ink);
-  color: var(--tile-bg);
+  color: var(--awaiting-bg); /* the tile has no fill of its own at rest */
   font-weight: 600;
 }
 .awaiting-option,

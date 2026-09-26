@@ -80,7 +80,7 @@ export function AwaitingInputCard({
   return (
     <section
       className="awaiting attention-surface"
-      aria-label="Needs you"
+      aria-label="Needs attention"
       data-open={open || undefined}
       onKeyDown={keys}
     >
@@ -89,7 +89,7 @@ export function AwaitingInputCard({
         onToggle={() => setOpen(!open)}
         summary={
           <>
-            <span className="awaiting-label">Needs you</span>
+            <span className="awaiting-label">Needs attention</span>
             {!open && <span className="awaiting-summary">{question.question}</span>}
           </>
         }
