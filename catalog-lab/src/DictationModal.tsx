@@ -134,12 +134,14 @@ export function DictationModal({
   const [deviceId, setDeviceId] = useState("default");
   const [picking, setPicking] = useState(false);
   const [elapsed, setElapsed] = useState(0);
-  const startedAt = useRef(performance.now());
+  // When recording started, read from the clock once on mount rather than on every render.
+  const startedAt = useRef(0);
   const doneButton = useRef<HTMLButtonElement>(null);
   const microphone = useMicrophone(live, deviceId);
   const speech = useSpeechTranscript(live && !microphone.error);
 
   useEffect(() => {
+    startedAt.current = performance.now();
     doneButton.current?.focus();
     const id = window.setInterval(
       () => setElapsed(performance.now() - startedAt.current),
