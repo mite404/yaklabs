@@ -14,9 +14,9 @@
     // Only the API runs the Worker; every other request is a static file.
     "run_worker_first": ["/api/*"],
   },
-  // The WorkOS client id is public (the browser bundle carries it too), so it lives here: a
-  // deploy replaces dashboard variables with these. The Anthropic key is a secret, set with
-  // `wrangler secret put ANTHROPIC_API_KEY` or in the dashboard, and never written here.
-  "vars": { "WORKOS_CLIENT_ID": "" },
+  // Both bindings live in the dashboard: `WORKOS_CLIENT_ID` as a variable, `ANTHROPIC_API_KEY`
+  // as a secret. Nothing environment-specific is written here, and keep_vars stops a deploy from
+  // replacing what the dashboard holds (a value named under `vars` would be replaced).
+  "keep_vars": true,
   "observability": { "enabled": true },
 }

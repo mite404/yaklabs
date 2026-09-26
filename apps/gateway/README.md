@@ -35,7 +35,7 @@ pnpm --filter gateway dev                                  # http://localhost:87
 ```
 
 `wrangler dev` serves the last web build, so rebuild the web app to see UI changes there.
-`.dev.vars` is ignored by git and overrides `wrangler.jsonc`'s `vars` locally.
+`.dev.vars` is ignored by git and supplies both bindings locally.
 
 ```sh
 pnpm --filter gateway test        # vitest in node: routes, streaming, auth
@@ -48,17 +48,16 @@ run `pnpm --filter web build` first. The root `pnpm build` orders the two throug
 
 ## Secrets and variables
 
-| Binding             | Production                                            | Local       |
-| ------------------- | ----------------------------------------------------- | ----------- |
-| `ANTHROPIC_API_KEY` | secret: `wrangler secret put`, or a dashboard Secret  | `.dev.vars` |
-| `WORKOS_CLIENT_ID`  | variable: `vars` in `wrangler.jsonc`, committed       | `.dev.vars` |
+| Binding             | Production                                          | Local       |
+| ------------------- | --------------------------------------------------- | ----------- |
+| `ANTHROPIC_API_KEY` | secret: `wrangler secret put`, or a dashboard Secret | `.dev.vars` |
+| `WORKOS_CLIENT_ID`  | variable: a dashboard Text variable                 | `.dev.vars` |
 
-The client id is public (the browser bundle carries it too), and it belongs in `wrangler.jsonc`
-rather than the dashboard: every `wrangler deploy` replaces the Worker's dashboard variables
-with the config's `vars`, and `keep_vars` does not protect a variable the config also names.
-Secrets survive deploys. Until both values are set, every `/api/*` request fails with a 500 while
-the static site keeps working, and the Worker's logs name each missing or malformed binding
-(never its value); the client id must start with `client_`.
+Nothing environment-specific is written in `wrangler.jsonc`: `keep_vars` is on, so a deploy keeps
+the dashboard's variables (a value named under `vars` would replace them), and secrets survive
+deploys anyway. Until both values are set, every `/api/*` request fails with a 500 while the
+static site keeps working, and the Worker's logs name each missing or malformed binding (never
+its value); the client id must start with `client_`.
 
 Token checks accept the issuers WorkOS's hosted API mints: `https://api.workos.com` for older
 environments and `https://api.workos.com/user_management/<clientId>` for ones created since
@@ -82,9 +81,11 @@ pnpm 10.11.1, older than the `pnpm@10.33.0` this repo pins and the `allowBuilds`
 
 - `PNPM_VERSION` = `10.33.0`
 
-And one runtime secret (Settings, Variables and Secrets, type Secret):
+And two runtime values (Settings, Variables and Secrets):
 
-- `ANTHROPIC_API_KEY` = the Anthropic API key
+- `ANTHROPIC_API_KEY`, type Secret: the Anthropic API key
+- `WORKOS_CLIENT_ID`, type Text: the WorkOS client id (public; the browser carries it too)
 
-`WORKOS_CLIENT_ID` goes in `wrangler.jsonc` and is committed, for the reason above. Add the
-deployed address to WorkOS's allowed origins (ADR-084).
+Add the deployed address to WorkOS's redirect URIs (`https://<worker>/callback`) and CORS
+origins (ADR-084), and build the web app with `VITE_AUTH=workos`, `VITE_WORKOS_CLIENT_ID` and
+`VITE_WORKOS_REDIRECT_URI` set as build variables (`apps/web/README.md`).
