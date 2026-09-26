@@ -415,3 +415,8 @@ The card has no grey fill at rest: option pills lose their `--paper-deep` rest f
 
 2026-09-26 - Accepted; amends ADR-067.
 The label's fill moves from yak brown `#d0ae7e` to an orange `#d19456` (`--yak-orange`, Ethan's pick) so it reads as caution, not decoration, while the text stays `#3b2612` (5.5:1 on the new fill).
+
+## ADR-069 - Attention cards cast their shadow down and to the right
+
+2026-09-26 - Accepted; amends ADR-059.
+The Recap and Needs attention cards' shadow moves 8px right as well as 8px down (`8px 8px 16px -8px`), so it shows equally on the bottom and right edges and not at all on the top or left, as if lit from the top left; before, the right side was barely darker than the surface (5 levels against 19 at the bottom), so the card looked lifted only at its bottom edge.

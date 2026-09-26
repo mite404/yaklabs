@@ -114,6 +114,7 @@ The gap is the token `--rest-gap`; the thread's bottom padding subtracts the com
 The thread's cards all sit on paper, so anything that needs the user (the Recap, a "Needs you" question) sits on the attention surface, a pale warm grey, and stands apart without a badge or a colour of alarm.
 Its choices are paper tiles, lighter than the card, so they separate by colour; hovering a row darkens it to a mid grey, where the usual inks fail, so the hovered row's text switches to the darkest ink.
 Green appears only as a button hover: Submit fills with the site's moss, as the outline button does.
+Both cards cast their shadow down and to the right, as if lit from the top left, and never on the top or left edge (ADR-069).
 The question card, labelled "Needs attention", is the exception: it sits on the app's paper with no grey fill at rest, its options, header and Skip fill with `--paper-deep` only on hover, and its label is a caution orange pill (ADR-067, ADR-068).
 
 | Property | Value | Source |
