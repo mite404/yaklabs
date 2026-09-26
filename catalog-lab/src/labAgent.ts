@@ -14,6 +14,13 @@ function wait(ms: number, signal: AbortSignal): Promise<void> {
   });
 }
 
+// A rejected payload's own question, trimmed, when it has a non-empty one.
+function questionOf(payload: unknown): string | undefined {
+  if (typeof payload !== "object" || payload === null || !("question" in payload)) return undefined;
+  const question = typeof payload.question === "string" ? payload.question.trim() : "";
+  return question === "" ? undefined : question;
+}
+
 // What the stand-in says for each event; `undefined` means it stays quiet.
 function replyText(event: AgentEvent): string | undefined {
   switch (event.kind) {
@@ -30,11 +37,15 @@ function replyText(event: AgentEvent): string | undefined {
       return `Got it: "${event.text}". Carrying on from there.`;
     case "question-rejected": {
       // A real agent reads `reason`; the stand-in only reuses its own question when it was sound.
-      const question = (event.question as { question?: unknown } | null)?.question;
-      return typeof question === "string" && question.trim()
-        ? `${question.trim()} Tell me in a sentence or two and I'll carry on from there.`
-        : "I need a bit more context before I carry on. What would you like me to do next?";
+      const question = questionOf(event.question);
+      return question === undefined
+        ? "I need a bit more context before I carry on. What would you like me to do next?"
+        : `${question} Tell me in a sentence or two and I'll carry on from there.`;
     }
+    default:
+      // A new kind of event stops this compiling until the stand-in has words for it.
+      event satisfies never;
+      return undefined;
   }
 }
 
