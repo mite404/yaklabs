@@ -6,11 +6,17 @@
 // Exits 1 when a story throws, logs a console error, or renders nothing, so a PASS line
 // means the story actually drew something.
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { chromium } from "playwright";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../../..");
+// pnpm keeps playwright inside the app that owns the story tests, so resolve it from there
+// and the screenshots come from the same browser build the tests run in.
+const playwright = await import(
+  createRequire(path.join(ROOT, "apps/storybook/package.json")).resolve("playwright"),
+);
+const { chromium } = playwright.default ?? playwright; // CommonJS entry: named exports sit on default
 const STATE_DIR = process.env.VERIFY_STATE_DIR ?? `/tmp/yaklabs-storybook-verify-${process.env.VERIFY_RUN_ID ?? "default"}`;
 
 function readPort() {

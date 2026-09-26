@@ -2,20 +2,21 @@
 name: verify-storybook
 description: >-
   Prove a UI component change in yaklabs by driving its Storybook stories in a real browser.
-  Launches a private Storybook for catalog-lab, lists the stories a change can affect, renders
+  Launches a private Storybook for the catalog package, lists the stories a change can affect, renders
   them with screenshots and ARIA trees, and runs the story test suite (render, play functions,
-  axe). Use after editing anything in catalog-lab/src or catalog-lab/.storybook, before claiming a
+  axe). Use after editing anything in packages/catalog/src or apps/storybook/.storybook, before claiming a
   component works, and when asked to verify, screenshot, or QA a component.
 ---
 
 # Verify Storybook
 
-The only surface in scope is the Storybook for `catalog-lab/` (React 19, Vite 7, Storybook 10). The
+The only surface in scope is the Storybook for `packages/catalog/`, hosted by `apps/storybook/`
+(React 19, Vite 8, Storybook 10). The
 workbench app (`index.html`) and the share page (`share.html`) are out of scope until a web or
 desktop app exists; their components are covered here through stories.
 
 A story is the unit of proof. Every component a user sees renders through at least one story, and
-`npm test` renders all of them in headless Chromium. This skill adds what the suite cannot tell
+`pnpm test` renders all of them in headless Chromium. This skill adds what the suite cannot tell
 you: which stories your change reaches, what they look like, and whether an interaction you care
 about actually works.
 
@@ -25,18 +26,18 @@ Run these first. They are cheap, and nothing below re-proves them.
 
 | Tier | Command (from repo root) | Runs in |
 | --- | --- | --- |
-| Format | `npm run format:check` | CI; pre-commit writes staged files via lint-staged |
+| Format | `pnpm format:check` | CI; pre-commit formats staged files via Lefthook |
 | Markdown wrap at 100 columns | `node scripts/wrap-md.js <file.md>` | pre-commit (staged `.md`) |
-| Lint, incl. jsx-a11y and type-aware rules | `npm run lint` | CI, pre-commit |
-| Types | `npm run typecheck` | CI, pre-commit |
-| Unit tests (69, node) | `npm run test:unit` | CI, pre-commit |
-| Story tests: every story renders, play functions pass, axe finds no violations | `npm run test:stories` | CI, pre-commit |
-| Storybook builds | `npm run build-storybook` | CI |
-| New dead code, complexity, duplication in changed files | `npx fallow audit --base HEAD` (this commit) or `npx fallow audit --base origin/main` (this branch) | pre-commit uses `HEAD`, CI uses the PR base |
+| Lint, incl. jsx-a11y and type-aware rules | `pnpm lint` | CI; pre-commit lints staged files |
+| Types | `pnpm typecheck` | CI |
+| Unit tests (69, node) | `pnpm test:unit` | CI |
+| Story tests: every story renders, play functions pass, axe finds no violations | `pnpm test:stories` | CI |
+| Storybook builds | `pnpm build-storybook` | CI |
+| New dead code, complexity, duplication in changed files | `pnpm fallow audit --base HEAD` (this commit) or `pnpm fallow audit --base origin/main` (this branch) | CI uses the PR base |
 
 - `oxlint` runs type-aware (`options.typeAware` plus the `oxlint-tsgolint` package), but it does not
   fold in `tsc` diagnostics, so `typecheck` is a separate tier, not a redundant one.
-- `fallow audit` fails only on findings the change introduces. The full `npm run fallow` report
+- `fallow audit` fails only on findings the change introduces. The full `pnpm fallow` report
   exits 1 today on an inherited health backlog (large or complex functions in `ChatThreadPanel`,
   `DictationModal` and others). That backlog is not a gate; do not "fix" the gate by baselining it.
 - There is no visual-regression tier. Axe checks contrast and semantics, not layout. Pixels are
@@ -49,7 +50,7 @@ Run these first. They are cheap, and nothing below re-proves them.
 ```
 
 Ready when it prints `storybook: ready at http://127.0.0.1:6106/`. It starts
-`storybook dev` on port 6106 (not 6006, so a human's `npm run storybook` is untouched), refuses to
+`storybook dev` on port 6106 (not 6006, so a human's `pnpm storybook` is untouched), refuses to
 start if a previous run's pid is alive or the port is taken, and waits for `/index.json` to list
 this repo's stories. For a second concurrent run, set both `VERIFY_RUN_ID=<name>` and
 `VERIFY_PORT=<free port>`; state lives in `/tmp/yaklabs-storybook-verify-<run id>/`.
@@ -66,12 +67,12 @@ blank, or unfamiliar. A 200 from someone else's Storybook fails the content chec
 
 ## Bound the change
 
-`catalog-lab/src/` is flat, so a directory does not bound a change; the import graph does. List
+`packages/catalog/src/` is flat, so a directory does not bound a change; the import graph does. List
 every story a change can reach:
 
 ```bash
 node .agents/skills/verify-storybook/scripts/affected-stories.mjs --since main
-node .agents/skills/verify-storybook/scripts/affected-stories.mjs catalog-lab/src/Menu.tsx
+node .agents/skills/verify-storybook/scripts/affected-stories.mjs packages/catalog/src/Menu.tsx
 ```
 
 It follows fallow's impact closure, so editing `Menu.tsx` lists 32 stories (every card has a share
@@ -95,7 +96,7 @@ Each story prints `PASS <id>` or `FAIL <id>` with the reason, then the paths of
 Storybook's error overlay, or rendered nothing. Pass `--width 420` for the narrow layouts.
 
 **Interaction proof** (click, type, open, close): encode it as a `play` function in the story, then
-run `npm run test:stories`. A play function is proof that reruns in CI forever; a manual click is
+run `pnpm test:stories`. A play function is proof that reruns in CI forever; a manual click is
 proof once. Use `storybook/test`:
 
 ```tsx

@@ -8,7 +8,7 @@ set -euo pipefail
 
 # ---------------------------------------------------------------- CONFIG
 APP="storybook"
-DEFAULT_PORT="${VERIFY_PORT:-6106}"      # not 6006, so a human's `npm run storybook` keeps its port
+DEFAULT_PORT="${VERIFY_PORT:-6106}"      # not 6006, so a human's `pnpm storybook` keeps its port
 READY_PATH="/index.json"                 # the story index; answers once the first build finishes
 DOCTOR_NEEDLE="foundations-button--default"   # a story id only this repo's Storybook serves
 BOOT_TIMEOUT=90
@@ -38,8 +38,8 @@ cmd_launch() {
   fi
 
   echo "$port" >"$PORT_FILE"
-  cd "$ROOT/catalog-lab"
-  STORYBOOK_DISABLE_TELEMETRY=1 nohup "$ROOT/node_modules/.bin/storybook" dev \
+  cd "$ROOT/apps/storybook"
+  STORYBOOK_DISABLE_TELEMETRY=1 nohup "$ROOT/apps/storybook/node_modules/.bin/storybook" dev \
     -p "$port" --host 127.0.0.1 --ci --no-open >"$LOG_FILE" 2>&1 &
   echo $! >"$PID_FILE"
 

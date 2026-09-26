@@ -56,7 +56,7 @@ Preconditions:
 - `Take screenshot` calls `getDisplayMedia`, which headless Chromium cannot grant. Opening the
   menu is provable; capturing is verified-unreachable here.
 - The awaiting-input free-text option was a `role="radio"` wrapping an `input` (axe
-  `nested-interactive`). If you touch `AwaitingInputCard`, re-run `npm run test:stories` and
+  `nested-interactive`). If you touch `AwaitingInputCard`, re-run `pnpm test:stories` and
   re-read this recipe's handles against the new markup.
 - `--dock-space` is set from JavaScript, so the compose box position depends on a rendered dock.
   Screenshot after the story settles, not on first paint.
