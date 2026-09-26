@@ -4,3 +4,5 @@ storybook-static/
 .amp/
 .rumdl_cache
 .fallow/
+.claude/worktrees/
+.artifacts/
