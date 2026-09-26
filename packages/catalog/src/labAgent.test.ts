@@ -38,6 +38,14 @@ it("asks in plain words when its question was rejected, reusing the sound part",
   );
 });
 
+it.each([null, "Should I?", { question: 42 }, { question: "  " }])(
+  "asks for context when the rejected question %j has no wording to reuse",
+  async (question) => {
+    const text = await reply({ kind: "question-rejected", reason: "question: required", question });
+    expect(text).toMatch(/^I need a bit more context before I carry on\./);
+  },
+);
+
 it("stops streaming as soon as the reply is abandoned", async () => {
   const controller = new AbortController();
   controller.abort();

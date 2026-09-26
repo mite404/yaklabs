@@ -14,6 +14,16 @@ function wait(ms: number, signal: AbortSignal): Promise<void> {
   });
 }
 
+// The wording of a rejected question, when it has a non-blank one to reuse. The question failed
+// the schema, so it arrives as `unknown` and is read only as far as this check proves.
+function rejectedWording(question: unknown): string | undefined {
+  if (typeof question !== "object" || question === null || !("question" in question))
+    return undefined;
+  const wording = question.question; // → unknown
+  if (typeof wording !== "string" || wording.trim() === "") return undefined;
+  return wording.trim();
+}
+
 // What the stand-in says for each event; `undefined` means it stays quiet.
 function replyText(event: AgentEvent): string | undefined {
   switch (event.kind) {
@@ -30,10 +40,15 @@ function replyText(event: AgentEvent): string | undefined {
       return `Got it: "${event.text}". Carrying on from there.`;
     case "question-rejected": {
       // A real agent reads `reason`; the stand-in only reuses its own question when it was sound.
-      const question = (event.question as { question?: unknown } | null)?.question;
-      return typeof question === "string" && question.trim()
-        ? `${question.trim()} Tell me in a sentence or two and I'll carry on from there.`
-        : "I need a bit more context before I carry on. What would you like me to do next?";
+      const wording = rejectedWording(event.question); // → string | undefined
+      return wording === undefined
+        ? "I need a bit more context before I carry on. What would you like me to do next?"
+        : `${wording} Tell me in a sentence or two and I'll carry on from there.`;
+    }
+    default: {
+      // A new event kind fails to compile here until the stand-in has a line for it.
+      const unhandled: never = event;
+      return unhandled;
     }
   }
 }
