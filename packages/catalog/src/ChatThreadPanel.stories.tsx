@@ -141,7 +141,10 @@ function pointer(type: string, x: number, y: number, buttons = 0): PointerEvent 
   return new PointerEvent(type, { bubbles: true, clientX: x, clientY: y, button: 0, buttons });
 }
 
-/** A highlight is something to pick up: an open hand over it, a closed one while it is held. */
+/**
+ * A highlight is something to pick up: an open hand over it, a closed one while it is held, and
+ * the I-beam for as long as the highlight is still being made.
+ */
 export const HighlightGrab: Story = {
   args: { thread: threads.trend },
   play: async ({ canvasElement }) => {
@@ -155,7 +158,12 @@ export const HighlightGrab: Story = {
     const box = range.getBoundingClientRect();
     const [x, y] = [box.left + 12, box.top + box.height / 2];
 
-    paragraph.dispatchEvent(pointer("pointermove", x, y));
+    // The thread starts watching the pointer in an effect, so the first move is repeated
+    // until it is heard; a plain throw keeps the retries out of the console.
+    await waitFor(() => {
+      paragraph.dispatchEvent(pointer("pointermove", x, y));
+      if (scroller.dataset.grab !== "ready") throw new Error("the thread is not listening yet");
+    });
     await expect(scroller).toHaveAttribute("data-grab", "ready");
     await expect(getComputedStyle(scroller).cursor).toBe("grab");
 
@@ -169,5 +177,17 @@ export const HighlightGrab: Story = {
     paragraph.dispatchEvent(pointer("pointermove", box.left - 40, y));
     await expect(scroller).not.toHaveAttribute("data-grab");
     await expect(getComputedStyle(scroller).cursor).not.toBe("grab");
+
+    // The browser grows a selection under a held button and reports it on selectionchange;
+    // the same events by hand, with the button down throughout.
+    document.getSelection()?.removeAllRanges();
+    paragraph.dispatchEvent(pointer("pointerdown", x, y, 1));
+    document.getSelection()?.addRange(range);
+    document.dispatchEvent(new Event("selectionchange"));
+    paragraph.dispatchEvent(pointer("pointermove", x + 24, y, 1));
+    await expect(scroller).not.toHaveAttribute("data-grab");
+    await expect(getComputedStyle(scroller).cursor).not.toBe("grab");
+    document.dispatchEvent(pointer("pointerup", x + 24, y));
+    await expect(scroller).toHaveAttribute("data-grab", "ready");
   },
 };
