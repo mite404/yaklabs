@@ -6,3 +6,4 @@ storybook-static/
 .fallow/
 .claude/worktrees/
 .artifacts/
+__screenshots__/
