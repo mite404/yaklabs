@@ -22,14 +22,18 @@ this list when it ships.
   (ADR-055, ADR-058).
 - **Show my work as numbered steps.** Adopt the numbered-circle step list from the "Application
   simulator" screenshot, which fits the legibility story (ADR-036).
+- **Lanes that reorder and drop in place.** The canvas appends; dragging a lane to a new position,
+  or dropping between two lanes, is next (ADR-089).
 
 ## Engineering
 
 - **Replies that produce cards.** The `Agent` seam still yields text only, so today's cards come
   from the seed thread. Next: the seam carries a card chunk, the worker declares the catalog as a
   tool, validates each `tool_use` with the catalog's schemas, and loops until the reply ends.
-- **Dark mode for the whole catalog.** `tokens.css` themes only the attention surfaces; the app's
-  theme toggle switches the root's `data-theme` today, and the page stays light (ADR-046).
+- **Card lanes that persist.** A card opened large on the canvas lasts the visit; keeping it means
+  storing its envelope beside the hidden-lane list (ADR-089).
+- **A keyboard path onto the canvas.** Drag and drop has none; the Blank thread button is the only
+  keyboard route, and a "send highlight to canvas" action on the selection would give it one.
 - **Make the catalog pass `noUncheckedIndexedAccess`.** Eight index reads in `interactive.ts` and
   `thread.ts` fail it, so `packages/runtime` keeps the flag off; the catalog should pass the
   shared base config.

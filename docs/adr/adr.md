@@ -942,3 +942,54 @@ token issuer remain unverified until a key and a person's sign-in are available.
 The seam between the thread and the agent still carries text only, so cards come from the seed
 thread today; card-producing replies are the next increment, and they change the seam, not the
 worker or the gateway.
+
+## ADR-089 - The compose canvas beside the thread, and a rail
+
+2026-09-26 - Accepted (Ethan); carries out ADR-083 and extends ADR-041.
+The thread page is two panes on one screen: the primary thread on the left and, to its right, the
+compose canvas, a dotted field that grows into a row of lanes. The divider between them is a
+`react-resizable-panels` separator (shadcn's Resizable primitive on Kay's tokens) that drags
+anywhere along its length, with floors of 28% and 20% so neither pane can vanish; the library reads
+a bare number as pixels and a string as a percentage, so the sizes are strings.
+Two things land on the canvas. A highlight dragged out of any thread arrives as the browser's own
+plain-text drag and starts a new thread of the same project: a fresh conversation in the worker's
+store, titled by the highlight's first line, whose compose box opens with the highlight quoted and
+the caret beneath it, so the user asks and no turn is sent on the drop. A card dragged by its header
+opens large in a lane of its own; the header is the handle so the slider inside an interactive card
+keeps its own drag, and the drag carries the same envelope a share link does (`SharedCard` under
+`application/x-kay-card`), which is why a card can be dropped anywhere that reads that type.
+Open space always remains at the end of the row, the whole canvas when it is empty and a slimmer
+column once lanes exist, so there is always somewhere to put the next thing, and its copy names the
+two drags. Thread lanes persist because their conversations do: the canvas lists every conversation
+but the primary, oldest first, less the lanes closed by hand, whose ids live in localStorage. Card
+lanes are a way of looking and last the visit.
+The header became a rail: the Kay mark, Thread and Lab as icons with tooltips, and at the foot the
+theme and the account. GitButler's workspace was the reference for the concept (lanes on a canvas,
+open ground kept to the right), not for the look; the rail and the canvas use Kay's paper, hairline,
+serif and olive.
+Not yet: lanes that reorder or drop at a position, a keyboard path for a highlight (the Blank thread
+button is the keyboard route today), and card lanes that persist; each is in `docs/LATER.md`.
+
+## ADR-090 - Dark mode for every surface
+
+2026-09-26 - Accepted (Ethan); extends ADR-046.
+ADR-046 themed only the attention surfaces, so the toggle switched `data-theme` and the page stayed
+light. Dark mode now redefines the page's roles under `:root[data-theme="dark"]`: the window is the
+site's night green (`--yak-night`), the app surface a step above it (`#1a1e1a`), hover and inset a
+step above that, the compose box and menus lifted again, and the cream that was the paper becomes
+the ink (14.7:1) with a soft ink at 72% cream (8.1:1). Lines are cream at 72% and 18%; the olive
+lifts to `#8e9d6f` so the slider's accent clears 3:1 (5.8:1); chart marks lift to `#b5b5ae`
+(8.2:1); the user's bubble is sage over the dark paper at 16%, 30% and 45%; shadows deepen; the warm
+notice and the recording dot get dark values of their own. Every ratio is measured against the dark
+paper and written beside its token.
+Three things had to be true first. The cream got a name of its own (`--yak-cream`), because the
+attention tokens and the outline button's hover said `var(--paper)` where they meant the cream, and
+a dark paper would have made that text vanish; `--on-accent` is the cream in either mode, and
+`--on-ink` (paper in light, night in dark) is what sits on an ink fill, which the shadcn bridge maps
+to `--primary-foreground`. The hard-coded whites on the default button and the workbench's current
+item became `--control-bg`, and menus draw on `--compose-bg`, the lifted surface, instead of the raw
+bright paper.
+Proof: all 42 stories shot in light before and after, byte-identical or matching a canonical set on
+a rerun; all 42 shot in dark through the screenshot lever's new `--theme` option and read by eye;
+and the browser lever measures that the page, the paper and the ink all change when the toggle is
+used, instead of trusting the attribute.

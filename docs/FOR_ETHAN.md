@@ -27,6 +27,13 @@ choice rides into the model's prompt as `[Card view: Net profit · Sep 14–20]`
 about the view they set (ADR-030, ADR-031). Proven in headless Chromium: the reply names the view,
 and a reload brings all four turns back from disk. What still waits: a model key in the gateway,
 and replies that produce cards, since the seam between thread and agent still carries only text.
+The app has a shape now, not just a thread. A rail on the left holds the mark, Thread and Lab, the
+theme and the account. Beside the thread sits the compose canvas (ADR-089): a dotted field where a
+highlight dragged out of the thread starts a new thread of the same project, with the highlight
+quoted in its compose box, and a card dragged by its header opens large in a lane of its own, with
+open ground always kept to the right for the next drop. The divider between thread and canvas drags
+anywhere along its length. And dark mode is real (ADR-090): the night green page, cream ink, every
+ratio measured, where before only the attention cards changed.
 
 ## 2. Cast & Crew
 
@@ -55,6 +62,11 @@ Nothing is built yet, so the cast is the set of ideas the prototypes will be mad
   alone, under the same lights, before it goes on stage.
 - **The ui package** (`packages/ui`) is the paint shop: shadcn primitives mixed only from Kay's
   tokens, so anything an agent builds comes out in the house colours (ADR-082).
+- **The rail** is the corridor outside the theatre: the mark on the door, one icon per room, and at
+  the far end the light switch and the cloakroom.
+- **The compose canvas** is the cutting-room wall: pull a line out of the thread and pin it up to
+  start a new cut, drag a card over to see it at size, and there is always bare wall to the right
+  for the next idea (ADR-089).
 
 ## 3. Behind the Scenes
 
@@ -380,6 +392,22 @@ Nothing is built yet, so the cast is the set of ideas the prototypes will be mad
   on screen until a second visit. The browser lever had hidden this for days behind a warm-up
   load. Fix: the flag, and a lever whose first load has to be clean. Lesson: when a check needs
   a warm-up to pass, the warm-up is the bug report.
+- **Fifty-two pixels wide.** The first split rendered the thread as a sliver. The panel library
+  reads a bare number as pixels and a string as a percentage, so `defaultSize={52}` asked for
+  fifty-two pixels. The lever's frame showed it and a geometry dump named it. Lesson: when a layout
+  is wrong by an order of magnitude, read the unit before the math.
+- **The drag that was aimed at nothing.** The card drag timed out for the same reason: its handle
+  sat inside that sliver, off screen, so the canvas intercepted the pointer. One bug, two symptoms;
+  the fix for the first fixed the second. Lesson: chase the earliest failure, not the loudest.
+- **Where paper meant cream.** Dark mode's first draft would have made the attention cards' text
+  vanish: a dozen tokens said `var(--paper)` where they meant the cream, and once paper turned dark
+  so did the text on the slate cards. Fix: the cream got its own name. Lesson: a token names a
+  role; when one value plays two roles, split it before you theme it.
+- **Eight props, one point over.** Adding one prop to the thread panel pushed fallow's cognitive
+  score to 16 again, since it weighs props as well as branches. A ternary that chose between an
+  empty style and one with a width went instead: React drops an undefined width by itself, so
+  `style={{ width }}` renders the same DOM with one branch fewer. Lesson: before extracting, look
+  for a branch that never needed to exist.
 
 ## 5. Director's Commentary
 
