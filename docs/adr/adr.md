@@ -474,3 +474,9 @@ Convex is the fast alternative: it can host the whole runtime (its actions run u
 2026-09-26 - Proposed; amends ADR-002 and ADR-074.
 Kay's docs (docs.meetkay.ai, now reachable, so ADR-002's reliance on Glass as a stand-in is no longer needed) say Kay is "a small stable core plus a set of extensions", where first-party integrations are plugins that contribute tools, integrations, `scheme://` resources, bundled skills and Pages ("full React apps hosted inside Kay's workspace"), and Kay runs on macOS only today.
 So the slice is packaged the way a plugin would be: the catalog cards as a Page, the catalog as tools the agent calls, and the card rules as a bundled `SKILL.md`, which makes "how would this ship in Kay?" a one-sentence answer; the private plugin SDK is out of reach, so this mirrors the contract's shape rather than using it.
+
+## ADR-079 - Voice first: Kay can read its last reply aloud
+
+2026-09-26 - Proposed; the shortcut is pending Ethan's choice.
+Kay's quickstart promises "Download it, sign in, and start talking", so the slice doubles down on voice: dictation already exists (ADR-028), and now, when a reply finishes streaming, a small semi-transparent hint appears above the compose box, "Press [shortcut] to hear me", clickable as well as keyboard-driven, which reads back only the last completed reply (for a card, its one-sentence summary); a speaker button in the compose area does the same, instead of one under every message.
+The hint is a non-blocking toast, not a modal, so it never takes focus from typing, and it goes away when the user types or after a few seconds; ⌘Space cannot be the shortcut because macOS gives it to Spotlight before any app sees it; speech goes through the gateway with the ElevenLabs key held server-side and nothing stored, with the browser's built-in voice as an on-device fallback, and the hint's text must pass 4.5:1 against the thread behind it (ADR-065).
