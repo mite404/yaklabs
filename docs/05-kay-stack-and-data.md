@@ -13,13 +13,14 @@ Legal pages change: re-read the sources before quoting them in the interview.
 | Privacy Policy | https://meetkay.ai/privacy | as served 2026-09-26 |
 | Careers and job posts | https://meetkay.ai/careers | Design Engineer, Design Engineer: Infrastructure, Frontend Engineer, Developer Experience, AI Harnesses, Cloud Infrastructure |
 | Marketing sites | https://meetkay.ai, https://yaklabs.ai | page source and response headers |
+| Kay docs (4 pages: welcome, quickstart, developer overview, own OAuth client) | https://docs.meetkay.ai (full index at `/llms.txt`) | as served 2026-09-26 |
 
 ## The stack
 
 | Layer | What they use | Evidence |
 | --- | --- | --- |
 | Codebase | One TypeScript monorepo: "a desktop app, a daemon, cloud services, and dozens of plugins" (pnpm or Turborepo style tooling) | Developer Experience post |
-| App UI | React and CSS; "data flow across process boundaries"; macOS and Windows | Frontend and Design Engineer: Infrastructure posts |
+| App UI | React and CSS; "data flow across process boundaries"; **macOS only today** ("Windows and Linux are not available yet"; Apple silicon and Intel builds), while the Frontend post asks for macOS and Windows experience, so Windows is coming | Frontend and Design Engineer: Infrastructure posts, Quickstart |
 | Desktop shell | Electron, **inferred** and unconfirmed: a Node-heavy TypeScript stack with a daemon, and an app data folder named after the app (`~/Library/Application Support/Yak/`) | Privacy Policy §6, job posts |
 | Systems language | Rust or Go is a nice-to-have for the AI Harnesses role only ("Systems-language experience (Rust, Go) alongside TypeScript"); nothing says the backend uses it | AI Harnesses post |
 | Hosted services | "the API, the inference gateway", plus Cloudflare-hosted "OAuth broker, downloads, release operations, build cache, website, and careers" | DPA Annex III, Data Use |
@@ -30,6 +31,7 @@ Legal pages change: re-read the sources before quoting them in the interview.
 | Analytics and logs | PostHog | Data Use |
 | Billing, feedback | Stripe; GitHub issues | Data Use |
 | Marketing sites | meetkay.ai is Astro with no client JavaScript; yaklabs.ai is hand-written HTML; both behind Cloudflare | page source, headers |
+| Docs site | Mintlify (a hosted docs service, itself Next.js on Vercel, behind Cloudflare) | response headers, `generator` meta |
 
 ## The DPA in brief
 
@@ -64,3 +66,25 @@ Legal pages change: re-read the sources before quoting them in the interview.
 - **Conversations stay on the device.** A slice that stores chat history in a cloud database contradicts the product's central privacy promise (ADR-075).
 - **The cloud holds only what Kay's cloud holds:** a gateway that streams and stores nothing, and usage metadata without content.
 - **Kay's backend is separate services, not server functions attached to a web router:** the desktop app calls the API and the gateway over HTTPS. The slice should keep the same split (ADR-076, ADR-077).
+
+## What the docs add (docs.meetkay.ai)
+
+**A small core plus extensions, built that way today.** "Kay is a small stable core plus a set of extensions. That isn't a description of a future plugin ecosystem - it's how Kay is built today. Gmail, GitHub, Notion, Slack, and the rest are plugins loaded through the same contract your own code would use."
+
+**Two ways to extend Kay:**
+
+| | Skill | Plugin |
+| --- | --- | --- |
+| What it is | A Markdown file of instructions (`SKILL.md` with `name` and `description` front matter) | A package that runs inside Kay, with Kay's own authority |
+| Where it lives | `~/.kay/agent/skills/<name>/`, a project's `.kay/skills/`, or a git repository; Kay also reads `.claude/skills/`, so Claude Code skills work as-is | A git repository |
+| Tooling | A text editor | The plugin SDK: `@yaklabs-ai/plugin-sdk` and `@yaklabs-ai/plugin-protocol`, private packages on GitHub Packages (organization members and design partners only) |
+
+**What a plugin can contribute:** tools the agent can call; integrations (a connected service with its own sign-in); addressable resources under its own `scheme://` (Kay's own guide is `skill://skills/authoring`), which the agent reads like anything else; bundled skills; and **Pages, "full React apps hosted inside Kay's workspace"**.
+
+**The approval model:** "the agent can propose, but only a human can grant." The agent can stage a skill or plugin source, request a permission, or ask to connect an integration, but cannot approve any of them; approval is a review card in the conversation, enabling a plugin is a second approval, and writing files into the plugins directory "fails closed rather than loading whatever it finds".
+
+**Onboarding is a conversation:** Kay looks at installed apps, top-level Documents folders, git identity and history from other AI coding tools, asks for consent with "a permission card you answer yourself", and offers to connect Slack, Gmail, GitHub, Calendar and Notion.
+
+**Other facts:** MCP support exists in internal testing but is not in the released build; Kay picks the model for each task and asks before anything consequential (sending, changing a file, spending money); updates download in the background and install only on "Restart to update"; the app is signed and notarized as Big Wombat LLC, distributed as a `.dmg`; Google can be connected through the user's own OAuth client (a "Desktop app" client type).
+
+**What this means for the slice:** our lab can be shaped as a Kay plugin: its cards as a Page (a React app), its catalog as tools, and its rules as a bundled skill; and its "Needs attention" card and fail-closed catalog already follow Kay's "the agent proposes, the human grants" model (ADR-078).
