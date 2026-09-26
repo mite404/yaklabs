@@ -2,11 +2,13 @@ import { useEffect, useRef, type KeyboardEvent, type ReactNode } from "react";
 
 // Keeps Tab inside the dialog, so focus cannot wander to what the modal pauses.
 function trapTab(event: KeyboardEvent<HTMLElement>) {
-  const focusable = event.currentTarget.querySelectorAll<HTMLElement>(
-    "button:not([disabled]), input:not([disabled]), textarea:not([disabled]), [tabindex='0']",
-  );
-  const first = focusable[0];
-  const last = focusable[focusable.length - 1];
+  const focusable = Array.from(
+    event.currentTarget.querySelectorAll<HTMLElement>(
+      "button:not([disabled]), input:not([disabled]), textarea:not([disabled]), [tabindex='0']",
+    ),
+  ); // → HTMLElement[]
+  const first = focusable.at(0);
+  const last = focusable.at(-1);
   if (!first || !last) return;
   if (event.shiftKey && document.activeElement === first) {
     event.preventDefault();
@@ -59,17 +61,19 @@ export function Modal({
     }
   }
 
+  // A <dialog> shown in place with `open`, not in the top layer with showModal(), which would
+  // cover the whole page; aria-modal still tells assistive technology the rest is paused.
   return (
     <div className="modal-backdrop">
-      <section
+      <dialog
+        open
         className={className ? `modal ${className}` : "modal"}
-        role="dialog"
         aria-modal="true"
         aria-labelledby={labelledBy}
         onKeyDown={keys}
       >
         {children}
-      </section>
+      </dialog>
     </div>
   );
 }
