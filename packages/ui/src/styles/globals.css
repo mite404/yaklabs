@@ -12,7 +12,7 @@
    hairlines and 4px corners with no per-component restyling, and dark mode follows the tokens
    because every value here is a reference, not a colour. */
 :root {
-  --background: var(--paper);
+  --background: var(--bg); /* the window around the app; surfaces are paper */
   --foreground: var(--ink);
   --card: var(--paper);
   --card-foreground: var(--ink);

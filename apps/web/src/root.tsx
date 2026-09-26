@@ -1,4 +1,7 @@
+import { AuthKitProvider } from "@workos-inc/authkit-react";
+import { trackInputModality } from "@yaklabs/catalog/inputModality";
 import { Toaster } from "@yaklabs/ui/components/sonner";
+import { useEffect, type ReactNode } from "react";
 import {
   isRouteErrorResponse,
   Links,
@@ -6,30 +9,24 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
+  useNavigate,
 } from "react-router";
 
 import "./index.css";
 import type { Route } from "./+types/root";
 import Header from "./components/header";
-import { ThemeProvider } from "./components/theme-provider";
+import { env } from "./env";
+import { THEME_BOOT, useTheme } from "./theme";
 
-export const links: Route.LinksFunction = () => [
-  { rel: "preconnect", href: "https://fonts.googleapis.com" },
-  { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
-  {
-    rel: "stylesheet",
-    href: "https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap",
-  },
-];
-
-export function Layout({ children }: { children: React.ReactNode }) {
+export function Layout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <Meta />
         <Links />
+        <script dangerouslySetInnerHTML={{ __html: THEME_BOOT }} />
       </head>
       <body>
         {children}
@@ -40,20 +37,48 @@ export function Layout({ children }: { children: React.ReactNode }) {
   );
 }
 
-export default function App() {
+// `state` comes back through the sign-in redirect unprotected, so only a same-origin path
+// is followed; anything else lands on the thread.
+function safeReturnTo(state: unknown): string {
+  const wanted =
+    typeof state === "object" && state !== null && "returnTo" in state ? state.returnTo : undefined;
+  if (typeof wanted !== "string") return "/";
+  try {
+    const url = new URL(wanted, window.location.origin); // → absolute, resolved against us
+    return url.origin === window.location.origin ? url.pathname + url.search : "/";
+  } catch {
+    return "/";
+  }
+}
+
+// WorkOS AuthKit in the browser (ADR-084); the provider also finishes the sign-in when the
+// callback route loads with a code. Dev mode keeps tokens in localStorage on localhost only.
+function Providers({ children }: { children: ReactNode }) {
+  const navigate = useNavigate();
+  if (env.auth.kind === "none") return children;
   return (
-    <ThemeProvider
-      attribute="data-theme"
-      defaultTheme="light"
-      disableTransitionOnChange
-      storageKey="theme"
+    <AuthKitProvider
+      clientId={env.auth.clientId}
+      redirectUri={env.auth.redirectUri}
+      devMode={window.location.hostname === "localhost"}
+      onRedirectCallback={({ state }) => void navigate(safeReturnTo(state), { replace: true })}
     >
-      <div className="grid grid-rows-[auto_1fr] h-svh">
-        <Header />
+      {children}
+    </AuthKitProvider>
+  );
+}
+
+export default function App() {
+  const [preference, setPreference] = useTheme();
+  useEffect(() => trackInputModality(), []);
+  return (
+    <Providers>
+      <div className="grid h-svh grid-rows-[auto_1fr]">
+        <Header onTheme={setPreference} />
         <Outlet />
       </div>
-      <Toaster richColors />
-    </ThemeProvider>
+      <Toaster richColors theme={preference} />
+    </Providers>
   );
 }
 

@@ -5,6 +5,8 @@
   "scripts": {
     "build": "react-router build",
     "dev": "react-router dev",
+    "test": "vitest run",
+    "test:unit": "vitest run",
     "typecheck": "react-router typegen && tsc --noEmit"
   },
   "dependencies": {
@@ -15,7 +17,6 @@
     "@yaklabs/ui": "workspace:*",
     "isbot": "^5",
     "lucide-react": "catalog:",
-    "next-themes": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
     "react-router": "^8.3.1",
@@ -31,6 +32,7 @@
     "@yaklabs/config": "workspace:*",
     "tailwindcss": "catalog:",
     "typescript": "catalog:",
-    "vite": "catalog:"
+    "vite": "catalog:",
+    "vitest": "catalog:"
   }
 }

@@ -6,12 +6,16 @@ import {
   DropdownMenuTrigger,
 } from "@yaklabs/ui/components/dropdown-menu";
 import { Moon, Sun } from "lucide-react";
+import type { ThemePreference } from "../theme";
 
-import { useTheme } from "@/components/theme-provider";
+const choices: { value: ThemePreference; label: string }[] = [
+  { value: "light", label: "Light" },
+  { value: "dark", label: "Dark" },
+  { value: "system", label: "System" },
+];
 
-export function ModeToggle() {
-  const { setTheme } = useTheme();
-
+/** Light, dark, or follow the system; the root's data-theme carries the answer (ADR-046). */
+export function ModeToggle({ onChoose }: { onChoose: (next: ThemePreference) => void }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger render={<Button variant="outline" size="icon" />}>
@@ -20,9 +24,11 @@ export function ModeToggle() {
         <span className="sr-only">Toggle theme</span>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={() => setTheme("light")}>Light</DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme("dark")}>Dark</DropdownMenuItem>
-        <DropdownMenuItem onClick={() => setTheme("system")}>System</DropdownMenuItem>
+        {choices.map(({ value, label }) => (
+          <DropdownMenuItem key={value} onClick={() => onChoose(value)}>
+            {label}
+          </DropdownMenuItem>
+        ))}
       </DropdownMenuContent>
     </DropdownMenu>
   );

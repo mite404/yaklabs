@@ -7,20 +7,12 @@ import {
   OctagonXIcon,
   TriangleAlertIcon,
 } from "lucide-react";
-import { useTheme } from "next-themes";
 import { Toaster as Sonner, type ToasterProps } from "sonner";
 
-// next-themes reports any string; Sonner only knows these three.
-function toasterTheme(theme: string | undefined): ToasterProps["theme"] {
-  return theme === "light" || theme === "dark" ? theme : "system";
-}
-
+/** shadcn's toaster on Kay's tokens; the app passes the theme it applied to the root. */
 const Toaster = ({ ...props }: ToasterProps) => {
-  const { theme } = useTheme();
-
   return (
     <Sonner
-      theme={toasterTheme(theme)}
       className="toaster group"
       icons={{
         success: <CircleCheckIcon className="size-4" />,

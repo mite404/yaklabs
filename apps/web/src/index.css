@@ -1,1 +1,6 @@
+/* Kay's stylesheet styles bare elements, so it sits in its own layer: above Tailwind's
+   preflight, which would otherwise reset the catalog's buttons and headings, and below the
+   utilities, so a class on a shadcn primitive still wins (ADR-082). */
+@layer theme, base, catalog, components, utilities;
 @import "@yaklabs/ui/globals.css";
+@import "@yaklabs/catalog/tokens.css" layer(catalog);
