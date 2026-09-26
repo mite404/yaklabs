@@ -70,20 +70,22 @@ export function Menu({
   const button = useRef<HTMLButtonElement>(null);
   const list = useRef<HTMLUListElement>(null);
 
-  const close = (refocus = true) => {
+  // Close and hand focus back to the trigger, after Escape or a choice.
+  const close = () => {
     setOpen(false);
-    if (refocus) button.current?.focus();
+    button.current?.focus();
   };
 
-  // Focus the first available item on open; close on any click outside.
+  // Focus the first available item on open; close on any click outside, or a scroll or resize,
+  // leaving focus where that put it.
   useEffect((): void | (() => void) => {
     if (!open) return;
     list.current?.querySelector<HTMLButtonElement>("button:not(:disabled)")?.focus();
     const outside = (event: PointerEvent) => {
-      if (!(event.target instanceof Node && root.current?.contains(event.target))) close(false);
+      if (!(event.target instanceof Node && root.current?.contains(event.target))) setOpen(false);
     };
     const away = (event: Event) => {
-      if (!(event.target instanceof Node && list.current?.contains(event.target))) close(false);
+      if (!(event.target instanceof Node && list.current?.contains(event.target))) setOpen(false);
     };
     document.addEventListener("pointerdown", outside);
     window.addEventListener("scroll", away, true);
