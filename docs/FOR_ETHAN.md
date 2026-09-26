@@ -358,7 +358,10 @@ Nothing is built yet, so the cast is the set of ideas the prototypes will be mad
   levers and rewrote their root resolution to `import.meta.dirname`, which left `fileURLToPath`
   imported and unused. The fixed file was staged, and the lint that had already passed never ran
   again, so CI caught it. Fix: the hook lints the fixed files a second time, without fixing.
-  Lesson: an autofix is an edit like any other, and whatever checks the edit has to run after it.
+  The same autofix also turned an index inside the lever into `.at()` on a NodeList, which has
+  no such method, and nobody saw it until the lever ran again a day later; that rule is now off
+  for the script folders. Lesson: an autofix is an edit like any other, and whatever checks the
+  edit has to run after it.
 - **The lever nobody imported.** fallow finds code by walking imports from the entry points it
   knows, so the two hand-run browser levers under `apps/web/scripts` counted as dead files the
   moment they were committed, and CI failed on them. Fix: declare them as entry points and keep
@@ -370,6 +373,13 @@ Nothing is built yet, so the cast is the set of ideas the prototypes will be mad
   whole session; the single before-shot had caught the chart mid-measure. Lesson: when one
   capture disagrees with the rest, suspect the capture before the code, and keep enough captures
   to tell the two apart.
+- **The blank first take.** Ethan's first `pnpm dev:web` showed a white page. React Router 8
+  hands Vite's dependency scan an empty list unless a future flag is on, so from a cold cache
+  Vite met every dependency while serving the first page, re-bundled in two batches, and the
+  reload it triggered asked for chunks the second batch had already replaced: 504s and nothing
+  on screen until a second visit. The browser lever had hidden this for days behind a warm-up
+  load. Fix: the flag, and a lever whose first load has to be clean. Lesson: when a check needs
+  a warm-up to pass, the warm-up is the bug report.
 
 ## 5. Director's Commentary
 
