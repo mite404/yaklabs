@@ -454,7 +454,7 @@ The desktop shell is probably Electron but unconfirmed, and Rust or Go appears o
 ## ADR-075 - The slice keeps conversations on the device
 
 2026-09-26 - Proposed.
-Kay's DPA makes on-device storage "the primary control": conversations, files, notes and credentials stay local, and hosted prompts pass through a gateway that writes nothing down, so the slice stores conversations in the browser (IndexedDB) and sends to the cloud only what Kay's cloud holds (usage metadata without content).
+Kay's DPA makes on-device storage "the primary control": conversations, files, notes and credentials stay local, and hosted prompts pass through a gateway that writes nothing down, so the slice stores conversations in the browser (see ADR-081) and sends to the cloud only what Kay's cloud holds (usage metadata without content).
 This rules out backends that persist message history by default, such as Convex's agent component (`@convex-dev/agent`) and its persistent text streaming helper, unless storage is turned off.
 
 ## ADR-076 - The slice mirrors Kay's process split
@@ -487,3 +487,9 @@ The hint is a non-blocking toast, not a modal, so it never takes focus from typi
 Kay's Data Use page names its inference gateway: "It runs Bifrost, open-source software we self-host on Fly.io", an LLM gateway written in Go with one OpenAI-compatible API across providers; running the same image on Fly.io (`fly deploy --image docker.io/maximhq/bifrost:latest`, configured from `config.json`) makes the slice's gateway the same software on the same host as Kay's.
 Bifrost's docs settle the three open questions: Anthropic chat streams, and ElevenLabs is supported for speech output (streamed) and for transcription (not streamed), while Deepgram is not a provider; browser access is set by `allowed_origins` (default `*`, so it must be narrowed); and `enforce_auth_on_inference` with virtual keys, each with a budget and a rate limit, keeps the provider keys on the gateway, though a key used from the browser is visible in the page, so its budget must be small; the dashboard needs its password and setup token before the app is public.
 Its content settings mirror Kay's DPA almost word for word: `disable_content_logging: true` keeps metadata only, and `allow_per_request_content_storage_override: false` means no request can opt back into storage.
+
+## ADR-081 - The slice stores its data in SQLite, in the browser's private file system
+
+2026-09-26 - Accepted (Ethan); completes ADR-075.
+Conversations are saved as markdown files and indexed in SQLite (the official WebAssembly build, `@sqlite.org/sqlite-wasm`), both kept in the Origin Private File System (OPFS), a folder the browser gives only this site; that mirrors Kay's local storage (transcripts as markdown, a local database of text and vectors) and its promise that conversations never leave the device, and it removes any hosted database from the slice.
+SQLite's fast OPFS mode works only inside a Web Worker, so the worker that stands in for Kay's daemon (ADR-076) owns the database; the page asks the browser to keep the data (`navigator.storage.persist()`), and clearing site data still wipes it, as deleting Kay's application data folder would.
