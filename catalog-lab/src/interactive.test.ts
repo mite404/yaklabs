@@ -12,7 +12,7 @@ import { profitCard } from "./thread";
 
 // A deep copy the test can break without touching the shared fixture.
 function card(): InteractiveSelection {
-  return structuredClone(profitCard) as InteractiveSelection;
+  return structuredClone(profitCard);
 }
 
 describe("resolveInteractive", () => {

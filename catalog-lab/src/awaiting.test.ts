@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { resolveAwaiting } from "./awaiting";
-import { threads } from "./thread";
+import { forecastQuestion, threads } from "./thread";
 
-const valid = threads.awaiting.awaiting as Record<string, unknown>;
+const valid = forecastQuestion;
 
 // The card's question when approved, or undefined when it would never be shown.
 function card(payload: unknown) {

@@ -1,5 +1,6 @@
+import type { AwaitingInput } from "./awaiting";
 import { scenarios } from "./fixtures";
-import type { CardAttachment } from "./interactive";
+import type { CardAttachment, InteractiveSelection } from "./interactive";
 import type { RecapItem } from "./recapRules";
 
 /** One turn in a thread; agent turns may carry a catalog payload the host validates. */
@@ -83,7 +84,7 @@ export const profitCard = {
       "Linked the slider to those three results",
     ],
   },
-};
+} satisfies InteractiveSelection;
 
 // Edge cases: a single reading and a view the catalog does not have.
 const fallbacks: Thread = {
@@ -123,6 +124,19 @@ const fallbacks: Thread = {
     },
   ],
 };
+
+/** The question the agent is blocked on in the awaiting thread: how to handle the missing view. */
+export const forecastQuestion = {
+  question: "A forecast view isn't in the catalog yet. How should I handle it?",
+  options: [
+    {
+      label: "Request a forecast view",
+      detail: "I'll add it to the catalog backlog and keep showing exact values until it ships.",
+    },
+  ],
+  answer: { placeholder: "How many weeks ahead should it forecast?" },
+  elsewhere: "Chat about a plan to capture a different selection of sales data",
+} satisfies AwaitingInput;
 
 // Synthetic conversations: every payload comes from the shared fixtures,
 // so a card in a thread and a card in a story are the exact same input.
@@ -188,21 +202,7 @@ export const threads: Record<string, Thread> = {
   },
   fallbacks,
   /** The fallbacks thread with the agent blocked on the user: whether to request the missing view. */
-  awaiting: {
-    ...fallbacks,
-    awaiting: {
-      question: "A forecast view isn't in the catalog yet. How should I handle it?",
-      options: [
-        {
-          label: "Request a forecast view",
-          detail:
-            "I'll add it to the catalog backlog and keep showing exact values until it ships.",
-        },
-      ],
-      answer: { placeholder: "How many weeks ahead should it forecast?" },
-      elsewhere: "Chat about a plan to capture a different selection of sales data",
-    },
-  },
+  awaiting: { ...fallbacks, awaiting: forecastQuestion },
   /** The same question, malformed: the way out was written into the one-line typed-answer
    *  row, too long to fit, so there is no card; the agent asks in plain words (ADR-040). */
   malformed: {
