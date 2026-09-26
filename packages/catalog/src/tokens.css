@@ -36,6 +36,7 @@
      our choice, "Ethan" = Ethan's pick. Nothing is sampled from pixels: the screen used for
      sampling had a blue-light filter (ADR-051). */
   --yak-night: #111411; /* css: the page body behind the shell */
+  --yak-cream: #f0efea; /* css: the site's paper; the text on dark fills in either mode */
   --yak-graphite: #56564f; /* Ethan: chart marks; green is kept for button hovers (ADR-058) */
   --yak-paper-bright: #f8f8f6; /* Ethan: one step brighter than paper */
   /* derived: --sage's hue (OKLCH 124°) at L 0.46 / C 0.06, an olive that reads as green in
@@ -53,7 +54,9 @@
   --bg: var(--yak-paper-bright); /* the window around the app */
   --compose-bg: var(--yak-paper-bright); /* the compose box, brighter than the app (ADR-056) */
   --olive: var(--yak-green); /* 6.1:1 on paper and under cream text */
-  --on-accent: var(--paper); /* css: the site's text on dark fills */
+  --on-accent: var(--yak-cream); /* css: the site's text on dark fills, in either mode */
+  --on-ink: var(--paper); /* text on an ink fill: paper in light mode, night in dark */
+  --control-bg: white; /* a button at rest: brighter than the paper it sits on */
   /* The user's bubble, and nothing else (ADR-047): the site's sage tint marks "you". */
   --bubble-tint: color-mix(in srgb, var(--sage) 40%, var(--paper));
   --bubble-tint-strong: color-mix(in srgb, var(--sage) 75%, var(--paper));
@@ -119,7 +122,7 @@ button {
   cursor: pointer;
   border: 1px solid var(--hairline);
   border-radius: 7px;
-  background: white;
+  background: var(--control-bg);
   color: var(--ink);
   padding: 10px 14px;
   font-size: 13px;
@@ -136,7 +139,7 @@ button:hover {
   --btn-border: var(--rule); /* css: the site's outline is its rule */
   --btn-hover-bg: var(--moss); /* css: the site's hover rule */
   --btn-hover-border: var(--moss); /* css */
-  --btn-hover-ink: var(--paper); /* css: 10.4:1 on moss */
+  --btn-hover-ink: var(--on-accent); /* css: 10.4:1 on moss */
   --btn-duration: 150ms; /* css */
   --btn-delay: 0ms; /* css: none; kept as a token for iteration */
   --btn-ease: ease; /* css: the default curve */
@@ -220,28 +223,50 @@ button:hover {
   }
 }
 
-/* Dark mode (ADR-046): only the attention surfaces are themed so far. The dark card that
-   was tried in light mode is kept here: paper text, deeper tiles, and darker hovers. */
+/* Dark mode (ADR-046, ADR-090): the page turns to the site's night green, the app surface
+   sits one step above it, and the cream becomes the ink. Ratios are against the dark paper
+   unless a pair says otherwise. */
 :root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: var(--yak-night); /* css: the site's body */
+  --paper: #1a1e1a; /* derived: night lifted a step, the app surface */
+  --paper-deep: #272c27; /* hover and inset fill: one step lighter, the way paper-deep is darker */
+  --compose-bg: #222722; /* the compose box and menus: lifted from the app, as the bright paper is */
+  --control-bg: #222722;
+  --ink: var(--yak-cream); /* 14.7:1 */
+  --soft-ink: #b4b4b0; /* derived: cream at 72%; 8.1:1, 6.8:1 on paper-deep */
+  --rule: rgba(240, 239, 234, 0.72);
+  --hairline: rgba(240, 239, 234, 0.18);
+  --olive: #8e9d6f; /* derived: the same hue, lifted so the slider's accent clears 3:1 (5.8:1) */
+  --data: #b5b5ae; /* chart marks: 8.2:1 */
+  --on-ink: var(--yak-night); /* 16.1:1 on the cream */
+  --bubble-tint: color-mix(in srgb, var(--sage) 16%, var(--paper));
+  --bubble-tint-strong: color-mix(in srgb, var(--sage) 30%, var(--paper));
+  --bubble-line: color-mix(in srgb, var(--sage) 45%, var(--paper)); /* 3.2:1 */
+  --shadow: color-mix(in srgb, black 40%, transparent);
+  --shadow-strong: color-mix(in srgb, black 60%, transparent);
+  --warn-bg: #3a3320; /* derived: the warm notice, deepened */
+  --warn-ink: #eddcaa; /* 9.2:1 on it */
+  --record: #d7573f; /* the recording dot, lifted to 4.3:1 */
   --attention-bg: var(--yak-slate);
-  --on-attention: var(--paper); /* 5.3:1 */
-  --on-attention-soft: color-mix(in srgb, var(--paper) 90%, var(--yak-slate)); /* 4.7:1 */
+  --on-attention: var(--yak-cream); /* 5.3:1 */
+  --on-attention-soft: color-mix(in srgb, var(--yak-cream) 90%, var(--yak-slate)); /* 4.7:1 */
   /* derived: hover on dark surfaces, halfway to the night green; paper 9.8:1 */
   --attention-hover: color-mix(in srgb, var(--yak-night) 50%, var(--yak-slate));
-  --attention-hover-ink: var(--paper); /* 9.8:1 */
+  --attention-hover-ink: var(--yak-cream); /* 9.8:1 */
   --awaiting-bg: var(--yak-slate); /* dark mode keeps the Needs you card as it was */
   --awaiting-tile-bg: color-mix(in srgb, var(--yak-night) 18%, var(--yak-slate));
   --awaiting-hover: color-mix(in srgb, var(--yak-night) 50%, var(--yak-slate));
-  --attention-line: color-mix(in srgb, var(--paper) 14%, var(--yak-slate));
-  --attention-focus: var(--paper);
+  --attention-line: color-mix(in srgb, var(--yak-cream) 14%, var(--yak-slate));
+  --attention-focus: var(--yak-cream);
   --on-attention-inverse: var(--yak-slate); /* 5.3:1 on paper */
   --tile-bg: color-mix(in srgb, var(--yak-night) 18%, var(--yak-slate)); /* paper 6.6:1 */
-  --tile-ink: var(--paper);
-  --tile-muted: color-mix(in srgb, var(--paper) 90%, var(--yak-slate)); /* 5.8:1 */
+  --tile-ink: var(--yak-cream);
+  --tile-muted: color-mix(in srgb, var(--yak-cream) 90%, var(--yak-slate)); /* 5.8:1 */
   --tile-wash: var(--attention-hover);
   --tile-field-bg: color-mix(in srgb, var(--yak-night) 12%, var(--yak-slate));
-  --tile-field-border: color-mix(in srgb, var(--paper) 60%, var(--yak-slate));
-  --tile-field-placeholder: color-mix(in srgb, var(--paper) 78%, var(--yak-slate)); /* 4.6:1 */
+  --tile-field-border: color-mix(in srgb, var(--yak-cream) 60%, var(--yak-slate));
+  --tile-field-placeholder: color-mix(in srgb, var(--yak-cream) 78%, var(--yak-slate)); /* 4.6:1 */
 }
 
 /* The attention surface for what needs attention (ADR-042). It redefines the text tokens, so
@@ -384,7 +409,7 @@ nav button span {
   color: var(--soft-ink);
 }
 nav button[aria-current] {
-  background: white;
+  background: var(--control-bg);
   box-shadow: 0 2px 8px var(--shadow);
   font-weight: 650;
 }

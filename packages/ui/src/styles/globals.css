@@ -19,7 +19,7 @@
   --popover: var(--compose-bg);
   --popover-foreground: var(--ink);
   --primary: var(--ink); /* green stays for hovers (ADR-058) */
-  --primary-foreground: var(--on-accent);
+  --primary-foreground: var(--on-ink);
   --secondary: var(--paper-deep);
   --secondary-foreground: var(--ink);
   --muted: var(--paper-deep);

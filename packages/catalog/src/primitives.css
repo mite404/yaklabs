@@ -38,7 +38,7 @@
   margin: 0;
   padding: 4px;
   list-style: none;
-  background: var(--yak-paper-bright);
+  background: var(--compose-bg);
   border: 1px solid var(--hairline);
   border-radius: 8px;
   box-shadow: 0 8px 24px var(--shadow-strong);
