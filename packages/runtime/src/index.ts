@@ -1,3 +1,4 @@
+export { toModelRequest } from "./modelRequest";
 export {
   agentEventSchema,
   agentSpecSchema,
