@@ -8,6 +8,8 @@
 @layer components {
   /* The canvas is a dotted field (ADR-089): open ground that invites something to be put down. */
   .canvas {
+    /* Its own stacking context, so the skeleton can sit under the lanes without leaving it. */
+    isolation: isolate;
     background-color: var(--bg);
     background-image: radial-gradient(var(--hairline) 1px, transparent 1px);
     background-size: 18px 18px;
@@ -57,7 +59,8 @@
   }
   .lane-skeleton {
     position: absolute;
-    z-index: 5;
+    /* Under the lanes: a neighbour sliding aside passes over it, not through a tint. */
+    z-index: -1;
     box-sizing: border-box;
     border: 1px solid var(--data);
     border-radius: var(--radius-card);

@@ -273,10 +273,12 @@ try {
       data,
     }));
   });
-  // The row is wider than the pane, so bring the skeleton's slot into view for the picture.
+  // The row is wider than the pane, so bring the skeleton's slot into view for the picture, once
+  // the neighbours have finished sliding aside.
   await canvas.evaluate((el) => {
     el.scrollLeft = el.querySelector("[data-skeleton]").offsetLeft - 24;
   });
+  await page.waitForTimeout(250);
   await shot("canvas-reorder");
   record(
     "a lifted lane shows a skeleton of itself in the neutral mark colour at the slot it would take",
