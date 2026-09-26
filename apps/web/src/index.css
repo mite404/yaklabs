@@ -15,13 +15,14 @@
     background-size: 18px 18px;
   }
 
-  /* A divider that drags shows a hint of a line while the pointer is on it (ADR-089): ink at
-     the pointer's height, fading to nothing 30px above and below, so the whole length reads as
-     something to take hold of without a line being drawn along all of it. The divider sets
-     --hint-y from the pointer (divider.ts); until it has, the line centres on the divider. */
+  /* A divider that drags shows a hint of a line while the pointer is on it (ADR-089): full ink
+     for 20px either side of the pointer's height, fading to nothing by 50px, so the whole length
+     reads as something to take hold of without a line being drawn along all of it. The divider
+     sets --hint-y from the pointer (divider.ts); until it has, the line centres on the divider. */
   .drag-hint {
     --hint-y: 50%;
-    --hint-reach: 30px;
+    --hint-hold: 20px;
+    --hint-reach: 50px;
   }
   .drag-hint::before {
     content: "";
@@ -32,7 +33,8 @@
     background: linear-gradient(
       to bottom,
       transparent calc(var(--hint-y) - var(--hint-reach)),
-      var(--ink) var(--hint-y),
+      var(--ink) calc(var(--hint-y) - var(--hint-hold)),
+      var(--ink) calc(var(--hint-y) + var(--hint-hold)),
       transparent calc(var(--hint-y) + var(--hint-reach))
     );
     opacity: 0;

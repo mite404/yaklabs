@@ -1,6 +1,6 @@
 import type { PointerEvent } from "react";
 
-// A divider's hint line (ADR-089) is brightest where the pointer is and gone 30px above and
+// A divider's hint line (ADR-089) holds full ink around the pointer and is gone 50px above and
 // below it, so the divider tells the stylesheet the pointer's height as `--hint-y`.
 
 /** Records the pointer's height on the divider it is over, for the hint line to centre on. */

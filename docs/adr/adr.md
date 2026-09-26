@@ -974,8 +974,9 @@ Amended later the same day, after the first run on Ethan's machine. The hand sho
 highlight that already exists: while a button is down the selection growing under it keeps the
 I-beam, as every word processor has since the nineties, and the hand appears on release. Lanes
 resize by the gap after them: the whole gap takes the drag, and while the pointer is on it a hint of
-a line shows, ink at the pointer's height fading to nothing 30px above and below, which JetBrains
-Air does along a full-height blue line; the divider between thread and canvas shows the same hint.
+a line shows, full ink for 20px either side of the pointer's height and gone by 50px, which
+JetBrains Air does along a full-height blue line; the divider between thread and canvas shows the
+same hint.
 Lanes reorder by the grip in the strip above them: past a small dead zone the lane lifts and rides
 the pointer, the lanes it passes step aside, and once its centre crosses a neighbour's a skeleton of
 it in the chart's neutral mark colour (`--data`) holds the slot it would take; the order is kept in
