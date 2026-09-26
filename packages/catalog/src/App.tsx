@@ -18,7 +18,7 @@ type Gap = {
 export function App() {
   const [selected, setSelected] = useState("trend");
   const [draft, setDraft] = useState("");
-  const [custom, setCustom] = useState<unknown>(undefined);
+  const [custom, setCustom] = useState<unknown>();
   const [gaps, setGaps] = useState<Gap[]>([]);
   const [capability, setCapability] = useState("Forecast with uncertainty");
   const scenario = scenarios[selected];
@@ -114,7 +114,9 @@ export function App() {
                 id="payload"
                 value={draft}
                 maxLength={32768}
-                onChange={(event) => setDraft(event.target.value)}
+                onChange={(event) => {
+                  setDraft(event.target.value);
+                }}
                 placeholder="Paste an agent response"
               />
               <button
@@ -172,13 +174,15 @@ export function App() {
               id="capability"
               maxLength={160}
               value={capability}
-              onChange={(event) => setCapability(event.target.value)}
+              onChange={(event) => {
+                setCapability(event.target.value);
+              }}
             />
             <button className="primary" onClick={captureGap}>
               Capture catalog gap
             </button>
-            <p role="status" className="muted">
-              {gaps.length} captured this session · resets on reload
+            <p className="muted">
+              <output>{gaps.length} captured this session · resets on reload</output>
             </p>
           </div>
           {gaps.length > 0 && (
