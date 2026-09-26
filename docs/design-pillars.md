@@ -46,6 +46,11 @@ yaklabs.ai uses two text inks and two line weights, and nothing else: `--ink` fo
 We follow it exactly; a field's placeholder takes the rule's ink, one step greyer than body text, and text selection is `--blue` with ink, as on the site.
 The raw palette (`--yak-*`) exists only to feed the semantic layer, so rebranding is a one-block edit.
 
+### 16. Contrast is measured, never judged by eye
+
+Text needs at least 4.5:1 and UI parts and graphics (rings, outlines, chart marks) at least 3:1, checked against every surface the colour lands on, including hover, selected and dark mode.
+A colour that fails is flagged with its ratio before it ships, even when it was asked for: six colours that looked fine failed on measurement, most of them on the `#8a8a85` hover (ADR-065).
+
 ## Typography
 
 ### 7. Newsreader for display, Inter for everything else

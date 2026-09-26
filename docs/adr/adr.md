@@ -392,3 +392,9 @@ The goal is less friction in the feedback loop: showing the agent what you see s
 Every card has a share button that copies a link to, or opens, a standalone page showing only that component, never the conversation; the card travels in the link's fragment (which never reaches a server) and passes the same catalog check before rendering, so a garbled or edited link shows an honest notice, and interactive cards stay interactive.
 In the lab the page is `share.html` beside the app, or the Share/Public page story inside Storybook; making it public means deploying either one.
 
+
+## ADR-065 - Contrast is measured before a colour ships
+
+2026-09-26 - Accepted.
+Every colour change is checked in numbers, not by eye: text needs at least 4.5:1, and UI parts and graphics (rings, outlines, chart marks) at least 3:1, measured against every surface the colour touches, including hover, selected and dark mode; a requested colour that fails is flagged with its ratio, and the nearest passing option, before it ships.
+Colours that looked fine failed on measurement at least six times: `#8a8a85` with light text (3.2:1, ADR-042), the grey focus ring on the attention card (1.8:1, ADR-044), the regular ink on the `#8a8a85` hover (4.4:1, ADR-046), sage as a chart mark (ADR-058), and olive (2.0:1) and soft ink (2.1:1) on that same hover; taste proposes, numbers dispose.

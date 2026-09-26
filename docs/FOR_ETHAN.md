@@ -47,6 +47,7 @@ Nothing is built yet, so the cast is the set of ideas the prototypes will be mad
 
 - **Primitives before polish.** Disclosure, Menu, Modal, CardHeader and IconButton now sit under every surface, each with its own story, so a new card or panel is assembled rather than invented (ADR-062). The attach menu (with a real screenshot) and the card share menu are the same Menu.
 - **Share the view, not the chat.** Each card can become a public page on its own; the card rides in the link and is validated again on arrival, so the catalog's safety travels with it (ADR-064).
+- **Taste proposes, numbers dispose.** The eye adapts to whatever it is looking at, so a colour that feels fine can still be unreadable; a cinematographer trusts the light meter, not the monitor. Every colour is now measured against each surface it touches, hover included, and a failing pick is flagged with its ratio before it ships (ADR-065).
 
 ## 4. Bloopers
 
