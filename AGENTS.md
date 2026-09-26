@@ -83,6 +83,11 @@ line will not fit in 50 characters, that is usually the commit doing two things 
 
 ## UI components
 
+- Do not convert these components to shadcn: App, AwaitingInputCard, CardHeader, CatalogCard,
+  ChartGlyph, ChatThreadPanel, ComposeBox, DictationModal, Disclosure, IconButton,
+  InteractiveCard, Menu, Modal, Recap, ShareButton, ShareView, Waveform, the icons in `icons.tsx`
+  (ChevronIcon, ShareIcon, LinkIcon, ExternalIcon, FilesIcon, ScreenIcon), and the CSS-only
+  Button (`.btn`) and TextField (`.field`) primitives.
 - Build new components with shadcn.
 - Move an existing component to shadcn only when there is a reason to touch it, and screenshot it
   before and after the move.
