@@ -66,7 +66,7 @@ try {
   const reply = page.locator(".turn-agent").last();
   await page.waitForFunction(
     () => {
-      const turns = document.querySelectorAll(".turn-agent");
+      const turns = [...document.querySelectorAll(".turn-agent")];
       const last = turns.at(-1);
       return (
         turns.length >= 2 &&
