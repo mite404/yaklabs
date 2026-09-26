@@ -178,6 +178,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .menu,
+  .device-list,
   .modal-backdrop,
   .modal {
     animation: none;

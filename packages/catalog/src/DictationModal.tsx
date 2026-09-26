@@ -127,6 +127,7 @@ function DevicePicker({
   };
   return (
     <div className="device-picker">
+      <span className="device-label">Audio input:</span>
       <button aria-haspopup="listbox" aria-expanded={open} onClick={onToggle}>
         {device.label} <span aria-hidden="true">▾</span>
       </button>
