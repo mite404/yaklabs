@@ -354,6 +354,23 @@ Nothing is built yet, so the cast is the set of ideas the prototypes will be mad
   recovered from git's object store, intact. Lesson: to test a commit in isolation, check it out in
   a throwaway worktree instead of juggling stashes.
 
+- **The autofix that broke its own lint.** The pre-commit hook ran `oxlint --fix` on the browser
+  levers and rewrote their root resolution to `import.meta.dirname`, which left `fileURLToPath`
+  imported and unused. The fixed file was staged, and the lint that had already passed never ran
+  again, so CI caught it. Fix: the hook lints the fixed files a second time, without fixing.
+  Lesson: an autofix is an edit like any other, and whatever checks the edit has to run after it.
+- **The lever nobody imported.** fallow finds code by walking imports from the entry points it
+  knows, so the two hand-run browser levers under `apps/web/scripts` counted as dead files the
+  moment they were committed, and CI failed on them. Fix: declare them as entry points and keep
+  them out of the complexity gate, as the DevTools snippets already were. Lesson: a tool that
+  discovers your code from imports cannot see a script you start by hand; tell it.
+- **The one shot that disagreed with seven.** After the thread panel's recap state moved into its
+  own hook, the profit story's before-shot and after-shot differed by 2,253 pixels along the
+  chart's x-axis. Three after-shots agreed with each other and with seven earlier sets from the
+  whole session; the single before-shot had caught the chart mid-measure. Lesson: when one
+  capture disagrees with the rest, suspect the capture before the code, and keep enough captures
+  to tell the two apart.
+
 ## 5. Director's Commentary
 
 ### The agent only states intent; the design system does the rest
