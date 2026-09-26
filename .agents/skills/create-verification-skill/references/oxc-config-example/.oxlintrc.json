@@ -1,13 +1,6 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": [
-    "eslint",
-    "typescript",
-    "unicorn",
-    "oxc",
-    "import",
-    "promise"
-  ],
+  "plugins": ["eslint", "typescript", "unicorn", "oxc", "import", "promise"],
   "categories": {
     "correctness": "error",
     "suspicious": "error",
@@ -57,8 +50,5 @@
     "eslint/no-inline-comments": "off",
     "eslint/capitalized-comments": "off"
   },
-  "ignorePatterns": [
-    "node_modules/**",
-    "dist/**"
-  ]
+  "ignorePatterns": ["node_modules/**", "dist/**"]
 }

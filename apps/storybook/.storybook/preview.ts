@@ -1,6 +1,6 @@
 import type { Decorator, Preview } from "@storybook/react-vite";
-import { trackInputModality } from "../src/inputModality";
-import "../src/tokens.css";
+import { trackInputModality } from "@yaklabs/catalog/inputModality";
+import "@yaklabs/catalog/tokens.css";
 
 trackInputModality();
 

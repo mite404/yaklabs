@@ -1,0 +1,17 @@
+# Staged files only (ADR-086): every agent commit runs this, so it stays cheap.
+# Type checks, tests and the audits run in CI, where --no-verify cannot skip them.
+pre-commit:
+  parallel: true
+  jobs:
+    - name: oxlint
+      glob: "*.{ts,tsx,js,mjs,cjs}"
+      run: pnpm oxlint --fix {staged_files}
+      stage_fixed: true
+    - name: oxfmt
+      glob: "*.{ts,tsx,js,mjs,cjs,json,jsonc,css,yml,yaml}"
+      run: pnpm oxfmt --write {staged_files}
+      stage_fixed: true
+    - name: wrap-md
+      glob: "*.md"
+      run: node scripts/wrap-md.js {staged_files}
+      stage_fixed: true

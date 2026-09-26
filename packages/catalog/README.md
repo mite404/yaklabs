@@ -5,16 +5,17 @@ not a prompt that asks an LLM to invent an interface.
 
 ## Run
 
-This package is an npm workspace. Install from the repo root, which also owns lint, format, and
-Fallow (`npm run lint`, `npm run format`, `npm run fallow`). Run the rest from `catalog-lab/`.
+This package is `@yaklabs/catalog`, a pnpm workspace member. Install from the repo root, which
+owns lint, format and Fallow (`pnpm lint`, `pnpm format`, `pnpm fallow`). Storybook and the
+story tests are hosted by `apps/storybook`; only the node unit tests run from here.
 
 ```sh
-npm ci # from the repo root
-npm run dev
-npm run storybook
-npm test
-npm run build
-npm run build-storybook
+pnpm install            # from the repo root
+pnpm --filter @yaklabs/catalog dev
+pnpm storybook          # from the root: apps/storybook serves this package's stories
+pnpm test               # from the root: unit and story tests
+pnpm --filter @yaklabs/catalog build
+pnpm build-storybook    # from the root
 ```
 
 The app is a deterministic evaluation workbench. It does not call a model. The JSON editor accepts
@@ -46,7 +47,8 @@ explain a gap, and decide what the unsupported view promises. Compare task succe
 not merely which chart they like. New catalog entries need a task, a strict schema, an accessible
 table equivalent, empty/error behavior, stories, and a user evaluation before approval.
 
-`src/tokens.css` owns the restrained green palette, surface/border colors, typography, and responsive
+`src/tokens.css` owns the restrained green palette, surface/border colors, typography, and
+responsive
 layout. No payload can override these tokens. It is a prototype token set, not a complete design
 system. The Google font request can be removed for an entirely local asset pipeline.
 
@@ -60,7 +62,8 @@ review ownership, retention policy, and a durable server store.
 
 ## A2UI relationship
 
-Inspired by [A2UI's introduction](https://a2ui.org/introduction/what-is-a2ui/): declarative messages,
+Inspired by [A2UI's introduction](https://a2ui.org/introduction/what-is-a2ui/): declarative
+messages,
 trusted catalogs, native client rendering, and client-owned styling. This is intentionally NOT an
 A2UI protocol implementation. A2UI permits component graphs and incremental updates. This prototype
 chooses a stricter complete-card selection: no arbitrary tree, IDs, bindings, streaming, or actions.

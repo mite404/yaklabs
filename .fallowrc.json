@@ -2,24 +2,28 @@
   // This file is JSONC: fallow reads these comments; generic JSON tools may not.
   "$schema": "./node_modules/fallow/schema.json",
   // scripts/*.js are pasted into the DevTools console, so nothing imports them.
-  "entry": ["catalog-lab/src/main.tsx", "scripts/*.js"],
+  "entry": [
+    "packages/catalog/src/main.tsx",
+    "packages/catalog/src/shareMain.tsx",
+    "apps/web/src/root.tsx",
+    "apps/web/src/routes.ts",
+    "apps/web/src/routes/*.tsx",
+    "apps/storybook/.storybook/main.ts",
+    "apps/storybook/.storybook/preview.ts",
+    "scripts/*.js"
+  ],
   "duplicates": {
     // Hide pair-only clones; focus on widespread copy-paste
     // worth refactoring. Lower to 2 to report every duplicate pair.
     "minOccurrences": 3
-    // Common additions (uncomment to enable):
-    // "ignore": [
-    //   "**/lib/**",          // for repos that publish transpiled output to lib/
-    //   "**/legacy/**",       // for repos with legacy-build artifacts
-    //   "**/__generated__/**", // Relay, GraphQL Code Generator
-    //   "**/generated/**"     // OpenAPI, Protobuf codegen
-    // ]
   },
   "health": {
     // Dev scripts (DevTools snippets, wrap-md) are tools, not product code; complexity gates
     // police the components.
-    "ignore": ["scripts/**"],
+    "ignore": ["scripts/**"]
   },
+  // React Router's default server entry imports isbot at build time; the app never does.
+  "ignoreDependencies": ["isbot"],
   "rules": {
     "unused-dependencies": "warn"
   }
