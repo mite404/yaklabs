@@ -26,7 +26,7 @@ this list when it ships.
   lanes should open the new lane there (ADR-089). Lanes already reorder by their grip.
 - **The row follows a carried lane.** A lane dragged to the pane's edge should scroll the row along,
   and a wheel mid-drag should move the drop slot with the row; today the slot is measured when the
-  lane lifts (ADR-089).
+  lane lifts (ADR-089). Escape should put a carried lane back, too.
 
 ## Engineering
 

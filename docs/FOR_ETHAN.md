@@ -35,9 +35,10 @@ open ground always kept to the right for the next drop. The divider between thre
 anywhere along its length. And dark mode is real (ADR-090): the night green page, cream ink, every
 ratio measured, where before only the attention cards changed.
 Then Ethan used it, and the canvas grew hands. The gap after a lane drags its width, with a hint of
-a line that follows the pointer the way JetBrains Air's divider does; the grip above a lane carries
-it to another place in the row, a skeleton in the chart's neutral grey holding the slot it will
-take; a wheel over the ground pans the row; the open space says what to drag and offers "Create
+a line that follows the pointer the way JetBrains Air's divider does; a lane's title bar carries
+it to another place in the row, a copy floating under the pointer while the lane itself waits
+dimmed in the slot it will take, after GitButler; a wheel over the ground pans the row; the open
+space says what to drag and offers "Create
 blank thread" in the site's own button. And the hand over a highlight learned its manners: it waits
 until the highlight is finished, because the I-beam while selecting is a convention older than the
 web.
@@ -537,11 +538,12 @@ export function landingIndex(slots: Slot[], from: number, dx: number): number {
 
 ```mermaid
 flowchart LR
-  D[pointerdown on the grip] -->|measure every lane once| L["Lift<br/>slots, top, height, x"]
-  M[pointermove] -->|dx from x| C{landingIndex}
+  D[pointerdown on the title bar] -->|measure every lane once| L["Lift<br/>slots, box, lane, x, y"]
+  M[pointermove] -->|dx, dy| C{landingIndex}
   L --> C
-  C -->|to = from| K[lane rides the pointer<br/>no skeleton]
-  C -->|to differs| S["skeleton at slotLeft(to)<br/>neighbours shiftFor(i)"]
+  C -->|any move| G[a copy of the lane<br/>floats under the pointer]
+  C -->|to = from| K[the lane waits dimmed<br/>where it was]
+  C -->|to differs| S["the lane slides to slotLeft(to)<br/>neighbours shiftFor(i)"]
   U[pointerup] -->|to differs| R[onMove: moveItem + saveOrder]
 ```
 
@@ -549,6 +551,11 @@ The film version: a dolly grip marks the track before the take. Once the marks a
 camera's position at any moment is a number along the track, not a fresh survey of the set.
 The marks are the `Slot` list; `dx` is how far the dolly has rolled; `landingIndex` reads the
 marks.
+
+One choice in the flow is easy to miss: the row's DOM is never reordered while the lane is in
+hand. The dimmed lane slides to its slot by a transform, and the real move happens on the drop.
+Moving the pressed element in the DOM would release its pointer capture mid-drag, so the
+choreography that looks like a live reorder is drawn, not done, until the hand opens.
 
 Senior-engineer takeaway: the pure functions are the ones with unit tests (twenty now in
 `canvas.test.ts`), the browser lever proves the measuring and the drawing, and the two never have

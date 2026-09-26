@@ -977,10 +977,15 @@ resize by the gap after them: the whole gap takes the drag, and while the pointe
 a line shows, full ink for 20px either side of the pointer's height and gone by 50px, which
 JetBrains Air does along a full-height blue line; the divider between thread and canvas shows the
 same hint.
-Lanes reorder by the grip in the strip above them: past a small dead zone the lane lifts and rides
-the pointer, the lanes it passes step aside, and once its centre crosses a neighbour's a skeleton of
-it in the chart's neutral mark colour (`--data`) holds the slot it would take; the order is kept in
-`kay.canvas.order` beside the hidden list, and arrow keys on the grip move a lane one slot. A
+Lanes reorder by their title bar, the same bar that drags a card out of a thread, or by the grip in
+the strip above them, and a hand over either says so. Past a small dead zone the lane lifts, after
+GitButler's pattern: a copy of it floats under the pointer, near-opaque with a shadow, while the
+lane itself stays in the row dimmed and, once its centre crosses a neighbour's, slides into the
+slot it would take as the lanes it passes step aside. The placeholder is therefore the lane's own
+shape, never a blank; the copy is a snapshot of its DOM with the draft and the scroll carried over,
+and the row's DOM is left alone until the drop, because moving the pressed element would release
+its pointer capture. The order is kept in `kay.canvas.order` beside the hidden list, and arrow
+keys on the grip move a lane one slot. A
 vertical wheel over the ground pans the row, since the row has nothing vertical to scroll. The open
 space reads "Drag a text selection or card / to start a new thread with context" over the catalog's
 own button, "Create blank thread", the one a card's "Show my work" uses. The close stays in the
