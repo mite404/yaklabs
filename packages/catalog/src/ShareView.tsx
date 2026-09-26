@@ -1,8 +1,19 @@
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 import { CatalogCard } from "./CatalogCard";
 import { InteractiveCard } from "./InteractiveCard";
 import { decodeCard } from "./share";
 import "./thread.css";
+
+// The page's own fragment, as an external store: opening a new link in the same tab changes
+// only the fragment, so the page re-reads it on `hashchange`. Server renders have no fragment.
+function subscribeToHash(onChange: () => void): () => void {
+  window.addEventListener("hashchange", onChange);
+  return () => {
+    window.removeEventListener("hashchange", onChange);
+  };
+}
+const readHash = () => window.location.hash;
+const readServerHash = () => "";
 
 /**
  * The public page for one shared card (ADR-064): only the component, never the chat around
@@ -13,16 +24,8 @@ import "./thread.css";
  * also updates when a new link is opened in the same tab (only the fragment changes then).
  */
 export function ShareView({ hash }: { hash?: string }) {
-  const [live, setLive] = useState(() =>
-    typeof window === "undefined" ? "" : window.location.hash,
-  );
-  useEffect(() => {
-    if (hash !== undefined) return;
-    const follow = () => setLive(window.location.hash);
-    window.addEventListener("hashchange", follow);
-    return () => window.removeEventListener("hashchange", follow);
-  }, [hash]);
-  const card = decodeCard(hash ?? live);
+  const live = useSyncExternalStore(subscribeToHash, readHash, readServerHash); // → "#c=…" or ""
+  const card = decodeCard(hash ?? live); // → SharedCard | undefined
   return (
     <main className="share-page">
       <div className="share-frame" data-context="thread">
