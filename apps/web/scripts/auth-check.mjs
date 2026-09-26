@@ -8,7 +8,6 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 
 const ROOT = path.resolve(import.meta.dirname, "../../..");
 const playwright = await import(
