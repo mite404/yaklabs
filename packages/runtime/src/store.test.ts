@@ -1,5 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, onTestFinished } from "vitest";
 import type { Conversation } from "./protocol";
+import { openSqliteStore } from "./sqliteStore";
 import { createMemoryStore, type ConversationStore } from "./store";
 import { netProfitChoice, profitThread } from "./testing";
 
@@ -32,6 +33,16 @@ const trend: Conversation = {
 // Each store under test, opened fresh and closed when its test ends.
 const stores: [string, () => Promise<ConversationStore>][] = [
   ["memory store", () => Promise.resolve(createMemoryStore())],
+  [
+    "SQLite store in memory",
+    async () => {
+      const store = await openSqliteStore({ kind: "memory" });
+      onTestFinished(() => {
+        store.close();
+      });
+      return store;
+    },
+  ],
 ];
 
 // The ids a query finds, in the order the store returns them.
