@@ -1,9 +1,11 @@
 import {
   useEffect,
+  useEffectEvent,
   useLayoutEffect,
   useRef,
   useState,
   type Dispatch,
+  type Ref,
   type SetStateAction,
 } from "react";
 import type { Agent, AgentEvent } from "./agent";
@@ -33,10 +35,43 @@ const CLOCK_TICK_MS = 30_000;
 // How long a jumped-to turn stays highlighted so the eye can find it.
 const FLASH_MS = 1200;
 
+// A turn arriving brings its thread to the end, where the turn is: the thread opens at its
+// latest turn and lands on each new one. A reply growing as it streams stays in view through
+// the thread's own pinning instead, so a reader who scrolled up is not pulled back.
+function landOn(turn: HTMLElement | null) {
+  const thread = turn?.parentElement; // → the scrolling thread, or undefined as a turn leaves
+  if (thread) thread.scrollTop = thread.scrollHeight;
+}
+
+// The dock card overlays the conversation, so its height is reserved below the last turn for
+// as long as it is docked, keeping a reader who was at the bottom still at the bottom.
+// Returns the release, which hands the space back.
+function reserveDockSpace(thread: HTMLElement, slot: HTMLElement): () => void {
+  const reserve = () => {
+    const atBottom = thread.scrollHeight - thread.scrollTop - thread.clientHeight < 4;
+    // Layout offsets, not screen rects, so the card's slide-in animation can't skew them.
+    const card =
+      slot.firstElementChild instanceof HTMLElement ? slot.firstElementChild.offsetTop : 0;
+    const composeInset = slot.nextElementSibling
+      ? parseFloat(getComputedStyle(slot.nextElementSibling).paddingTop) || 0
+      : 0;
+    thread.style.setProperty("--dock-space", `${slot.offsetHeight - card + composeInset}px`);
+    if (atBottom) thread.scrollTop = thread.scrollHeight;
+  };
+  reserve();
+  const observer = new ResizeObserver(reserve);
+  observer.observe(slot);
+  return () => {
+    observer.disconnect();
+    thread.style.removeProperty("--dock-space");
+  };
+}
+
 // The user's turn: a tinted bubble resting on the thread (ADR-025).
-function UserTurn({ message }: { message: UserMessage }) {
+function UserTurn({ message, ref }: { message: UserMessage; ref: Ref<HTMLElement> }) {
   return (
     <article
+      ref={ref}
       className="turn turn-user"
       data-turn-id={message.id}
       aria-label={`You, ${message.time}`}
@@ -71,12 +106,15 @@ function UserTurn({ message }: { message: UserMessage }) {
 function AgentTurn({
   message,
   onChoose,
+  ref,
 }: {
   message: AgentMessage;
   onChoose: (attachment: CardAttachment) => void;
+  ref: Ref<HTMLElement>;
 }) {
   return (
     <article
+      ref={ref}
       className="turn turn-agent"
       data-turn-id={message.id}
       aria-label={`Agent, ${message.time}`}
@@ -117,7 +155,11 @@ function useAgent(
 
   useEffect(() => {
     const controllers = live.current;
-    return () => controllers.forEach((controller) => controller.abort());
+    return () => {
+      controllers.forEach((controller) => {
+        controller.abort();
+      });
+    };
   }, []);
 
   return (event) => {
@@ -125,7 +167,7 @@ function useAgent(
     const id = `reply-${++replies.current}`;
     live.current.add(controller);
     // Pure updaters (React may run them twice): append on the first chunk, then extend.
-    const write = (text: string, streaming: boolean) =>
+    const write = (text: string, streaming: boolean) => {
       setMessages((current) =>
         current.some((message) => message.id === id)
           ? current.map((message) =>
@@ -135,6 +177,7 @@ function useAgent(
             )
           : [...current, { id, role: "agent", time: "now", text, streaming }],
       );
+    };
     void (async () => {
       let started = false;
       for await (const chunk of agent.respond(event, controller.signal)) {
@@ -145,7 +188,9 @@ function useAgent(
       if (started && !controller.signal.aborted) write("", false);
       live.current.delete(controller);
     })();
-    return () => controller.abort();
+    return () => {
+      controller.abort();
+    };
   };
 }
 
@@ -153,9 +198,16 @@ function useAgent(
 function useClock(now?: number): number {
   const [live, setLive] = useState(() => Date.now());
   useEffect(() => {
-    if (now !== undefined) return;
-    const id = window.setInterval(() => setLive(Date.now()), CLOCK_TICK_MS);
-    return () => window.clearInterval(id);
+    // A fixed clock never ticks; clearing an interval that was never set is a no-op.
+    const id =
+      now === undefined
+        ? window.setInterval(() => {
+            setLive(Date.now());
+          }, CLOCK_TICK_MS)
+        : undefined;
+    return () => {
+      window.clearInterval(id);
+    };
   }, [now]);
   return now ?? live;
 }
@@ -215,7 +267,9 @@ export function ChatThreadPanel({
     checked?.kind === "approved" ? checked.question : undefined,
   );
   const scroller = useRef<HTMLDivElement>(null);
-  const dockOverlay = useRef<HTMLDivElement>(null);
+  // The docked card's overlay, held as state so the space reserved for it follows the element
+  // itself: when it mounts, when it leaves, and when one card is swapped for the other.
+  const [dockSlot, setDockSlot] = useState<HTMLDivElement | null>(null);
 
   const recapVisible =
     awaiting === undefined &&
@@ -229,53 +283,28 @@ export function ChatThreadPanel({
       dismissedAt,
     });
 
-  // Open at the latest turn, and land on each new one. A reply growing as it streams is kept
-  // in view by the thread's own pinning, so a reader who scrolled up is not pulled back.
-  useLayoutEffect(() => {
-    const el = scroller.current;
-    if (el) el.scrollTop = el.scrollHeight;
-  }, [messages.length]);
-
   // The user never sees a malformed question or its error: the error goes to the agent, which
-  // asks again in an ordinary streamed reply (ADR-040).
-  useEffect(() => {
-    if (checked?.kind !== "malformed") return;
-    return tell({ kind: "question-rejected", reason: checked.reason, question: thread.awaiting });
-    // Once per question: `tell` is recreated each render, and resending would repeat the ask.
-  }, [checked]);
+  // asks again in an ordinary streamed reply (ADR-040). `checked` is settled on the first render,
+  // so this runs once per question; the Effect Event reads the latest `tell`, which is recreated
+  // each render, without making that a reason to ask again.
+  const reportMalformed = useEffectEvent((reason: string) =>
+    tell({ kind: "question-rejected", reason, question: thread.awaiting }),
+  );
+  useEffect(
+    () => (checked?.kind === "malformed" ? reportMalformed(checked.reason) : undefined),
+    [checked],
+  );
 
   // Every card that grows inside the thread stays clear of the compose box (ADR-038).
   useEffect(() => {
-    if (scroller.current) return keepExpansionsInView(scroller.current);
+    const el = scroller.current; // → the thread, mounted before any effect runs
+    return el ? keepExpansionsInView(el) : undefined;
   }, []);
 
-  // The dock card overlays the conversation, so reserve its height below the last turn,
-  // keeping a reader who was at the bottom still at the bottom.
-  const docked = awaiting !== undefined || recapVisible;
   useLayoutEffect(() => {
     const el = scroller.current;
-    const slot = dockOverlay.current;
-    if (!el) return;
-    if (!slot) {
-      el.style.removeProperty("--dock-space");
-      return;
-    }
-    const reserve = () => {
-      const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 4;
-      // Layout offsets, not screen rects, so the card's slide-in animation can't skew them.
-      const card =
-        slot.firstElementChild instanceof HTMLElement ? slot.firstElementChild.offsetTop : 0;
-      const composeInset = slot.nextElementSibling
-        ? parseFloat(getComputedStyle(slot.nextElementSibling).paddingTop) || 0
-        : 0;
-      el.style.setProperty("--dock-space", `${slot.offsetHeight - card + composeInset}px`);
-      if (atBottom) el.scrollTop = el.scrollHeight;
-    };
-    reserve();
-    const observer = new ResizeObserver(reserve);
-    observer.observe(slot);
-    return () => observer.disconnect();
-  }, [docked]);
+    return el && dockSlot ? reserveDockSpace(el, dockSlot) : undefined;
+  }, [dockSlot]);
 
   // A choice is only news if it differs from what the agent last saw on that card.
   function choose(attachment: CardAttachment) {
@@ -365,15 +394,15 @@ export function ChatThreadPanel({
       <div className="thread-scroll" ref={scroller}>
         {messages.map((message) =>
           message.role === "user" ? (
-            <UserTurn key={message.id} message={message} />
+            <UserTurn key={message.id} ref={landOn} message={message} />
           ) : (
-            <AgentTurn key={message.id} message={message} onChoose={choose} />
+            <AgentTurn key={message.id} ref={landOn} message={message} onChoose={choose} />
           ),
         )}
       </div>
       <div className="thread-dock">
         {awaiting !== undefined && (
-          <div className="dock-overlay" ref={dockOverlay}>
+          <div className="dock-overlay" ref={setDockSlot}>
             <AwaitingInputCard
               question={awaiting}
               onAnswer={answer}
@@ -385,13 +414,17 @@ export function ChatThreadPanel({
           </div>
         )}
         {recapVisible && (
-          <div className="dock-overlay" ref={dockOverlay}>
+          <div className="dock-overlay" ref={setDockSlot}>
             <Recap
               items={thread.recap ?? []}
               idleMs={clock - (lastInputAt ?? clock)}
               collapsed={draft.trim() !== "" && !peeking}
-              onExpand={() => setPeeking(true)}
-              onDismiss={() => setDismissedAt(clock)}
+              onExpand={() => {
+                setPeeking(true);
+              }}
+              onDismiss={() => {
+                setDismissedAt(clock);
+              }}
               onJump={jump}
             />
           </div>
@@ -404,7 +437,9 @@ export function ChatThreadPanel({
               if (!value.trim()) setPeeking(false);
             }}
             onSend={send}
-            onDictate={() => setDictating(true)}
+            onDictate={() => {
+              setDictating(true);
+            }}
             disabled={dictating}
             attachments={[
               ...Object.values(pending).map((item) => ({
@@ -426,20 +461,24 @@ export function ChatThreadPanel({
                 return next;
               });
             }}
-            onAttachFiles={(picked) =>
+            onAttachFiles={(picked) => {
               setFiles((current) => [
                 ...current,
                 ...picked.map((file) => ({ id: `file-${++fileIds.current}`, file })),
-              ])
-            }
+              ]);
+            }}
           />
         </div>
       </div>
       {dictating && (
         <DictationModal
           source={dictationSource}
-          onCancel={() => endDictation()}
-          onDone={(transcript) => endDictation(transcript)}
+          onCancel={() => {
+            endDictation();
+          }}
+          onDone={(transcript) => {
+            endDictation(transcript);
+          }}
         />
       )}
     </section>
