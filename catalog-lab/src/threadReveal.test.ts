@@ -24,22 +24,13 @@ describe("nudgeScrollTop", () => {
     expect(nudgeScrollTop({ top: 800, bottom: 1011 }, { ...view, insetBottom: 220 })).toBe(631);
   });
 
-  it("starts a card taller than the band at the band's top", () => {
-    expect(nudgeScrollTop({ top: 700, bottom: 1700 }, view)).toBe(680);
-  });
-
-  it("keeps the clicked control in view even when its card is taller than the band", () => {
-    // "Hide my work" sits in the footer, below the steps it just opened: it rests 20px above
-    // the compose box (1690 - 600 + 20), rather than under it with the card's top in view.
-    expect(nudgeScrollTop({ top: 700, bottom: 1700 }, view, { top: 1660, bottom: 1690 })).toBe(1110);
-  });
-
-  it("still starts a tall card at the band's top when the clicked control is visible there", () => {
-    expect(nudgeScrollTop({ top: 700, bottom: 1700 }, view, { top: 720, bottom: 750 })).toBe(680);
+  it("shows a card taller than the band down to its bottom edge, so nothing is left hidden", () => {
+    // Its bottom rests 20px above the compose box (1700 - 600 + 20); its top leaves the view.
+    expect(nudgeScrollTop({ top: 700, bottom: 1700 }, view)).toBe(1120);
   });
 
   it("never scrolls up to reveal, which would move away from the click", () => {
-    expect(nudgeScrollTop({ top: 100, bottom: 1700 }, view)).toBe(400);
+    expect(nudgeScrollTop({ top: 100, bottom: 950 }, view)).toBe(400);
   });
 
   it("never scrolls past the end of the thread", () => {
