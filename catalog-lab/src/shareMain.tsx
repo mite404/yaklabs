@@ -1,9 +1,9 @@
 import { createRoot } from "react-dom/client";
-import { App } from "./App";
 import { trackInputModality } from "./inputModality";
+import { ShareView } from "./ShareView";
 import "./tokens.css";
 
 trackInputModality();
 
 const root = document.getElementById("root");
-if (root) createRoot(root).render(<App />);
+if (root) createRoot(root).render(<ShareView />);

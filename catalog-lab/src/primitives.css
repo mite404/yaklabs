@@ -1,0 +1,190 @@
+/* Primitives shared by every surface (ADR-062): icon button, menu, disclosure, modal and
+   card header. Colours come only from tokens, so each adapts inside the attention surface. */
+
+/* Icon button: a square, borderless target for one icon. */
+.icon-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--soft-ink);
+  transition: background-color 150ms ease, color 150ms ease;
+}
+.icon-btn:hover,
+.icon-btn[aria-expanded="true"] {
+  background: var(--paper-deep);
+  color: var(--ink);
+}
+.icon-btn:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+/* Menu: a popup list anchored to its trigger. */
+.menu-anchor {
+  position: relative;
+  display: inline-flex;
+}
+.menu {
+  position: fixed; /* placed beside its trigger in Menu.tsx */
+  z-index: 20;
+  min-width: 220px;
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  background: var(--yak-paper-bright);
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px var(--shadow-strong);
+  animation: menu-in 120ms ease-out;
+}
+.menu button {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 8px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--ink);
+  font-size: 13px;
+  text-align: left;
+  white-space: nowrap;
+}
+.menu button:hover:not(:disabled),
+.menu button:focus-visible {
+  background: var(--paper-deep);
+  outline: none;
+}
+.menu button:disabled {
+  color: var(--soft-ink);
+  opacity: 0.6;
+  cursor: default;
+}
+.menu-icon {
+  display: inline-flex;
+  color: var(--soft-ink);
+}
+.menu-label {
+  flex: 1;
+}
+.menu-shortcut {
+  padding: 1px 5px;
+  border: 1px solid var(--hairline);
+  border-radius: 4px;
+  color: var(--soft-ink);
+  font: inherit;
+  font-size: 11px;
+}
+@keyframes menu-in {
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+}
+
+/* Disclosure: a header that folds the body below it. */
+.disclosure-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+}
+.disclosure-header:hover {
+  background: var(--paper-deep);
+}
+/* Open, a flush line separates the header from the body, 8px below the header so its
+   hover fill never touches the line. Folded, there is no body, so no line. */
+.disclosure[data-open] > .disclosure-body {
+  margin-top: 8px;
+  border-top: 1px solid var(--hairline);
+}
+.disclosure-chevron {
+  margin-left: auto;
+  display: inline-flex;
+  color: var(--soft-ink);
+}
+
+/* Modal: covers its nearest positioned ancestor with a scrim, and rises into view. */
+.modal-backdrop {
+  position: absolute;
+  inset: 0;
+  z-index: 5;
+  display: grid;
+  place-items: center;
+  padding: var(--thread-gutter, 20px);
+  background: var(--scrim);
+  backdrop-filter: blur(3px);
+  animation: modal-fade 160ms ease-out;
+}
+.modal {
+  background: var(--paper);
+  border: 1px solid var(--hairline);
+  border-radius: 16px;
+  box-shadow: 0 18px 48px var(--shadow-strong);
+  animation: modal-rise 200ms ease-out;
+}
+@keyframes modal-fade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes modal-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+}
+
+/* Card header: title left, actions right, and a flush line under it, edge to edge. */
+.card-heading {
+  align-items: flex-start;
+  border-bottom: 1px solid var(--hairline);
+}
+.card-heading-text {
+  min-width: 0;
+}
+.card-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: none;
+  margin: -4px -6px 0 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .menu,
+  .modal-backdrop,
+  .modal {
+    animation: none;
+  }
+  .icon-btn {
+    transition: none;
+  }
+}
+
+/* Share: the copied confirmation appears beside the button, then fades away. */
+.share {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.share-status {
+  font-size: 12px;
+  color: var(--soft-ink);
+  white-space: nowrap;
+}
+.share-status:empty {
+  display: none;
+}

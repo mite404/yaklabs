@@ -120,6 +120,7 @@ export function App() {
                 placeholder="Paste an agent response"
               />
               <button
+                className="btn btn-sm"
                 onClick={() => {
                   try {
                     setCustom(JSON.parse(draft));

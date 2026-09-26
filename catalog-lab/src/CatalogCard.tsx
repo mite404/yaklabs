@@ -10,7 +10,12 @@ import {
   CartesianGrid,
   Tooltip,
 } from "recharts";
+import { CardHeader } from "./CardHeader";
 import { resolve, type DataProps, type Selection } from "./catalog";
+import { ShareButton } from "./ShareButton";
+
+/** Bars are flat data colour with the button's 4px top corners; no gradient (ADR-055). */
+export const BAR_RADIUS = 4;
 
 function DataTable({ props }: { props: DataProps }) {
   return (
@@ -46,18 +51,18 @@ function Chart({ selection }: { selection: Selection }) {
   const props = selection.props;
   const axes = (
     <>
-      <CartesianGrid vertical={false} stroke="var(--line)" />
+      <CartesianGrid vertical={false} stroke="var(--hairline)" />
       <XAxis
         dataKey="label"
         tickLine={false}
         axisLine={false}
-        tick={{ fill: "var(--muted)", fontSize: 12 }}
+        tick={{ fill: "var(--soft-ink)", fontSize: 12 }}
       />
       <YAxis
         tickLine={false}
         axisLine={false}
         width={48}
-        tick={{ fill: "var(--muted)", fontSize: 12 }}
+        tick={{ fill: "var(--soft-ink)", fontSize: 12 }}
       />
       <Tooltip />
     </>
@@ -80,9 +85,9 @@ function Chart({ selection }: { selection: Selection }) {
               dataKey="value"
               name={props.unit}
               type="linear"
-              stroke="var(--accent)"
+              stroke="var(--data)"
               strokeWidth={props.variant === "snapshot" ? 0 : 3}
-              dot={{ r: 4, fill: "var(--accent)", strokeWidth: 2 }}
+              dot={{ r: 4, fill: "var(--data)", strokeWidth: 2 }}
               connectNulls={false}
               isAnimationActive={false}
             />
@@ -97,8 +102,8 @@ function Chart({ selection }: { selection: Selection }) {
             <Bar
               dataKey="value"
               name={props.unit}
-              fill="var(--accent)"
-              radius={[4, 4, 0, 0]}
+              fill="var(--data)"
+              radius={[BAR_RADIUS, BAR_RADIUS, 0, 0]}
               isAnimationActive={false}
             />
           </RechartsBarChart>
@@ -108,18 +113,31 @@ function Chart({ selection }: { selection: Selection }) {
   );
 }
 
-/** The only entry point for agent-selected UI. All content passes the catalog boundary. */
-export function CatalogCard({ payload }: { payload: unknown }) {
+/**
+ * The only entry point for agent-selected UI. All content passes the catalog boundary.
+ * @param context Host-owned placement, never part of the agent payload: "page" for the
+ * evaluation workbench, "thread" for a card inside a chat thread (ADR-023).
+ * @param shareable Show the share button (ADR-064); off on the public page itself.
+ */
+export function CatalogCard({
+  payload,
+  context = "page",
+  shareable = true,
+}: {
+  payload: unknown;
+  context?: "page" | "thread";
+  shareable?: boolean;
+}) {
   const result = resolve(payload);
   const [showTable, setShowTable] = useState(false);
   if (result.kind === "rejected")
     return (
-      <section className="card state">
+      <section className="card state" data-context={context}>
         <span className="state-symbol">↗</span>
         <p className="eyebrow">CATALOG LIMIT</p>
         <h2>We don’t have a safe view for this yet.</h2>
         <p>{result.reason}</p>
-        <p>
+        <p className="page-only">
           Try an approved view, or capture the missing capability below. We
           won’t substitute an unrelated chart.
         </p>
@@ -127,7 +145,7 @@ export function CatalogCard({ payload }: { payload: unknown }) {
     );
   if (result.kind === "empty")
     return (
-      <section className="card state">
+      <section className="card state" data-context={context}>
         <span className="state-symbol">∅</span>
         <p className="eyebrow">NO DATA</p>
         <h2>{result.title}</h2>
@@ -137,16 +155,17 @@ export function CatalogCard({ payload }: { payload: unknown }) {
   const { selection } = result;
   const { props } = selection;
   return (
-    <section className="card">
-      <header className="card-heading">
-        <div>
-          <p className="eyebrow">
-            {selection.component} / {props.variant}
-          </p>
-          <h2>{props.title}</h2>
-        </div>
-        <span className="badge">Validated</span>
-      </header>
+    <section className="card" data-context={context}>
+      <CardHeader
+        eyebrow={`${selection.component} / ${props.variant}`}
+        title={props.title}
+        actions={
+          <>
+            <span className="badge">Validated</span>
+            {shareable && <ShareButton card={{ v: 1, kind: "catalog", payload }} />}
+          </>
+        }
+      />
       {result.kind === "fallback" && (
         <p className="notice" role="status">
           {result.reason}
@@ -175,8 +194,8 @@ export function CatalogCard({ payload }: { payload: unknown }) {
           </span>
         </span>
         {selection.component !== "DataTable" && (
-          <button onClick={() => setShowTable(!showTable)}>
-            {showTable ? "Show chart" : "View data table"} ↗
+          <button className="btn btn-sm card-toggle" onClick={() => setShowTable(!showTable)}>
+            {showTable ? "Show chart" : "View data table"}
           </button>
         )}
       </footer>
