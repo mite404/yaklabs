@@ -17,9 +17,16 @@ import { ShareButton } from "./ShareButton";
 /** Bars are flat data colour with the button's 4px top corners; no gradient (ADR-055). */
 export const BAR_RADIUS = 4;
 
+// The table scrolls inside its card, so it is a named region in the Tab order: keyboard users
+// focus it to scroll the rows.
 function DataTable({ props }: { props: DataProps }) {
   return (
-    <div className="table-wrap">
+    <section
+      className="table-wrap"
+      aria-label={`${props.title} table`}
+      // oxlint-disable-next-line jsx-a11y/no-noninteractive-tabindex -- axe's scrollable-region-focusable requires a scrolling region to take keyboard focus
+      tabIndex={0}
+    >
       <table>
         <caption>
           {props.title} · {props.unit}
@@ -39,7 +46,7 @@ function DataTable({ props }: { props: DataProps }) {
           ))}
         </tbody>
       </table>
-    </div>
+    </section>
   );
 }
 

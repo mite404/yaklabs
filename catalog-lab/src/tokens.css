@@ -705,6 +705,11 @@ label {
   max-height: 290px;
   padding: 0 24px 20px;
 }
+/* The site's focus ring, drawn inside: the card clips anything outside the table. */
+.table-wrap:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
 table {
   border-collapse: collapse;
   width: 100%;
