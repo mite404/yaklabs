@@ -2,32 +2,17 @@ import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import {
   SIMULATED_DEVICES,
   formatElapsed,
-  levelFromSamples,
   simulatedLevel,
   simulatedTranscript,
   type AudioDevice,
 } from "./dictation";
+import { listenToMicrophone, speechRecognizer, transcribe } from "./liveDictation";
 import { Modal } from "./Modal";
 import { Waveform } from "./Waveform";
 import "./dictation.css";
 
 /** Where audio comes from: a deterministic simulation, or the user's real microphone. */
 export type DictationSource = "simulated" | "microphone";
-
-// Minimal Web Speech API surface; it is not in TypeScript's DOM library.
-type SpeechResultList = ArrayLike<ArrayLike<{ transcript: string }>>;
-type SpeechRecognizer = {
-  continuous: boolean;
-  interimResults: boolean;
-  lang: string;
-  onresult: ((event: { results: SpeechResultList }) => void) | null;
-  start: () => void;
-  stop: () => void;
-};
-type SpeechWindow = Window & {
-  SpeechRecognition?: new () => SpeechRecognizer;
-  webkitSpeechRecognition?: new () => SpeechRecognizer;
-};
 
 // How often the visible timer and simulated transcript refresh.
 const CLOCK_MS = 250;
@@ -39,51 +24,17 @@ function useMicrophone(enabled: boolean, deviceId: string) {
   const [error, setError] = useState<string>();
 
   useEffect(() => {
-    if (!enabled) return;
-    let stopped = false;
-    let frame = 0;
-    let stream: MediaStream | undefined;
-    let context: AudioContext | undefined;
-    navigator.mediaDevices
-      .getUserMedia({ audio: deviceId === "default" ? true : { deviceId: { exact: deviceId } } })
-      .then(async (granted) => {
-        if (stopped) return granted.getTracks().forEach((track) => track.stop());
-        stream = granted;
-        context = new AudioContext();
-        const analyser = context.createAnalyser();
-        analyser.fftSize = 1024;
-        context.createMediaStreamSource(granted).connect(analyser);
-        const samples = new Float32Array(analyser.fftSize);
-        const measure = () => {
-          analyser.getFloatTimeDomainData(samples);
-          level.current = levelFromSamples(samples);
-          frame = requestAnimationFrame(measure);
-        };
-        measure();
-        const all = await navigator.mediaDevices.enumerateDevices();
-        const inputs = all.filter((device) => device.kind === "audioinput");
-        setDevices(
-          inputs.map((device, index) => ({
-            id: device.deviceId,
-            label:
-              device.deviceId === "default"
-                ? "System Default"
-                : device.label || `Microphone ${index + 1}`,
-          })),
-        );
-      })
-      .catch((reason: Error) =>
-        setError(
-          reason.name === "NotAllowedError"
-            ? "Microphone access was blocked. Allow it in your browser settings to dictate."
-            : "No microphone could be opened.",
-        ),
-      );
+    const stop = enabled
+      ? listenToMicrophone(deviceId, {
+          onLevel: (value) => {
+            level.current = value;
+          },
+          onDevices: setDevices,
+          onError: setError,
+        })
+      : undefined;
     return () => {
-      stopped = true;
-      cancelAnimationFrame(frame);
-      stream?.getTracks().forEach((track) => track.stop());
-      void context?.close();
+      stop?.();
     };
   }, [enabled, deviceId]);
 
@@ -93,24 +44,14 @@ function useMicrophone(enabled: boolean, deviceId: string) {
 // Live transcription through the browser's speech service, where one exists.
 function useSpeechTranscript(enabled: boolean) {
   const [text, setText] = useState("");
-  const Recognizer =
-    (window as SpeechWindow).SpeechRecognition ?? (window as SpeechWindow).webkitSpeechRecognition;
+  const Recognizer = speechRecognizer();
   const supported = Recognizer !== undefined;
 
   useEffect(() => {
-    if (!enabled || !Recognizer) return;
-    const recognizer = new Recognizer();
-    recognizer.continuous = true;
-    recognizer.interimResults = true;
-    recognizer.lang = navigator.language || "en-US";
-    recognizer.onresult = (event) =>
-      setText(
-        Array.from(event.results, (result) => result[0].transcript)
-          .join(" ")
-          .trim(),
-      );
-    recognizer.start();
-    return () => recognizer.stop();
+    const stop = enabled && Recognizer ? transcribe(Recognizer, setText) : undefined;
+    return () => {
+      stop?.();
+    };
   }, [enabled, Recognizer]);
 
   return { text, supported };
@@ -134,19 +75,21 @@ export function DictationModal({
   const [deviceId, setDeviceId] = useState("default");
   const [picking, setPicking] = useState(false);
   const [elapsed, setElapsed] = useState(0);
-  const startedAt = useRef(performance.now());
+  // Read once, on the first render: the recording's start never moves.
+  const [startedAt] = useState(() => performance.now());
   const doneButton = useRef<HTMLButtonElement>(null);
   const microphone = useMicrophone(live, deviceId);
   const speech = useSpeechTranscript(live && !microphone.error);
 
   useEffect(() => {
     doneButton.current?.focus();
-    const id = window.setInterval(
-      () => setElapsed(performance.now() - startedAt.current),
-      CLOCK_MS,
-    );
-    return () => window.clearInterval(id);
-  }, []);
+    const id = window.setInterval(() => {
+      setElapsed(performance.now() - startedAt);
+    }, CLOCK_MS);
+    return () => {
+      window.clearInterval(id);
+    };
+  }, [startedAt]);
 
   const devices = live ? microphone.devices : SIMULATED_DEVICES;
   const device = devices.find((item) => item.id === deviceId) ?? {
@@ -154,7 +97,7 @@ export function DictationModal({
     label: "System Default",
   };
   const transcript = live ? speech.text : simulatedTranscript(elapsed);
-  const read = live ? microphone.read : () => simulatedLevel(performance.now() - startedAt.current);
+  const read = live ? microphone.read : () => simulatedLevel(performance.now() - startedAt);
   const notice =
     microphone.error ??
     (live && !speech.supported
@@ -190,28 +133,33 @@ export function DictationModal({
           <button
             aria-haspopup="listbox"
             aria-expanded={picking}
-            onClick={() => setPicking(!picking)}
+            onClick={() => {
+              setPicking(!picking);
+            }}
           >
             {device.label} <span aria-hidden="true">▾</span>
           </button>
           {picking && (
-            <ul role="listbox" aria-label="Choose microphone">
+            // Options sit directly in the listbox: an <li> there fails axe's listitem rule.
+            // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- a <select> cannot draw these radio-dot rows; this is the ARIA listbox pattern
+            <div className="device-list" role="listbox" aria-label="Choose microphone">
               {devices.map((item) => (
-                <li key={item.id}>
-                  <button
-                    role="option"
-                    aria-selected={item.id === deviceId}
-                    onClick={() => {
-                      setDeviceId(item.id);
-                      setPicking(false);
-                    }}
-                  >
-                    <span className="radio" aria-hidden="true" />
-                    {item.label}
-                  </button>
-                </li>
+                <button
+                  key={item.id}
+                  className="device-option"
+                  // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- <option> is valid only inside a <select>, which this list cannot be
+                  role="option"
+                  aria-selected={item.id === deviceId}
+                  onClick={() => {
+                    setDeviceId(item.id);
+                    setPicking(false);
+                  }}
+                >
+                  <span className="radio" aria-hidden="true" />
+                  {item.label}
+                </button>
               ))}
-            </ul>
+            </div>
           )}
         </div>
       </header>
@@ -229,7 +177,13 @@ export function DictationModal({
           <button className="btn btn-sm" onClick={onCancel}>
             Cancel
           </button>
-          <button ref={doneButton} className="dictation-done" onClick={() => onDone(transcript)}>
+          <button
+            ref={doneButton}
+            className="dictation-done"
+            onClick={() => {
+              onDone(transcript);
+            }}
+          >
             <span className="stop-square" aria-hidden="true" /> Done
           </button>
         </div>
