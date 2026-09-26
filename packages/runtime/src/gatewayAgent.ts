@@ -5,15 +5,16 @@ import { hc } from "hono/client";
 import { toModelRequest } from "./modelRequest";
 import type { Conversation } from "./protocol";
 import type { ConversationStore } from "./store";
+import { untilAborted } from "./untilAborted";
 
 // What the gateway agent needs: where the gateway is, who is asking, and which thread.
 type GatewayAgentOptions = {
   baseUrl: string;
-  /** The signed-in user's WorkOS token; without one the gateway refuses (ADR-084, ADR-085). */
+  // The signed-in user's WorkOS token; without one the gateway refuses (ADR-084, ADR-085).
   accessToken?: string;
   store: ConversationStore;
   conversationId: string;
-  /** Replaces the network, for tests that route requests to an in-process app. */
+  // Replaces the network, for tests that route requests to an in-process app.
   fetch?: typeof fetch;
 };
 
@@ -25,24 +26,6 @@ function historyBefore(conversation: Conversation, event: AgentEvent): Conversat
   return savedTurn
     ? { ...conversation, messages: conversation.messages.slice(0, -1) }
     : conversation;
-}
-
-// Resolves when the signal aborts, so a read that never settles cannot hold the reply open.
-function whenAborted(signal: AbortSignal): Promise<IteratorReturnResult<undefined>> {
-  return new Promise((resolve) => {
-    const stop = () => {
-      resolve({ done: true, value: undefined });
-    };
-    if (signal.aborted) stop();
-    else signal.addEventListener("abort", stop, { once: true });
-  });
-}
-
-// The same events, ending the moment the signal aborts rather than at the next event.
-function untilAborted<T>(source: AsyncIterable<T>, signal: AbortSignal): AsyncIterable<T> {
-  const events = source[Symbol.asyncIterator](); // → AsyncIterator<T>
-  const aborted = whenAborted(signal);
-  return { [Symbol.asyncIterator]: () => ({ next: () => Promise.race([events.next(), aborted]) }) };
 }
 
 // The reply's text as it streams, the way the SDK's `text` event reports it.
