@@ -1,0 +1,66 @@
+# Kay's stack and data boundaries - a reference
+
+What YakLabs has published about how Kay is built and what data it holds, read on 2026-09-26.
+Everything here comes from their public pages; anything inferred is marked **inferred**.
+Legal pages change: re-read the sources before quoting them in the interview.
+
+## Sources
+
+| Page | URL | Version read |
+| --- | --- | --- |
+| Data Processing Agreement (DPA) | https://meetkay.ai/dpa | "Last updated September 20, 2026", effective 19 August 2026 |
+| Data Use (sub-processor list, authoritative) | https://meetkay.ai/data | as served 2026-09-26 |
+| Privacy Policy | https://meetkay.ai/privacy | as served 2026-09-26 |
+| Careers and job posts | https://meetkay.ai/careers | Design Engineer, Design Engineer: Infrastructure, Frontend Engineer, Developer Experience, AI Harnesses, Cloud Infrastructure |
+| Marketing sites | https://meetkay.ai, https://yaklabs.ai | page source and response headers |
+
+## The stack
+
+| Layer | What they use | Evidence |
+| --- | --- | --- |
+| Codebase | One TypeScript monorepo: "a desktop app, a daemon, cloud services, and dozens of plugins" (pnpm or Turborepo style tooling) | Developer Experience post |
+| App UI | React and CSS; "data flow across process boundaries"; macOS and Windows | Frontend and Design Engineer: Infrastructure posts |
+| Desktop shell | Electron, **inferred** and unconfirmed: a Node-heavy TypeScript stack with a daemon, and an app data folder named after the app (`~/Library/Application Support/Yak/`) | Privacy Policy §6, job posts |
+| Systems language | Rust or Go is a nice-to-have for the AI Harnesses role only ("Systems-language experience (Rust, Go) alongside TypeScript"); nothing says the backend uses it | AI Harnesses post |
+| Hosted services | "the API, the inference gateway", plus Cloudflare-hosted "OAuth broker, downloads, release operations, build cache, website, and careers" | DPA Annex III, Data Use |
+| Hosting and database | Fly.io: "Application hosting and managed PostgreSQL", Ashburn, Virginia | Data Use, DPA Annex III |
+| Edge | Cloudflare: website delivery, the OAuth broker, software update delivery | Data Use |
+| Sign-in | WorkOS (the downloads site redirects through WorkOS AuthKit); the DPA's Annex III still says Clerk, so the annex is stale and the Data Use page, which the DPA calls authoritative, wins | Data Use, downloads.meetkay.ai |
+| Hosted models | Fireworks AI for text inference; Deepgram (announced) for transcription; Tavily (announced) for web search; users may bring their own Anthropic, OpenAI or OpenRouter key | Data Use, Privacy Policy §4 |
+| Analytics and logs | PostHog | Data Use |
+| Billing, feedback | Stripe; GitHub issues | Data Use |
+| Marketing sites | meetkay.ai is Astro with no client JavaScript; yaklabs.ai is hand-written HTML; both behind Cloudflare | page source, headers |
+
+## The DPA in brief
+
+**The principle.** "Kay runs on your own computer, so most of what your people do with it never reaches us at all." Annex II calls this "architectural minimisation" and "the primary control rather than a marketing point".
+
+**What stays on the device** (never reaches YakLabs): conversations, the files Kay reads, the notes it keeps, credentials (in the OS credential store, Keychain on macOS), local logs, the local search index. Conversation transcripts are stored unencrypted on disk; the Privacy Policy recommends full-disk encryption.
+
+**What YakLabs does hold:**
+
+- Account and organisation records (name, email, profile image, membership, pending invites).
+- Usage records: model, provider, tokens or audio duration, computed cost, timestamp, user and organisation ids; no content.
+- Support and feedback content.
+- Product usage measurements (on by default, can be switched off) and beta diagnostics (opt-in), pseudonymised.
+- For the connection broker: a per-install device id and a SHA-256 hash of each refresh token.
+
+**What passes through without being kept:** prompt, response, audio and transcript content on the hosted paths. "It is forwarded to a model provider and streamed back. It is not written to disk and it is not retained by us." The gateway's no-storage configuration "is re-applied from a fixed file on every restart", and no request can opt back into storage.
+
+**Bring your own key:** prompts go "directly from your machine to that provider" and never reach YakLabs.
+
+**Retention:** gateway logs are metadata only, kept 7 days; hosted-service logs in PostHog 14 days; abuse rate-limit counters swept about hourly; backups age out after 10 days. Usage and billing records sit in an append-only ledger kept seven years for tax law, with no content in them.
+
+**Engineering habits worth noting:**
+
+- *Data classification by construction:* "Every field in the diagnostics channel is classified before it may leave the device ... enforced in code with a test that fails on a new unclassified field, rather than by reviewer diligence." The same idea as turning our contrast rule (ADR-065) into a test.
+- *Stated gaps:* "We hold no SOC 2 or ISO 27001 certification today. We would rather say so here than let a security review discover it later."
+- *No training:* they do not train on customer data, and require the same of every default model provider.
+
+**Sub-processors (Data Use page, 2026-09-26):** WorkOS, Stripe, Fly.io, Cloudflare, Fireworks AI, GitHub, PostHog; announced: Deepgram, Tavily. Not sub-processors: their own inference gateway, and model providers users connect themselves. ElevenLabs was one and no longer is.
+
+## What this means for our vertical slice
+
+- **Conversations stay on the device.** A slice that stores chat history in a cloud database contradicts the product's central privacy promise (ADR-075).
+- **The cloud holds only what Kay's cloud holds:** a gateway that streams and stores nothing, and usage metadata without content.
+- **Kay's backend is separate services, not server functions attached to a web router:** the desktop app calls the API and the gateway over HTTPS. The slice should keep the same split (ADR-076, ADR-077).
