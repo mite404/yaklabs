@@ -56,8 +56,9 @@ run `pnpm --filter web build` first. The root `pnpm build` orders the two throug
 The client id is public (the browser bundle carries it too), and it belongs in `wrangler.jsonc`
 rather than the dashboard: every `wrangler deploy` replaces the Worker's dashboard variables
 with the config's `vars`, and `keep_vars` does not protect a variable the config also names.
-Secrets survive deploys. Until both values are set, every `/api/*` request fails with a 500 that
-names the missing binding; the client id must start with `client_`.
+Secrets survive deploys. Until both values are set, every `/api/*` request fails with a 500 while
+the static site keeps working, and the Worker's logs name each missing or malformed binding
+(never its value); the client id must start with `client_`.
 
 Token checks accept the issuers WorkOS's hosted API mints: `https://api.workos.com` for older
 environments and `https://api.workos.com/user_management/<clientId>` for ones created since
