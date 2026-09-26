@@ -6,9 +6,23 @@ import { Disclosure } from "./Disclosure";
 function Section({ startOpen }: { startOpen: boolean }) {
   const [open, setOpen] = useState(startOpen);
   return (
-    <div style={{ width: 420, background: "var(--paper)", border: "1px solid var(--hairline)", borderRadius: 12, padding: "4px 0 12px" }}>
-      <Disclosure open={open} onToggle={() => setOpen(!open)} summary={<strong style={{ fontSize: 13 }}>How I got this</strong>}>
-        <p style={{ margin: "12px 16px 0", fontSize: 13 }}>Read last week's orders, grouped them by day, and subtracted refunds.</p>
+    <div
+      style={{
+        width: 420,
+        background: "var(--paper)",
+        border: "1px solid var(--hairline)",
+        borderRadius: 12,
+        padding: "4px 0 12px",
+      }}
+    >
+      <Disclosure
+        open={open}
+        onToggle={() => setOpen(!open)}
+        summary={<strong style={{ fontSize: 13 }}>How I got this</strong>}
+      >
+        <p style={{ margin: "12px 16px 0", fontSize: 13 }}>
+          Read last week's orders, grouped them by day, and subtracted refunds.
+        </p>
       </Disclosure>
     </div>
   );

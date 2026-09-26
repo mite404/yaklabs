@@ -5,8 +5,11 @@ not a prompt that asks an LLM to invent an interface.
 
 ## Run
 
+This package is an npm workspace. Install from the repo root, which also owns lint, format, and
+Fallow (`npm run lint`, `npm run format`, `npm run fallow`). Run the rest from `catalog-lab/`.
+
 ```sh
-npm ci
+npm ci # from the repo root
 npm run dev
 npm run storybook
 npm test

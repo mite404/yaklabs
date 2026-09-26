@@ -427,7 +427,8 @@
   background: var(--paper-deep);
 }
 /* Hovered rows on the attention surface darken, so their text switches to the hover ink. */
-.attention-surface :is(.awaiting-tile, .recap li button, .disclosure-header, .awaiting-action, .recap-close):hover {
+.attention-surface
+  :is(.awaiting-tile, .recap li button, .disclosure-header, .awaiting-action, .recap-close):hover {
   --ink: var(--attention-hover-ink);
   --soft-ink: var(--attention-hover-ink);
   color: var(--ink);

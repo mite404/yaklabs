@@ -34,11 +34,7 @@ function DataTable({ props }: { props: DataProps }) {
           {props.rows.map((row, index) => (
             <tr key={index}>
               <th scope="row">{row.label}</th>
-              <td>
-                {row.value === null
-                  ? "Not recorded"
-                  : String(row.value)}
-              </td>
+              <td>{row.value === null ? "Not recorded" : String(row.value)}</td>
             </tr>
           ))}
         </tbody>
@@ -138,8 +134,8 @@ export function CatalogCard({
         <h2>We don’t have a safe view for this yet.</h2>
         <p>{result.reason}</p>
         <p className="page-only">
-          Try an approved view, or capture the missing capability below. We
-          won’t substitute an unrelated chart.
+          Try an approved view, or capture the missing capability below. We won’t substitute an
+          unrelated chart.
         </p>
       </section>
     );
@@ -172,8 +168,7 @@ export function CatalogCard({
         </p>
       )}
       <div className="measure">
-        <span className="legend-dot" /> {props.unit}{" "}
-        <span className="muted">· supplied order</span>
+        <span className="legend-dot" /> {props.unit} <span className="muted">· supplied order</span>
       </div>
       {selection.component === "DataTable" || showTable ? (
         <DataTable props={props} />

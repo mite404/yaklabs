@@ -62,8 +62,7 @@ export function AwaitingInputCard({
     if (event.key === "Enter") {
       if (ownEnter) return;
       submit();
-    }
-    else if (typing) return;
+    } else if (typing) return;
     else if (event.key === "ArrowDown") select(((selected ?? -1) + 1) % rows);
     else if (event.key === "ArrowUp") select(((selected ?? rows) - 1 + rows) % rows);
     else if (Number(event.key) >= 1 && Number(event.key) <= rows) select(Number(event.key) - 1);
@@ -94,44 +93,66 @@ export function AwaitingInputCard({
           </>
         }
       >
-          <h3 className="awaiting-question" id="awaiting-question">
-            {question.question}
-          </h3>
-          <div ref={options} className="awaiting-options" role="radiogroup" aria-labelledby="awaiting-question">
-            {question.options.map((option, i) => (
-              <button key={option.label} className="tile awaiting-tile" onClick={() => select(i)} {...tile(i)}>
-                <span className="awaiting-key">{i + 1}</span>
-                <span>
-                  <span className="awaiting-option">{option.label}</span>
-                  {option.detail && <span className="awaiting-detail">{option.detail}</span>}
-                </span>
-              </button>
-            ))}
-            <div className="tile awaiting-tile awaiting-answer" onClick={() => select(answerRow)} {...tile(answerRow)}>
-              <span className="awaiting-key">{answerRow + 1}</span>
-              <input
-                ref={field}
-                className="field"
-                value={typed}
-                onFocus={() => setSelected(answerRow)}
-                onChange={(event) => setTyped(event.target.value)}
-                placeholder={question.answer.placeholder}
-                aria-label={question.answer.placeholder}
-              />
-            </div>
-            <button className="tile awaiting-tile" onClick={() => select(elsewhereRow)} {...tile(elsewhereRow)}>
-              <span className="awaiting-key">{elsewhereRow + 1}</span>
-              <span className="awaiting-option">{question.elsewhere ?? ELSEWHERE}</span>
+        <h3 className="awaiting-question" id="awaiting-question">
+          {question.question}
+        </h3>
+        <div
+          ref={options}
+          className="awaiting-options"
+          role="radiogroup"
+          aria-labelledby="awaiting-question"
+        >
+          {question.options.map((option, i) => (
+            <button
+              key={option.label}
+              className="tile awaiting-tile"
+              onClick={() => select(i)}
+              {...tile(i)}
+            >
+              <span className="awaiting-key">{i + 1}</span>
+              <span>
+                <span className="awaiting-option">{option.label}</span>
+                {option.detail && <span className="awaiting-detail">{option.detail}</span>}
+              </span>
             </button>
+          ))}
+          <div
+            className="tile awaiting-tile awaiting-answer"
+            onClick={() => select(answerRow)}
+            {...tile(answerRow)}
+          >
+            <span className="awaiting-key">{answerRow + 1}</span>
+            <input
+              ref={field}
+              className="field"
+              value={typed}
+              onFocus={() => setSelected(answerRow)}
+              onChange={(event) => setTyped(event.target.value)}
+              placeholder={question.answer.placeholder}
+              aria-label={question.answer.placeholder}
+            />
           </div>
-          <div className="awaiting-actions">
-            <button className="awaiting-action" onClick={onElsewhere}>
-              Skip
-            </button>
-            <button className="awaiting-action awaiting-submit" disabled={!canSubmit} onClick={submit}>
-              Submit
-            </button>
-          </div>
+          <button
+            className="tile awaiting-tile"
+            onClick={() => select(elsewhereRow)}
+            {...tile(elsewhereRow)}
+          >
+            <span className="awaiting-key">{elsewhereRow + 1}</span>
+            <span className="awaiting-option">{question.elsewhere ?? ELSEWHERE}</span>
+          </button>
+        </div>
+        <div className="awaiting-actions">
+          <button className="awaiting-action" onClick={onElsewhere}>
+            Skip
+          </button>
+          <button
+            className="awaiting-action awaiting-submit"
+            disabled={!canSubmit}
+            onClick={submit}
+          >
+            Submit
+          </button>
+        </div>
       </Disclosure>
     </section>
   );

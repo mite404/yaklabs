@@ -51,7 +51,13 @@ export const WithDisabledItem: Story = {
     ...Attach.args,
     items: [
       { label: "Add images & files", icon: <FilesIcon />, shortcut: "⌘U", onSelect: () => {} },
-      { label: "Take screenshot", icon: <ScreenIcon />, disabled: true, hint: "This browser cannot capture the screen", onSelect: () => {} },
+      {
+        label: "Take screenshot",
+        icon: <ScreenIcon />,
+        disabled: true,
+        hint: "This browser cannot capture the screen",
+        onSelect: () => {},
+      },
     ],
   },
 } as Story;

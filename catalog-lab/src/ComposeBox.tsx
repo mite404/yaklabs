@@ -22,7 +22,16 @@ function PaperclipIcon() {
 function MicIcon() {
   return (
     <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-      <rect x="9" y="3" width="6" height="11" rx="3" fill="none" stroke="currentColor" strokeWidth="1.8" />
+      <rect
+        x="9"
+        y="3"
+        width="6"
+        height="11"
+        rx="3"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+      />
       <path
         d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"
         fill="none"
@@ -38,7 +47,13 @@ function MicIcon() {
 export function ChartGlyph() {
   return (
     <svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true">
-      <path d="M2 14h12M4 12V8M8 12V4M12 12V6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+      <path
+        d="M2 14h12M4 12V8M8 12V4M12 12V6"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
     </svg>
   );
 }
@@ -56,8 +71,23 @@ function canCaptureScreen(): boolean {
 function FileGlyph() {
   return (
     <svg viewBox="0 0 16 16" width="13" height="13" aria-hidden="true">
-      <rect x="2" y="3" width="12" height="10" rx="1.5" fill="none" stroke="currentColor" strokeWidth="1.6" />
-      <path d="m4.5 11 3-3 2 2 1.5-1.5 1.5 1.5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
+      <rect
+        x="2"
+        y="3"
+        width="12"
+        height="10"
+        rx="1.5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.6"
+      />
+      <path
+        d="m4.5 11 3-3 2 2 1.5-1.5 1.5 1.5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.6"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
@@ -149,7 +179,14 @@ export function ComposeBox({
             },
           ]}
           trigger={(props) => (
-            <button {...props} type="button" className="compose-icon" aria-label="Attach" title="Attach" disabled={disabled}>
+            <button
+              {...props}
+              type="button"
+              className="compose-icon"
+              aria-label="Attach"
+              title="Attach"
+              disabled={disabled}
+            >
               <PaperclipIcon />
             </button>
           )}
@@ -195,7 +232,12 @@ export function ComposeBox({
         >
           <MicIcon />
         </button>
-        <button type="submit" className="compose-send" disabled={disabled || !canSend} aria-label="Send">
+        <button
+          type="submit"
+          className="compose-send"
+          disabled={disabled || !canSend}
+          aria-label="Send"
+        >
           ↑
         </button>
       </div>

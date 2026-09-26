@@ -2,3 +2,8 @@ node_modules/
 dist/
 storybook-static/
 .amp/
+.rumdl_cache
+.fallow/
+.claude/worktrees/
+.artifacts/
+__screenshots__/

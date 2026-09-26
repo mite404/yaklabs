@@ -141,7 +141,8 @@ export function fillSentence(
   const parts: { text: string; live: boolean }[] = [];
   let cursor = 0;
   for (const match of template.matchAll(PLACEHOLDER_PATTERN)) {
-    if (match.index > cursor) parts.push({ text: template.slice(cursor, match.index), live: false });
+    if (match.index > cursor)
+      parts.push({ text: template.slice(cursor, match.index), live: false });
     parts.push({ text: values[match[1] as Placeholder], live: true });
     cursor = match.index + match[0].length;
   }

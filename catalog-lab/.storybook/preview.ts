@@ -11,7 +11,11 @@ const withTheme: Decorator = (Story, context) => {
 };
 
 const preview: Preview = {
-  parameters: { layout: "padded" },
+  parameters: {
+    layout: "padded",
+    // Any axe violation fails the story's test, locally and in CI.
+    a11y: { test: "error" },
+  },
   globalTypes: {
     theme: {
       description: "Light or dark mode",

@@ -1,0 +1,28 @@
+{
+  "name": "yaklabs",
+  "private": true,
+  "workspaces": [
+    "catalog-lab"
+  ],
+  "scripts": {
+    "lint": "oxlint catalog-lab scripts",
+    "format": "oxfmt catalog-lab scripts",
+    "format:check": "oxfmt --check catalog-lab scripts",
+    "typecheck": "npm run typecheck --workspaces",
+    "test": "npm test --workspaces",
+    "test:unit": "npm run test:unit --workspaces",
+    "test:stories": "npm run test:stories --workspaces",
+    "build-storybook": "npm run build-storybook --workspaces",
+    "fallow": "fallow",
+    "fallow:audit": "fallow audit"
+  },
+  "devDependencies": {
+    "fallow": "^3.28.0",
+    "oxfmt": "^0.70.0",
+    "oxlint": "^1.85.0",
+    "oxlint-tsgolint": "^7.0.2003"
+  },
+  "allowScripts": {
+    "esbuild@0.28.2": true
+  }
+}

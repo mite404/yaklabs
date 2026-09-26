@@ -103,7 +103,9 @@ export function Menu({
     }
     if (event.key !== "ArrowDown" && event.key !== "ArrowUp") return;
     event.preventDefault();
-    const enabled = Array.from(list.current?.querySelectorAll<HTMLButtonElement>("button:not(:disabled)") ?? []);
+    const enabled = Array.from(
+      list.current?.querySelectorAll<HTMLButtonElement>("button:not(:disabled)") ?? [],
+    );
     const at = enabled.indexOf(document.activeElement as HTMLButtonElement);
     const step = event.key === "ArrowDown" ? 1 : -1;
     enabled[(at + step + enabled.length) % enabled.length]?.focus();

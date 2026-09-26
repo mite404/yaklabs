@@ -22,10 +22,7 @@ export const trend = {
 } satisfies Selection;
 
 /** Deterministic scenarios keep product evaluation independent of model variability. */
-export const scenarios: Record<
-  string,
-  { label: string; question: string; payload: unknown }
-> = {
+export const scenarios: Record<string, { label: string; question: string; payload: unknown }> = {
   trend: {
     label: "Weekly trend",
     question: "How did closed cases change this week?",

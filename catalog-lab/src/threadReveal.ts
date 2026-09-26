@@ -69,9 +69,7 @@ export function centerScrollTop(target: Span, view: Viewport): number {
   const band = view.height - view.insetTop - view.insetBottom;
   const height = target.bottom - target.top;
   const top =
-    height <= band
-      ? target.top - view.insetTop - (band - height) / 2
-      : target.top - view.insetTop;
+    height <= band ? target.top - view.insetTop - (band - height) / 2 : target.top - view.insetTop;
   return clamp(top, view.maxScrollTop);
 }
 
@@ -123,7 +121,8 @@ export function keepExpansionsInView(scroller: HTMLElement): () => void {
         interaction !== undefined &&
         performance.now() - interaction.at <= INTERACTION_WINDOW_MS &&
         turn.contains(interaction.target);
-      if (asked) nudgeInScroller(scroller, [interaction!.target.closest<HTMLElement>(".card") ?? turn]);
+      if (asked)
+        nudgeInScroller(scroller, [interaction!.target.closest<HTMLElement>(".card") ?? turn]);
       else if (pinned) scroller.scrollTop = scroller.scrollHeight;
     }
   });
