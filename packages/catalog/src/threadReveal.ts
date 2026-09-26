@@ -15,6 +15,9 @@ export type Viewport = {
 // How long after a click or key press a turn's growth still counts as that interaction's result.
 const INTERACTION_WINDOW_MS = 1000;
 
+// The user's latest click or key press inside the thread, and when it happened.
+type Interaction = { target: HTMLElement; at: number };
+
 function clamp(top: number, maxScrollTop: number): number {
   return Math.round(Math.min(Math.max(top, 0), Math.max(maxScrollTop, 0)));
 }
@@ -45,6 +48,18 @@ function viewport(scroller: HTMLElement): Viewport {
 function prefersReducedMotion(): boolean {
   if (typeof window === "undefined") return false;
   return window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+}
+
+// What to reveal when `turn` grew: the card the user just clicked or keyed inside, when the
+// growth came soon enough to be that interaction's result; undefined when nobody asked for it.
+function askedToReveal(
+  turn: HTMLElement,
+  last: Interaction | undefined,
+  now: number,
+): HTMLElement | undefined {
+  if (last === undefined || now - last.at > INTERACTION_WINDOW_MS) return undefined;
+  if (!turn.contains(last.target)) return undefined;
+  return last.target.closest<HTMLElement>(".card") ?? turn;
 }
 
 /**
@@ -97,7 +112,7 @@ export function centerInScroller(scroller: HTMLElement, element: HTMLElement): v
  * @returns A cleanup function that stops watching.
  */
 export function keepExpansionsInView(scroller: HTMLElement): () => void {
-  let interaction: { target: HTMLElement; at: number } | undefined;
+  let interaction: Interaction | undefined;
   const heights = new WeakMap<Element, number>();
   const atEnd = () => scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 2;
   let pinned = atEnd();
@@ -112,17 +127,14 @@ export function keepExpansionsInView(scroller: HTMLElement): () => void {
 
   const resized = new ResizeObserver((entries) => {
     for (const entry of entries) {
-      const turn = entry.target as HTMLElement;
+      const turn = entry.target; // → Element; only `.turn` elements are observed
+      if (!(turn instanceof HTMLElement)) continue;
       const before = heights.get(turn);
       const after = entry.borderBoxSize[0]?.blockSize ?? turn.offsetHeight;
       heights.set(turn, after);
       if (before === undefined || after <= before) continue;
-      const asked =
-        interaction !== undefined &&
-        performance.now() - interaction.at <= INTERACTION_WINDOW_MS &&
-        turn.contains(interaction.target);
-      if (asked)
-        nudgeInScroller(scroller, [interaction!.target.closest<HTMLElement>(".card") ?? turn]);
+      const asked = askedToReveal(turn, interaction, performance.now()); // → HTMLElement | undefined
+      if (asked !== undefined) nudgeInScroller(scroller, [asked]);
       else if (pinned) scroller.scrollTop = scroller.scrollHeight;
     }
   });
