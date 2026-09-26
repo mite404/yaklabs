@@ -72,7 +72,8 @@ That makes the first product evaluation easier to reason about and the renderer 
 ## Limitations
 
 This validates representation safety, not the truth of business data or the correctness of a model's
-selection. There is no live model, authentication, server storage, or provenance verification.
+selection. The package itself has no live model, sign-in or server storage; `apps/web`, the runtime
+worker and the gateway add those around it (ADR-088). There is no provenance verification.
 The schema caps 100 rows and bounded finite numbers. An eventual network ingress must also cap
 request bytes before JSON parsing. The editor's character limit is only a local UX limit.
 Builds currently report upstream Zod annotation warnings and bundle-size warnings. No optimization

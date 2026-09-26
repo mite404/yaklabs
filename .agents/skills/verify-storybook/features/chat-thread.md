@@ -17,9 +17,10 @@ away, and a card that asks the user a question when the agent is waiting on them
 
 ## How to get to it (user POV)
 
-- The panel is the product surface; there is no app route yet. In Storybook: `Thread/Chat thread
+- The panel is the product surface; `apps/web` renders it on `/` through the runtime worker. In
+  Storybook: `Thread/Chat thread
   panel`, stories `thread-chat-thread-panel--{standard,next-to-split-pane,fallbacks,
-  fallbacks-narrow,recap-after-idle,awaiting-input,awaiting-input-narrow,awaiting-input-malformed,
+  fallbacks-narrow,recap-after-idle,awaiting-input,awaiting-input-narrow,awaiting-input-malformed,reply-fails,
   recently-active,inactive-thread,interactive-profit,interactive-profit-narrow}`.
 
 ## Driving it with Storybook
@@ -38,6 +39,10 @@ Preconditions:
 - **Recap.** Load `thread-chat-thread-panel--recap-after-idle`. `region "Recap"` holds a `status`
   reading `Recap · 12 min since your last message`, `button "Dismiss recap"`, and one button per
   recorded outcome. Compare with `--recently-active` (no recap) and `--inactive-thread`.
+- **Reply fails.** Load `thread-chat-thread-panel--reply-fails`; its agent throws before a word
+  arrives. Its play function types into `textbox "Message"`, presses Enter, and expects the text
+  "I couldn't finish that reply. Try again in a moment." with no `article` left `aria-busy`. The
+  cause reaches the console as a warning, never the thread (ADR-040).
 - **Awaiting input.** Load `thread-chat-thread-panel--awaiting-input`. `region "Needs attention"`
   holds `radiogroup "A forecast view isn't in the catalog yet. How should I handle it?"` with
   `radio "1 Request a forecast view …"`, the typed answer `textbox "How many weeks ahead should it

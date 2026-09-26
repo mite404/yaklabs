@@ -910,3 +910,35 @@ Every story rendered byte-identical before and after the move, and again after t
 from screenshots of all forty stories taken twice from the old layout; the four that differ are the
 dictation stories' live waveform and one chart animation, which differ between two runs of the same
 code.
+
+## ADR-088 - The runtime and the gateway, as built
+
+2026-09-26 - Accepted (Ethan); carries out ADR-076, ADR-081, ADR-085 and ADR-086, and amends
+ADR-081.
+`packages/runtime` is the Web Worker that stands in for Kay's daemon: the page and the worker talk
+only through one zod-checked union each way (commands `init`, `open`, `send`, `abort`, `list`;
+notices `ready`, `opened`, `chunk`, `done`, `failed`, `listed`, `error`), the page checks its own
+commands before posting and the worker checks them again on arrival, and the page's `startRuntime`
+returns an `Agent` for the thread panel, so the UI did not change to move the loop off its thread.
+Conversations live behind a `ConversationStore` (open, save, list, search) with two adapters, memory
+and SQLite through `@sqlite.org/sqlite-wasm`'s `opfs-sahpool` VFS in a worker, as rows in
+`conversations` and `messages` with an FTS5 index kept by triggers; the markdown transcripts ADR-081
+describes are deferred, since the rows already give Kay's local store its shape and a file export is
+one adapter away.
+The worker saves the user's turn before the agent runs and the reply when it ends or is stopped, and
+the model request it builds carries every card the agent showed as JSON in the assistant turn and
+every card choice as a `[Card view: <label>]` line in the user turn, which is how the interactive
+UI's state reaches the model (ADR-030, ADR-031).
+`apps/gateway` is one Hono app on Cloudflare Workers with `run_worker_first` on `/api/*` and the web
+build as its assets: `POST /api/messages` takes text turns only, verifies the caller's WorkOS access
+token against the client's JWKS (jose), forwards the turns to `claude-opus-5` with adaptive thinking
+and an 8192-token cap, and streams the SDK's own event stream back as newline-delimited JSON, which
+the worker rebuilds with `MessageStream.fromReadableStream`; the browser calls it through Hono's
+typed client, and both bindings live in the Cloudflare dashboard with `keep_vars` on.
+Sign-in is WorkOS AuthKit in the browser behind a layout route that redirects signed-out visitors
+and follows only a same-origin path back; the callback and the share page stay public, the settings
+parse once into a union (agent lab or gateway, auth none or WorkOS), and the real-model path and the
+token issuer remain unverified until a key and a person's sign-in are available.
+The seam between the thread and the agent still carries text only, so cards come from the seed
+thread today; card-producing replies are the next increment, and they change the seam, not the
+worker or the gateway.

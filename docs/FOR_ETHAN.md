@@ -17,6 +17,16 @@ agent is blocked on gets its own "Needs you" card instead of hiding inside the r
 Every component is now run, not just read: all 40 stories render in headless Chromium with an axe
 check on each commit and in CI, beside oxlint, oxfmt, `tsc` and fallow, and a `verify-storybook`
 skill lets an agent screenshot whatever a change reaches.
+The lab has become an app. The repo is now a pnpm monorepo in Better-T-Stack's layout
+(ADR-087): the catalog is a package beside its stories, `apps/web` is the React Router site that
+renders the profit thread, `packages/runtime` runs the agent loop and keeps every conversation in
+SQLite inside the browser's private file system, and `apps/gateway` is the one Cloudflare Worker
+that checks a WorkOS sign-in and streams Claude's reply back without keeping a copy. The moment it
+all exists for: the user steps the profit card to net profit, asks "why is Saturday high?", that
+choice rides into the model's prompt as `[Card view: Net profit · Sep 14–20]`, and the reply is
+about the view they set (ADR-030, ADR-031). Proven in headless Chromium: the reply names the view,
+and a reload brings all four turns back from disk. What still waits: a model key in the gateway,
+and replies that produce cards, since the seam between thread and agent still carries only text.
 
 ## 2. Cast & Crew
 
@@ -33,6 +43,18 @@ Nothing is built yet, so the cast is the set of ideas the prototypes will be mad
   replaced (ADR-013).
 - **The component catalog** is the show bible: it makes a thousand guest directors produce one show
   (see Director's Commentary).
+- **The web app** (`apps/web`) is the theatre: the one room the audience sits in, with the thread
+  on stage and sign-in at the door (ADR-083, ADR-084).
+- **The runtime worker** (`packages/runtime`) is the production office behind the stage. It keeps
+  the call sheets (the conversation store) and runs the shoot (the agent loop); the stage only
+  passes notes through one door, and each note is checked on both sides (ADR-076, ADR-086).
+- **The gateway** (`apps/gateway`) is the stage door and the runner. The guard checks every pass
+  against the list WorkOS publishes (its signing keys); the runner carries the pages to the
+  writers' room (Claude), relays each line back as it is spoken, and keeps no copy (ADR-085).
+- **The Storybook app** (`apps/storybook`) is the screening room: every card and panel plays there
+  alone, under the same lights, before it goes on stage.
+- **The ui package** (`packages/ui`) is the paint shop: shadcn primitives mixed only from Kay's
+  tokens, so anything an agent builds comes out in the house colours (ADR-082).
 
 ## 3. Behind the Scenes
 
@@ -73,6 +95,33 @@ Nothing is built yet, so the cast is the set of ideas the prototypes will be mad
 - **The UI reports; the agent decides.** The panel used to hold three canned replies of its own. Now
   it only tells an `Agent` what happened and streams back whatever it says, so the same components
   can run against the lab stand-in today and a real model for the demo (ADR-041).
+
+- **Copy the scaffold, then take out what fights the design.** Better-T-Stack scaffolded only the
+  frontend; Varlock (an env codegen step), the server entry and `next-themes` did not survive,
+  because the app parses its settings once with zod, renders no server, and React 19 refuses the
+  inline script `next-themes` needs. Fourteen of seventeen generated shadcn components went too:
+  nothing imported them, and `shadcn add` restores any in seconds (ADR-087).
+- **Kay's stylesheet sits in its own cascade layer.** `tokens.css` styles bare buttons, links and
+  headings. Unlayered it would beat every Tailwind utility on a shadcn primitive; below preflight
+  the catalog's own look would reset. So it loads in a `catalog` layer between the two.
+- **Save the line before the take.** The worker writes the user's message to disk before the agent
+  answers, so a failed reply never loses what the user typed; the reply is saved when it ends, or
+  when the user stops it, with whatever streamed so far, which is what the screen showed.
+- **Pass the reel through; don't re-edit it.** The gateway streams the SDK's own events, one JSON
+  object per line, and the browser rebuilds them with the same SDK
+  (`MessageStream.fromReadableStream`). A format of our own would need a second decoder, kept in
+  step with every block type Claude adds; passing the reel through means the projector already
+  reads it.
+- **Check at both doors.** The worker checks every command, and the page checks its own before
+  sending. A malformed command (say, an empty token) then fails where it was made, instead of
+  arriving as an `error` nobody can match to a call.
+- **Nothing environment-specific in the Worker's config.** Both bindings live in the Cloudflare
+  dashboard, the key as a secret and the client id as a variable, with `keep_vars` on so a deploy
+  keeps them. A value named under `vars`, even an empty placeholder, would replace the
+  dashboard's on every deploy.
+- **A failed reply ends in plain words.** The gateway can answer 401 or 5xx. The thread now ends
+  such a turn with one sentence and stops the streaming state, and the cause goes to the console,
+  never the thread (ADR-040).
 
 - **A question to answer should look like a place to type.** In the "Needs you" card, row 2 looked
   like a third statement. It now uses a new text-field primitive with the button's outline and 4px
@@ -187,6 +236,65 @@ Nothing is built yet, so the cast is the set of ideas the prototypes will be mad
   split pane. Fix: the thread panel enforces the rule itself by watching every turn grow after a
   click (ADR-038). Lesson: a rule that depends on every component remembering it is a suggestion;
   put it where nothing can skip it.
+
+- **The typecheck that ran a package install.** `react-router typegen` hung Turbo for eleven
+  minutes. React Router 8 installs `isbot` by itself when a project lacks it, and the install it
+  spawned could not reach the registry through the proxy. Fix: keep `isbot` as a dependency and
+  tell fallow why. Lesson: a hang in a type check is rarely the type check; read what the tool
+  does before it checks anything.
+- **The example config that was linting the repo.** After the move, oxlint reported rules nobody
+  had turned on. It had found an example `.oxlintrc.json` under the vendored skills and applied it
+  as a nested config. Fix: nested configs off, and ignore patterns that cover the whole vendored
+  tree. Lesson: a file that looks like config is config to any tool that walks the tree.
+- **The hook path that pointed at a ghost.** A throwaway worktree of `main` ran the old
+  `prepare: husky` script, which wrote an absolute `core.hooksPath` into the shared repo config.
+  Git ran no hook on any commit for an hour; every gate ran because someone ran it by hand. Fix:
+  `pnpm install` reinstalls Lefthook with the hooks path reset, so the setup converges on its
+  own. Lesson: when a hook is silent, check where git is looking before checking the hook.
+- **Two `--accent`s.** shadcn's `--accent` is its hover fill; Kay's `--accent` was the olive on the
+  slider. Loading both stylesheets would have turned the slider grey. Kay's became `--olive`
+  before the bridge was written, with `--radius` becoming `--radius-card` for the same reason.
+  Lesson: before mapping two vocabularies, list the words they share.
+- **The script React refused to run.** `next-themes` prevents a flash of the wrong theme by
+  rendering an inline script; React 19 logs an error when a client-rendered component contains
+  one. A fifty-line theme module now sets `data-theme` on the root and boots the stored theme
+  from the prerendered shell's head instead. Lesson: a library built for server rendering can
+  carry assumptions a single-page app cannot meet.
+- **The radio that swallowed a text field.** The "Needs attention" card's typed-answer row was a
+  `div role="radio"` wrapping an `input`, so axe failed two stories on nested interactive
+  controls. It is now a `<label>` around the field: a click anywhere focuses the field, whose focus
+  selects the row, and the other rows carry their position and count so "3 of 3" still reads.
+  Keyboard behaviour and pixels are unchanged. Lesson: a role is a promise about what is inside.
+- **The build that waited for itself.** The Worker ships the web build as its assets, so its build
+  must run after the web build. Saying so made Turbo report a cycle: the web app depends on the
+  runtime package, the runtime lists the gateway (only for its types), and every build waits for
+  its dependencies' builds. Nothing needed the gateway built first; the edge existed only on
+  paper. Fix: the runtime's build waits on nothing, with a comment saying why. Lesson: needing
+  someone's types is not needing their build, like a call sheet that makes the editor wait for the
+  premiere.
+- **The setting every deploy would have erased.** The first plan put the WorkOS client id in the
+  Cloudflare dashboard while `wrangler.jsonc` held an empty placeholder. Cloudflare's docs say
+  each `wrangler deploy` replaces dashboard variables with the config's, so every deploy would
+  have blanked the id and broken sign-in. Caught by reading the docs before shipping. Fix: no
+  variables in the config at all and `keep_vars` on, so the dashboard owns both values. Lesson:
+  when two places can hold one setting, find out which one wins before choosing.
+- **The stop button that did not stop the tape.** The Anthropic SDK's `MessageStream.abort()`
+  only raises a flag; if the stream has gone quiet, the reply waits for the next event that may
+  never come. Fix: race every read against the abort signal (`untilAborted`), proven by a test
+  whose fake gateway never closes its stream. Lesson: read what "abort" actually does in the
+  library before trusting the word.
+- **The reload mid-take.** The first browser run of the runtime passed, but Vite reloaded the test
+  page halfway: its dependency scan does not follow `new Worker(new URL(...))`, so it only found
+  the worker's imports once the worker started. Fix: name those dependencies in
+  `optimizeDeps.include`, then prove it from a cold cache and six runs in a row.
+- **The stricter rulebook next door.** The catalog ships TypeScript sources, so they compile inside
+  the runtime's stricter program, and eight of their index reads fail `noUncheckedIndexedAccess`.
+  The runtime turns that flag off until the catalog passes it. Lesson: a shared base config only
+  helps if every package actually passes it.
+- **Two jobs painting the same wall.** Lefthook ran `oxlint --fix` and `oxfmt` in parallel on the
+  same staged files, so a commit could land code oxlint changed after oxfmt had formatted it. It
+  happened twice. Fix: the jobs run in order. Lesson: two tools that write the same files are a
+  sequence, however fast each one is.
 
 - **The 20px that was really 16.** The last card was meant to rest 20px above the compose box but
   measured 16 to 20px, because the thread scrolled to its end before the charts and fonts finished
@@ -321,7 +429,7 @@ Every Storybook story is a scenario that carries the question a real user would 
 fixture serves development and research:
 
 ```ts
-// catalog-lab/src/fixtures.ts
+// packages/catalog/src/fixtures.ts
 // Each scenario pairs a user question with a fixed agent payload,
 // so a test session never depends on a live model's mood.
 export const scenarios: Record<
@@ -418,7 +526,7 @@ In the thread, the scroller is the camera operator, and it now reframes on its o
 to ask.
 
 ```ts
-// catalog-lab/src/threadReveal.ts: move only if the card is clipped, and only enough to rest
+// packages/catalog/src/threadReveal.ts: move only if the card is clipped, and only enough to rest
 // it 20px above the compose box; a card taller than the view starts at its top; never scroll up.
 export function nudgeScrollTop(target: Span, view: Viewport): number {
   const bandBottom = view.scrollTop + view.height - view.insetBottom;
@@ -459,7 +567,7 @@ and the user had to read history to find a decision.
 Now the question is its own validated payload, and the host always adds the exit.
 
 ```ts
-// catalog-lab/src/awaiting.ts: the agent supplies the question and its branches; the host
+// packages/catalog/src/awaiting.ts: the agent supplies the question and its branches; the host
 // renders them numbered and always appends "Chat about something else" (AwaitingInputCard.tsx).
 export const awaitingSchema = z.strictObject({
   question: text,
@@ -490,7 +598,7 @@ The thread panel now talks to the agent through one channel, `Agent`, and the la
 stand-in is just one voice on it.
 
 ```ts
-// catalog-lab/src/agent.ts: the only contract the thread knows.
+// packages/catalog/src/agent.ts: the only contract the thread knows.
 export type AgentEvent =
   | { kind: "message"; text: string; attachments: CardAttachment[] }
   | { kind: "answer"; text: string }
@@ -532,7 +640,7 @@ what the one inside it cannot, and each runs where it is cheapest.
 The middle ring is new: every story is now also a test. One Vitest config holds both kinds:
 
 ```ts
-// catalog-lab/vite.config.ts: two projects, one command (`npm test`)
+// packages/catalog/vite.config.ts and apps/storybook/vite.config.ts: two projects, one command (`pnpm test`)
 projects: [
   // Plain functions and schemas, in Node: fast, no browser.
   { extends: true, test: { name: "unit", include: ["src/**/*.test.{ts,tsx}"] } },
@@ -566,3 +674,125 @@ fine on paper and still fall apart when read aloud; the modal's focus trap did e
 Senior-engineer takeaway: put each check where it is cheapest to run and hardest to skip. The hook
 catches it in seconds on your machine; CI catches whoever skipped the hook; the verify skill covers
 what no automated check can judge, which is whether it looks right.
+
+### Roll sound before action: attach the reader before you wait
+
+The gateway must choose its HTTP status before it sends a byte, but it only learns whether Claude
+accepted the request once the request is in flight. The natural order is "wait for the answer,
+then start reading", and it passes every test on a laptop. It is still wrong: the SDK's stream
+hands each event only to readers already listening, so an event that lands in between is lost,
+like a line spoken before the boom mic was switched on.
+
+```ts
+// apps/gateway/src/app.ts: the order is the whole point.
+const reply = anthropic.messages.stream({ model, max_tokens, thinking, system, messages });
+// Roll sound: the reader starts listening now, before any event can arrive.
+const body = reply.toReadableStream(); // → one JSON event per line
+// Then call action: a 4xx/5xx from Claude throws here, before we answer the browser,
+// so the route can still reply 502 { error: "upstream", status }.
+await reply.withResponse();
+return body;
+```
+
+```mermaid
+sequenceDiagram
+  participant B as Browser
+  participant G as Gateway Worker
+  participant A as Claude API
+  B->>G: POST /api/messages, Bearer token
+  G->>G: verify token (WorkOS keys), check body (zod)
+  G->>A: messages.stream(...)
+  Note over G: toReadableStream(): reader attached
+  alt Claude accepts
+    A-->>G: 200, then events
+    G-->>B: 200 application/x-ndjson
+    A-->>G: more events
+    G-->>B: one event per line
+    B->>B: MessageStream.fromReadableStream(body)
+  else Claude refuses (529 overloaded)
+    A-->>G: 529
+    G-->>B: 502 { error: "upstream", status: 529 }
+  end
+```
+
+To prove the point, the two lines were swapped on purpose and the whole suite still passed: in
+node, the gateway happened to resume before the SDK parsed its first event. The order is right
+because the SDK's source says its iterator starts with an empty queue, not because a test says so,
+and the comment in the code says that, so nobody tidies it back later.
+
+Senior-engineer takeaway: when a test passes, ask whether the code is right or the timing was
+kind. A race that a fast machine hides is still a race; settle it by reading the source, then write
+down why, where the next editor will look.
+
+### The daemon backstage: one door, checked on both sides
+
+Kay's desktop app never runs the agent in its window; a daemon does, and the window only talks to
+it. The slice keeps that blocking with a Web Worker, so moving to Kay means recasting the worker
+as their daemon, not rewriting the UI (ADR-076). One reply, in the worker, reads like a call sheet:
+
+```ts
+// packages/runtime/src/agentLoop.ts: one reply, in the order that loses nothing.
+await update(loop, store, conversationId, (c) => withUserTurn(c, event, now())); // saved first
+const agent = createAgent(spec, { store, conversationId, accessToken }); // lab or gateway
+let text = "";
+for await (const piece of agent.respond(event, signal)) {
+  if (signal.aborted) break; // the user pressed stop
+  text += piece;
+  post({ kind: "chunk", requestId, text: piece }); // the page checks it on arrival
+}
+if (text.trim() !== "") {
+  await update(loop, store, conversationId, (c) => withAgentReply(c, text, now())); // then this
+}
+post({ kind: "done", requestId });
+```
+
+```mermaid
+sequenceDiagram
+  participant P as Page (thread)
+  participant W as Worker (daemon)
+  participant S as SQLite in OPFS
+  participant G as Gateway
+  P->>W: send (event with the card-view chip)
+  W->>S: save the user's turn
+  W->>G: POST /api/messages, [Card view: Net profit · Sep 14–20] in the last turn
+  G-->>W: model's text, streamed
+  W-->>P: chunk, chunk, ... done
+  W->>S: save the agent's reply
+```
+
+The film version: the stage manager writes the actor's line in the prompt book before the cue,
+not after the scene, because a scene can be cut halfway and the book must still say what was said.
+
+Senior-engineer takeaway: order your writes by what you cannot afford to lose. The user's words
+are irreplaceable and go to disk first; the reply can always be asked for again.
+
+### Move it, then prove it moved nothing
+
+A layout move touches every file and changes no behaviour, which is exactly the kind of change
+nobody re-tests. So the proof came first: every story was photographed twice from the old layout,
+which also showed which six differ between two runs of the same code (live waveforms, a chart
+mid-animation). After the move, and again after every token rename, the same forty screenshots
+were compared byte for byte, and the only differences were those known animations.
+
+```sh
+# The same lever, before and after; cmp says identical or nothing.
+node .agents/skills/verify-storybook/scripts/shoot.mjs $IDS --out before
+git mv catalog-lab packages/catalog   # ... the whole move ...
+node .agents/skills/verify-storybook/scripts/shoot.mjs $IDS --out after
+for f in before/*.png; do cmp -s "$f" "after/$(basename "$f")" || echo "differs: $f"; done
+```
+
+```mermaid
+flowchart LR
+  A[Old layout] -->|shoot twice| B[Baseline + its own noise]
+  A -->|git mv, rewrite configs| C[New layout]
+  C -->|shoot once| D[After]
+  B --> E{cmp byte for byte}
+  D --> E
+  E -->|identical| F[Proven unchanged]
+  E -->|differs, on the noise list| G[Animation, not a change]
+  E -->|differs, not on the list| H[Look, then fix]
+```
+
+Senior-engineer takeaway: capture the baseline before you touch anything, and capture its noise
+too, so "different" has a meaning when the comparison runs.
