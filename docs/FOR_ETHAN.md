@@ -8,6 +8,7 @@ We are preparing for a founding design-engineer interview at YakLabs, whose prod
 We picked one of the three problems in the posting - making agent work legible - and have been arguing our way to a set of interaction principles, recorded as ADRs in `docs/adr/adr.md`.
 The first code exists: `catalog-lab/`, a React + Storybook experiment where an agent may only pick from a strict catalog of chart and table cards.
 Next: fit those cards into a chat thread panel (ADR-023), then the site of working prototypes.
+Ideas we agreed on but have not started live in `docs/LATER.md`.
 The thread now keeps every expanded card 20px above the compose box (ADR-038), and a question the agent is blocked on gets its own "Needs you" card instead of hiding inside the recap (ADR-039).
 
 ## 2. Cast & Crew

@@ -149,7 +149,7 @@ The tokens are named `--bubble-tint`, `--bubble-tint-strong`, and `--bubble-line
 
 ## Open questions
 
-- Whether the stepped slider, dictation controls, links and the primary button should move from olive to ink, so green only appears on button hovers.
+- Whether the stepped slider, dictation controls, links and the primary button should move from olive to ink, so green only appears on button hovers (tracked in `docs/LATER.md`).
 
 - Rules 2 and 3 (and the display ink `#22251e`) rest on how the tint looked on a screen with a blue-light filter, which warms dark neutrals: re-check them with the filter off.
 - Ethan's warm greys (`#8a8a85`, `#cbcac4`) were picked on the same screen: keep them as deliberate choices, or re-pick them with the filter off.
