@@ -12,7 +12,7 @@ It is the product's core promise, it shows timing, hierarchy, and progressive di
 
 ## ADR-002 - Treat Glass as inferred DNA for Kay
 
-2026-09-24 - Accepted.
+2026-09-24 - Superseded by ADR-078 (the docs are now read; see `docs/05-kay-stack-and-data.md`).
 The Kay docs were unreachable from this environment, so Kay's vocabulary and surfaces come from search snippets, with Ramp's Glass as the likely ancestor.
 Anything inferred from Glass is labeled as inferred and must be checked against docs.meetkay.ai before the interview.
 
@@ -468,3 +468,9 @@ Moving to Kay would then mean replacing the worker with their daemon and our gat
 2026-09-26 - Proposed; pending Ethan's choice.
 Kay's backend is separate services that the desktop app calls over HTTPS, and an Electron app has no web server to attach server functions to, so Next.js App Router server functions are the wrong shape; the closest match is a standalone TypeScript service (for example Hono) with Postgres, which deploys to Fly.io or Cloudflare Workers (Kay's own hosts), so no other host such as Railway is needed.
 Convex is the fast alternative: it can host the whole runtime (its actions run up to 10 minutes, and `@convex-dev/workflow` handles longer work), but its document-relational model differs from Kay's Postgres rows, its agent component stores message history by default (see ADR-075), and running the loop on a server moves it off the user's machine, the opposite of Kay; if chosen, use it fully and keep it behind the `Agent` seam and a usage interface.
+
+## ADR-078 - Shape the slice as a Kay plugin
+
+2026-09-26 - Proposed; amends ADR-002 and ADR-074.
+Kay's docs (docs.meetkay.ai, now reachable, so ADR-002's reliance on Glass as a stand-in is no longer needed) say Kay is "a small stable core plus a set of extensions", where first-party integrations are plugins that contribute tools, integrations, `scheme://` resources, bundled skills and Pages ("full React apps hosted inside Kay's workspace"), and Kay runs on macOS only today.
+So the slice is packaged the way a plugin would be: the catalog cards as a Page, the catalog as tools the agent calls, and the card rules as a bundled `SKILL.md`, which makes "how would this ship in Kay?" a one-sentence answer; the private plugin SDK is out of reach, so this mirrors the contract's shape rather than using it.
