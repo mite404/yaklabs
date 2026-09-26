@@ -16,6 +16,7 @@ import "./index.css";
 import type { Route } from "./+types/root";
 import Header from "./components/header";
 import { env } from "./env";
+import { safeReturnTo } from "./returnTo";
 import { THEME_BOOT, useTheme } from "./theme";
 
 export function Layout({ children }: { children: ReactNode }) {
@@ -37,20 +38,6 @@ export function Layout({ children }: { children: ReactNode }) {
   );
 }
 
-// `state` comes back through the sign-in redirect unprotected, so only a same-origin path
-// is followed; anything else lands on the thread.
-function safeReturnTo(state: unknown): string {
-  const wanted =
-    typeof state === "object" && state !== null && "returnTo" in state ? state.returnTo : undefined;
-  if (typeof wanted !== "string") return "/";
-  try {
-    const url = new URL(wanted, window.location.origin); // → absolute, resolved against us
-    return url.origin === window.location.origin ? url.pathname + url.search : "/";
-  } catch {
-    return "/";
-  }
-}
-
 // WorkOS AuthKit in the browser (ADR-084); the provider also finishes the sign-in when the
 // callback route loads with a code. Dev mode keeps tokens in localStorage on localhost only.
 function Providers({ children }: { children: ReactNode }) {
@@ -61,7 +48,9 @@ function Providers({ children }: { children: ReactNode }) {
       clientId={env.auth.clientId}
       redirectUri={env.auth.redirectUri}
       devMode={window.location.hostname === "localhost"}
-      onRedirectCallback={({ state }) => void navigate(safeReturnTo(state), { replace: true })}
+      onRedirectCallback={({ state }) =>
+        void navigate(safeReturnTo(state, window.location.origin), { replace: true })
+      }
     >
       {children}
     </AuthKitProvider>
