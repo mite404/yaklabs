@@ -51,6 +51,13 @@ describe("the runtime in a Web Worker", () => {
     expect((await second.list()).map((summary) => summary.id)).toContain(id);
   }, 20_000);
 
+  it("falls back to memory in a second worker while the first holds the database", async () => {
+    const first = startLab();
+    expect(await first.ready).toEqual({ storage: "opfs" });
+    const second = startLab(); // a second tab, say
+    expect(await second.ready).toEqual({ storage: "memory" });
+  }, 20_000);
+
   it("stops a reply when the page aborts it", async () => {
     const id = `abort-${crypto.randomUUID()}`;
     const runtime = startLab();
