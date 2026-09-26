@@ -10,6 +10,9 @@ The first code exists: `catalog-lab/`, a React + Storybook experiment where an a
 Next: fit those cards into a chat thread panel (ADR-023), then the site of working prototypes.
 Ideas we agreed on but have not started live in `docs/LATER.md`.
 The thread now keeps every expanded card 20px above the compose box (ADR-038), and a question the agent is blocked on gets its own "Needs you" card instead of hiding inside the recap (ADR-039).
+Every component is now run, not just read: all 40 stories render in headless Chromium with an axe
+check on each commit and in CI, beside oxlint, oxfmt, `tsc` and fallow, and a `verify-storybook`
+skill lets an agent screenshot whatever a change reaches.
 
 ## 2. Cast & Crew
 
@@ -52,11 +55,34 @@ Nothing is built yet, so the cast is the set of ideas the prototypes will be mad
 - **One editor holds the cut.** Anyone can watch the dailies, but only one editor works on the timeline at a time, or two people's changes overwrite each other. Parallel sessions read the branch freely; one writes, and handing over the branch is an explicit handoff with its head commit and open PR (ADR-066).
 - **Fill is for the hand, not the rest.** The question card's options used to sit in grey pills even when nobody touched them, so the card looked busy before it was read. Now it rests on plain paper and a row fills only under the pointer, like a spotlight that follows the actor instead of lighting the whole stage; its label says "Needs attention" on a caution orange pill, warm like a yellow card rather than red like a stop (ADR-067, ADR-068).
 
+- **One set of house rules at the root.** oxlint, oxfmt and fallow install once at the repo root,
+  with `catalog-lab` as an npm workspace, so the next app inherits the same rules instead of
+  copying them. Like one colour pipeline for the whole show, not one per episode.
+- **Gate on what this change did, not on the whole history.** `fallow audit --base HEAD` fails
+  only on findings a commit introduces; the older backlog is reported but never blocks. A gate
+  that blocks unrelated work gets skipped with `--no-verify` within a day.
+- **Vitest 4, on purpose.** Storybook's stable test addon supports Vitest 3 and 4; only a
+  Storybook 11 alpha accepts 5. Stable tools under the proof layer beat the newest version.
 - **Read the fine print; it is the architecture diagram.** Kay's legal pages say more about its build than any tech-detection plugin: the DPA names the hosts (Fly.io, Cloudflare), the database (Postgres), the app data folder, and the rule that conversations never leave the device. The slice follows that rule (ADR-075) and mirrors the process split, with a Web Worker as the daemon's stand-in (ADR-076). The reference lives in `docs/05-kay-stack-and-data.md`.
 
 - **The slice is a location shoot, not a studio build.** Kay's app is a desktop "studio" with a daemon backstage; the web slice recreates the same blocking on location: React Router as a static single-page app for the stage (ADR-083), a Web Worker as the daemon backstage, owning the agent loop and SQLite in the browser's private file system (ADR-081), WorkOS at the door (ADR-084), and one Hono Worker on Cloudflare as the gateway that holds the keys and keeps nothing (ADR-085, ADR-086). Every piece maps to a part of Kay, so moving to their stack is recasting, not rewriting.
 
 ## 4. Bloopers
+
+- **The rulebook with a missing chapter.** The first oxlint config listed five plugins. In oxlint,
+  a `plugins` list replaces the defaults instead of adding to them, and `eslint` was not on the
+  list, so core rules like `no-unused-vars` never ran and the output looked clean. Lesson: an
+  empty report proves nothing until you know what was switched on.
+- **The installer that dropped the unit tests.** Adding Storybook's test addon wrote a Vitest
+  `projects` list with only the story project, so the 69 unit tests would silently stop running.
+  Caught because the count was checked: 109 tests (69 unit plus 40 stories), not 40.
+- **The screenshot shot mid-dissolve.** The first proof capture of the "Needs attention" card came
+  out washed out, because the card fades in and the camera fired during the fade. Fix: wait for
+  fonts and finish animations before each capture. Lesson: evidence of a fade-in must be the last
+  frame, like grabbing a still after the dissolve, not during it.
+- **The modal that never took focus.** Driving the modal in a real browser showed focus staying on
+  the button that opened it, so Escape did nothing until you tabbed in. Reading the code had
+  suggested a working focus trap; only running it showed the trap had no one inside.
 
 - **The docs were behind a locked door.** The environment's network policy blocked docs.meetkay.ai, so Kay's vocabulary was reconstructed from search snippets and Ramp's Glass. Everything inferred is labeled; verify before the interview.
 - **The push that was not a network problem.** GitHub was reachable, but the Claude GitHub App was not installed on the repo, so pushes returned 403. Network allowlist and repo permission are two different gates.
@@ -333,3 +359,46 @@ And the `AbortSignal` lets the panel stop a reply the moment it unmounts, so not
 To run the UI against a real model later: write an `Agent` whose `respond` calls a small server route (keeping the API key off the browser), stream its text back, and pass it as `<ChatThreadPanel agent={realAgent} />`.
 
 Say it in the interview: "The components never know who is answering; that is how the same UI is tested with a script and shipped with a model."
+
+### Three rings of proof: read it, run it, watch it
+
+A linter reads code. A test runs it. A screenshot shows what a person would see. Each ring catches
+what the one inside it cannot, and each runs where it is cheapest.
+
+The middle ring is new: every story is now also a test. One Vitest config holds both kinds:
+
+```ts
+// catalog-lab/vite.config.ts: two projects, one command (`npm test`)
+projects: [
+  // Plain functions and schemas, in Node: fast, no browser.
+  { extends: true, test: { name: "unit", include: ["src/**/*.test.{ts,tsx}"] } },
+  // Every story mounts in headless Chromium, runs its play function, then axe checks it.
+  // A story that throws, or has a nested control or a low-contrast label, fails here.
+  {
+    extends: true,
+    plugins: [storybookTest()],
+    test: { name: "storybook", browser: { enabled: true, provider: playwright() } },
+  },
+],
+```
+
+```mermaid
+flowchart LR
+  E[Edit a component] --> H{pre-commit}
+  H -->|staged files| F[oxfmt + wrap-md]
+  H --> L[oxlint: defects, a11y, types]
+  H --> T[tsc]
+  H --> S[69 unit + 40 story tests<br/>render, play, axe]
+  H --> A[fallow audit<br/>only what this commit adds]
+  A --> P[Push / PR]
+  P --> C{CI: same checks<br/>+ Storybook build<br/>+ audit vs PR base}
+  E -.->|agent proving a change| V[verify-storybook<br/>affected stories → screenshots + ARIA trees]
+```
+
+The film version: the linter is the script supervisor reading pages, the story tests are the table
+read where every scene is actually performed, and the screenshots are dailies. A script can look
+fine on paper and still fall apart when read aloud; the modal's focus trap did exactly that.
+
+Senior-engineer takeaway: put each check where it is cheapest to run and hardest to skip. The hook
+catches it in seconds on your machine; CI catches whoever skipped the hook; the verify skill covers
+what no automated check can judge, which is whether it looks right.

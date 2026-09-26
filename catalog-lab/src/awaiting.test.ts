@@ -30,7 +30,9 @@ it("lets the agent word the way out, and falls back when it doesn't", () => {
 
 describe("every row stays short enough for four to look considered", () => {
   it("accepts a question of two short sentences", () => {
-    expect(card({ ...valid, question: "The forecast view is missing. Should I request it?" })).toBeDefined();
+    expect(
+      card({ ...valid, question: "The forecast view is missing. Should I request it?" }),
+    ).toBeDefined();
   });
 
   it("sends a third sentence back to the agent to ask in the thread instead", () => {

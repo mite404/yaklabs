@@ -13,7 +13,9 @@ import "./thread.css";
  * also updates when a new link is opened in the same tab (only the fragment changes then).
  */
 export function ShareView({ hash }: { hash?: string }) {
-  const [live, setLive] = useState(() => (typeof window === "undefined" ? "" : window.location.hash));
+  const [live, setLive] = useState(() =>
+    typeof window === "undefined" ? "" : window.location.hash,
+  );
   useEffect(() => {
     if (hash !== undefined) return;
     const follow = () => setLive(window.location.hash);
@@ -25,16 +27,26 @@ export function ShareView({ hash }: { hash?: string }) {
     <main className="share-page">
       <div className="share-frame" data-context="thread">
         {card?.kind === "interactive" ? (
-          <InteractiveCard key={hash ?? live} payload={card.payload} turnId="shared" onChoose={() => {}} shareable={false} />
+          <InteractiveCard
+            key={hash ?? live}
+            payload={card.payload}
+            turnId="shared"
+            onChoose={() => {}}
+            shareable={false}
+          />
         ) : card ? (
           <CatalogCard payload={card.payload} context="thread" shareable={false} />
         ) : (
           <section className="card state" data-context="thread">
             <h2>This link doesn’t contain a card.</h2>
-            <p>It may be incomplete or have been changed. Ask whoever shared it for a fresh link.</p>
+            <p>
+              It may be incomplete or have been changed. Ask whoever shared it for a fresh link.
+            </p>
           </section>
         )}
-        <p className="share-note">Shared from Kay. Only this view is shared, not the conversation.</p>
+        <p className="share-note">
+          Shared from Kay. Only this view is shared, not the conversation.
+        </p>
       </div>
     </main>
   );

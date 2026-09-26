@@ -5,10 +5,18 @@ import { ExternalIcon, LinkIcon, ShareIcon } from "./icons";
 function Row() {
   return (
     <div style={{ display: "flex", gap: 12, padding: 16, background: "var(--paper)" }}>
-      <IconButton label="Share this card"><ShareIcon /></IconButton>
-      <IconButton label="Copy link"><LinkIcon /></IconButton>
-      <IconButton label="Open in a new tab"><ExternalIcon /></IconButton>
-      <IconButton label="Unavailable" disabled><ShareIcon /></IconButton>
+      <IconButton label="Share this card">
+        <ShareIcon />
+      </IconButton>
+      <IconButton label="Copy link">
+        <LinkIcon />
+      </IconButton>
+      <IconButton label="Open in a new tab">
+        <ExternalIcon />
+      </IconButton>
+      <IconButton label="Unavailable" disabled>
+        <ShareIcon />
+      </IconButton>
     </div>
   );
 }

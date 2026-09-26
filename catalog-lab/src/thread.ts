@@ -195,7 +195,8 @@ export const threads: Record<string, Thread> = {
       options: [
         {
           label: "Request a forecast view",
-          detail: "I'll add it to the catalog backlog and keep showing exact values until it ships.",
+          detail:
+            "I'll add it to the catalog backlog and keep showing exact values until it ships.",
         },
       ],
       answer: { placeholder: "How many weeks ahead should it forecast?" },
@@ -211,7 +212,8 @@ export const threads: Record<string, Thread> = {
       options: [
         {
           label: "Request a forecast view",
-          detail: "I'll add it to the catalog backlog and keep showing exact values until it ships.",
+          detail:
+            "I'll add it to the catalog backlog and keep showing exact values until it ships.",
         },
       ],
       answer: { placeholder: "Chat about a plan to capture a different selection of sales data" },

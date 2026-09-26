@@ -8,11 +8,22 @@ const STATES: [string, string | undefined, string][] = [
   ["Filled", undefined, "The next 4 weeks"],
 ];
 
-function FieldStates({ placeholder, surface }: { placeholder: string; surface: "paper" | "attention" }) {
+function FieldStates({
+  placeholder,
+  surface,
+}: {
+  placeholder: string;
+  surface: "paper" | "attention";
+}) {
   return (
     <div
       className={surface === "attention" ? "attention-surface" : undefined}
-      style={{ display: "grid", gap: 20, padding: 32, background: surface === "paper" ? "var(--bg)" : undefined }}
+      style={{
+        display: "grid",
+        gap: 20,
+        padding: 32,
+        background: surface === "paper" ? "var(--bg)" : undefined,
+      }}
     >
       {STATES.map(([name, preview, value]) => (
         <div key={name} style={{ display: "flex", alignItems: "center", gap: 24 }}>
@@ -33,7 +44,13 @@ function FieldStates({ placeholder, surface }: { placeholder: string; surface: "
         <span className="muted" style={{ width: 110, fontSize: 12 }}>
           Disabled
         </span>
-        <input className="field" style={{ maxWidth: 320 }} placeholder={placeholder} disabled aria-label="Disabled" />
+        <input
+          className="field"
+          style={{ maxWidth: 320 }}
+          placeholder={placeholder}
+          disabled
+          aria-label="Disabled"
+        />
       </div>
     </div>
   );

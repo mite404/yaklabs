@@ -17,8 +17,18 @@ it("returns nothing for a fragment that is missing, garbled or of an unknown kin
 });
 
 it("links to share.html in the app and to the public-page story inside Storybook", () => {
-  const app = { href: "https://kay.example/lab/", pathname: "/lab/", origin: "https://kay.example" } as Location;
+  const app = {
+    href: "https://kay.example/lab/",
+    pathname: "/lab/",
+    origin: "https://kay.example",
+  } as Location;
   expect(shareLink(card, app)).toMatch(/^https:\/\/kay\.example\/lab\/share\.html#c=/);
-  const storybook = { href: "http://localhost:6006/iframe.html?id=x", pathname: "/iframe.html", origin: "http://localhost:6006" } as Location;
-  expect(shareLink(card, storybook)).toMatch(/^http:\/\/localhost:6006\/iframe\.html\?id=share-public-page--from-link&viewMode=story#c=/);
+  const storybook = {
+    href: "http://localhost:6006/iframe.html?id=x",
+    pathname: "/iframe.html",
+    origin: "http://localhost:6006",
+  } as Location;
+  expect(shareLink(card, storybook)).toMatch(
+    /^http:\/\/localhost:6006\/iframe\.html\?id=share-public-page--from-link&viewMode=story#c=/,
+  );
 });

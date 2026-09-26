@@ -154,10 +154,9 @@ export function DictationModal({
     label: "System Default",
   };
   const transcript = live ? speech.text : simulatedTranscript(elapsed);
-  const read = live
-    ? microphone.read
-    : () => simulatedLevel(performance.now() - startedAt.current);
-  const notice = microphone.error ??
+  const read = live ? microphone.read : () => simulatedLevel(performance.now() - startedAt.current);
+  const notice =
+    microphone.error ??
     (live && !speech.supported
       ? "The waveform is live, but this browser has no speech service, so no text will appear."
       : undefined);
@@ -175,65 +174,66 @@ export function DictationModal({
   }
 
   return (
-    <Modal className="dictation" labelledBy="dictation-title" onClose={onCancel} onKeyDown={onKeyDown}>
-        <header className="dictation-header">
-          <p id="dictation-title">
-            <span className="rec-dot" aria-hidden="true" />
-            Listening
-            <span className="dictation-time">{formatElapsed(elapsed)}</span>
-          </p>
-          <div className="device-picker">
-            <button
-              aria-haspopup="listbox"
-              aria-expanded={picking}
-              onClick={() => setPicking(!picking)}
-            >
-              {device.label} <span aria-hidden="true">▾</span>
-            </button>
-            {picking && (
-              <ul role="listbox" aria-label="Choose microphone">
-                {devices.map((item) => (
-                  <li key={item.id}>
-                    <button
-                      role="option"
-                      aria-selected={item.id === deviceId}
-                      onClick={() => {
-                        setDeviceId(item.id);
-                        setPicking(false);
-                      }}
-                    >
-                      <span className="radio" aria-hidden="true" />
-                      {item.label}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </header>
-
-        <Waveform read={read} />
-
-        <p className={transcript ? "dictation-text" : "dictation-text muted"} aria-live="polite">
-          {transcript || "Start speaking…"}
+    <Modal
+      className="dictation"
+      labelledBy="dictation-title"
+      onClose={onCancel}
+      onKeyDown={onKeyDown}
+    >
+      <header className="dictation-header">
+        <p id="dictation-title">
+          <span className="rec-dot" aria-hidden="true" />
+          Listening
+          <span className="dictation-time">{formatElapsed(elapsed)}</span>
         </p>
-        {notice && <p className="dictation-notice">{notice}</p>}
+        <div className="device-picker">
+          <button
+            aria-haspopup="listbox"
+            aria-expanded={picking}
+            onClick={() => setPicking(!picking)}
+          >
+            {device.label} <span aria-hidden="true">▾</span>
+          </button>
+          {picking && (
+            <ul role="listbox" aria-label="Choose microphone">
+              {devices.map((item) => (
+                <li key={item.id}>
+                  <button
+                    role="option"
+                    aria-selected={item.id === deviceId}
+                    onClick={() => {
+                      setDeviceId(item.id);
+                      setPicking(false);
+                    }}
+                  >
+                    <span className="radio" aria-hidden="true" />
+                    {item.label}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      </header>
 
-        <footer className="dictation-footer">
-          <span className="muted">Typing is paused while recording</span>
-          <div>
-            <button className="btn btn-sm" onClick={onCancel}>
-              Cancel
-            </button>
-            <button
-              ref={doneButton}
-              className="dictation-done"
-              onClick={() => onDone(transcript)}
-            >
-              <span className="stop-square" aria-hidden="true" /> Done
-            </button>
-          </div>
-        </footer>
+      <Waveform read={read} />
+
+      <p className={transcript ? "dictation-text" : "dictation-text muted"} aria-live="polite">
+        {transcript || "Start speaking…"}
+      </p>
+      {notice && <p className="dictation-notice">{notice}</p>}
+
+      <footer className="dictation-footer">
+        <span className="muted">Typing is paused while recording</span>
+        <div>
+          <button className="btn btn-sm" onClick={onCancel}>
+            Cancel
+          </button>
+          <button ref={doneButton} className="dictation-done" onClick={() => onDone(transcript)}>
+            <span className="stop-square" aria-hidden="true" /> Done
+          </button>
+        </div>
+      </footer>
     </Modal>
   );
 }

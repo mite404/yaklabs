@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useEffectEvent, useRef } from "react";
 
 // One sample every TICK_MS; each sample is a bar BAR px wide with GAP px after it.
 const TICK_MS = 45;
@@ -12,8 +12,7 @@ type Palette = { accent: string; bar: string; future: string };
 
 function readPalette(el: HTMLElement): Palette {
   const style = getComputedStyle(el);
-  const token = (name: string, fallback: string) =>
-    style.getPropertyValue(name).trim() || fallback;
+  const token = (name: string, fallback: string) => style.getPropertyValue(name).trim() || fallback;
   return {
     accent: token("--accent", "#515e38"),
     bar: token("--ink", "#252524"),
@@ -41,10 +40,10 @@ function drawBar(ctx: CanvasRenderingContext2D, x: number, mid: number, height: 
  */
 export function Waveform({ read }: { read: () => number }) {
   const canvas = useRef<HTMLCanvasElement>(null);
-  const reader = useRef(read);
-  reader.current = read;
+  // Samples through the latest `read` without restarting the animation loop when it changes.
+  const sample = useEffectEvent(read);
 
-  useEffect(() => {
+  useEffect((): void | (() => void) => {
     const el = canvas.current;
     const ctx = el?.getContext("2d");
     if (!el || !ctx) return;
@@ -68,7 +67,7 @@ export function Waveform({ read }: { read: () => number }) {
       // A hidden tab can skip seconds; resume from now instead of replaying them.
       if (now - lastTick > 1000) lastTick = now - TICK_MS;
       while (now - lastTick >= TICK_MS) {
-        levels.unshift(reader.current());
+        levels.unshift(sample());
         lastTick += TICK_MS;
       }
       const playhead = Math.round(width / 2);
@@ -101,6 +100,7 @@ export function Waveform({ read }: { read: () => number }) {
     <canvas
       ref={canvas}
       className="waveform"
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- a live canvas cannot be an <img>; role="img" names its drawing
       role="img"
       aria-label="Live audio waveform, newest sound at the center"
     />
