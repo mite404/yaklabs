@@ -24,13 +24,15 @@
       "dependsOn": ["^typecheck"]
     },
     "test": {
-      "dependsOn": ["^typecheck"]
+      "dependsOn": ["^typecheck"],
+      "passThroughEnv": ["PLAYWRIGHT_BROWSERS_PATH"]
     },
     "test:unit": {
       "dependsOn": ["^typecheck"]
     },
     "test:stories": {
-      "dependsOn": ["^typecheck"]
+      "dependsOn": ["^typecheck"],
+      "passThroughEnv": ["PLAYWRIGHT_BROWSERS_PATH"]
     },
     "dev": {
       "cache": false,
