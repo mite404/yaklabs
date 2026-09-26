@@ -82,10 +82,16 @@ export const DictationPickerEscapes: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByRole("button", { name: /System Default/ }));
-    await expect(canvas.getByRole("listbox", { name: "Choose microphone" })).toBeVisible();
+    // The dialog rises in from opacity 0, and on that first frame nothing inside it counts as
+    // visible; wait it out rather than assert once.
+    await waitFor(async () => {
+      await expect(canvas.getByRole("listbox", { name: "Choose microphone" })).toBeVisible();
+    });
     await userEvent.keyboard("{Escape}");
     await expect(canvas.queryByRole("listbox", { name: "Choose microphone" })).toBeNull();
-    await expect(canvas.getByRole("dialog")).toBeVisible();
+    await waitFor(async () => {
+      await expect(canvas.getByRole("dialog")).toBeVisible();
+    });
     await userEvent.keyboard("{Escape}");
     await expect(canvas.queryByRole("dialog")).toBeNull();
   },
