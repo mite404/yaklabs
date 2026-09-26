@@ -423,6 +423,12 @@ The Recap and Needs attention cards' shadow moves 8px right as well as 8px down 
 
 ## ADR-070 - The control you just clicked stays in view
 
-2026-09-26 - Accepted; amends ADR-038.
+2026-09-26 - Superseded by ADR-071.
 When a click makes a card taller than the visible thread, the thread still starts the card at its top, unless that would leave the clicked control under the compose box; then it scrolls until the control rests 20px above the compose box, so a toggle such as "Show my work" can always be clicked again to hide.
 Before, opening the profit card's steps pushed "Hide my work" beneath the compose box, where a click landed in the text field.
+
+## ADR-071 - An expanded card always shows its bottom edge
+
+2026-09-26 - Accepted; supersedes ADR-070 and amends ADR-038.
+When a click grows a card and its bottom is clipped by any surface (the compose box, or the Recap or Needs attention card docked over the thread), the thread scrolls up until the card's bottom edge rests 20px above that surface, even if the card's top leaves the view; a card that is not clipped does not move.
+The bottom edge is the signal that everything in the card has been shown: without it, a non-technical person is left wondering how to close the card, or waiting for the agent to say more.
