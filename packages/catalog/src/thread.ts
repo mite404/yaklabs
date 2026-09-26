@@ -1,5 +1,5 @@
 import { scenarios } from "./fixtures";
-import type { CardAttachment } from "./interactive";
+import type { CardAttachment, InteractiveSelection } from "./interactive";
 import type { RecapItem } from "./recapRules";
 
 /** One turn in a thread; agent turns may carry a catalog payload the host validates. */
@@ -83,7 +83,7 @@ export const profitCard = {
       "Linked the slider to those three results",
     ],
   },
-};
+} satisfies InteractiveSelection;
 
 // Edge cases: a single reading and a view the catalog does not have.
 const fallbacks: Thread = {

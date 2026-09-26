@@ -12,7 +12,7 @@ import { profitCard } from "./thread";
 
 // A deep copy the test can break without touching the shared fixture.
 function card(): InteractiveSelection {
-  return structuredClone(profitCard) as InteractiveSelection;
+  return structuredClone(profitCard);
 }
 
 describe("resolveInteractive", () => {
@@ -69,6 +69,15 @@ it("fills the sentence and marks which parts are live", () => {
     { text: " was ", live: false },
     { text: "$25.6k", live: true },
     { text: ".", live: false },
+  ]);
+});
+
+it("leaves a placeholder the schema would reject in the text as written", () => {
+  const values = card().props.control.stops[0];
+  const parts = fillSentence("{measure} beat {forecast}.", summarize(values, "Sep 14–20"));
+  expect(parts).toEqual([
+    { text: "Gross profit", live: true },
+    { text: " beat {forecast}.", live: false },
   ]);
 });
 
