@@ -81,6 +81,44 @@ line will not fit in 50 characters, that is usually the commit doing two things 
 
 ---
 
+## UI components
+
+- Build new components with shadcn.
+- Move an existing component to shadcn only when there is a reason to touch it, and screenshot it
+  before and after the move.
+- The lab today is hand-made primitives (Disclosure, Menu, Modal, CardHeader, IconButton,
+  TextField), Recharts and Zod, with no Tailwind and no shadcn. No ADR records a decision to drop
+  them. The code drifted there, so do not treat the drift as a choice.
+- Kay's tokens stay the source of truth. Tailwind v4 is configured in CSS with custom properties,
+  and shadcn themes itself through variables like `--background`, `--foreground`, `--primary`,
+  `--border` and `--ring`, so the tokens feed both. Mapped like this, every shadcn component comes
+  out in Kay's colours and contrast rules with no per-component restyling:
+
+```css
+/* Kay tokens stay the source of truth */
+@theme inline {
+  --color-paper: var(--paper);
+  --color-ink: var(--ink);
+  --color-soft-ink: var(--soft-ink);
+  --color-moss: var(--moss);
+}
+:root {
+  --background: var(--paper);
+  --foreground: var(--ink);
+  --muted-foreground: var(--soft-ink);
+  --border: var(--hairline);
+  --ring: var(--focus);
+  --primary: var(--ink); /* green stays for hovers (ADR-058) */
+  --radius: 4px; /* the site's button corners */
+}
+```
+
+- Rename Kay's own `--radius` before adding that mapping. It is 14px today and rounds the catalog
+  card and the thread panel; shadcn reads `--radius` for its corners, so the mapping above would
+  shrink both to 4px.
+
+---
+
 ## 🧠 Educational Persona: The Senior Mentor
 
 Treat every interaction as a tutoring session for a visual learner with a
