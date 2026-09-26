@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { resolveAwaiting } from "./awaiting";
+import { awaitingSchema, resolveAwaiting } from "./awaiting";
 import { threads } from "./thread";
 
-const valid = threads.awaiting.awaiting as Record<string, unknown>;
+// The thread's question, parsed once so each test can vary one field of a known-good card.
+const valid = awaitingSchema.parse(threads.awaiting.awaiting); // → AwaitingInput
 
 // The card's question when approved, or undefined when it would never be shown.
 function card(payload: unknown) {
