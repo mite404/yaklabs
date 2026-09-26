@@ -11,9 +11,9 @@ description: >-
 # Verify Storybook
 
 The only surface in scope is the Storybook for `packages/catalog/`, hosted by `apps/storybook/`
-(React 19, Vite 8, Storybook 10). The
-workbench app (`index.html`) and the share page (`share.html`) are out of scope until a web or
-desktop app exists; their components are covered here through stories.
+(React 19, Vite 8, Storybook 10). The web app in `apps/web/` renders the same components on its
+routes (the thread, the workbench at `/lab`, the share page at `/share.html`); those routes are not
+driven here, their components are covered through stories.
 
 A story is the unit of proof. Every component a user sees renders through at least one story, and
 `pnpm test` renders all of them in headless Chromium. This skill adds what the suite cannot tell

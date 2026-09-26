@@ -876,3 +876,37 @@ The day-4 extra becomes visual regression and accessibility checks in CI (Playwr
 across the Storybook states, plus axe), which matches the Design Engineer: Infrastructure post's
 "state catalogs, screenshot and visual regression tests, and accessibility checks in CI" and
 contains the contrast guard.
+
+## ADR-087 - The repo is a pnpm monorepo in Better-T-Stack's layout
+
+2026-09-26 - Accepted (Ethan); carries out ADR-086.
+Better-T-Stack scaffolded only the frontend (`pnpm create better-t-stack@latest` with React Router
+and every backend, database, auth and payments option set to none, plus the lefthook, oxlint and
+turborepo addons), and the result was rearranged so the catalog stays one package beside its own
+stories, schemas and tests: `apps/web` is the React Router single-page app, `apps/storybook` hosts
+Storybook and the story tests over `packages/catalog` (`@yaklabs/catalog`, the former
+`catalog-lab`), `apps/gateway` is the Hono Worker, `packages/runtime` is the Web Worker's agent loop
+and conversation store, `packages/ui` holds the shadcn primitives on Kay's tokens, and
+`packages/config` the shared TypeScript base; pnpm's catalog pins the versions every package shares
+and Turborepo runs `build`, `typecheck` and the tests.
+Three scaffold pieces did not survive the move: Varlock (an env codegen step; the app parses its
+`VITE_` variables once with zod into a union with no half-set states), `bunfig.toml` and the server
+entry (`@react-router/node`, `@react-router/serve`, `start`; ADR-083's `ssr: false` build keeps
+`isbot` only because React Router's typegen installs it by itself when it is missing), and fourteen
+of the seventeen generated shadcn components, which nothing imported and `shadcn add` restores in
+seconds; `next-themes` went too, since React 19 refuses the inline script it renders inside a
+client-rendered component, so a fifty-line module sets `data-theme` on the root, boots the stored
+theme from the prerendered shell, and hands the toaster its theme as a prop.
+Two token names collided with shadcn's and were renamed before the bridge was written: Kay's
+`--radius` (14px, the card and the thread panel) is now `--radius-card`, and Kay's `--accent` (the
+olive) is now `--olive`, so shadcn's `--radius` can be the site's 4px button corner and its
+`--accent` the hover fill; the app loads `tokens.css` in a `catalog` cascade layer declared between
+Tailwind's `base` and `components`, so the catalog keeps its bare-element styles above preflight
+while a utility class on a shadcn primitive still wins.
+Lefthook replaced husky and lint-staged and runs only on staged files (oxlint, oxfmt, the markdown
+wrap), and CI runs everything else on pnpm with a frozen lockfile; oxlint runs with nested configs
+off, because it otherwise picked up an example config under the vendored skills.
+Every story rendered byte-identical before and after the move, and again after the token renames,
+from screenshots of all forty stories taken twice from the old layout; the four that differ are the
+dictation stories' live waveform and one chart animation, which differ between two runs of the same
+code.
