@@ -1,5 +1,15 @@
+import { z } from "zod";
+
 /** A single card, shared on its own: the kind of card and the agent's payload for it. */
 export type SharedCard = { v: 1; kind: "catalog" | "interactive"; payload: unknown };
+
+// The envelope a link carries. Only the envelope is checked here; the payload passes the
+// card's own catalog check before anything renders (ADR-064).
+const sharedCardSchema = z.object({
+  v: z.literal(1),
+  kind: z.enum(["catalog", "interactive"]),
+  payload: z.unknown(),
+});
 
 // The link's fragment: everything after `#c=` is the card. Fragments never reach a server,
 // so the card's data stays between the people who have the link.
@@ -31,9 +41,9 @@ export function decodeCard(hash: string): SharedCard | undefined {
   const fragment = hash.replace(/^#/, "");
   if (!fragment.startsWith(PREFIX)) return undefined;
   try {
-    const card = JSON.parse(fromBase64Url(fragment.slice(PREFIX.length)));
-    if (card?.v !== 1 || (card.kind !== "catalog" && card.kind !== "interactive")) return undefined;
-    return card as SharedCard;
+    const json: unknown = JSON.parse(fromBase64Url(fragment.slice(PREFIX.length)));
+    const card = sharedCardSchema.safeParse(json);
+    return card.success ? card.data : undefined;
   } catch {
     return undefined;
   }
