@@ -119,15 +119,18 @@ function Chart({ selection }: { selection: Selection }) {
  * @param context Host-owned placement, never part of the agent payload: "page" for the
  * evaluation workbench, "thread" for a card inside a chat thread (ADR-023).
  * @param shareable Show the share button (ADR-064); off on the public page itself.
+ * @param draggable Let the header drag the card out, as onto the compose canvas (ADR-089).
  */
 export function CatalogCard({
   payload,
   context = "page",
   shareable = true,
+  draggable = false,
 }: {
   payload: unknown;
   context?: "page" | "thread";
   shareable?: boolean;
+  draggable?: boolean;
 }) {
   const result = resolve(payload);
   const [showTable, setShowTable] = useState(false);
@@ -160,6 +163,9 @@ export function CatalogCard({
       <CardHeader
         eyebrow={`${selection.component} / ${props.variant}`}
         title={props.title}
+        drag={
+          draggable ? { card: { v: 1, kind: "catalog", payload }, title: props.title } : undefined
+        }
         actions={
           <>
             <span className="badge">Validated</span>

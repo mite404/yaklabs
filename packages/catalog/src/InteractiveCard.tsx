@@ -42,11 +42,14 @@ export function InteractiveCard({
   turnId,
   onChoose,
   shareable = true,
+  draggable = false,
 }: {
   payload: unknown;
   turnId: string;
   onChoose: (attachment: CardAttachment) => void;
   shareable?: boolean;
+  /** Let the header drag the card out, as onto the compose canvas (ADR-089). */
+  draggable?: boolean;
 }) {
   const result = resolveInteractive(payload);
   const initial =
@@ -81,6 +84,11 @@ export function InteractiveCard({
       <CardHeader
         title={props.title}
         actions={shareable && <ShareButton card={{ v: 1, kind: "interactive", payload }} />}
+        drag={
+          draggable
+            ? { card: { v: 1, kind: "interactive", payload }, title: props.title }
+            : undefined
+        }
       />
 
       <p className="live-sentence" aria-live="polite">
@@ -143,7 +151,9 @@ export function InteractiveCard({
           value={index}
           aria-valuetext={stop.label}
           style={{ ["--fill" as string]: `${(index / (stops.length - 1)) * 100}%` }}
-          onChange={(event) => choose(Number(event.target.value))}
+          onChange={(event) => {
+            choose(Number(event.target.value));
+          }}
         />
         <div className="stops">
           {stops.map((item, i) => (
@@ -153,7 +163,9 @@ export function InteractiveCard({
               tabIndex={-1}
               data-edge={i === 0 ? "start" : i === stops.length - 1 ? "end" : undefined}
               style={{ left: `${(i / (stops.length - 1)) * 100}%` }}
-              onClick={() => choose(i)}
+              onClick={() => {
+                choose(i);
+              }}
             >
               {item.label}
             </button>
@@ -175,7 +187,9 @@ export function InteractiveCard({
         <button
           className="btn btn-sm card-toggle"
           aria-expanded={showWork}
-          onClick={() => setShowWork(!showWork)}
+          onClick={() => {
+            setShowWork(!showWork);
+          }}
         >
           {showWork ? "Hide my work" : "Show my work"}
         </button>

@@ -11,6 +11,28 @@ const sharedCardSchema = z.object({
 /** A single card, shared on its own: the kind of card and the agent's payload for it. */
 export type SharedCard = z.infer<typeof sharedCardSchema>;
 
+/** The type under which a dragged card rides on the drag's data (ADR-089). */
+export const CARD_DRAG_TYPE = "application/x-kay-card";
+
+/** Puts a card on a drag, with its title as the plain text a foreign drop target would see. */
+export function startCardDrag(transfer: DataTransfer, card: SharedCard, title: string): void {
+  transfer.setData(CARD_DRAG_TYPE, JSON.stringify(card));
+  transfer.setData("text/plain", title);
+  transfer.effectAllowed = "copy";
+}
+
+/** The card a drop carries, or undefined when the drag was something else, such as text. */
+export function cardFromDrop(transfer: Pick<DataTransfer, "getData">): SharedCard | undefined {
+  const raw = transfer.getData(CARD_DRAG_TYPE); // → JSON, or "" when no card was dragged
+  if (raw === "") return undefined;
+  try {
+    const parsed = sharedCardSchema.safeParse(JSON.parse(raw)); // → SharedCard, or a failure
+    return parsed.success ? parsed.data : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 // The parts of a location a share link is built from.
 type LinkBase = Pick<Location, "href" | "pathname" | "origin">;
 
@@ -22,11 +44,11 @@ function toBase64Url(text: string): string {
   const bytes = new TextEncoder().encode(text);
   let binary = "";
   bytes.forEach((byte) => (binary += String.fromCharCode(byte)));
-  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  return btoa(binary).replaceAll("+", "-").replaceAll("/", "_").replace(/=+$/, "");
 }
 
 function fromBase64Url(encoded: string): string {
-  const base64 = encoded.replace(/-/g, "+").replace(/_/g, "/");
+  const base64 = encoded.replaceAll("-", "+").replaceAll("_", "/");
   const binary = atob(base64 + "=".repeat((4 - (base64.length % 4)) % 4));
   return new TextDecoder().decode(Uint8Array.from(binary, (char) => char.charCodeAt(0)));
 }

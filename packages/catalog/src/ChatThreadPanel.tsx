@@ -122,9 +122,16 @@ function AgentTurn({
       aria-busy={message.streaming || undefined}
     >
       <p>{message.text}</p>
-      {message.payload !== undefined && <CatalogCard payload={message.payload} context="thread" />}
+      {message.payload !== undefined && (
+        <CatalogCard payload={message.payload} context="thread" draggable />
+      )}
       {message.interactive !== undefined && (
-        <InteractiveCard payload={message.interactive} turnId={message.id} onChoose={onChoose} />
+        <InteractiveCard
+          payload={message.interactive}
+          turnId={message.id}
+          onChoose={onChoose}
+          draggable
+        />
       )}
     </article>
   );
@@ -472,6 +479,8 @@ function focusComposeIn(scroller: HTMLElement | null): void {
  * @param dictationSource Audio for dictation: simulated (default) or the real microphone.
  * @param startDictating Open with dictation already recording (stories).
  * @param agent Who answers: the scripted lab stand-in by default, or a real model (ADR-041).
+ * @param initialDraft Text waiting in the compose box when the thread opens, such as a
+ * highlight dropped on the canvas (ADR-089).
  */
 export function ChatThreadPanel({
   thread,
@@ -481,6 +490,7 @@ export function ChatThreadPanel({
   dictationSource = "simulated",
   startDictating = false,
   agent = labAgent,
+  initialDraft = "",
 }: {
   thread: Thread;
   width?: number;
@@ -489,10 +499,11 @@ export function ChatThreadPanel({
   dictationSource?: DictationSource;
   startDictating?: boolean;
   agent?: Agent;
+  initialDraft?: string;
 }) {
   const [messages, setMessages] = useState(thread.messages);
   const tell = useAgent(agent, setMessages);
-  const [draft, setDraft] = useState("");
+  const [draft, setDraft] = useState(initialDraft);
   const [dictating, setDictating] = useState(startDictating);
   const outbox = useOutbox(thread.messages);
   const [awaiting, setAwaiting] = useAwaiting(thread, tell);
@@ -546,11 +557,7 @@ export function ChatThreadPanel({
   }
 
   return (
-    <section
-      className="thread-panel"
-      style={width === undefined ? undefined : { width }}
-      aria-label={thread.title}
-    >
+    <section className="thread-panel" style={{ width }} aria-label={thread.title}>
       <header className="thread-header">
         <h2>{thread.title}</h2>
       </header>

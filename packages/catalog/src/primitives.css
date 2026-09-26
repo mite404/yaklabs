@@ -161,6 +161,10 @@
 }
 
 /* Card header: title left, actions right, and a flush line under it, edge to edge. */
+/* A header that is a drag handle (ADR-089) says so with the cursor. */
+.card-heading[draggable="true"] {
+  cursor: grab;
+}
 .card-heading {
   align-items: flex-start;
   border-bottom: 1px solid var(--hairline);
