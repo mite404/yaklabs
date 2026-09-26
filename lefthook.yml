@@ -23,3 +23,14 @@ pre-commit:
       glob: "*.md"
       run: node scripts/wrap-md.js {staged_files}
       stage_fixed: true
+
+# A pull or a branch switch that changes the lockfile installs what it added, so the dev server
+# never fails to resolve a package the branch brought in.
+post-merge:
+  jobs:
+    - name: install
+      run: node scripts/install-if-behind.js
+post-checkout:
+  jobs:
+    - name: install
+      run: node scripts/install-if-behind.js

@@ -37,7 +37,9 @@ pnpm build-storybook  # apps/storybook/storybook-static
 ## Checks
 
 Lefthook runs on every commit and touches only staged files: Oxlint, Oxfmt, and a 100-column wrap
-for markdown. CI (`.github/workflows/ci.yml`) runs the rest on every pull request: format, lint,
+for markdown. After a pull or a branch switch it runs `pnpm install` when the lockfile moved past
+what `node_modules` holds, so a branch that adds a package never leaves the dev server failing to
+resolve it. CI (`.github/workflows/ci.yml`) runs the rest on every pull request: format, lint,
 types, the fallow audit against the base branch, unit and story tests, and both builds.
 
 To prove a component change in a real browser, use the `verify-storybook` skill under
