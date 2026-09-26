@@ -15,6 +15,11 @@
     //   "**/generated/**"     // OpenAPI, Protobuf codegen
     // ]
   },
+  "health": {
+    // Dev scripts (DevTools snippets, wrap-md) are tools, not product code; complexity gates
+    // police the components.
+    "ignore": ["scripts/**"],
+  },
   "rules": {
     "unused-dependencies": "warn"
   }

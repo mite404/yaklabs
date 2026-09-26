@@ -1,6 +1,7 @@
 {
   "name": "yaklabs",
   "private": true,
+  "type": "module",
   "workspaces": [
     "catalog-lab"
   ],
@@ -14,10 +15,13 @@
     "test:stories": "npm run test:stories --workspaces",
     "build-storybook": "npm run build-storybook --workspaces",
     "fallow": "fallow",
-    "fallow:audit": "fallow audit"
+    "fallow:audit": "fallow audit",
+    "prepare": "husky"
   },
   "devDependencies": {
     "fallow": "^3.28.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.5.1",
     "oxfmt": "^0.70.0",
     "oxlint": "^1.85.0",
     "oxlint-tsgolint": "^7.0.2003"
