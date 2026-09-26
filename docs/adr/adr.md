@@ -970,8 +970,25 @@ The header became a rail: the Kay mark, Thread and Lab as icons with tooltips, a
 theme and the account. GitButler's workspace was the reference for the concept (lanes on a canvas,
 open ground kept to the right), not for the look; the rail and the canvas use Kay's paper, hairline,
 serif and olive.
-Not yet: lanes that reorder or drop at a position, a keyboard path for a highlight (the Blank thread
-button is the keyboard route today), and card lanes that persist; each is in `docs/LATER.md`.
+Amended later the same day, after the first run on Ethan's machine. The hand shows only over a
+highlight that already exists: while a button is down the selection growing under it keeps the
+I-beam, as every word processor has since the nineties, and the hand appears on release. Lanes
+resize by the gap after them: the whole gap takes the drag, and while the pointer is on it a hint of
+a line shows, ink at the pointer's height fading to nothing 30px above and below, which JetBrains
+Air does along a full-height blue line; the divider between thread and canvas shows the same hint.
+Lanes reorder by the grip in the strip above them: past a small dead zone the lane lifts and rides
+the pointer, the lanes it passes step aside, and once its centre crosses a neighbour's a skeleton of
+it in the chart's neutral mark colour (`--data`) holds the slot it would take; the order is kept in
+`kay.canvas.order` beside the hidden list, and arrow keys on the grip move a lane one slot. A
+vertical wheel over the ground pans the row, since the row has nothing vertical to scroll. The open
+space reads "Drag a text selection or card / to start a new thread with context" over the catalog's
+own button, "Create blank thread", the one a card's "Show my work" uses. The close stays in the
+strip, with the site's 4px corners. Moving it into the thread's title bar was built and axed: it
+cost the panel a prop and the card lanes a title bar of their own, for a change Ethan chose not to
+make yet.
+Not yet: a drop between two lanes, a keyboard path for a highlight (the Create blank thread button
+is the keyboard route today), card lanes that persist, and the row scrolling itself while a carried
+lane nears its edge; each is in `docs/LATER.md`.
 
 ## ADR-090 - Dark mode for every surface
 

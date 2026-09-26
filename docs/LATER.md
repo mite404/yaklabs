@@ -22,8 +22,11 @@ this list when it ships.
   (ADR-055, ADR-058).
 - **Show my work as numbered steps.** Adopt the numbered-circle step list from the "Application
   simulator" screenshot, which fits the legibility story (ADR-036).
-- **Lanes that reorder and drop in place.** The canvas appends; dragging a lane to a new position,
-  or dropping between two lanes, is next (ADR-089).
+- **A drop between two lanes.** The canvas appends; dropping a highlight or a card between two
+  lanes should open the new lane there (ADR-089). Lanes already reorder by their grip.
+- **The row follows a carried lane.** A lane dragged to the pane's edge should scroll the row along,
+  and a wheel mid-drag should move the drop slot with the row; today the slot is measured when the
+  lane lifts (ADR-089).
 
 ## Engineering
 
@@ -32,8 +35,9 @@ this list when it ships.
   tool, validates each `tool_use` with the catalog's schemas, and loops until the reply ends.
 - **Card lanes that persist.** A card opened large on the canvas lasts the visit; keeping it means
   storing its envelope beside the hidden-lane list (ADR-089).
-- **A keyboard path onto the canvas.** Drag and drop has none; the Blank thread button is the only
-  keyboard route, and a "send highlight to canvas" action on the selection would give it one.
+- **A keyboard path onto the canvas.** Drag and drop has none; the Create blank thread button is
+  the only keyboard route, and a "send highlight to canvas" action on the selection would give it
+  one. Lane widths and order do have one: arrow keys on a gap or a grip.
 - **Make the catalog pass `noUncheckedIndexedAccess`.** Eight index reads in `interactive.ts` and
   `thread.ts` fail it, so `packages/runtime` keeps the flag off; the catalog should pass the
   shared base config.

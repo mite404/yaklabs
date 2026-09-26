@@ -17,13 +17,15 @@ The agent loop and the conversation store run in a Web Worker from `@yaklabs/run
 A rail on the left holds the Kay mark, Thread and Lab, and at its foot the theme and the account.
 On `/`, the thread sits beside the compose canvas: drag a highlight out of the thread onto the
 canvas to start a new thread of the same project with the highlight quoted in its compose box, or
-drag a card by its header to see it large in a lane of its own. The pointer becomes a hand over a
-highlight and closes while it is held, so the drag announces itself. Open space always remains at
-the
+drag a card by its header to see it large in a lane of its own. The pointer shows a hand over a
+highlight that already exists, never while one is being made. Open space always remains at the
 end of the row for the next drop, and the divider between the thread and the canvas drags anywhere
-along its length. Thread lanes persist with their conversations; a lane closed by its × stays
-closed (`kay.canvas.hidden` in localStorage), and card lanes last the visit. The model is
-`src/canvas.ts`, the surface `src/components/canvas.tsx`.
+along its length. The gap after a lane drags the lane's width, the grip in the strip above a lane
+drags it to another place in the row (a skeleton marks the slot it would take), arrow keys on
+either do the same, and a wheel over the ground pans the row. Thread lanes persist because their
+conversations do, in the order they were left (`kay.canvas.order` in localStorage), except the
+ones closed (`kay.canvas.hidden`), and card lanes last the visit. The model is `src/canvas.ts`,
+the surface `src/components/canvas.tsx`.
 
 "Required" applies only when the build has sign-in turned on (below).
 

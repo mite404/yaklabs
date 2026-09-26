@@ -34,6 +34,13 @@ quoted in its compose box, and a card dragged by its header opens large in a lan
 open ground always kept to the right for the next drop. The divider between thread and canvas drags
 anywhere along its length. And dark mode is real (ADR-090): the night green page, cream ink, every
 ratio measured, where before only the attention cards changed.
+Then Ethan used it, and the canvas grew hands. The gap after a lane drags its width, with a hint of
+a line that follows the pointer the way JetBrains Air's divider does; the grip above a lane carries
+it to another place in the row, a skeleton in the chart's neutral grey holding the slot it will
+take; a wheel over the ground pans the row; the open space says what to drag and offers "Create
+blank thread" in the site's own button. And the hand over a highlight learned its manners: it waits
+until the highlight is finished, because the I-beam while selecting is a convention older than the
+web.
 
 ## 2. Cast & Crew
 
@@ -66,7 +73,10 @@ Nothing is built yet, so the cast is the set of ideas the prototypes will be mad
   the far end the light switch and the cloakroom.
 - **The compose canvas** is the cutting-room wall: pull a line out of the thread and pin it up to
   start a new cut, drag a card over to see it at size, and there is always bare wall to the right
-  for the next idea (ADR-089).
+  for the next idea (ADR-089). The pins move: take a lane by its grip and the others shuffle
+  along, and the gaps between them are handles that set each lane's width. The canvas model
+  (`apps/web/src/canvas.ts`) does the arithmetic of where a carried lane lands, and the surface
+  (`components/canvas.tsx`) only measures, listens and draws.
 
 ## 3. Behind the Scenes
 
@@ -413,6 +423,25 @@ Nothing is built yet, so the cast is the set of ideas the prototypes will be mad
   command piped tsc into `head`, and `$?` reports the last command in a pipe. Fix: the parameter
   became optional, and the check now reads `PIPESTATUS`. Lesson: a green light means nothing until
   you know which lamp it is wired to.
+- **The hand that reached out too soon.** The open hand appeared the moment a drag-select touched
+  its first character. The pointer-move handler did check for a held button, but the browser also
+  reports every change of the selection on `selectionchange`, and that handler refreshed the hand
+  without asking whether a button was down. Fix: the thread remembers the pointer's buttons with
+  its place, and no path shows the hand while one is down. The story now makes a selection under a
+  held button and expects the I-beam. Lesson: when two events can reach one decision, the decision
+  needs the same facts from both.
+- **The screening room that never got the new pages.** The verify-storybook harness kept failing
+  the grab story while the story suite passed, before and after the fix alike, and a stash-and-shoot
+  "before" looked identical to "after". The tell was a timestamp in the stack trace that never
+  changed: the private Storybook was serving the catalog from a build cache made in the previous
+  session, so both sides of the comparison were the old code. Fix: `launch` now clears that cache
+  before it starts. Lesson: a comparison is only as good as the certainty that the two sides
+  differ in the way you think.
+- **Refs are not for rendering.** The lane drag measured its slots into a ref at pointer-down and
+  the render read them back to place the skeleton. The React lint refused: a ref read during
+  render can leave the screen behind the data. The measurement moved into state beside the move it
+  serves, which is also more honest, since the render does depend on it. Lesson: if the picture
+  needs it, it is state.
 
 ## 5. Director's Commentary
 
@@ -477,6 +506,46 @@ Senior-engineer takeaway: when output volume outgrows review capacity, stop revi
 start constraining inputs.
 Your `never` exhaustiveness check is the same idea in miniature: the compiler, not a reviewer,
 guarantees coverage.
+
+### A drag is data: measure once, compute the rest
+
+Reordering lanes on the canvas could have been a tangle of event handlers moving DOM nodes about.
+Instead the surface measures once, when the grip is pressed, and everything after is a calculation
+over that measurement. `apps/web/src/canvas.ts` holds the arithmetic, and it has no idea what a
+pointer is:
+
+```ts
+// Where each lane sat when the grip was pressed; the lift itself never moves the targets.
+export type Slot = { left: number; width: number };
+
+// A lane passes a neighbour once its centre crosses the neighbour's, and not before.
+export function landingIndex(slots: Slot[], from: number, dx: number): number {
+  const dragged = centre(slots[from]) + dx;
+  let to = from;
+  for (let i = from + 1; i < slots.length; i++) if (dragged > centre(slots[i])) to = i;
+  for (let i = from - 1; i >= 0; i--) if (dragged < centre(slots[i])) to = i;
+  return to;
+}
+```
+
+```mermaid
+flowchart LR
+  D[pointerdown on the grip] -->|measure every lane once| L["Lift<br/>slots, top, height, x"]
+  M[pointermove] -->|dx from x| C{landingIndex}
+  L --> C
+  C -->|to = from| K[lane rides the pointer<br/>no skeleton]
+  C -->|to differs| S["skeleton at slotLeft(to)<br/>neighbours shiftFor(i)"]
+  U[pointerup] -->|to differs| R[onMove: moveItem + saveOrder]
+```
+
+The film version: a dolly grip marks the track before the take. Once the marks are down, the
+camera's position at any moment is a number along the track, not a fresh survey of the set.
+The marks are the `Slot` list; `dx` is how far the dolly has rolled; `landingIndex` reads the
+marks.
+
+Senior-engineer takeaway: the pure functions are the ones with unit tests (twenty now in
+`canvas.test.ts`), the browser lever proves the measuring and the drawing, and the two never have
+to be debugged at the same time.
 
 ### Test screenings, not beauty contests
 
