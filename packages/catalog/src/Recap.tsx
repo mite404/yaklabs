@@ -1,5 +1,18 @@
 import { formatIdle, type RecapItem } from "./recapRules";
 
+// The recap's live status is its headline alone. A status region reads out whole, so the
+// jump buttons stay outside it rather than being re-read each time the idle time moves on.
+function RecapHeadline({ idleMs }: { idleMs: number }) {
+  return (
+    <p>
+      <output>
+        <strong>Recap</strong>
+        <span className="muted"> · {formatIdle(idleMs)} since your last message</span>
+      </output>
+    </p>
+  );
+}
+
 /**
  * "Previously on": an outcomes-first recap shown above the compose box after the user
  * has been away (ADR-018). Each item jumps to the turn that holds its evidence.
@@ -29,12 +42,9 @@ export function Recap({
     );
 
   return (
-    <section className="recap attention-surface" aria-label="Recap" role="status">
+    <section className="recap attention-surface" aria-label="Recap">
       <header className="recap-header">
-        <p>
-          <strong>Recap</strong>
-          <span className="muted"> · {formatIdle(idleMs)} since your last message</span>
-        </p>
+        <RecapHeadline idleMs={idleMs} />
         <button className="recap-close" onClick={onDismiss} aria-label="Dismiss recap">
           ×
         </button>
@@ -42,7 +52,11 @@ export function Recap({
       <ul>
         {items.map((item) => (
           <li key={item.turnId + item.text}>
-            <button onClick={() => onJump(item.turnId)}>
+            <button
+              onClick={() => {
+                onJump(item.turnId);
+              }}
+            >
               <span className="recap-text">{item.text}</span>
               <span className="recap-go" aria-hidden="true">
                 →
