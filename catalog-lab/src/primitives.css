@@ -12,7 +12,9 @@
   border-radius: 4px;
   background: transparent;
   color: var(--soft-ink);
-  transition: background-color 150ms ease, color 150ms ease;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
 }
 .icon-btn:hover,
 .icon-btn[aria-expanded="true"] {

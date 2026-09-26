@@ -58,16 +58,14 @@ export function resolve(input: unknown): Resolution {
         "This request is outside catalog v1 or its data contract. No unvalidated content was rendered.",
     };
   const selection = parsed.data;
-  if (selection.props.rows.length === 0)
-    return { kind: "empty", title: selection.props.title };
+  if (selection.props.rows.length === 0) return { kind: "empty", title: selection.props.title };
   if (
     selection.component === "LineChart" &&
     selection.props.rows.filter((row) => row.value !== null).length < 2
   ) {
     return {
       kind: "fallback",
-      reason:
-        "A trend needs at least two known observations. Showing the exact values instead.",
+      reason: "A trend needs at least two known observations. Showing the exact values instead.",
       selection: {
         catalogVersion: "1",
         component: "DataTable",

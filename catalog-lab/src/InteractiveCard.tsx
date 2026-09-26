@@ -1,13 +1,5 @@
 import { useState } from "react";
-import {
-  Bar,
-  BarChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
+import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { CardHeader } from "./CardHeader";
 import { BAR_RADIUS, CatalogCard } from "./CatalogCard";
 import { ShareButton } from "./ShareButton";
@@ -35,9 +27,7 @@ function prefersReducedMotion(): boolean {
 // One axis for every stop: rescaling per stop would make net look as tall as gross.
 function sharedMax(selection: InteractiveSelection): number {
   return niceCeiling(
-    Math.max(
-      ...selection.props.control.stops.flatMap((stop) => stop.rows.map((row) => row.value)),
-    ),
+    Math.max(...selection.props.control.stops.flatMap((stop) => stop.rows.map((row) => row.value))),
   );
 }
 
@@ -182,7 +172,11 @@ export function InteractiveCard({
 
       <footer>
         <span>{props.source}</span>
-        <button className="btn btn-sm card-toggle" aria-expanded={showWork} onClick={() => setShowWork(!showWork)}>
+        <button
+          className="btn btn-sm card-toggle"
+          aria-expanded={showWork}
+          onClick={() => setShowWork(!showWork)}
+        >
           {showWork ? "Hide my work" : "Show my work"}
         </button>
       </footer>

@@ -14,7 +14,10 @@ async function reply(event: AgentEvent, signal = new AbortController().signal): 
 
 it("streams a reply in chunks that join into whole sentences", async () => {
   const chunks: string[] = [];
-  for await (const chunk of agent.respond({ kind: "answer", text: "4 weeks" }, new AbortController().signal))
+  for await (const chunk of agent.respond(
+    { kind: "answer", text: "4 weeks" },
+    new AbortController().signal,
+  ))
     chunks.push(chunk);
   expect(chunks.length).toBeGreaterThan(1);
   expect(chunks.join("")).toBe('Got it: "4 weeks". Carrying on from there.');
@@ -30,7 +33,9 @@ it("asks in plain words when its question was rejected, reusing the sound part",
     reason: "answer.placeholder: too long",
     question: threads.malformed.awaiting,
   });
-  expect(text).toMatch(/^A forecast view isn't in the catalog yet\. How should I handle it\? Tell me/);
+  expect(text).toMatch(
+    /^A forecast view isn't in the catalog yet\. How should I handle it\? Tell me/,
+  );
 });
 
 it("stops streaming as soon as the reply is abandoned", async () => {

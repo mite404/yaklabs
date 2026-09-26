@@ -14,9 +14,7 @@ it("renders every turn and marks embedded cards as thread-placed", () => {
 });
 
 it("keeps the catalog boundary inside a thread: unsupported payloads never render a chart", () => {
-  const html = renderToStaticMarkup(
-    <ChatThreadPanel thread={threads.fallbacks} />,
-  );
+  const html = renderToStaticMarkup(<ChatThreadPanel thread={threads.fallbacks} />);
   expect(html).toContain("We don’t have a safe view for this yet.");
   expect(html).toContain("Showing the exact values instead.");
 });
@@ -40,7 +38,9 @@ it("floats the agent's question above the compose box with numbered choices and 
 
 it("waits for a choice: Submit stays disabled until a tile is selected, Skip is always there", () => {
   const html = renderToStaticMarkup(<ChatThreadPanel thread={threads.awaiting} />);
-  expect(html).toMatch(/<button class="awaiting-action awaiting-submit" disabled="">Submit<\/button>/);
+  expect(html).toMatch(
+    /<button class="awaiting-action awaiting-submit" disabled="">Submit<\/button>/,
+  );
   expect(html).toContain(">Skip</button>");
   expect(html).not.toContain('aria-checked="true"');
 });

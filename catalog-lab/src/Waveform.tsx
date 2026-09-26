@@ -12,8 +12,7 @@ type Palette = { accent: string; bar: string; future: string };
 
 function readPalette(el: HTMLElement): Palette {
   const style = getComputedStyle(el);
-  const token = (name: string, fallback: string) =>
-    style.getPropertyValue(name).trim() || fallback;
+  const token = (name: string, fallback: string) => style.getPropertyValue(name).trim() || fallback;
   return {
     accent: token("--accent", "#515e38"),
     bar: token("--ink", "#252524"),

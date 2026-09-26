@@ -1,4 +1,11 @@
-import { useEffect, useLayoutEffect, useRef, useState, type Dispatch, type SetStateAction } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type Dispatch,
+  type SetStateAction,
+} from "react";
 import type { Agent, AgentEvent } from "./agent";
 import { AwaitingInputCard } from "./AwaitingInputCard";
 import { resolveAwaiting, type AwaitingInput } from "./awaiting";
@@ -76,9 +83,7 @@ function AgentTurn({
       aria-busy={message.streaming || undefined}
     >
       <p>{message.text}</p>
-      {message.payload !== undefined && (
-        <CatalogCard payload={message.payload} context="thread" />
-      )}
+      {message.payload !== undefined && <CatalogCard payload={message.payload} context="thread" />}
       {message.interactive !== undefined && (
         <InteractiveCard payload={message.interactive} turnId={message.id} onChoose={onChoose} />
       )}
@@ -258,7 +263,8 @@ export function ChatThreadPanel({
     const reserve = () => {
       const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 4;
       // Layout offsets, not screen rects, so the card's slide-in animation can't skew them.
-      const card = slot.firstElementChild instanceof HTMLElement ? slot.firstElementChild.offsetTop : 0;
+      const card =
+        slot.firstElementChild instanceof HTMLElement ? slot.firstElementChild.offsetTop : 0;
       const composeInset = slot.nextElementSibling
         ? parseFloat(getComputedStyle(slot.nextElementSibling).paddingTop) || 0
         : 0;
@@ -313,7 +319,10 @@ export function ChatThreadPanel({
   function answer(text: string) {
     setAwaiting(undefined);
     setLastInputAt(clock);
-    setMessages((current) => [...current, { id: `local-${current.length}`, role: "user", text, time: "now" }]);
+    setMessages((current) => [
+      ...current,
+      { id: `local-${current.length}`, role: "user", text, time: "now" },
+    ]);
     tell({ kind: "answer", text });
   }
 
@@ -398,8 +407,16 @@ export function ChatThreadPanel({
             onDictate={() => setDictating(true)}
             disabled={dictating}
             attachments={[
-              ...Object.values(pending).map((item) => ({ id: item.turnId, label: item.label, kind: "card" as const })),
-              ...files.map((item) => ({ id: item.id, label: item.file.name, kind: "file" as const })),
+              ...Object.values(pending).map((item) => ({
+                id: item.turnId,
+                label: item.label,
+                kind: "card" as const,
+              })),
+              ...files.map((item) => ({
+                id: item.id,
+                label: item.file.name,
+                kind: "file" as const,
+              })),
             ]}
             onRemoveAttachment={(id) => {
               setFiles((current) => current.filter((item) => item.id !== id));

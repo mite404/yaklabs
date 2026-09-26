@@ -80,8 +80,7 @@ export function App() {
       <main>
         <header className="topbar">
           <span>
-            Experiments <span className="muted">/</span>{" "}
-            <b>Catalog-first answers</b>
+            Experiments <span className="muted">/</span> <b>Catalog-first answers</b>
           </span>
           <span className="badge neutral">Prototype · synthetic data</span>
         </header>
@@ -93,8 +92,7 @@ export function App() {
             <span>Familiar building blocks.</span>
           </h1>
           <p>
-            Explore how a trusted component turns a business question into a
-            view you can inspect.
+            Explore how a trusted component turns a business question into a view you can inspect.
           </p>
         </section>
         <div className="question">
@@ -140,9 +138,7 @@ export function App() {
           <section className="evaluation-notes">
             <p className="eyebrow">REVIEW THE FIT</p>
             <h3>What makes this useful?</h3>
-            <p>
-              The view answers one question. Exact values remain one click away.
-            </p>
+            <p>The view answers one question. Exact values remain one click away.</p>
             <ul>
               <li>Names and units are visible</li>
               <li>Missing data stays missing</li>
@@ -168,10 +164,7 @@ export function App() {
           <div>
             <p className="eyebrow">CATALOG EVOLUTION</p>
             <h2>Missing a useful view?</h2>
-            <p>
-              Record a capability, not confidential business data. Nothing is
-              sent to a server.
-            </p>
+            <p>Record a capability, not confidential business data. Nothing is sent to a server.</p>
           </div>
           <div>
             <label htmlFor="capability">Capability to explore</label>
@@ -201,9 +194,7 @@ export function App() {
             </details>
           )}
         </section>
-        <p className="endnote">
-          The model selects. The catalog constrains. The product renders.
-        </p>
+        <p className="endnote">The model selects. The catalog constrains. The product renders.</p>
       </main>
     </div>
   );

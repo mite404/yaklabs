@@ -22,7 +22,12 @@ export function Disclosure({
   const body = useId();
   return (
     <div className="disclosure" data-open={open || undefined}>
-      <button className="disclosure-header" aria-expanded={open} aria-controls={body} onClick={onToggle}>
+      <button
+        className="disclosure-header"
+        aria-expanded={open}
+        aria-controls={body}
+        onClick={onToggle}
+      >
         {summary}
         <span className="disclosure-chevron">
           <ChevronIcon open={open} />
