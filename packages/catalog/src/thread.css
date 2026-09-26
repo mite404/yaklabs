@@ -46,6 +46,14 @@
 
 /* The scroll area is the size container for embedded cards (ADR-023).
    A stable scrollbar gutter keeps content from shifting when the bar appears (ADR-003). */
+/* A highlight is something to pick up (ADR-089): an open hand over it, a closed one while it
+   is held; the thread sets data-grab from the pointer (grabbable.ts). */
+.thread-scroll[data-grab="ready"] {
+  cursor: grab;
+}
+.thread-scroll[data-grab="held"] {
+  cursor: grabbing;
+}
 .thread-scroll {
   container: thread / inline-size;
   overflow-y: auto;

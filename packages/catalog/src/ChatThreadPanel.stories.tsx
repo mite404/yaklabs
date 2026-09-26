@@ -135,3 +135,39 @@ export const ReplyFails: Story = {
     });
   },
 };
+
+// A pointer event at a point, the way the browser would send it.
+function pointer(type: string, x: number, y: number, buttons = 0): PointerEvent {
+  return new PointerEvent(type, { bubbles: true, clientX: x, clientY: y, button: 0, buttons });
+}
+
+/** A highlight is something to pick up: an open hand over it, a closed one while it is held. */
+export const HighlightGrab: Story = {
+  args: { thread: threads.trend },
+  play: async ({ canvasElement }) => {
+    const scroller = canvasElement.querySelector<HTMLElement>(".thread-scroll");
+    const paragraph = canvasElement.querySelector<HTMLElement>(".turn-agent p");
+    if (!scroller || !paragraph) throw new Error("the thread did not render");
+    const range = document.createRange();
+    range.selectNodeContents(paragraph);
+    document.getSelection()?.removeAllRanges();
+    document.getSelection()?.addRange(range);
+    const box = range.getBoundingClientRect();
+    const [x, y] = [box.left + 12, box.top + box.height / 2];
+
+    paragraph.dispatchEvent(pointer("pointermove", x, y));
+    await expect(scroller).toHaveAttribute("data-grab", "ready");
+    await expect(getComputedStyle(scroller).cursor).toBe("grab");
+
+    paragraph.dispatchEvent(pointer("pointerdown", x, y, 1));
+    await expect(scroller).toHaveAttribute("data-grab", "held");
+    await expect(getComputedStyle(scroller).cursor).toBe("grabbing");
+
+    document.dispatchEvent(pointer("pointerup", x, y));
+    await expect(scroller).toHaveAttribute("data-grab", "ready");
+
+    paragraph.dispatchEvent(pointer("pointermove", box.left - 40, y));
+    await expect(scroller).not.toHaveAttribute("data-grab");
+    await expect(getComputedStyle(scroller).cursor).not.toBe("grab");
+  },
+};

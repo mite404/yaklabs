@@ -15,6 +15,7 @@ import { resolveAwaiting, type AwaitingInput } from "./awaiting";
 import { CatalogCard } from "./CatalogCard";
 import { ChartGlyph, ComposeBox } from "./ComposeBox";
 import { appendDictation } from "./dictation";
+import { markGrabbableHighlight } from "./grabbable";
 import { DictationModal, type DictationSource } from "./DictationModal";
 import { InteractiveCard } from "./InteractiveCard";
 import { labAgent } from "./labAgent";
@@ -344,11 +345,12 @@ function useAwaiting(
   return [awaiting, setAwaiting];
 }
 
-// Every card that grows inside the thread stays clear of the compose box (ADR-038), and the
-// docked card's space is reserved for as long as it is there. The hook owns the ref to the
-// scrolling thread it watches. The slot is held as state so the reservation follows the
+// What the scrolling thread does on its own: every card that grows inside it stays clear of
+// the compose box (ADR-038), the docked card's space is reserved for as long as it is there,
+// and a highlight shows the hand that says it can be picked up (ADR-089). The hook owns the
+// ref to the thread it watches. The slot is held as state so the reservation follows the
 // element: when it mounts, leaves, or one card replaces another.
-function useDockLayout(): {
+function useScroller(): {
   scroller: RefObject<HTMLDivElement | null>;
   setDockSlot: (slot: HTMLDivElement | null) => void;
 } {
@@ -357,6 +359,10 @@ function useDockLayout(): {
   useEffect(() => {
     const el = scroller.current; // → the thread, mounted before any effect runs
     return el ? keepExpansionsInView(el) : undefined;
+  }, [scroller]);
+  useEffect(() => {
+    const el = scroller.current;
+    return el ? markGrabbableHighlight(el) : undefined;
   }, [scroller]);
   useLayoutEffect(() => {
     const el = scroller.current;
@@ -508,7 +514,7 @@ export function ChatThreadPanel({
   const outbox = useOutbox(thread.messages);
   const [awaiting, setAwaiting] = useAwaiting(thread, tell);
   const recap = useRecap({ thread, activity, now, awaiting, draft });
-  const { scroller, setDockSlot } = useDockLayout();
+  const { scroller, setDockSlot } = useScroller();
 
   function send() {
     const { attachments, files } = outbox.take();

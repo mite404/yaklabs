@@ -957,7 +957,10 @@ store, titled by the highlight's first line, whose compose box opens with the hi
 the caret beneath it, so the user asks and no turn is sent on the drop. A card dragged by its header
 opens large in a lane of its own; the header is the handle so the slider inside an interactive card
 keeps its own drag, and the drag carries the same envelope a share link does (`SharedCard` under
-`application/x-kay-card`), which is why a card can be dropped anywhere that reads that type.
+`application/x-kay-card`), which is why a card can be dropped anywhere that reads that type. The
+pointer says a highlight can be picked up before the browser's drag does: an open hand while it
+rests on the highlight and a closed one from press to release, which is the same hand a card's
+header shows.
 Open space always remains at the end of the row, the whole canvas when it is empty and a slimmer
 column once lanes exist, so there is always somewhere to put the next thing, and its copy names the
 two drags. Thread lanes persist because their conversations do: the canvas lists every conversation

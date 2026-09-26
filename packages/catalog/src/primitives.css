@@ -165,6 +165,9 @@
 .card-heading[draggable="true"] {
   cursor: grab;
 }
+.card-heading[draggable="true"]:active {
+  cursor: grabbing;
+}
 .card-heading {
   align-items: flex-start;
   border-bottom: 1px solid var(--hairline);

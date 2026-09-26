@@ -17,7 +17,9 @@ The agent loop and the conversation store run in a Web Worker from `@yaklabs/run
 A rail on the left holds the Kay mark, Thread and Lab, and at its foot the theme and the account.
 On `/`, the thread sits beside the compose canvas: drag a highlight out of the thread onto the
 canvas to start a new thread of the same project with the highlight quoted in its compose box, or
-drag a card by its header to see it large in a lane of its own. Open space always remains at the
+drag a card by its header to see it large in a lane of its own. The pointer becomes a hand over a
+highlight and closes while it is held, so the drag announces itself. Open space always remains at
+the
 end of the row for the next drop, and the divider between the thread and the canvas drags anywhere
 along its length. Thread lanes persist with their conversations; a lane closed by its × stays
 closed (`kay.canvas.hidden` in localStorage), and card lanes last the visit. The model is
