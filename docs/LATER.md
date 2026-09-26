@@ -41,8 +41,10 @@ this list when it ships.
   "sign in again".
 - **Transcripts as markdown files in OPFS.** ADR-081 has conversations saved as markdown and
   indexed in SQLite; the slice stores rows only, with an FTS5 index (ADR-088).
-- **Deterministic screenshots.** `shoot.mjs` should emulate reduced motion so Recharts' animation
-  never lands mid-grow; today four stories are known animation noise.
+- **Two stories that still move between runs.** The dictation stories draw a simulated waveform
+  from random samples, and `ReplyFails` types during its play function, so `shoot.mjs` can catch
+  them mid-frame even under reduced motion; a seeded simulated source and a wait for the play
+  function to finish would make every story byte-identical between runs.
 - **Memoize the interactive card's chart.** Toggling "Show my work" re-renders the whole card, so
   Recharts swaps 14 SVG groups although the data is unchanged; memoizing the chart stops that. It
   moves no pixels, so it is tidying, not a fix (ADR-073).

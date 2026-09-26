@@ -95,7 +95,8 @@ Each story prints `PASS <id>` or `FAIL <id>` with the reason, then the paths of
 `<id>.png` and `<id>.aria.yml`. FAIL means the story threw, logged `console.error`, showed
 Storybook's error overlay, or rendered nothing. Pass `--width 420` for the narrow layouts and
 `--theme dark` to shoot under `data-theme="dark"` (ADR-090); shoot both when a change touches
-tokens.
+tokens. Shots are taken under reduced motion, so a chart's grow and the waveform's sweep never
+land mid-frame: two runs of the same code are byte-identical, and a byte difference is a change.
 
 **Interaction proof** (click, type, open, close): encode it as a `play` function in the story, then
 run `pnpm test:stories`. A play function is proof that reruns in CI forever; a manual click is

@@ -84,6 +84,9 @@ mkdirSync(args.out, { recursive: true });
 const base = `http://127.0.0.1:${readPort()}`;
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: args.width, height: 900 } });
+// The chart's grow and the waveform's sweep both honour reduced motion, so every frame is the
+// settled one and two runs of the same code are byte-identical.
+await page.emulateMedia({ reducedMotion: "reduce" });
 const results = [];
 for (const id of args.ids) results.push(await shoot(page, base, id, args.out, args.theme));
 await browser.close();
