@@ -550,9 +550,17 @@ footer button {
   font-size: 11px;
   white-space: nowrap;
 }
-/* A toggle keeps one width for both labels, centred, so it does not jump when it flips. */
+/* A card's footer is laid out in whole pixels (ADR-072): a 17px line for the button and the
+   source line alike, so the text sits exactly 7px inside the 31px button's height and both snap
+   to the same pixel rows whatever the scroll position. */
+.card footer .btn {
+  line-height: 17px;
+}
+/* A toggle keeps one width for both labels, centred, so it does not jump when it flips: 128px
+   fits the widest label ("View data table", 125.7px) in whole pixels, so its left edge never
+   lands between pixels (ADR-072). */
 .card-toggle {
-  min-width: 9.5em;
+  min-width: 128px;
   justify-content: center;
   text-align: center;
 }

@@ -182,7 +182,7 @@ export function InteractiveCard({
 
       <footer>
         <span>{props.source}</span>
-        <button className="btn btn-sm" aria-expanded={showWork} onClick={() => setShowWork(!showWork)}>
+        <button className="btn btn-sm card-toggle" aria-expanded={showWork} onClick={() => setShowWork(!showWork)}>
           {showWork ? "Hide my work" : "Show my work"}
         </button>
       </footer>

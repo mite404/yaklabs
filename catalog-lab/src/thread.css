@@ -641,7 +641,7 @@
 .card[data-context="thread"] footer {
   padding: 10px 16px;
   font-size: 11px;
-  line-height: 1.5;
+  line-height: 17px; /* whole pixels, matching the button's line (ADR-072) */
 }
 .card[data-context="thread"].state {
   min-height: 0;
