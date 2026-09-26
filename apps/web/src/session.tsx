@@ -1,9 +1,9 @@
 import { useAuth } from "@workos-inc/authkit-react";
+import type { Session } from "@yaklabs/runtime";
 import { useEffect, type ReactNode } from "react";
 import { env } from "./env";
 
-/** What the runtime needs from a signed-in visitor: a fresh access token for the gateway. */
-export type Session = { getAccessToken(): Promise<string> };
+export type { Session };
 
 // Sends signed-out visitors to WorkOS's hosted sign-in and shows nothing of the app until
 // they are back (ADR-084). The path they wanted rides along in `state`.
