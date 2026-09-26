@@ -1,6 +1,7 @@
 import { AuthKitProvider } from "@workos-inc/authkit-react";
 import { trackInputModality } from "@yaklabs/catalog/inputModality";
 import { Toaster } from "@yaklabs/ui/components/sonner";
+import { TooltipProvider } from "@yaklabs/ui/components/tooltip";
 import { useEffect, type ReactNode } from "react";
 import {
   isRouteErrorResponse,
@@ -14,7 +15,7 @@ import {
 
 import "./index.css";
 import type { Route } from "./+types/root";
-import Header from "./components/header";
+import Rail from "./components/rail";
 import { env } from "./env";
 import { safeReturnTo } from "./returnTo";
 import { THEME_BOOT, useTheme } from "./theme";
@@ -62,10 +63,12 @@ export default function App() {
   useEffect(() => trackInputModality(), []);
   return (
     <Providers>
-      <div className="grid h-svh grid-rows-[auto_1fr]">
-        <Header onTheme={setPreference} />
-        <Outlet />
-      </div>
+      <TooltipProvider>
+        <div className="grid h-svh grid-cols-[auto_1fr] overflow-hidden">
+          <Rail onTheme={setPreference} />
+          <Outlet />
+        </div>
+      </TooltipProvider>
       <Toaster richColors theme={preference} />
     </Providers>
   );
