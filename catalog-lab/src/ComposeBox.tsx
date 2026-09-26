@@ -64,7 +64,10 @@ export type ComposeAttachment = { id: string; label: string; kind?: "card" | "fi
 
 // Whether this browser can capture a screen, window or tab.
 function canCaptureScreen(): boolean {
-  return typeof navigator !== "undefined" && Boolean(navigator.mediaDevices?.getDisplayMedia);
+  return (
+    typeof navigator !== "undefined" &&
+    typeof navigator.mediaDevices?.getDisplayMedia === "function"
+  );
 }
 
 // A small picture glyph for file chips, matching the chart glyph's weight.
