@@ -16,10 +16,12 @@ const PLACEHOLDERS = ["measure", "total", "peakLabel", "peakValue", "period"] as
 type Placeholder = (typeof PLACEHOLDERS)[number];
 const PLACEHOLDER_PATTERN = /\{(\w+)\}/g;
 
+function isPlaceholder(name: string): name is Placeholder {
+  return PLACEHOLDERS.some((known) => known === name);
+}
+
 function usesOnlyKnownPlaceholders(template: string): boolean {
-  return [...template.matchAll(PLACEHOLDER_PATTERN)].every(([, name]) =>
-    (PLACEHOLDERS as readonly string[]).includes(name),
-  );
+  return [...template.matchAll(PLACEHOLDER_PATTERN)].every(([, name]) => isPlaceholder(name));
 }
 
 /**
@@ -132,7 +134,8 @@ export function summarize(stop: Stop, period: string): Record<Placeholder, strin
 
 /**
  * Splits a sentence template into text and filled values, so the card can emphasise
- * the live numbers; unknown placeholders never reach here (the schema rejects them).
+ * the live numbers. Unknown placeholders never reach here (the schema rejects them); one
+ * that did would stay as its literal text.
  */
 export function fillSentence(
   template: string,
@@ -143,7 +146,10 @@ export function fillSentence(
   for (const match of template.matchAll(PLACEHOLDER_PATTERN)) {
     if (match.index > cursor)
       parts.push({ text: template.slice(cursor, match.index), live: false });
-    parts.push({ text: values[match[1] as Placeholder], live: true });
+    const name = match[1];
+    parts.push(
+      isPlaceholder(name) ? { text: values[name], live: true } : { text: match[0], live: false },
+    );
     cursor = match.index + match[0].length;
   }
   if (cursor < template.length) parts.push({ text: template.slice(cursor), live: false });

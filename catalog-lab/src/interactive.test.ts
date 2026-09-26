@@ -72,6 +72,21 @@ it("fills the sentence and marks which parts are live", () => {
   ]);
 });
 
+it("leaves a placeholder it does not know as literal text", () => {
+  const values = {
+    measure: "Net profit",
+    total: "$25.6k",
+    peakLabel: "Sat",
+    peakValue: "$5.9k",
+    period: "Sep 14–20",
+  };
+  expect(fillSentence("{measure} beat {forecast}", values)).toEqual([
+    { text: "Net profit", live: true },
+    { text: " beat ", live: false },
+    { text: "{forecast}", live: false },
+  ]);
+});
+
 it("formats dollars compactly, without a meaningless .0", () => {
   expect(formatUsd(950)).toBe("$950");
   expect(formatUsd(9_000)).toBe("$9k");
