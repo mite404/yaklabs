@@ -40,7 +40,7 @@ function highlightBoxes(within: HTMLElement): Iterable<Box> {
 export function markGrabbableHighlight(thread: HTMLElement): () => void {
   let held = false;
   let last = { x: -1, y: -1 };
-  const mark = (state: Grab | undefined) => {
+  const mark = (state?: Grab) => {
     if (state === undefined) delete thread.dataset.grab;
     else thread.dataset.grab = state;
   };

@@ -408,6 +408,11 @@ Nothing is built yet, so the cast is the set of ideas the prototypes will be mad
   empty style and one with a width went instead: React drops an undefined width by itself, so
   `style={{ width }}` renders the same DOM with one branch fewer. Lesson: before extracting, look
   for a branch that never needed to exist.
+- **The exit code that belonged to head.** CI failed the catalog typecheck on `mark()` called with
+  no argument, while the local check had printed `tsc=0`. The zero was real, just not tsc's: the
+  command piped tsc into `head`, and `$?` reports the last command in a pipe. Fix: the parameter
+  became optional, and the check now reads `PIPESTATUS`. Lesson: a green light means nothing until
+  you know which lamp it is wired to.
 
 ## 5. Director's Commentary
 
