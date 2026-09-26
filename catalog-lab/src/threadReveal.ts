@@ -52,14 +52,18 @@ function prefersReducedMotion(): boolean {
  * is not clipped at the bottom stays put; a clipped one rises until its bottom rests
  * `insetBottom` above the compose box, like the last card in the thread. One taller than the
  * visible band rises only until its top reaches the band's top, so it is read from the
- * beginning; the thread never scrolls up to reveal, which would move away from the click.
+ * beginning, unless that would leave `control` (what was clicked) under the compose box: the
+ * control always stays in view, so a toggle can be clicked again (ADR-070). The thread never
+ * scrolls up to reveal, which would move away from the click.
  */
-export function nudgeScrollTop(target: Span, view: Viewport): number {
+export function nudgeScrollTop(target: Span, view: Viewport, control?: Span): number {
   const bandBottom = view.scrollTop + view.height - view.insetBottom;
   if (target.bottom <= bandBottom) return view.scrollTop;
   const bottomAligned = target.bottom - view.height + view.insetBottom;
   const topAligned = target.top - view.insetTop;
-  return clamp(Math.max(view.scrollTop, Math.min(bottomAligned, topAligned)), view.maxScrollTop);
+  const controlShown = control ? control.bottom - view.height + view.insetBottom : -Infinity;
+  const top = Math.max(Math.min(bottomAligned, topAligned), controlShown);
+  return clamp(Math.max(view.scrollTop, top), view.maxScrollTop);
 }
 
 /**
@@ -76,11 +80,18 @@ export function centerScrollTop(target: Span, view: Viewport): number {
   return clamp(top, view.maxScrollTop);
 }
 
-/** Scrolls `scroller` by the smallest amount that keeps `elements` clear of the compose box. */
-export function nudgeInScroller(scroller: HTMLElement, elements: HTMLElement[]): void {
+/**
+ * Scrolls `scroller` by the smallest amount that keeps `elements` clear of the compose box,
+ * and `control` (the element that was clicked, if any) in view.
+ */
+export function nudgeInScroller(scroller: HTMLElement, elements: HTMLElement[], control?: HTMLElement): void {
   if (elements.length === 0) return;
   const view = viewport(scroller);
-  const top = nudgeScrollTop(contentSpan(scroller, elements), view);
+  const top = nudgeScrollTop(
+    contentSpan(scroller, elements),
+    view,
+    control ? contentSpan(scroller, [control]) : undefined,
+  );
   if (top !== view.scrollTop)
     scroller.scrollTo({ top, behavior: prefersReducedMotion() ? "auto" : "smooth" });
 }
@@ -124,7 +135,11 @@ export function keepExpansionsInView(scroller: HTMLElement): () => void {
         interaction !== undefined &&
         performance.now() - interaction.at <= INTERACTION_WINDOW_MS &&
         turn.contains(interaction.target);
-      if (asked) nudgeInScroller(scroller, [interaction!.target.closest<HTMLElement>(".card") ?? turn]);
+      if (asked) {
+        const target = interaction!.target;
+        const control = target.closest<HTMLElement>("button, a, input, textarea, select, summary") ?? target;
+        nudgeInScroller(scroller, [target.closest<HTMLElement>(".card") ?? turn], control);
+      }
       else if (pinned) scroller.scrollTop = scroller.scrollHeight;
     }
   });
