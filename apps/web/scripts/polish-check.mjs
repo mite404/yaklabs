@@ -5,17 +5,12 @@
 //   pnpm dev:web                                                   # http://127.0.0.1:5173
 //   node apps/web/scripts/polish-check.mjs --capture               # once, on the base
 //   node apps/web/scripts/polish-check.mjs [--only A,C] [--out dir]
-import { createRequire } from "node:module";
-import path from "node:path";
-import { ROOT, run } from "./lever.mjs";
+import { chromium } from "./harness.mjs";
+import { run } from "./lever.mjs";
 import { capture } from "./polish-checks.mjs";
 import { polishChecks } from "./polish-predicates.mjs";
 
 if (process.argv.includes("--capture")) {
-  const playwright = await import(
-    createRequire(path.join(ROOT, "apps/storybook/package.json")).resolve("playwright")
-  );
-  const { chromium } = playwright.default ?? playwright;
   const browser = await chromium.launch();
   await capture(browser);
   await browser.close();

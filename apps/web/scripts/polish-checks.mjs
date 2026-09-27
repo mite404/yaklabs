@@ -2,7 +2,8 @@
 // measurements (0.5), and the baseline it compares against (0.6).
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { BASE, ROOT } from "./lever.mjs";
+import { ROOT } from "./harness.mjs";
+import { BASE } from "./lever.mjs";
 
 export const BASELINE = path.join(ROOT, ".artifacts/polish/baseline");
 export const THEMES = ["light", "dark"];

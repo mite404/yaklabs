@@ -5,7 +5,8 @@ import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { carry, selectReply } from "./canvas-checks.mjs";
-import { ROOT, shotPath } from "./lever.mjs";
+import { ROOT } from "./harness.mjs";
+import { shotPath } from "./lever.mjs";
 import {
   boxesOf,
   canvasIn,

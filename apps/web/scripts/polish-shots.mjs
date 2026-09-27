@@ -4,21 +4,14 @@
 //   node apps/web/scripts/polish-shots.mjs --dir docs/trail/evidence/shell-polish/before
 //   node apps/web/scripts/polish-shots.mjs --dir … --query chrome=painting --prefix painting-
 import { mkdirSync } from "node:fs";
-import { createRequire } from "node:module";
 import path from "node:path";
-import { ROOT } from "./lever.mjs";
+import { arg, chromium, ROOT } from "./harness.mjs";
 import { openScenario, settle, THEMES, titleBar, toEmpty, WIDTHS } from "./polish-checks.mjs";
 
-const argv = process.argv.slice(2);
-const arg = (name, fallback) => (argv.includes(name) ? argv[argv.indexOf(name) + 1] : fallback);
 const DIR = path.resolve(ROOT, arg("--dir", ".artifacts/polish/shots"));
 const QUERY = arg("--query");
 const PREFIX = arg("--prefix", "");
 
-const playwright = await import(
-  createRequire(path.join(ROOT, "apps/storybook/package.json")).resolve("playwright")
-);
-const { chromium } = playwright.default ?? playwright;
 const browser = await chromium.launch();
 mkdirSync(DIR, { recursive: true });
 const file = (name) => path.join(DIR, `${PREFIX}${name}.png`);

@@ -6,10 +6,9 @@
 //
 //   node apps/web/scripts/paint-chrome.mjs     # → apps/web/public/chrome/painting.webp
 import { mkdirSync, writeFileSync } from "node:fs";
-import { createRequire } from "node:module";
 import path from "node:path";
+import { chromium, ROOT } from "./harness.mjs";
 
-const ROOT = path.resolve(import.meta.dirname, "../../..");
 const OUT = path.join(ROOT, "apps/web/public/chrome");
 // 1440x44 CSS pixels at 2x; the bar is 44px tall (tasks.md A2).
 const [WIDTH, HEIGHT, SCALE] = [1440, 44, 2];
@@ -115,10 +114,6 @@ async function finish({ maxLuminance }) {
 }
 /* oxlint-enable unicorn/consistent-function-scoping */
 
-const playwright = await import(
-  createRequire(path.join(ROOT, "apps/storybook/package.json")).resolve("playwright")
-);
-const { chromium } = playwright.default ?? playwright;
 const browser = await chromium.launch();
 const page = await browser.newPage({
   viewport: { width: WIDTH, height: HEIGHT },

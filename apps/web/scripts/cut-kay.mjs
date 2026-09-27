@@ -6,20 +6,14 @@
 //
 //   node apps/web/scripts/cut-kay.mjs
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
-import { createRequire } from "node:module";
 import path from "node:path";
+import { chromium, ROOT } from "./harness.mjs";
 
-const ROOT = path.resolve(import.meta.dirname, "../../..");
 const SOURCE = path.join(ROOT, "docs/reference/shell-polish/crops/9-mascot.png");
 const OUT = path.join(ROOT, "apps/web/public/kay");
 // The mascot shows 96px wide (tasks.md H1), the face 32px in the avatar; both at 2x.
 const MASCOT_WIDTH = 192;
 const FACE_SIZE = 64;
-
-const playwright = await import(
-  createRequire(path.join(ROOT, "apps/storybook/package.json")).resolve("playwright")
-);
-const { chromium } = playwright.default ?? playwright;
 
 // Runs in the page: the cut, the crop and the two encodes, returned as base64 WebP.
 async function cut({ png, mascotWidth, faceSize }) {
