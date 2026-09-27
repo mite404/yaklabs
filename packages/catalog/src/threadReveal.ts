@@ -114,15 +114,22 @@ export function centerInScroller(scroller: HTMLElement, element: HTMLElement): v
 export function keepExpansionsInView(scroller: HTMLElement): () => void {
   let interaction: Interaction | undefined;
   const heights = new WeakMap<Element, number>();
-  const atEnd = () => scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 2;
+  const reachOf = () => scroller.scrollHeight - scroller.clientHeight; // → the furthest scrollTop
+  const atEnd = () => reachOf() - scroller.scrollTop < 2;
   let pinned = atEnd();
+  let reach = reachOf();
 
   const remember = (event: Event) => {
     if (event.target instanceof HTMLElement)
       interaction = { target: event.target, at: performance.now() };
   };
+  // A scroll the layout caused, such as the browser keeping a paragraph in place while a chart
+  // above it sizes, comes with a new reach; only a reader's scroll, which leaves the reach as it
+  // was, takes the thread off its end.
   const track = () => {
-    pinned = atEnd();
+    const moved = reachOf() !== reach;
+    reach = reachOf();
+    pinned = atEnd() || (pinned && moved);
   };
 
   const resized = new ResizeObserver((entries) => {
@@ -140,7 +147,9 @@ export function keepExpansionsInView(scroller: HTMLElement): () => void {
   });
 
   const watchTurns = () => {
-    scroller.querySelectorAll(":scope > .turn").forEach((turn) => resized.observe(turn));
+    scroller.querySelectorAll(":scope > .turn").forEach((turn) => {
+      resized.observe(turn);
+    });
   };
   const added = new MutationObserver(watchTurns);
 
