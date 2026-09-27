@@ -255,9 +255,12 @@ function ghostOf({ lift, picture }: CarrySource, from: CarryPoint): Ghost | null
 }
 
 // A lifted press ends without a click, as a native drag does, so nothing under the release
-// reads it as one. The next press disarms this, for a carry that ended before its release.
+// reads it as one. That click comes from the pointer, counting one or more, before any other
+// press: the next press disarms this, for a carry that ended before its release, and a click
+// from the keyboard, which counts none, passes.
 function swallowStrayClick(): void {
-  const swallow = (event: Event) => {
+  const swallow = (event: MouseEvent) => {
+    if (event.detail === 0) return;
     event.preventDefault();
     event.stopPropagation();
     disarm();

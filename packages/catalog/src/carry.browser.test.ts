@@ -104,7 +104,7 @@ describe("a press on a handle inside another handle", () => {
 });
 
 describe("a carry the window's blur cancels", () => {
-  it("leaves the next click from the keyboard alone", async () => {
+  it("lets a click from the keyboard through, but not the release's", async () => {
     const card = handle("card", 20, 20);
     const send = document.createElement("button");
     send.textContent = "Send";
@@ -123,6 +123,11 @@ describe("a carry the window's blur cancels", () => {
 
     send.focus();
     await userEvent.keyboard("{Enter}");
+    expect(sent).toBe(1);
+
+    const end = middleOf(send);
+    send.dispatchEvent(pointer("pointerup", end.x, end.y));
+    send.dispatchEvent(new MouseEvent("click", { bubbles: true, detail: 1 }));
     expect(sent).toBe(1);
   });
 });
