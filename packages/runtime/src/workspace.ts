@@ -122,10 +122,6 @@ function clampIndex(at: number, length: number): number {
   return Math.min(Math.max(Math.trunc(at), 0), length);
 }
 
-function randomSuffix(): string {
-  return crypto.randomUUID().replaceAll("-", "").slice(0, 12);
-}
-
 function parentOf(thread: ThreadSummary): ThreadId | undefined {
   return thread.place.kind === "child" ? thread.place.parentId : undefined;
 }
@@ -138,6 +134,11 @@ function activityOf(ws: Workspace, main: ThreadSummary): string {
       (latest, child) => (child.updatedAt > latest ? child.updatedAt : latest),
       main.updatedAt,
     );
+}
+
+/** Twelve random hex digits: the tail of every id minted on the device. */
+export function randomSuffix(): string {
+  return crypto.randomUUID().replaceAll("-", "").slice(0, 12);
 }
 
 /** The id a thread's lane always has. */
