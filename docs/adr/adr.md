@@ -1159,7 +1159,7 @@ thin DOM shell, cancelled by Escape, the window's own blur, `pointercancel` or l
 
 ## ADR-103 - A pinned thread stays pinned through the layout's own scrolls
 
-2026-09-27 - Accepted.
+2026-09-27 - Superseded by ADR-109.
 Chromium's scroll anchoring moves a thread's `scrollTop` while a chart above sizes itself, and the
 scroll event it fires landed with the thread a pixel or two short of its end, so the thread
 unpinned itself and rested short (2 of 15 fresh loads of one dictation story, 7 of 15 of another).
@@ -1204,3 +1204,18 @@ the byte-exact comparison of two loads stays strict (24 of 24 loads identical).
 A carry claims its press with `preventDefault`, not `stopPropagation`, so the press still bubbles
 to the lane around it. A lane's reorder therefore takes only a press nobody claimed, or a card
 header inside a thread lane would lift the card and its lane together.
+
+## ADR-109 - A thread decides whether to follow its end when it resizes
+
+2026-09-27 - Accepted; supersedes ADR-103.
+ADR-103 judged the pin from scroll events, but a scroll event reads the layout when it is
+delivered, not when the scroll happened. A reader who scrolled up in the frame a streaming reply
+grew therefore looked like a layout scroll, and the thread snapped back to its end. Two rules over
+scroll events were measured and failed (23 and 12 of 360 loads rested short).
+Browser scroll anchoring is now off on the thread (`overflow-anchor: none`). The thread decides
+when it resizes: it follows its end only if the gap before the resize (the gap now, less what the
+resize added) was under 2px. A view that gets shorter, such as the compose box growing, counts as
+the end moving away.
+Measured in a real browser, a reader's scroll-up during streaming is now kept in all four thread
+stories, and 0 of 360 fresh loads rest short. The cost is that when content above a reader who
+scrolled up grows, it now pushes their view down, where anchoring used to hold it in place.
