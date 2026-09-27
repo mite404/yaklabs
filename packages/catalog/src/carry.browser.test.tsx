@@ -197,6 +197,25 @@ describe("a card that moves between the press and the lift", () => {
   });
 });
 
+describe("a press on an element that is gone by the lift", () => {
+  it("still lifts cleanly, the picture on the pointer", () => {
+    const card = handle("card", 20, 20);
+    const line = document.createElement("p");
+    line.textContent = "a line the thread re-renders";
+    card.replaceChildren(line);
+    const start = middleOf(line);
+
+    line.dispatchEvent(pointer("pointerdown", start.x, start.y, 1));
+    line.remove();
+    card.dispatchEvent(pointer("pointermove", start.x + 20, start.y, 1));
+    expect(reported).toEqual([]);
+    expect(document.querySelector<HTMLElement>(".carry-ghost")?.style.transform).toMatch(
+      /^translate\(/,
+    );
+    card.dispatchEvent(pointer("pointerup", start.x + 20, start.y));
+  });
+});
+
 describe("a carry whose target throws", () => {
   it("still ends, and the next carry starts clean", () => {
     const first = handle("first", 20, 20);
