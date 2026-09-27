@@ -55,13 +55,10 @@ export type CarryEffect =
   | { kind: "drop"; target: CarryTarget; carried: Carried; at: CarryPoint }
   | { kind: "end"; lifted: boolean };
 
-/**
- * The press that arms a carry: a DOM `PointerEvent` or React's, whose `stopPropagation` also
- * keeps the press from React handlers further out.
- */
+/** The press that arms a carry: a DOM `PointerEvent` or React's. */
 export type CarryPress = Pick<
   PointerEvent,
-  "pointerId" | "button" | "clientX" | "clientY" | "target" | "preventDefault" | "stopPropagation"
+  "pointerId" | "button" | "clientX" | "clientY" | "target" | "preventDefault"
 >;
 
 /** Where a carry comes from and what rides the pointer while it is carried. */
@@ -420,8 +417,9 @@ export function useCarryTarget(ref: RefObject<HTMLElement | null>, target: Carry
 /**
  * Arms a carry from a primary-button press: past `LIFT_PX` it lifts, and the release drops it
  * on the target under the pointer. The press is claimed, so the browser starts no drag or
- * selection of its own and no handle further out arms too. A press while another carry is
- * under way is left alone.
+ * selection of its own, and the carry it arms is the page's one carry: a handle further out
+ * that hears the same press, or any press while a carry is under way, arms nothing. The press
+ * still reaches the rest of the page, so a menu open elsewhere hears it and closes.
  */
 export function armCarry(down: CarryPress, source: CarrySource): void {
   if (down.button !== 0) return;
@@ -434,7 +432,6 @@ export function armCarry(down: CarryPress, source: CarrySource): void {
   });
   if (next === carry) return;
   down.preventDefault();
-  down.stopPropagation();
   carry = next;
   listen({
     pointerId,
