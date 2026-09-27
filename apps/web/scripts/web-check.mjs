@@ -1661,6 +1661,62 @@ try {
       };
     },
   );
+
+  await onOwnPage(
+    "each visit to a child brings its lane into view and flashes it once, panned away or closed",
+    "/t/t-002?scenario=demo",
+    {},
+    async (own) => {
+      const saturday = "Saturday leads at every level";
+      const region = own
+        .locator('[role="tabpanel"]:not([inert])')
+        .getByRole("region", { name: "Compose canvas" });
+      const saturdayLane = region.locator(`:scope > article[aria-label="${saturday}"]`);
+      const saturdayRow = own
+        .locator('[data-slot="sidebar"]')
+        .getByRole("link", { name: saturday, exact: true });
+      await saturdayLane.waitFor({ timeout: 15_000 });
+      // The arrival's own flash ends before the count starts.
+      await own.waitForTimeout(1500);
+      await region.evaluate((row) => {
+        window.flashes = 0;
+        new MutationObserver((records) => {
+          window.flashes += records.filter(
+            (each) => each.target.dataset.flash !== undefined,
+          ).length;
+        }).observe(row, { subtree: true, attributeFilter: ["data-flash"] });
+      });
+      // Clicks the child's row, lets the lane slide in and its flash end, then reads whether the
+      // lane sits whole in the canvas and how often a lane flashed since the last visit.
+      const visit = async () => {
+        await saturdayRow.click();
+        await saturdayLane.waitFor({ timeout: 5_000 });
+        await own.waitForTimeout(1500);
+        return region.evaluate((row, name) => {
+          const edges = row
+            .querySelector(`:scope > article[aria-label="${name}"]`)
+            .getBoundingClientRect();
+          const pane = row.getBoundingClientRect();
+          const inView = edges.left >= pane.left - 1 && edges.right <= pane.right + 1;
+          const seen = `in view ${inView}, flashed ${window.flashes}`;
+          window.flashes = 0;
+          return seen;
+        }, saturday);
+      };
+      await region.evaluate((row) => {
+        row.scrollLeft = row.scrollWidth;
+      });
+      const pannedAway = await visit();
+      await region.getByRole("button", { name: `Close ${saturday}`, exact: true }).click();
+      await saturdayLane.waitFor({ state: "detached", timeout: 10_000 });
+      const closed = await visit();
+      const once = "in view true, flashed 1";
+      return {
+        ok: pannedAway === once && closed === once,
+        detail: `after panning it away: ${pannedAway}; after closing it: ${closed}`,
+      };
+    },
+  );
 } catch (error) {
   record("run", false, String(error));
   await shot("failure");

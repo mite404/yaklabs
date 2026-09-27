@@ -17,7 +17,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { matchPath, useLocation, useNavigate, useNavigation } from "react-router";
+import { matchPath, useLocation, useNavigate, useNavigation, type Location } from "react-router";
 import { inBackground, usePaths, useRuntimeState, useStartedRuntime } from "../runtime";
 import { parseShell, resume, unreadCount, unsaved, visit, type ShellState } from "./state";
 import { edit, verbs, type Go, type ShellVerbs } from "./verbs";
@@ -32,6 +32,8 @@ export type Shell = ShellVerbs & {
   doc: ShellState;
   /** The URL's thread; null on "/", on /lab, and for a thread the workspace lacks. */
   active: Located | null;
+  /** This visit to the URL: a new key for each navigation, a second click on its link included. */
+  visitKey: string;
   /** The open main threads, left to right. */
   tabs: ThreadSummary[];
   /** Where "/" goes, or null when nothing is open. */
@@ -48,6 +50,7 @@ type Parts = {
   ready: Ready;
   saved: ShellState;
   active: Located | null;
+  visitKey: string;
   go: Go;
   lastShown: ThreadId | null;
 };
@@ -69,7 +72,7 @@ function activeIn(ws: Workspace | null, named: string | undefined): Located | nu
 
 // The shell the frame reads: the document with the URL's thread visited, its tabs, where "/"
 // goes, the unread count, and the verbs.
-function shellOf({ runtime, ready, saved, active, go, lastShown }: Parts): Shell {
+function shellOf({ runtime, ready, saved, active, visitKey, go, lastShown }: Parts): Shell {
   const { workspace, source } = ready;
   const doc = active === null ? saved : visit(saved, active);
   const byId = new Map(workspace.threads.map((thread) => [thread.id, thread] as const));
@@ -78,6 +81,7 @@ function shellOf({ runtime, ready, saved, active, go, lastShown }: Parts): Shell
     workspace,
     doc,
     active,
+    visitKey,
     tabs: doc.tabs.flatMap((id) => byId.get(id) ?? []),
     resumeTo: resume(doc, workspace, lastShown),
     unread: unreadCount(doc, workspace),
@@ -85,13 +89,13 @@ function shellOf({ runtime, ready, saved, active, go, lastShown }: Parts): Shell
   };
 }
 
-// The thread the address names, or is on its way to name: a navigation in flight counts at
-// once, so a tab switch shows in the same frame as the click rather than when the router has
-// finished its own asynchronous steps.
-function useNamedThread(): string | undefined {
+// The address, or the one it is on its way to: a navigation in flight counts at once, so a tab
+// switch shows in the same frame as the click rather than when the router has finished its own
+// asynchronous steps. The router later commits that same location, key and all.
+function useShownLocation(): Location {
   const pending = useNavigation().location; // → Location | undefined
   const current = useLocation();
-  return matchPath("/t/:threadId", (pending ?? current).pathname)?.params.threadId;
+  return pending ?? current;
 }
 
 // Goes to a thread, or home, keeping the scenario. It navigates with flushSync, so a tab switch
@@ -147,7 +151,8 @@ function useKeepShell(
 export function ShellProvider({ children }: { children: ReactNode }) {
   const state = useRuntimeState();
   const runtime = useStartedRuntime();
-  const named = useNamedThread();
+  const shown = useShownLocation();
+  const named = matchPath("/t/:threadId", shown.pathname)?.params.threadId;
   const go = useGo();
   const ws = state.kind === "ready" ? state.workspace : null;
   const saved = useMemo(() => (ws === null ? null : parseShell(ws.shell, ws)), [ws]);
@@ -158,9 +163,9 @@ export function ShellProvider({ children }: { children: ReactNode }) {
   const shell = useMemo(
     () =>
       state.kind === "ready" && runtime !== null && saved !== null
-        ? shellOf({ runtime, ready: state, saved, active, go, lastShown })
+        ? shellOf({ runtime, ready: state, saved, active, visitKey: shown.key, go, lastShown })
         : null,
-    [state, runtime, saved, active, go, lastShown],
+    [state, runtime, saved, active, shown.key, go, lastShown],
   );
   return <ShellContext value={shell}>{children}</ShellContext>;
 }
