@@ -1,6 +1,7 @@
 import {
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
@@ -11,6 +12,7 @@ import { ArrowUpRight, BookOpen, FlaskConical } from "lucide-react";
 import { useEffect, useRef, type ReactElement, type ReactNode } from "react";
 import { Link, useLocation } from "react-router";
 import { usePaths } from "../runtime";
+import { Account, type Looks } from "./account";
 import { ProjectTree } from "./project-tree";
 
 // The mark as meetkay.ai declares it (ADR-095): one polygon, drawn in the text colour.
@@ -72,14 +74,42 @@ function useSheetClosesOnArrival(): void {
 /** The id of the sidebar's navigation landmark, which the title bar's toggle controls. */
 export const SIDEBAR_ID = "sidebar";
 
+// The rail's fixed places: Kay, the documentation link, and the Lab, above the projects.
+function RailPlaces({ hrefTo, onLab }: { hrefTo: (path: "/" | "/lab") => string; onLab: boolean }) {
+  return (
+    <SidebarHeader className="gap-0.5 px-2 pt-2">
+      <SidebarMenu className="gap-0.5">
+        <Place label="Kay" link={<Link to={hrefTo("/")} aria-label="Kay" />}>
+          <KayMark className="text-ink" />
+          <span className="font-serif text-lg text-ink">Kay</span>
+        </Place>
+        <Place
+          label="Documentation"
+          link={<a href={DOCS_URL} target="_blank" rel="noreferrer" aria-label="Documentation" />}
+        >
+          <BookOpen />
+          <span className="text-ink">Documentation</span>
+          <ArrowUpRight aria-hidden="true" className="ml-auto size-3.5! text-soft-ink" />
+        </Place>
+        <Place label="Lab" link={<Link to={hrefTo("/lab")} />} active={onLab}>
+          <FlaskConical />
+          <span className="text-ink">Lab</span>
+        </Place>
+      </SidebarMenu>
+    </SidebarHeader>
+  );
+}
+
 /**
  * The sidebar below the title bar (shadcn's sidebar-16 pattern), one navigation landmark.
  * Collapsed it is today's 56px rail of places; open it names them and lists the projects. The
- * account and the theme live in the title bar, so the rail keeps only places.
+ * account and the theme live in the title bar; on a phone, where the bar has no room for the
+ * account, it sits at the sidebar's foot instead, outside the navigation landmark (ADR-121).
  */
-export function AppSidebar() {
+export function AppSidebar({ theme, chrome }: Looks) {
   const { hrefTo } = usePaths();
   const { pathname } = useLocation();
+  const { isMobile } = useSidebar();
   useSheetClosesOnArrival();
   return (
     <Sidebar
@@ -94,32 +124,16 @@ export function AppSidebar() {
         aria-label="Sidebar"
         className="flex min-h-0 flex-1 flex-col"
       >
-        <SidebarHeader className="gap-0.5 px-2 pt-2">
-          <SidebarMenu className="gap-0.5">
-            <Place label="Kay" link={<Link to={hrefTo("/")} aria-label="Kay" />}>
-              <KayMark className="text-ink" />
-              <span className="font-serif text-lg text-ink">Kay</span>
-            </Place>
-            <Place
-              label="Documentation"
-              link={
-                <a href={DOCS_URL} target="_blank" rel="noreferrer" aria-label="Documentation" />
-              }
-            >
-              <BookOpen />
-              <span className="text-ink">Documentation</span>
-              <ArrowUpRight aria-hidden="true" className="ml-auto size-3.5! text-soft-ink" />
-            </Place>
-            <Place label="Lab" link={<Link to={hrefTo("/lab")} />} active={pathname === "/lab"}>
-              <FlaskConical />
-              <span className="text-ink">Lab</span>
-            </Place>
-          </SidebarMenu>
-        </SidebarHeader>
+        <RailPlaces hrefTo={hrefTo} onLab={pathname === "/lab"} />
         <SidebarContent>
           <ProjectTree />
         </SidebarContent>
       </div>
+      {isMobile && (
+        <SidebarFooter>
+          <Account theme={theme} chrome={chrome} side="top" align="start" />
+        </SidebarFooter>
+      )}
     </Sidebar>
   );
 }

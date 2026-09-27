@@ -52,6 +52,7 @@ function SidebarToggle() {
  * bell, and the account in the corner (ADR-094). It is green chrome, flat or painted (ADR-110,
  * ADR-115). On a phone it is two rows (ADR-116): the project's name and what never scrolls on
  * top, with a "⋯" for the thread and project; below, the views, Thread, Browser and Canvas.
+ * The account moves to the sidebar's foot on a phone instead (ADR-121).
  */
 export function TitleBar({ theme, chrome }: Looks) {
   const shell = useShell();
@@ -62,7 +63,7 @@ export function TitleBar({ theme, chrome }: Looks) {
       data-slot="title-bar"
       inert={isMobile && openMobile}
       data-chrome={chrome.style}
-      className="chrome-surface flex h-11 shrink-0 items-center gap-2 pr-3 select-none max-md:grid max-md:h-auto max-md:grid-cols-[auto_minmax(0,1fr)_repeat(4,auto)] max-md:grid-rows-[44px_auto] max-md:gap-x-1 max-md:gap-y-0 max-md:px-2 max-md:pb-1.5"
+      className="chrome-surface flex h-11 shrink-0 items-center gap-2 pr-3 select-none max-md:grid max-md:h-auto max-md:grid-cols-[auto_minmax(0,1fr)_repeat(3,auto)] max-md:grid-rows-[44px_auto] max-md:gap-x-1 max-md:gap-y-0 max-md:px-2 max-md:pb-1.5"
     >
       <TrafficLights />
       <SidebarToggle />
@@ -72,7 +73,7 @@ export function TitleBar({ theme, chrome }: Looks) {
         <DataMarker />
         <LayoutSwitch shell={shell} />
         <Bell shell={shell} />
-        <Account theme={theme} chrome={chrome} />
+        {!isMobile && <Account theme={theme} chrome={chrome} />}
         <ThreadMenu shell={shell} />
       </div>
     </header>

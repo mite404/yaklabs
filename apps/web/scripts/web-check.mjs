@@ -152,6 +152,33 @@ const focusOn = (own) =>
     return `${role} ${at.getAttribute("aria-label") ?? at.textContent.trim()}`;
   });
 
+// Whether the phone drawer's Account button sits in the sheet's lower half, as its foot.
+const accountSitsLow = (own) =>
+  own.evaluate(() => {
+    const sheet = document.querySelector('dialog[data-slot="sidebar"]');
+    const button = sheet?.querySelector('[aria-label="Account"]');
+    if (sheet === null || button === null || button === undefined) return false;
+    const sheetBox = sheet.getBoundingClientRect();
+    const buttonBox = button.getBoundingClientRect();
+    return buttonBox.top > sheetBox.top + sheetBox.height / 2;
+  });
+
+// Whether every open menu item's box sits inside a `width`x`height` viewport.
+const menuOnScreen = (own, width, height) =>
+  own.evaluate(
+    ([w, h]) => {
+      const items = [...document.querySelectorAll('[role="menuitemradio"], [role="menuitem"]')];
+      return (
+        items.length > 0 &&
+        items.every((item) => {
+          const rect = item.getBoundingClientRect();
+          return rect.left >= 0 && rect.right <= w && rect.top >= 0 && rect.bottom <= h;
+        })
+      );
+    },
+    [width, height],
+  );
+
 try {
   await page.goto(`${BASE}/`, { waitUntil: "load" });
   const title = page.getByRole("heading", { name: "Last week's profit by day" });
@@ -1203,11 +1230,11 @@ try {
           );
           return rect.width > 0 && rect.left >= 0 && rect.right <= width && el.contains(hit);
         };
-        // Two rows (ADR-116): the controls that never scroll, then the views.
+        // Two rows (ADR-116): the controls that never scroll, then the views. The account
+        // moved to the sidebar's foot on a phone, so the bar itself never shows it.
         const top = [
           '[aria-label="Toggle sidebar"]',
           '[aria-label^="Notifications"]',
-          '[aria-label="Account"]',
           '[aria-label="Thread and project actions"]',
         ].map((selector) => takesTap(bar.querySelector(selector)));
         const views = [...bar.querySelectorAll('[role="group"][aria-label="Layout"] button')].map(
@@ -1217,6 +1244,7 @@ try {
           project: bar.querySelector('[data-slot="project-name"]').textContent,
           top,
           views,
+          noAccount: bar.querySelector('[aria-label="Account"]') === null,
           height: bar.getBoundingClientRect().height,
           spill: bar.scrollWidth - bar.clientWidth,
         };
@@ -1228,6 +1256,7 @@ try {
           look.top.every(Boolean) === true &&
           look.views.length === 3 &&
           look.views.every(Boolean) === true &&
+          look.noAccount === true &&
           look.height === 82 &&
           look.spill <= 0,
         detail: JSON.stringify(look),
@@ -1323,6 +1352,64 @@ try {
           afterChoice === 0,
         detail: `${JSON.stringify(push)}; open after a tap on the page ${afterTap}; after choosing a thread ${afterChoice}`,
       };
+    },
+  );
+
+  await onOwnPage(
+    "on a phone the account sits at the foot of the sidebar, and its menu opens there",
+    "/t/t-005?scenario=demo",
+    { viewport: { width: 390, height: 844 } },
+    async (own) => {
+      await own.locator('[data-slot="project-name"]').filter({ hasText: /\S/ }).waitFor({
+        timeout: 15_000,
+      });
+      const initialTheme = await own.evaluate(() => document.documentElement.dataset.theme);
+      await own.getByRole("button", { name: "Toggle sidebar" }).click();
+      await own.waitForTimeout(600);
+      const drawer = own.getByRole("dialog");
+      const onePage = (await own.getByRole("button", { name: "Account" }).count()) === 1;
+      const account = drawer.getByRole("button", { name: "Account" });
+      const inDrawer = (await account.count()) === 1;
+      const footed = await accountSitsLow(own);
+      await account.click();
+      await own.getByRole("menu").waitFor();
+      const within = await menuOnScreen(own, 390, 844);
+      await own.screenshot({ path: path.join(OUT, "account-menu-phone-light.png") });
+      await own.getByRole("menuitemradio", { name: "Dark" }).click();
+      const darkened = await own.evaluate(() => document.documentElement.dataset.theme);
+      await own.screenshot({ path: path.join(OUT, "account-menu-phone-dark.png") });
+      await own.getByRole("menuitemradio", { name: "System" }).click();
+      const restored = await own.evaluate(() => document.documentElement.dataset.theme);
+      await own.keyboard.press("Escape");
+      await own.waitForTimeout(200);
+      const menuGone = (await own.getByRole("menu").count()) === 0;
+      const drawerStillOpen = (await drawer.count()) === 1;
+      return {
+        ok:
+          onePage &&
+          inDrawer &&
+          footed === true &&
+          within === true &&
+          darkened === "dark" &&
+          restored === initialTheme &&
+          menuGone &&
+          drawerStillOpen,
+        detail: `one Account button on the page ${onePage}; in the drawer ${inDrawer}; low in it ${footed}; every item on screen ${within}; theme light→${darkened}→${restored}; Escape closed the menu ${menuGone}, left the drawer open ${drawerStillOpen}`,
+      };
+    },
+  );
+
+  await onOwnPage(
+    "on desktop the sidebar has no Account button, since the rail shares its children",
+    "/t/t-005?scenario=demo",
+    {},
+    async (own) => {
+      await own.locator('[data-slot="sidebar"]').first().waitFor({ timeout: 15_000 });
+      const count = await own
+        .locator('[data-slot="sidebar"]')
+        .getByRole("button", { name: "Account" })
+        .count();
+      return { ok: count === 0, detail: `${count} Account button(s) in the desktop sidebar` };
     },
   );
 

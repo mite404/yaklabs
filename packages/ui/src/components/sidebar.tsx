@@ -161,7 +161,11 @@ function usePushFocus(
   React.useEffect(() => {
     const before = document.activeElement;
     const onKey = (event: KeyboardEvent) => {
-      if (open && event.key === "Escape") close();
+      if (!open || event.key !== "Escape" || event.defaultPrevented) return;
+      // An open menu (Base UI's Menu, e.g. the account's) owns Escape while it is up: it
+      // closes itself, and the drawer beneath it must not close along with it.
+      if (event.target instanceof Element && event.target.closest('[role="menu"]')) return;
+      close();
     };
     if (open) panel.current?.focus();
     document.addEventListener("keydown", onKey);

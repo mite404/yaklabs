@@ -84,7 +84,7 @@ export function Window({ theme, children }: { theme: ThemeChoice; children: Reac
         >
           <TitleBar theme={theme} chrome={chrome} />
           <div data-slot="window-body" className="window-trim relative flex min-h-0 flex-1">
-            <AppSidebar />
+            <AppSidebar theme={theme} chrome={chrome} />
             <Workspace>{children}</Workspace>
           </div>
         </SidebarProvider>
