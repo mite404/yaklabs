@@ -19,8 +19,10 @@ const KAY_MARK_POINTS =
 // Kay's documentation, a Kay plugin's natural home (ADR-078).
 const DOCS_URL = "https://docs.meetkay.ai";
 
-// A rail button as today's rail drew them: 40px in the collapsed rail, the label beside it open.
-const RAIL_BUTTON = "h-10 gap-3 px-3 text-sm group-data-[collapsible=icon]:size-10! [&_svg]:size-5";
+// A rail button as today's rail drew them: 40px in the collapsed rail, the label beside it
+// open, the glyph soft until the pointer is on it or its place is open.
+const RAIL_BUTTON =
+  "h-10 gap-3 px-3 text-sm text-soft-ink hover:text-ink data-active:text-ink group-data-[collapsible=icon]:size-10! [&_svg]:size-5";
 
 /** Kay's mark, one polygon in the text colour; decorative, since its link carries the name. */
 export function KayMark({ className }: { className?: string }) {
@@ -76,12 +78,12 @@ export function AppSidebar() {
             link={<a href={DOCS_URL} target="_blank" rel="noreferrer" aria-label="Documentation" />}
           >
             <BookOpen />
-            <span>Documentation</span>
+            <span className="text-ink">Documentation</span>
             <ArrowUpRight aria-hidden="true" className="ml-auto size-3.5! text-soft-ink" />
           </Place>
           <Place label="Lab" link={<Link to={hrefTo("/lab")} />} active={pathname === "/lab"}>
             <FlaskConical />
-            <span>Lab</span>
+            <span className="text-ink">Lab</span>
           </Place>
         </SidebarMenu>
       </SidebarHeader>
