@@ -8,7 +8,10 @@ const WORD_MS = 45;
 // Resolves after `ms`, or early and silently if the reply is abandoned.
 function wait(ms: number, signal: AbortSignal): Promise<void> {
   return new Promise((resolve) => {
-    if (ms <= 0 || signal.aborted) return resolve();
+    if (ms <= 0 || signal.aborted) {
+      resolve();
+      return;
+    }
     const id = setTimeout(resolve, ms);
     signal.addEventListener("abort", () => (clearTimeout(id), resolve()), { once: true });
   });
