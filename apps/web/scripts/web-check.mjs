@@ -707,6 +707,42 @@ try {
       };
     },
   );
+
+  await onOwnPage(
+    "at phone width every tab, New thread and Account stay on screen, and New thread takes a tap",
+    "/t/t-005?scenario=demo",
+    { viewport: { width: 390, height: 844 } },
+    async (own) => {
+      await tabsOf(own).first().waitFor({ timeout: 15_000 });
+      const look = await own.evaluate(() => {
+        const bar = document.querySelector('header[data-slot="title-bar"]');
+        // On screen, and a tap at its centre lands on it: nothing clips or covers it.
+        const [plus, account, ...tabs] = [
+          bar.querySelector('[aria-label="New thread"]'),
+          bar.querySelector('[aria-label="Account"]'),
+          ...bar.querySelectorAll('[role="tab"]'),
+        ].map((el) => {
+          const rect = el.getBoundingClientRect();
+          const hit = document.elementFromPoint(
+            rect.left + rect.width / 2,
+            rect.top + rect.height / 2,
+          );
+          return rect.width > 0 && rect.left >= 0 && rect.right <= innerWidth && el.contains(hit);
+        });
+        return { tabs, plus, account, spill: bar.scrollWidth - bar.clientWidth };
+      });
+      await own.screenshot({ path: path.join(OUT, "title-bar-phone.png") });
+      return {
+        ok:
+          look.tabs.length === 2 &&
+          look.tabs.every(Boolean) &&
+          look.plus &&
+          look.account &&
+          look.spill <= 0,
+        detail: JSON.stringify(look),
+      };
+    },
+  );
 } catch (error) {
   record("run", false, String(error));
   await shot("failure");

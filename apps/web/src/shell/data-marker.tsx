@@ -16,11 +16,13 @@ export function DataMarker() {
           <Badge
             tabIndex={0}
             variant="outline"
-            className="h-6 rounded-[var(--radius)] border-hairline px-2 text-xs font-normal text-soft-ink"
+            className="h-6 min-w-0 shrink rounded-[var(--radius)] border-hairline px-2 text-xs font-normal text-soft-ink"
           />
         }
       >
-        <span data-slot="data-marker">{marker.label}</span>
+        <span data-slot="data-marker" className="truncate">
+          {marker.label}
+        </span>
       </TooltipTrigger>
       <TooltipContent side="bottom">{marker.hint}</TooltipContent>
     </Tooltip>
