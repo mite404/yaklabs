@@ -69,6 +69,28 @@ async function chooseTheme(name) {
   await page.keyboard.press("Escape");
 }
 
+// A step on a page of its own at `address`, a mock scenario, so no device data is touched. A
+// throw fails that step alone, and the steps after it still run.
+async function onOwnPage(step, address, options, measure) {
+  const own = await browser.newPage({ viewport: { width: 1280, height: 900 }, ...options });
+  own.on("console", (message) => {
+    if (message.type() === "error") errors.push(message.text());
+  });
+  own.on("pageerror", (error) => errors.push(String(error)));
+  try {
+    await own.goto(`${BASE}${address}`, { waitUntil: "load" });
+    const { ok, detail } = await measure(own);
+    record(step, ok, detail);
+  } catch (error) {
+    record(step, false, String(error).split("\n")[0]);
+  } finally {
+    await own.close();
+  }
+}
+
+// The open threads, by the tablist the title bar names.
+const tabsOf = (own) => own.getByRole("tablist", { name: "Open threads" }).getByRole("tab");
+
 try {
   await page.goto(`${BASE}/`, { waitUntil: "load" });
   const title = page.getByRole("heading", { name: "Last week's profit by day" });
@@ -632,6 +654,28 @@ try {
     `${spoiled.length} file spoiled; ${reason.replaceAll(/\s+/g, " ").slice(0, 140)}`,
   );
   await device.close();
+
+  await onOwnPage(
+    "the tab strip holds only tabs, and a tab's close button still closes it",
+    "/t/t-005?scenario=demo",
+    {},
+    async (own) => {
+      const strip = own.getByRole("tablist", { name: "Open threads" });
+      await tabsOf(own).first().waitFor({ timeout: 15_000 });
+      const strays = await strip.getByRole("button").count();
+      await strip.getByRole("tab", { name: "Last week's sales" }).hover();
+      await own.waitForTimeout(100);
+      const closer = own.getByRole("button", { name: "Close Last week's sales" });
+      const shown = await closer.evaluate((el) => getComputedStyle(el).opacity);
+      await closer.click();
+      await own.waitForTimeout(300);
+      const left = await tabsOf(own).allInnerTexts();
+      return {
+        ok: strays === 0 && shown === "1" && left.join() === "Service desk weekly review",
+        detail: `${strays} buttons in the tablist; close shown on hover ${shown}; tabs left ${left.join(", ")}`,
+      };
+    },
+  );
 } catch (error) {
   record("run", false, String(error));
   await shot("failure");
