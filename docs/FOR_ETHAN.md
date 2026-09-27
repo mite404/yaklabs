@@ -576,11 +576,11 @@ The first entries are ideas from before any code existed; the rest are parts of 
   the whole tab. It got 932px and left 233px beside it empty, a fifth of the tab. The side pane was
   made collapsible in the same render that asked it to collapse, and `react-resizable-panels`
   applies a panel's new limits one render late, so the pane still had its old limits when asked
-  to close, and refused. P9 now asks how much of its tab the thread fills: 80% on the old code, 100%
-  after. Fix:
-  the side pane is collapsible all the time with fixed limits, and a drag that reaches the far
-  edge closes it only until release, so the layout switch stays the one control that decides
-  what sits beside the thread (ADR-106). Lesson: when a library applies a prop a render late, do
+  to close, and refused. P9 now asks how much of its tab the thread fills: 80% on the old code,
+  100% after. Fix: the side pane is collapsible all the time with fixed limits, and a drag that
+  reaches the far edge closes it only until release, so the layout switch stays the one control
+  that decides what sits beside the thread (ADR-106). Lesson: when a library applies a prop a render
+  late, do
   not change the prop and lean on it in the same render. The lens was swapped as action was
   called, and the focus puller was still on the old marks.
 - **Two loads, two pictures.** P7 loads each scenario twice and compares the screenshots byte for
@@ -611,9 +611,17 @@ The first entries are ideas from before any code existed; the rest are parts of 
   times and measuring the gap did. Fix: only a reader's scroll unpins. A scroll that arrives with a
   change in how far the thread can scroll is the layout's, and keeps the pin. The rule is now a
   pure step, `pinnedAfterScroll`, with a table test that fails under the old rule, and none of 90
-  loads across six stories rested short (ADR-103). Lesson: a scroll event does not say who
-  scrolled; tell the two apart by what else changed. It is "The 20px that was really 16", one
-  level deeper.
+  loads across six stories rested short (ADR-103).
+  That fix had a second act. A reader who scrolled up in the same frame a streaming reply grew was
+  snapped back to the end, in all four thread stories a probe tried. A scroll event reads the
+  layout when it is delivered, not when the scroll happened, so by the time it arrives the reply
+  has grown and the reader's own scroll looks like the layout's. Two more rules over scroll events
+  were measured and failed (23 and 12 of 360 loads rested short). So the thread stopped listening
+  to scroll events. Scroll anchoring is off, and the thread decides when it resizes: it follows
+  its end only if the gap before the growth was under 2px. The reader's scroll-up now holds in
+  all four stories, and 0 of 360 loads rest short (ADR-109). Lesson: a scroll event does not say
+  who scrolled, and it arrives late. Decide at the moment you know what changed, which here is the
+  resize. It is "The 20px that was really 16", two levels deeper.
 
 ## 5. Director's Commentary
 
