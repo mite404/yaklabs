@@ -118,6 +118,10 @@
   /* a darkening wash at the bar's ends: moss is darker than every pixel under it, so it only
      raises the inks' ratios */
   --chrome-painting-wash: color-mix(in srgb, var(--moss) 45%, transparent);
+  /* the painted bar's hover and skeleton fill: a night wash, since a flat fill vanishes on a
+     painting of the same green (1.03:1); 1.37:1 over the painting's mean, and it only darkens,
+     so cream on it is 10.12:1 and the painted soft ink 7.91:1 */
+  --chrome-painting-hover: color-mix(in srgb, var(--yak-night) 35%, transparent);
   /* "Selected" on the bar, the active tab and the pressed layout: a cream pill, 8.98:1
      against the bar in either theme, with the night green on it (16.1:1). */
   --chrome-pill: var(--yak-cream);

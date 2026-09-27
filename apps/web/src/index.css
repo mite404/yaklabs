@@ -20,6 +20,11 @@
   outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
+/* shadcn's ghost button hovers at half strength in dark mode (dark:hover:bg-muted/50). The bar
+   is the same in either theme (ADR-110), so its hover is the full fill there too. */
+:root[data-theme="dark"] .chrome-surface .dark\:hover\:bg-muted\/50:hover {
+  background-color: var(--muted);
+}
 /* A tab draws its ring inside itself: the tab strip scrolls, and a scroller clips whatever lies
    past its edge. On the active tab's pill the ring is the pill's own night ink (16.1:1). */
 .chrome-surface .tab:focus-visible {
@@ -137,6 +142,7 @@
      is a step brighter than the flat bar's, since the painting is lighter than the flat green. */
   .chrome-surface[data-chrome="painting"] {
     --soft-ink: var(--on-chrome-painting-soft);
+    --paper-deep: var(--chrome-painting-hover);
     background:
       linear-gradient(
         to right,
