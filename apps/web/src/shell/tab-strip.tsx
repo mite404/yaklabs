@@ -77,15 +77,14 @@ type TabProps = {
 // active one is the cream pill (ADR-110).
 function Tab({ thread, shell, hover, plus }: TabProps) {
   const { Icon } = LAYOUTS[viewOf(shell.doc, thread.id).pane];
-  const active = shell.active?.main === thread.id;
   const close = (control: Element) => {
     closeFrom(shell, thread.id, control, plus);
   };
   return (
     <div
       role="presentation"
-      data-active={active || undefined}
-      className={`flex ${TAB_BOX} ${active ? "chrome-pill" : ""}`}
+      data-active={shell.active?.main === thread.id || undefined}
+      className={`chrome-pill flex ${TAB_BOX}`}
     >
       <TabsTrigger
         value={thread.id}
@@ -113,10 +112,7 @@ function Tab({ thread, shell, hover, plus }: TabProps) {
 function CloseSlot({ thread, shell, hover, plus }: TabProps) {
   const active = shell.active?.main === thread.id;
   return (
-    <div
-      data-active={active || undefined}
-      className={`group/slot relative ${TAB_BOX} ${active ? "chrome-pill" : ""}`}
-    >
+    <div data-active={active || undefined} className={`chrome-pill group/slot relative ${TAB_BOX}`}>
       <button
         type="button"
         tabIndex={-1}

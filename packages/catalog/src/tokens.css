@@ -351,8 +351,8 @@ button:hover {
   color: var(--ink);
 }
 /* The pill: a piece of cream on the bar, with the night inks back on it, the focus ring too,
-   since a tab draws its ring inside itself. */
-.chrome-surface .chrome-pill {
+   since a tab draws its ring inside itself. A `.chrome-pill` is cream while it is active. */
+.chrome-surface .chrome-pill[data-active] {
   --focus: var(--on-chrome-pill); /* 16.1:1 on the pill */
   --ink: var(--on-chrome-pill);
   --soft-ink: var(--on-chrome-pill-soft);
