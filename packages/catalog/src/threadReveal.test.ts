@@ -68,6 +68,12 @@ describe("pinnedAfterScroll", () => {
     expect(pinnedAfterScroll(true, 463, { reach: 492, scrollTop: 490 })).toBe(true);
   });
 
+  it("unpins a reader who scrolls up in the same frame a streaming reply grows", () => {
+    // The wheel moved scrollTop 463 → 300 as a chunk grew the reach to 492: the scroll event
+    // arrives before the resize, so it sees both.
+    expect(pinnedAfterScroll(true, 463, { reach: 492, scrollTop: 300 })).toBe(false);
+  });
+
   it("leaves a reader who scrolled up where they are as content grows", () => {
     expect(pinnedAfterScroll(false, 463, { reach: 492, scrollTop: 300 })).toBe(false);
   });
