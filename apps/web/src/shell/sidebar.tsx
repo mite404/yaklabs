@@ -10,6 +10,7 @@ import { ArrowUpRight, BookOpen, FlaskConical } from "lucide-react";
 import type { ReactElement, ReactNode } from "react";
 import { Link, useLocation } from "react-router";
 import { usePaths } from "../runtime";
+import { ProjectTree } from "./project-tree";
 
 // The mark as meetkay.ai declares it (ADR-095): one polygon, drawn in the text colour.
 const KAY_MARK_POINTS =
@@ -84,7 +85,9 @@ export function AppSidebar() {
           </Place>
         </SidebarMenu>
       </SidebarHeader>
-      <SidebarContent />
+      <SidebarContent>
+        <ProjectTree />
+      </SidebarContent>
     </Sidebar>
   );
 }

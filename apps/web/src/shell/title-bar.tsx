@@ -1,4 +1,5 @@
 import { SidebarTrigger } from "@yaklabs/ui/components/sidebar";
+import { useRuntimeState } from "../runtime";
 import type { ThemeChoice } from "../theme";
 import { Account } from "./account";
 import { Bell } from "./bell";
@@ -31,6 +32,7 @@ function TrafficLights() {
  */
 export function TitleBar({ theme }: { theme: ThemeChoice }) {
   const shell = useShell();
+  const starting = useRuntimeState().kind === "starting";
   return (
     <header
       data-slot="title-bar"
@@ -41,7 +43,7 @@ export function TitleBar({ theme }: { theme: ThemeChoice }) {
         aria-label="Toggle sidebar"
         className="shrink-0 rounded-[var(--radius)] bg-transparent text-soft-ink hover:text-ink"
       />
-      <TabStrip shell={shell} />
+      <TabStrip shell={shell} starting={starting} />
       <div className="flex shrink-0 items-center gap-2">
         <DataMarker />
         <LayoutSwitch shell={shell} />

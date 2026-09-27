@@ -166,6 +166,10 @@
     pointer-events: none;
   }
   @media (prefers-reduced-motion: reduce) {
+    /* A loading row holds still: shadcn's skeleton pulses otherwise. */
+    [data-slot="skeleton"] {
+      animation: none;
+    }
     .drag-hint::before,
     .lane-shift,
     .lane :is(.thread-header, .card-heading)::before,

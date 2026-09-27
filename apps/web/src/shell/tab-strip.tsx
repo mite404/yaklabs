@@ -52,9 +52,10 @@ function Tab({ thread, shell }: { thread: ThreadSummary; shell: Shell }) {
 
 /**
  * The open threads as shadcn Tabs: choosing one goes to its address, which is what makes it
- * active. The strip scrolls once tabs reach their floor, keeping the active one in view.
+ * active. The strip scrolls once tabs reach their floor, keeping the active one in view. While
+ * the runtime starts, one skeleton tab holds the place; a failed start leaves the strip empty.
  */
-export function TabStrip({ shell }: { shell: Shell | null }) {
+export function TabStrip({ shell, starting }: { shell: Shell | null; starting: boolean }) {
   const active = shell?.active?.main ?? null;
   useEffect(() => {
     if (active !== null)
@@ -76,11 +77,10 @@ export function TabStrip({ shell }: { shell: Shell | null }) {
           aria-label="Open threads"
           className="no-scrollbar h-auto w-auto min-w-0 justify-start gap-1 overflow-x-auto bg-transparent p-0"
         >
-          {shell === null ? (
-            <Skeleton className="h-[30px] w-40 rounded-[var(--radius)]" />
-          ) : (
-            shell.tabs.map((thread) => <Tab key={thread.id} thread={thread} shell={shell} />)
-          )}
+          {starting && <Skeleton className="h-[30px] w-40 rounded-[var(--radius)]" />}
+          {shell?.tabs.map((thread) => (
+            <Tab key={thread.id} thread={thread} shell={shell} />
+          ))}
         </TabsList>
       </Tabs>
       <Button
