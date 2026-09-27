@@ -904,6 +904,26 @@ try {
       return { ok: fit.scroll <= fit.client, detail: JSON.stringify(fit) };
     },
   );
+
+  await onOwnPage(
+    "New project hands focus to the new thread's row in the sidebar",
+    "/?scenario=empty",
+    {},
+    async (own) => {
+      await own.getByRole("button", { name: "New project" }).focus();
+      await own.keyboard.press("Enter");
+      await own.waitForURL(/\/t\//);
+      await own.waitForTimeout(500);
+      const at = await own.evaluate(() => ({
+        current: document.activeElement.getAttribute("aria-current"),
+        sidebar: document.activeElement.closest('[data-slot="sidebar"]') !== null,
+      }));
+      return {
+        ok: at.current === "page" && at.sidebar,
+        detail: `focus on ${await focusOn(own)}, current ${at.current}, in the sidebar ${at.sidebar}`,
+      };
+    },
+  );
 } catch (error) {
   record("run", false, String(error));
   await shot("failure");
