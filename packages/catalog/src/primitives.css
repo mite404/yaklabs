@@ -168,6 +168,10 @@
 .card-heading[draggable="true"]:active {
   cursor: grabbing;
 }
+/* The card left behind while its picture rides the pointer (ADR-089). */
+.card[data-lifted] {
+  opacity: 0.35;
+}
 .card-heading {
   align-items: flex-start;
   border-bottom: 1px solid var(--hairline);
