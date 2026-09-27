@@ -2,7 +2,7 @@
 import { createAgentLoop, type Opened } from "./agentLoop";
 import { liveMint } from "./mint";
 import type { LegacyCanvas, RuntimeData, ScenarioName, Source } from "./protocol";
-import { openSqliteStore } from "./sqliteStore";
+import { openSqliteStore, StorageUnavailableError } from "./sqliteStore";
 import { ensureStarter, type Store } from "./store";
 
 // This file only ever runs as the dedicated worker `startRuntime` creates (ADR-083).
@@ -13,7 +13,9 @@ const DATABASE = "yaklabs";
 
 // SQLite in the private file system when the browser allows it; memory otherwise, which the
 // page learns from the source. Only the file on disk may migrate the v1 canvas keys: a memory
-// store starts empty, so the page keeps the keys for a later run that reaches the file.
+// store starts empty, so the page keeps the keys for a later run that reaches the file. A file
+// that opened but cannot be read or migrated is not a refused file system: falling back would
+// hide the threads it holds behind a fresh starter, so that start breaks with its reason.
 async function openDeviceStore(
   legacy: LegacyCanvas | undefined,
 ): Promise<{ store: Store; source: Source }> {
@@ -21,11 +23,9 @@ async function openDeviceStore(
     const store = await openSqliteStore({ kind: "opfs", name: DATABASE }, legacy);
     return { store, source: { kind: "device", storage: "opfs" } };
   } catch (error) {
+    if (!(error instanceof StorageUnavailableError)) throw error;
     // oxlint-disable-next-line no-console -- the one place a worker can say why it fell back
-    console.warn(
-      "[runtime] Threads stay in memory: the private file system is unavailable.",
-      error,
-    );
+    console.warn("[runtime] Threads stay in memory.", error.message);
     const store = await openSqliteStore({ kind: "memory" });
     return { store, source: { kind: "device", storage: "memory" } };
   }

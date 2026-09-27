@@ -28,6 +28,12 @@ import {
  */
 export type StoreLocation = { kind: "opfs"; name: string } | { kind: "memory" };
 
+/**
+ * The browser refused the private file system: outside a Worker, or another worker holds its
+ * access handles. The one failure a device may answer by keeping its threads in memory.
+ */
+export class StorageUnavailableError extends Error {}
+
 // Names become an OPFS directory and a file, so they stay plain.
 const NAME = /^[a-z0-9][a-z0-9-]{0,39}$/;
 // The sidebar shows one line of the latest message, cut at a word-ish length.
@@ -97,6 +103,10 @@ const extraSchema = z.record(z.string(), z.unknown());
 
 // The wasm module loads once per worker; later stores reuse it and its registered VFS.
 let sqlite3: Promise<Sqlite3Static> | undefined;
+
+function reasonOf(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
 
 // The latest message's text on one line, shortened with an ellipsis when it runs long.
 function toPreview(text: string): string {
@@ -239,15 +249,35 @@ function search(db: Database, query: string): ThreadSummary[] {
  * Opens the database file itself, with no schema applied: a named file in the private file
  * system (only inside a Worker), or memory.
  *
- * @throws As `openSqliteStore` does for the location.
+ * @throws A `StorageUnavailableError` when the private file system is refused; an `Error` when
+ *   the name is not lowercase letters, digits and dashes, or SQLite itself cannot load.
  */
 export async function openDatabase(location: StoreLocation): Promise<Database> {
   const api = await (sqlite3 ??= sqlite3InitModule()); // → Sqlite3Static
   if (location.kind === "memory") return new api.oo1.DB(":memory:", "c");
   if (!NAME.test(location.name)) throw new Error(`Unusable store name: ${location.name}`);
-  // One pool per database, so two databases (or two test files) never share a directory.
-  const pool = await api.installOpfsSAHPoolVfs({ name: `opfs-sahpool-${location.name}` });
-  return new pool.OpfsSAHPoolDb(`/${location.name}.sqlite3`);
+  try {
+    // One pool per database, so two databases (or two test files) never share a directory.
+    const pool = await api.installOpfsSAHPoolVfs({ name: `opfs-sahpool-${location.name}` });
+    return new pool.OpfsSAHPoolDb(`/${location.name}.sqlite3`);
+  } catch (error) {
+    const reason = `The private file system is unavailable: ${reasonOf(error)}`;
+    throw new StorageUnavailableError(reason, { cause: error });
+  }
+}
+
+// The database at the newest schema; one that cannot be read or brought there is closed again.
+async function openMigrated(location: StoreLocation, legacy?: LegacyCanvas): Promise<Database> {
+  const db = await openDatabase(location);
+  try {
+    db.exec("pragma foreign_keys = on");
+    migrate(db, legacy);
+  } catch (error) {
+    db.close();
+    const reason = `The saved threads could not be brought up to date: ${reasonOf(error)}`;
+    throw new Error(reason, { cause: error });
+  }
+  return db;
 }
 
 /**
@@ -256,17 +286,14 @@ export async function openDatabase(location: StoreLocation): Promise<Database> {
  * VFS, which needs no cross-origin isolation headers but works only inside a Worker; in node
  * only `memory` works.
  *
- * @throws When the name is not lowercase letters, digits and dashes, when the private file
- *   system or its access handles are unavailable (outside a Worker, or another worker holds
- *   the pool), when the database cannot be opened, or when a migration step fails.
+ * @throws As `openDatabase` does; and, having closed the database again, when it cannot be
+ *   read or brought up to date (a failed step, or a version newer than this build).
  */
 export async function openSqliteStore(
   location: StoreLocation,
   legacy?: LegacyCanvas,
 ): Promise<Store> {
-  const db = await openDatabase(location);
-  db.exec("pragma foreign_keys = on");
-  migrate(db, legacy);
+  const db = await openMigrated(location, legacy);
 
   return {
     workspace: () => readWorkspace(db),

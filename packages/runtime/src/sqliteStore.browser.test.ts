@@ -2,7 +2,7 @@ import type { ThreadMessage } from "@yaklabs/catalog/thread";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { threadMessageSchema } from "./protocol";
-import { openSqliteStore } from "./sqliteStore";
+import { openSqliteStore, StorageUnavailableError } from "./sqliteStore";
 import { netProfitChoice, profitThread } from "./testing";
 import { inFreshWorker } from "./testWorkerClient";
 
@@ -52,9 +52,9 @@ describe("SQLite store in the browser's private file system", () => {
   });
 
   it("refuses the private file system outside a Worker, so the runtime can fall back", async () => {
-    await expect(openSqliteStore({ kind: "opfs", name: "main-thread" })).rejects.toThrow(
-      "Missing required OPFS APIs",
-    );
+    const opening = openSqliteStore({ kind: "opfs", name: "main-thread" });
+    await expect(opening).rejects.toThrow(StorageUnavailableError);
+    await expect(opening).rejects.toThrow("Missing required OPFS APIs");
   });
 });
 
