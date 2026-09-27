@@ -120,7 +120,7 @@ function MainRows({
           <SidebarMenuAction
             aria-expanded={open}
             aria-label={`${open ? "Hide" : "Show"} the threads in ${main.title}`}
-            className="top-1.5 right-1 w-auto gap-0.5 rounded-[var(--radius)] px-1 text-xs text-soft-ink tabular-nums"
+            className="top-1.5 right-1 aspect-auto h-5 w-auto gap-0.5 rounded-[var(--radius)] px-1 text-xs text-soft-ink tabular-nums"
             onClick={() => {
               folds.toggle(main.id);
             }}
