@@ -5,6 +5,7 @@ import {
   ResizablePanelGroup,
 } from "@yaklabs/ui/components/resizable";
 import {
+  useCallback,
   useEffect,
   useRef,
   useState,
@@ -30,29 +31,39 @@ function layoutFor(pane: PaneKind, split: number): Record<string, number> {
   return pane === "thread" ? { thread: 100, side: 0 } : { thread: split, side: 100 - split };
 }
 
+// The thread's share a drag left behind, or null when the drag closed the side pane at the far
+// edge, which only the layout switch may do.
+function keptSplit(layout: Record<string, number>): number | null {
+  const sizes = new Map(Object.entries(layout)); // → Map<panel id, percent>
+  const thread = sizes.get("thread");
+  return thread === undefined || sizes.get("side") === 0 ? null : thread;
+}
+
 /** The id of the tab panel that holds a main thread's workspace, for the tab that controls it. */
 export function panelId(main: ThreadId): string {
   return `panel-${main}`;
 }
 
+// Whether something has been on screen at least once.
+function useSeen(shown: boolean): boolean {
+  const [seen, setSeen] = useState(shown);
+  if (shown && !seen) setSeen(true);
+  return seen || shown;
+}
+
 // Mounts its children the first time it is shown and keeps them until it goes. Hidden, they
 // keep their state, scroll and running replies, take no input (inert), and skip rendering
-// (content-visibility, from [data-retained] in index.css), which keeps what display: none drops.
+// (content-visibility, from [data-retain][inert] in index.css), which keeps what display: none
+// drops.
 function Retain({
   shown,
   children,
   ...rest
 }: { shown: boolean; children: ReactNode } & HTMLAttributes<HTMLDivElement>) {
-  const [seen, setSeen] = useState(shown);
-  if (shown && !seen) setSeen(true);
+  const seen = useSeen(shown);
   if (!seen) return null;
   return (
-    <div
-      {...rest}
-      inert={!shown}
-      data-retained={shown ? undefined : ""}
-      className="min-h-0 min-w-0 [grid-area:1/1]"
-    >
+    <div {...rest} inert={!shown} data-retain="" className="min-h-0 min-w-0 [grid-area:1/1]">
       {children}
     </div>
   );
@@ -88,15 +99,21 @@ function SidePanes({ shell, thread, view, focus }: Beside) {
 }
 
 // One tab's panes: the main thread, then a panel holding the browser and the canvas. The
-// thread alone collapses that panel (and only then may it collapse, so a drag never does);
-// the split is kept on release.
+// thread alone collapses that panel; the split is kept on release. The panel's limits never
+// change: the library takes new limits a render late, so a panel made collapsible in the
+// render that collapses it refused to close and left a fifth of the tab blank. A drag can
+// only close it by reaching the far edge, and then the view's layout comes back, since the
+// layout switch alone decides what sits beside the thread.
 function Workspace(beside: Beside) {
   const { shell, thread, view } = beside;
   const group = useRef<GroupHandle>(null);
   const alone = view.pane === "thread";
-  useEffect(() => {
+  const place = useCallback(() => {
     group.current?.setLayout(layoutFor(view.pane, view.split));
   }, [view.pane, view.split]);
+  useEffect(() => {
+    place();
+  }, [place]);
   return (
     <ResizablePanelGroup
       orientation="horizontal"
@@ -104,8 +121,10 @@ function Workspace(beside: Beside) {
       groupRef={group}
       defaultLayout={layoutFor(view.pane, view.split)}
       onLayoutChanged={(layout, { isUserInteraction }) => {
-        const split = new Map(Object.entries(layout)).get("thread"); // → number | undefined
-        if (isUserInteraction && !alone && split !== undefined) shell.setSplit(thread.id, split);
+        if (!isUserInteraction) return;
+        const split = keptSplit(layout);
+        if (split === null) place();
+        else shell.setSplit(thread.id, split);
       }}
     >
       {/* Strings are percentages to the panel library; a bare number would be pixels. */}
@@ -122,8 +141,9 @@ function Workspace(beside: Beside) {
       <ResizablePanel
         id="side"
         minSize={`${100 - SPLIT.max}`}
-        collapsible={alone}
+        collapsible
         collapsedSize="0"
+        collapsedThreshold={`${100 - SPLIT.max}`}
         className="grid"
       >
         <SidePanes {...beside} />

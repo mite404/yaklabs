@@ -5,17 +5,9 @@
 //   pnpm dev:web                                   # in one terminal
 //   node apps/web/scripts/web-check.mjs [--base http://127.0.0.1:5173] [--out dir]
 import { mkdirSync, writeFileSync } from "node:fs";
-import { createRequire } from "node:module";
 import path from "node:path";
+import { arg, chromium, ROOT } from "./harness.mjs";
 
-const ROOT = path.resolve(import.meta.dirname, "../../..");
-const playwright = await import(
-  createRequire(path.join(ROOT, "apps/storybook/package.json")).resolve("playwright")
-);
-const { chromium } = playwright.default ?? playwright;
-
-const argv = process.argv.slice(2);
-const arg = (name, fallback) => (argv.includes(name) ? argv[argv.indexOf(name) + 1] : fallback);
 const BASE = arg("--base", "http://127.0.0.1:5173");
 const OUT = arg(
   "--out",
@@ -421,6 +413,60 @@ try {
     labelsAfter.map((label) => label.slice(0, 12)).join(" → "),
   );
 
+  const threadLanes = canvas.locator("article").filter({ has: page.locator(".thread-header") });
+  await threadLanes.first().scrollIntoViewIfNeeded();
+  const firstBar = await threadLanes.first().locator(".thread-header").boundingBox();
+  // The bar's far end, past any title however long.
+  const firstGrip = { x: firstBar.x + firstBar.width - 12, y: firstBar.y + firstBar.height / 2 };
+  await page.mouse.move(firstGrip.x, firstGrip.y);
+  await page.mouse.down();
+  await page.mouse.move(firstGrip.x - 200, firstGrip.y + 30, { steps: 8 });
+  await page.waitForTimeout(250);
+  const liftedBeforeEscape = await page.locator("[data-lifted]").count();
+  await page.keyboard.press("Escape");
+  await page.waitForTimeout(100);
+  const heldAfterEscape = await page.locator("[data-ghost], [data-lifted]").count();
+  await page.mouse.up();
+  await page.waitForTimeout(250);
+  const labelsEscaped = await canvas
+    .locator("article")
+    .evaluateAll((els) => els.map((el) => el.getAttribute("aria-label")));
+  record(
+    "Escape puts a lifted lane back while the button is still down, and letting go moves nothing",
+    liftedBeforeEscape === 1 &&
+      heldAfterEscape === 0 &&
+      labelsEscaped.join("|") === labelsAfter.join("|"),
+    `lifted ${liftedBeforeEscape}, still up after Escape ${heldAfterEscape}; ${labelsEscaped.map((label) => label.slice(0, 12)).join(" → ")}`,
+  );
+
+  // A card's header inside a thread lane arms a carry, which claims its press with
+  // preventDefault and lets it travel on. A stand-in header that claims its press the same way
+  // shows whether the lane leaves a claimed press alone, as it must for the card to go alone.
+  const claimed = threadLanes.first().locator(".thread-panel");
+  await claimed.evaluate((panel) => {
+    const standIn = document.createElement("header");
+    standIn.className = "card-heading";
+    standIn.dataset.claims = "";
+    standIn.style.height = "40px";
+    standIn.addEventListener("pointerdown", (event) => {
+      event.preventDefault();
+    });
+    panel.prepend(standIn);
+  });
+  const claimBox = await page.locator("[data-claims]").boundingBox();
+  await page.mouse.move(claimBox.x + 40, claimBox.y + 20);
+  await page.mouse.down();
+  await page.mouse.move(claimBox.x + 200, claimBox.y + 40, { steps: 6 });
+  await page.waitForTimeout(250);
+  const liftedByClaim = await page.locator("[data-lifted]").count();
+  await page.mouse.up();
+  await page.locator("[data-claims]").evaluate((el) => el.remove());
+  record(
+    "a press something in a lane has claimed, as a card's header does, never lifts the lane",
+    liftedByClaim === 0,
+    `${liftedByClaim} lifted`,
+  );
+
   const handle = page.locator('[data-slot="resizable-handle"]');
   const handleBox = await handle.boundingBox();
   const panel = page.locator('[data-slot="resizable-panel"]').first();
@@ -546,6 +592,46 @@ try {
     "unknown path shows the not-found page",
     await page.getByText("Page not found").isVisible(),
   );
+
+  // A device file that opens but cannot be read ends the start broken with its reason, never a
+  // fresh starter over threads that are there. A page of its own, so its device is its own;
+  // the pool keeps a 4096-byte header of its own before the database's bytes.
+  const device = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  await device.goto(`${BASE}/`, { waitUntil: "load" });
+  await device.locator(".thread-panel").first().waitFor({ timeout: 20_000 });
+  await device.goto(`${BASE}/share.html`, { waitUntil: "load" });
+  const spoiled = await device.evaluate(async () => {
+    const names = [];
+    async function spoil(dir, at) {
+      for await (const [name, entry] of dir.entries()) {
+        if (entry.kind === "directory") {
+          await spoil(entry, `${at}/${name}`);
+          continue;
+        }
+        if ((await entry.getFile()).size <= 8192) continue;
+        const writable = await entry.createWritable({ keepExistingData: true });
+        await writable.seek(4096);
+        await writable.write(new Uint8Array(4096).fill(0x5a));
+        await writable.close();
+        names.push(`${at}/${name}`);
+      }
+    }
+    await spoil(await navigator.storage.getDirectory(), "");
+    return names;
+  });
+  await device.goto(`${BASE}/`, { waitUntil: "load" });
+  const notice = device.getByText("Your threads could not be opened", { exact: true });
+  await notice.waitFor({ timeout: 20_000 });
+  const reason = await notice.locator("xpath=..").innerText();
+  await device.getByRole("main").getByRole("button", { name: "Try again" }).click();
+  await notice.waitFor({ timeout: 20_000 });
+  await device.screenshot({ path: path.join(OUT, "device-broken.png") });
+  record(
+    "a device file that cannot be read says why and offers Try again, which tries again",
+    spoiled.length === 1 && reason.includes("could not be brought up to date"),
+    `${spoiled.length} file spoiled; ${reason.replaceAll(/\s+/g, " ").slice(0, 140)}`,
+  );
+  await device.close();
 } catch (error) {
   record("run", false, String(error));
   await shot("failure");

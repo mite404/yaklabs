@@ -134,6 +134,23 @@ export function visit(state: ShellState, at: Located): ShellState {
 }
 
 /**
+ * The document to save when the workspace holds a different one (nothing saved yet, or a
+ * thread gone since), else null.
+ */
+export function unsaved(saved: ShellState | null, ws: Workspace | null): ShellState | null {
+  if (saved === null || ws === null) return null;
+  return JSON.stringify(saved) === JSON.stringify(ws.shell) ? null : saved;
+}
+
+/**
+ * Whether showing `pane` beside `main` takes the page off the child its address names; a child
+ * shows only on its main's canvas, so the page goes to the main instead.
+ */
+export function leavesChild(at: Located | null, main: ThreadId, pane: PaneKind): boolean {
+  return pane !== "canvas" && at?.main === main && at.focus !== null;
+}
+
+/**
  * Closes a tab, keeping its view for when it opens again. `next` is where the page goes if the
  * closed tab was on screen: its right neighbour, else its left, else null for home.
  */

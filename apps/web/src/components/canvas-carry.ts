@@ -27,8 +27,9 @@ function landingAt(row: HTMLElement, point: CarryPoint): Landing {
   return { at, marker };
 }
 
-function sameLanding(a: Landing | null, b: Landing | null): boolean {
-  return a?.at === b?.at && a?.marker === b?.marker;
+// A landing as one comparable value, so a move to the same place sets no state.
+function keyOf(landing: Landing | null): string {
+  return landing === null ? "" : `${landing.at}:${String(landing.marker)}`;
 }
 
 /**
@@ -42,7 +43,7 @@ export function useLanding(
 ): Landing | null {
   const [landing, setLanding] = useState<Landing | null>(null);
   const follow = (next: Landing | null) => {
-    setLanding((current) => (sameLanding(current, next) ? current : next));
+    setLanding((current) => (keyOf(current) === keyOf(next) ? current : next));
   };
   useCarryTarget(row, {
     over: (_carried, point) => {

@@ -1,10 +1,10 @@
 import { ChatThreadPanel } from "@yaklabs/catalog";
 import type { ThreadMessage } from "@yaklabs/catalog/thread";
 import type { ThreadId, ThreadSummary } from "@yaklabs/runtime";
-import { Button } from "@yaklabs/ui/components/button";
 import { useEffect, useState } from "react";
 import { inBackground, reasonOf, useRuntime } from "../runtime";
 import { useSession } from "../session";
+import { QuietButton } from "./quiet-button";
 
 // A thread's turns as the worker hands them over: on their way, here, or refused.
 type Turns =
@@ -59,9 +59,7 @@ export function ThreadPane({ thread }: { thread: ThreadSummary }) {
       <div className="flex flex-col items-start gap-2 p-4 text-sm">
         <p className="text-ink">{thread.title} could not be opened.</p>
         <p className="text-soft-ink">{turns.reason}</p>
-        <Button variant="outline" size="sm" onClick={retry}>
-          Try again
-        </Button>
+        <QuietButton onClick={retry}>Try again</QuietButton>
       </div>
     );
   }

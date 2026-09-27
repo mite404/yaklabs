@@ -74,8 +74,6 @@
   outline: none;
 }
 
-/* The scroll area is the size container for embedded cards (ADR-023).
-   A stable scrollbar gutter keeps content from shifting when the bar appears (ADR-003). */
 /* A highlight is something to pick up (ADR-089): an open hand over it, a closed one while it
    is held; the thread sets data-grab from the pointer (grabbable.ts). */
 .thread-scroll[data-grab="ready"] {
@@ -84,9 +82,14 @@
 .thread-scroll[data-grab="held"] {
   cursor: grabbing;
 }
+/* The scroll area is the size container for embedded cards (ADR-023).
+   A stable scrollbar gutter keeps content from shifting when the bar appears (ADR-003).
+   The thread steers its own scroll (threadReveal.ts), so the browser's scroll anchoring, which
+   would shift it to hold a paragraph in place as content sizes, stays off (ADR-103). */
 .thread-scroll {
   container: thread / inline-size;
   overflow-y: auto;
+  overflow-anchor: none;
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
   /* The bottom padding lands the last card --rest-gap above the compose box or the dock

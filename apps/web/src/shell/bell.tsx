@@ -70,19 +70,30 @@ function BellTrigger({ unread, disabled }: { unread: number; disabled: boolean }
  * new keep their dot until it closes.
  */
 export function Bell({ shell }: { shell: Shell | null }) {
+  if (shell === null) {
+    return (
+      <DropdownMenu>
+        <BellTrigger unread={0} disabled />
+      </DropdownMenu>
+    );
+  }
+  return <BellMenu shell={shell} />;
+}
+
+// The bell once the shell is ready, and the menu of notifications it opens.
+function BellMenu({ shell }: { shell: Shell }) {
   const [fresh, setFresh] = useState<string[]>([]);
-  const items = shell?.workspace.notifications ?? [];
-  const utc = shell?.source.kind === "scenario";
+  const items = shell.workspace.notifications;
+  const utc = shell.source.kind === "scenario";
   return (
     <DropdownMenu
       onOpenChange={(open) => {
-        if (shell === null) return;
         const unseen = items.filter((item) => !shell.doc.read.includes(item.id));
         setFresh(open ? unseen.map((item) => item.id) : []);
         if (open) shell.markRead(items.map((item) => item.id));
       }}
     >
-      <BellTrigger unread={shell?.unread ?? 0} disabled={shell === null} />
+      <BellTrigger unread={shell.unread} disabled={false} />
       <DropdownMenuContent align="end" className="w-80">
         <DropdownMenuGroup>
           <DropdownMenuLabel>Notifications</DropdownMenuLabel>
@@ -93,7 +104,7 @@ export function Bell({ shell }: { shell: Shell | null }) {
               <DropdownMenuItem
                 key={item.id}
                 onClick={() => {
-                  shell?.open(item.threadId);
+                  shell.open(item.threadId);
                 }}
               >
                 <Row item={item} fresh={fresh.includes(item.id)} utc={utc} />

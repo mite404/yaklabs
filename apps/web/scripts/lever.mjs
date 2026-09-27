@@ -1,17 +1,8 @@
 // The harness the workspace lever runs on: a browser, the addresses, the output folder, and a
 // runner that gives every check its own page so one failure never hides another.
 import { mkdirSync, writeFileSync } from "node:fs";
-import { createRequire } from "node:module";
 import path from "node:path";
-
-export const ROOT = path.resolve(import.meta.dirname, "../../..");
-const playwright = await import(
-  createRequire(path.join(ROOT, "apps/storybook/package.json")).resolve("playwright")
-);
-const { chromium } = playwright.default ?? playwright;
-
-const argv = process.argv.slice(2);
-const arg = (name, fallback) => (argv.includes(name) ? argv[argv.indexOf(name) + 1] : fallback);
+import { arg, chromium, ROOT } from "./harness.mjs";
 
 export const BASE = arg("--base", "http://127.0.0.1:5173");
 export const STORYBOOK = arg("--storybook", "http://127.0.0.1:6106");
@@ -73,7 +64,11 @@ export async function luminance(page, clip) {
 
 /** Runs each check (or those named by --only), prints PASS or FAIL, writes results.json. */
 export async function run(checks) {
-  const browser = await chromium.launch();
+  // Partial raster redraws only the part of a tile that changed, so an anti-aliased edge that
+  // straddles an earlier change keeps a trace of the page's loading order: two loads with the
+  // same paint commands then differ by a few levels at a rounded corner. Whole-tile raster makes
+  // a screenshot a function of the final page alone, which is what P7 compares.
+  const browser = await chromium.launch({ args: ["--disable-partial-raster"] });
   const results = [];
   for (const [id, check] of Object.entries(checks)) {
     if (ONLY.length > 0 && !ONLY.includes(id)) continue;

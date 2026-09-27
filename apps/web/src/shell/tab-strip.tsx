@@ -25,7 +25,7 @@ function Tab({ thread, shell }: { thread: ThreadSummary; shell: Shell }) {
   return (
     <div
       role="presentation"
-      className={`group/tab relative flex w-[220px] min-w-28 shrink ${active ? "chrome-pill" : ""}`}
+      className={`group/tab relative flex w-[220px] min-w-28 shrink has-data-active:min-w-40 ${active ? "chrome-pill" : ""}`}
     >
       <TabsTrigger
         value={thread.id}
