@@ -163,11 +163,11 @@
 }
 
 /* Card header: title left, actions right, and a flush line under it, edge to edge. */
-/* A header that is a drag handle (ADR-089) says so with the cursor. */
-.card-heading[draggable="true"] {
+/* A header that carries its card (ADR-089) says so with the cursor. */
+.card-heading[data-carry] {
   cursor: grab;
 }
-.card-heading[draggable="true"]:active {
+.card-heading[data-carry]:active {
   cursor: grabbing;
 }
 /* The card left behind while its picture rides the pointer (ADR-089). */

@@ -48,7 +48,7 @@ export function InteractiveCard({
   turnId: string;
   onChoose: (attachment: CardAttachment) => void;
   shareable?: boolean;
-  /** Let the header drag the card out, as onto the compose canvas (ADR-089). */
+  /** Let the header carry the card out, as onto the compose canvas (ADR-089). */
   draggable?: boolean;
 }) {
   const result = resolveInteractive(payload);
