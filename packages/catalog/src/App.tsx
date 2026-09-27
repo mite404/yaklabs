@@ -14,8 +14,12 @@ type Gap = {
   recordedAt: string;
 };
 
-/** Product-evaluation workbench, using fixtures rather than pretending to call an LLM. */
-export function App() {
+/**
+ * Product-evaluation workbench, using fixtures rather than pretending to call an LLM.
+ * @param home Where the brand link goes: the host's home, with whatever the host keeps in it,
+ *   such as the web app's `?scenario=` (ADR-096).
+ */
+export function App({ home = "/" }: { home?: string }) {
   const [selected, setSelected] = useState("trend");
   const [draft, setDraft] = useState("");
   const [custom, setCustom] = useState<unknown>();
@@ -46,7 +50,7 @@ export function App() {
   return (
     <div className="app">
       <aside>
-        <a className="brand" href="/">
+        <a className="brand" href={home}>
           ▦ <span>Fieldnotes</span>
         </a>
         <p className="workspace">

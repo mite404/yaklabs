@@ -205,12 +205,19 @@ describe("the runtime runs a scenario in the worker", () => {
   }, 20_000);
 });
 
-describe("the runtime falls back and breaks down plainly", () => {
-  it("falls back to memory in a second worker while the first holds the database", async () => {
+describe("the runtime waits its turn and breaks down plainly", () => {
+  it("holds a second worker while the first has the device, then opens the same threads", async () => {
     const first = startLab();
-    expect((await ready(first)).source).toEqual({ kind: "device", storage: "opfs" });
+    await ready(first);
+    const id = await newChild(first);
     const second = startLab(); // a second tab, say
-    expect((await ready(second)).source).toEqual({ kind: "device", storage: "memory" });
+    await vi.waitFor(() => {
+      expect(second.state()).toEqual({ kind: "held", source: null });
+    });
+    first.dispose(); // the first tab closes
+    const { source, workspace } = await ready(second);
+    expect(source).toEqual({ kind: "device", storage: "opfs" });
+    expect(locate(workspace, id)).toEqual({ main: profit, focus: id });
   }, 20_000);
 
   it("breaks, rather than hide the saved threads, on a database newer than this build", async () => {
