@@ -60,7 +60,7 @@
       used.set(key, entry);
     }
   }
-  const usedList = [...used.values()].sort((a, b) => b.count - a.count);
+  const usedList = [...used.values()].toSorted((a, b) => b.count - a.count);
 
   console.log(`%c${declared.length} declared custom properties`, "font-weight:bold");
   console.table(declared);

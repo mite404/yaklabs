@@ -14,6 +14,7 @@ permissions:
 
 env:
   STORYBOOK_DISABLE_TELEMETRY: 1
+  TURBO_TELEMETRY_DISABLED: 1
 
 jobs:
   checks:
@@ -23,40 +24,44 @@ jobs:
         with:
           # fallow audit diffs against the PR's base branch, so it needs history.
           fetch-depth: 0
+      # Reads the pnpm version from package.json's packageManager field.
+      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v7
         with:
           node-version: 26
-          cache: npm
-      - run: npm ci
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
 
       - name: Format
-        run: npm run format:check
+        run: pnpm format:check
       - name: Lint
-        run: npm run lint -- --format github
+        run: pnpm lint --format github
       - name: Typecheck
-        run: npm run typecheck
+        run: pnpm typecheck
       - name: Fallow audit (findings this PR introduces)
         if: github.event_name == 'pull_request'
         env:
           BASE_REF: ${{ github.base_ref }}
-        run: npx fallow audit --base "origin/$BASE_REF" --format github-annotations
+        run: pnpm fallow audit --base "origin/$BASE_REF" --format github-annotations
 
       - name: Install Chromium for story tests
-        run: npx playwright install --with-deps chromium
+        run: pnpm --filter storybook exec playwright install --with-deps chromium
       - name: Unit and story tests
-        run: npm test
+        run: pnpm test
+      - name: Build
+        run: pnpm build
       - name: Build Storybook
-        run: npm run build-storybook
+        run: pnpm build-storybook
 
       - name: Upload failed-story screenshots
         if: failure()
         uses: actions/upload-artifact@v7
         with:
           name: failed-story-screenshots
-          path: catalog-lab/**/__screenshots__/
+          path: apps/storybook/**/__screenshots__/
           if-no-files-found: ignore
       - name: Upload Storybook
         uses: actions/upload-artifact@v7
         with:
           name: storybook-static
-          path: catalog-lab/storybook-static/
+          path: apps/storybook/storybook-static/

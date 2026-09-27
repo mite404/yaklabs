@@ -2,31 +2,32 @@
   "name": "yaklabs",
   "private": true,
   "type": "module",
-  "workspaces": [
-    "catalog-lab"
-  ],
   "scripts": {
-    "lint": "oxlint catalog-lab scripts",
-    "format": "oxfmt catalog-lab scripts",
-    "format:check": "oxfmt --check catalog-lab scripts",
-    "typecheck": "npm run typecheck --workspaces",
-    "test": "npm test --workspaces",
-    "test:unit": "npm run test:unit --workspaces",
-    "test:stories": "npm run test:stories --workspaces",
-    "build-storybook": "npm run build-storybook --workspaces",
+    "dev": "turbo run dev",
+    "dev:web": "turbo run dev --filter=web",
+    "build": "turbo run build",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "test:unit": "turbo run test:unit",
+    "test:stories": "turbo run test:stories",
+    "storybook": "pnpm --filter storybook storybook",
+    "build-storybook": "turbo run build-storybook",
+    "lint": "oxlint --disable-nested-config",
+    "format": "oxfmt --write",
+    "format:check": "oxfmt --check",
     "fallow": "fallow",
     "fallow:audit": "fallow audit",
-    "prepare": "husky"
+    "prepare": "lefthook install --reset-hooks-path"
   },
   "devDependencies": {
+    "@yaklabs/config": "workspace:*",
     "fallow": "^3.28.0",
-    "husky": "^9.1.7",
-    "lint-staged": "^17.5.1",
+    "lefthook": "^2.1.12",
     "oxfmt": "^0.70.0",
     "oxlint": "^1.85.0",
-    "oxlint-tsgolint": "^7.0.2003"
+    "oxlint-tsgolint": "^7.0.2003",
+    "turbo": "^2.10.12",
+    "typescript": "catalog:"
   },
-  "allowScripts": {
-    "esbuild@0.28.2": true
-  }
+  "packageManager": "pnpm@10.33.0"
 }

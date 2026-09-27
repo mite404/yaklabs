@@ -32,6 +32,11 @@ Preconditions:
 - **Lock.** While the dialog is open, `textbox "Message"` shows placeholder `Recording…` and it,
   `button "Attach"`, `button "Dictate"` and `button "Send"` are all `[disabled]`, with the text
   `Typing is paused while recording`.
+- **Microphone.** Click `button "System Default"`. `listbox "Choose microphone"` opens with
+  `option "System Default" [selected]`, `option "MacBook Pro Microphone"`,
+  `option "USB Headset Microphone"` and `option "Loopback Audio"`. Click one: the list closes and
+  the button takes its name. With the list open, Escape closes only the list; a second Escape
+  closes the dialog. No story opens the list, so axe only checks it when you do.
 - **Cancel.** Click `button "Cancel"`. The dialog closes, the message box is empty and enabled.
 - **Done.** Load `thread-chat-thread-panel--dictation`, wait for the simulated transcript, click
   `button "Done"`. The dialog closes and the transcript is in `textbox "Message"`.

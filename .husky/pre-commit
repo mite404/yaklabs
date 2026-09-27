@@ -1,7 +1,0 @@
-# Cheapest first: staged-file formatting, then whole-repo checks, then the changed-code audit.
-npx lint-staged
-npm run lint
-npm run typecheck
-npm test
-# Fails only on findings this commit introduces (--base HEAD), not the branch's backlog.
-npx fallow audit --base HEAD
