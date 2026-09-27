@@ -185,6 +185,18 @@ describe("useCarryTarget", () => {
   });
 });
 
+describe("a card that moves between the press and the lift", () => {
+  it("rides the pointer by the point it was taken at", () => {
+    const card = handle("card", 20, 20);
+    card.dispatchEvent(pointer("pointerdown", 80, 50, 1));
+    card.style.top = "60px";
+    card.dispatchEvent(pointer("pointermove", 100, 50, 1));
+    const ghost = document.querySelector<HTMLElement>(".carry-ghost");
+    expect(ghost?.style.transform).toBe("translate(40px, 20px)");
+    card.dispatchEvent(pointer("pointerup", 100, 50));
+  });
+});
+
 describe("a carry whose target throws", () => {
   it("still ends, and the next carry starts clean", () => {
     const first = handle("first", 20, 20);
