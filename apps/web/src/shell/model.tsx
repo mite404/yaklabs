@@ -10,7 +10,7 @@ import {
   type Workspace,
 } from "@yaklabs/runtime";
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { useMatch, useNavigate } from "react-router";
+import { matchPath, useLocation, useNavigate, useNavigation } from "react-router";
 import { toast } from "sonner";
 import { inBackground, reasonOf, usePaths, useRuntimeState, useStartedRuntime } from "../runtime";
 import {
@@ -186,6 +186,15 @@ function verbs(deps: Deps, doc: ShellState): ShellVerbs {
   };
 }
 
+// The thread the address names, or is on its way to name: a navigation in flight counts at
+// once, so a tab switch shows in the same frame as the click rather than when the router has
+// finished its own asynchronous steps.
+function useNamedThread(): string | undefined {
+  const pending = useNavigation().location; // → Location | undefined
+  const current = useLocation();
+  return matchPath("/t/:threadId", (pending ?? current).pathname)?.params.threadId;
+}
+
 // Keeps the runtime's document in step with the page: the canonical one whenever it differs
 // (nothing saved yet, or a thread gone), and a visit each time the address names a new thread.
 // Only a new address visits: a state push must not re-add a tab closed a moment ago while the
@@ -220,7 +229,7 @@ export function ShellProvider({ children }: { children: ReactNode }) {
   const runtime = useStartedRuntime();
   const navigate = useNavigate();
   const { pathTo, hrefTo } = usePaths();
-  const named = useMatch("/t/:threadId")?.params.threadId; // → string | undefined
+  const named = useNamedThread();
   const ready = state.kind === "ready" ? state : null;
   const ws = ready?.workspace ?? null;
   const saved = useMemo(() => (ws === null ? null : parseShell(ws.shell, ws)), [ws]);
@@ -236,8 +245,9 @@ export function ShellProvider({ children }: { children: ReactNode }) {
   const shell = useMemo<Shell | null>(() => {
     if (ready === null || doc === null) return null;
     const { workspace, source } = ready;
+    // A tab switch shows the tab in the same frame as the click, never a transition later.
     const go = (to: ThreadId | null) => {
-      void navigate(to === null ? hrefTo("/") : pathTo(to));
+      void navigate(to === null ? hrefTo("/") : pathTo(to), { flushSync: true });
     };
     const byId = new Map(workspace.threads.map((thread) => [thread.id, thread] as const));
     return {
