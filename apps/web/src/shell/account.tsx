@@ -108,7 +108,10 @@ function WorkOsAccount({ theme, chrome }: { theme: ThemeChoice; chrome: ChromeCh
   const face = (
     <>
       {user.profilePictureUrl !== null && <AvatarImage src={user.profilePictureUrl} alt="" />}
-      <AvatarFallback>{initialsOf([user.firstName, user.lastName], user.email)}</AvatarFallback>
+      {/* The ink, not the muted ink: on the bar's hover fill that is 7.21:1, the muted 4.47:1. */}
+      <AvatarFallback className="text-ink">
+        {initialsOf([user.firstName, user.lastName], user.email)}
+      </AvatarFallback>
     </>
   );
   return (
@@ -137,7 +140,7 @@ function LocalAccount({ theme, chrome }: { theme: ThemeChoice; chrome: ChromeCho
   const face = (
     <>
       <AvatarImage src="/kay/kay-face.webp" alt="" />
-      <AvatarFallback>
+      <AvatarFallback className="text-ink">
         <UserRound className="size-3.5" />
       </AvatarFallback>
     </>
