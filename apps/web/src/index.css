@@ -79,32 +79,57 @@
     cursor: default;
   }
   /* The grip: six dots that fade up in the middle of the bar while the pointer is on the part
-     of it that drags, and stay away while it is on the title, which renames. In a lane the
-     title keeps to its own half of the bar so the two never meet. */
+     of it that drags, and stay away while it is on the title, which renames. Beneath the dots a
+     veil in the bar's own paper fades out the stretch of title they sit on, so the whole title
+     shows at rest and only yields its middle to the grip on hover. The veil is the grip's hit
+     area too: a press on it lands on the bar, never on the title under it. */
+  .lane :is(.thread-header, .card-heading)::before,
   .lane :is(.thread-header, .card-heading)::after {
     content: "";
     position: absolute;
+    opacity: 0;
+    transition: opacity 150ms ease;
+  }
+  .lane :is(.thread-header, .card-heading)::before {
+    inset: 0 auto 0 50%;
+    width: 46px;
+    transform: translateX(-50%);
+    background: linear-gradient(
+      to right,
+      transparent,
+      var(--paper) 30%,
+      var(--paper) 70%,
+      transparent
+    );
+  }
+  .lane :is(.thread-header, .card-heading)::after {
     top: 50%;
     left: 50%;
     width: 15px;
     height: 10px;
     transform: translate(-50%, -50%);
     background: radial-gradient(circle, var(--soft-ink) 1.25px, transparent 1.75px) 0 0 / 5px 5px;
-    opacity: 0;
-    transition: opacity 150ms ease;
     pointer-events: none;
   }
+  .lane :is(.thread-header, .card-heading):hover::before,
   .lane :is(.thread-header, .card-heading):hover::after {
     opacity: 1;
   }
   .lane
     :is(.thread-header, .card-heading):has(
       :is(h2, .card-heading-text, .thread-rename):hover
+    )::before,
+  .lane
+    :is(.thread-header, .card-heading):has(
+      :is(h2, .card-heading-text, .thread-rename):hover
     )::after {
     opacity: 0;
   }
+  /* The title hugs its text so the whole thing shows at rest; it only clips with an ellipsis
+     once it outgrows the bar itself. */
   .lane .thread-header h2 {
-    max-width: calc(50% - 20px);
+    width: fit-content;
+    max-width: 100%;
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
@@ -129,6 +154,7 @@
   @media (prefers-reduced-motion: reduce) {
     .drag-hint::before,
     .lane-shift,
+    .lane :is(.thread-header, .card-heading)::before,
     .lane :is(.thread-header, .card-heading)::after {
       transition: none;
     }
