@@ -313,7 +313,8 @@ The first entries are ideas from before any code existed; the rest are parts of 
   byte for byte (ADR-110).
 - **A painting the repo makes, not one it borrows.** The mock's painting is a crop of an image
   whose source and licence nobody has yet. `paint-chrome.mjs` paints one from seeded noise, misty
-  ground and tree canopies, identical on every run, 4 KB, with every pixel held at luminance 0.10.
+  ground and tree canopies, identical on every run, 3 KB, with no pixel of the shipped file above
+  luminance 0.10.
   It is ours to ship today, and when Ethan names the painting he wants, it goes through the same
   clamp (ADR-115).
 - **A stencil, not a picture, for the splash drawing.** A drawing shipped as an image shows its
@@ -687,14 +688,27 @@ The first entries are ideas from before any code existed; the rest are parts of 
   gives the frame a layer of its own, and every pixel under it is the baseline's again (ADR-112).
 - **The soft ink that the painting made unreadable.** The painting was clamped so cream stayed at
   5:1, and the lever still failed: the soft ink, cream at 72%, is dimmer than cream and fell to
-  3.1:1 on the brightest strokes. The clamp now holds the painting at 0.10 and the painted bar's
-  soft ink is cream at 85%, 4.72:1 on its brightest pixel. Lesson: a contrast floor belongs to the
-  faintest ink on the surface, not the main one.
+  3.1:1 on the brightest strokes. The painted bar's soft ink is now cream at 85%. Lesson: a
+  contrast floor belongs to the faintest ink on the surface, not the main one.
+  That fix had a second act, found by the review. The script clamped the pixels, measured them,
+  and only then encoded a lossy WebP, and the encode lifted some pixels past the clamp: the file
+  itself reached luminance 0.134, where that soft ink is 3.9:1. The lever missed it because at
+  1x the browser halves the 2880px image and averages the peaks away. Now the script decodes the
+  file it wrote, measures that, and lowers its clamp until the file holds the bound (0.080 gets
+  a decoded 0.096). It writes what it measured to `painting.json`, the token test reads it, and
+  the lever measures the bar at 2x as well. Lesson: measure the artifact you ship, not the step
+  before the last transform.
 - **The lever that measured the badge as the bell's background.** The first contrast pass hid one
   node at a time and read what was left in its box. The bell's box also holds the unread badge,
   which is cream, so the cream bell read 1:1; the badge's round corners gave its "2" the bar as a
   background. The lever now takes one picture with every glyph and icon removed and measures each
   ink only over the pixels its own glyphs cover, less anything drawn on top of it.
+- **The focus ring the tab strip cut off.** The bar's new 2px ring sat 2px outside each control.
+  On a tab that put it outside the tab strip, which scrolls, and a scroller clips whatever lies
+  past its edge, so a focused tab showed almost no ring: the exact failure the rule was written
+  for. The lever passed because it asked whether any pixel near the control was bright. A tab now
+  draws its ring inside itself (cream, or night on the pill), and the lever asks how much of each
+  side of the control the ring covers, so a ring clipped on one side fails.
 
 ## 5. Director's Commentary
 
