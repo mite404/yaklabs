@@ -20,12 +20,16 @@ function remember(style: ChromeStyle): void {
   }
 }
 
-// `?chrome=` wins and is kept, so a link that sets it holds across the app's own links, which
-// keep only the scenario; then the stored choice; then the solid bar.
+// `?chrome=` is a one-time seed: it is kept as the visitor's choice and taken out of the address,
+// so a remount or a reload keeps what they later pick from the menu. Then the stored choice;
+// then the solid bar.
 function readChrome(): ChromeStyle {
-  const asked = styleOf(new URLSearchParams(location.search).get(PARAM)); // → ChromeStyle | null
+  const url = new URL(location.href);
+  const asked = styleOf(url.searchParams.get(PARAM)); // → ChromeStyle | null
   if (asked !== null) {
     remember(asked);
+    url.searchParams.delete(PARAM);
+    history.replaceState(history.state, "", url);
     return asked;
   }
   try {
