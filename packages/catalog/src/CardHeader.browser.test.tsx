@@ -62,11 +62,17 @@ afterEach(async () => {
 
 describe("a card header under a finger", () => {
   it("lifts the card instead of scrolling the page", async () => {
+    // The page hears how the touch ended, wherever the pointer is held.
     const heard: string[] = [];
+    const listening = new AbortController();
     for (const type of ["pointercancel", "pointerup"])
-      heading.addEventListener(type, () => {
-        heard.push(type);
-      });
+      window.addEventListener(
+        type,
+        () => {
+          heard.push(type);
+        },
+        { capture: true, signal: listening.signal },
+      );
     const box = heading.getBoundingClientRect();
     const start = { x: box.left + 20, y: box.top + box.height / 2 };
 
@@ -76,6 +82,7 @@ describe("a card header under a finger", () => {
       await touch("touchMove", { x: start.x + step * 3, y: start.y + step * 3 });
     expect(document.documentElement).toHaveAttribute("data-carrying", "card");
     await touch("touchEnd");
+    listening.abort();
     expect(heard).toEqual(["pointerup"]);
     expect(document.documentElement).not.toHaveAttribute("data-carrying");
   });

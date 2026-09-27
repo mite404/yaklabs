@@ -73,12 +73,11 @@ export type CarrySource = {
 type Armed = Extract<CarryState, { phase: "armed" }>;
 type Carrying = Extract<CarryState, { phase: "carrying" }>;
 
-// One press in the page: the element it landed on holds the pointer once it lifts, and the
-// ghost, the picture on screen, exists from the lift to the end, `offset` from the pointer.
+// One press in the page. The ghost, the picture on screen, exists from the lift to the end,
+// `offset` from the pointer.
 type Press = {
   pointerId: number;
   source: CarrySource;
-  captor: Element | null;
   listening: AbortController;
   offset: CarryPoint;
   ghost: HTMLElement | null;
@@ -297,23 +296,26 @@ function swallowStrayClick(): void {
   window.addEventListener("pointerdown", disarm, true);
 }
 
+// The page's root holds the pointer from the lift to the end, so moves and the release outside
+// the window still reach the carry. The element the press landed on would not do: the page may
+// render it away before the lift.
 function putUp(press: Press): void {
-  const { source, captor, pointerId } = press;
+  const { source, pointerId } = press;
   press.ghost = ghostOf(source);
   if (press.ghost) document.body.append(press.ghost);
   if (source.lift) source.lift.dataset.lifted = "";
   document.documentElement.dataset.carrying = source.carried.kind;
-  captor?.setPointerCapture(pointerId);
+  document.documentElement.setPointerCapture(pointerId);
 }
 
 function takeDown(press: Press, lifted: boolean): void {
-  const { source, captor, pointerId } = press;
+  const { source, pointerId } = press;
+  const root = document.documentElement;
   press.listening.abort();
   press.ghost?.remove();
   if (source.lift) delete source.lift.dataset.lifted;
-  delete document.documentElement.dataset.carrying;
-  if (captor !== null && captor.hasPointerCapture(pointerId))
-    captor.releasePointerCapture(pointerId);
+  delete root.dataset.carrying;
+  if (root.hasPointerCapture(pointerId)) root.releasePointerCapture(pointerId);
   if (lifted) swallowStrayClick();
 }
 
@@ -383,7 +385,15 @@ function listen(press: Press): void {
     options,
   );
   window.addEventListener("pointercancel", cancel, options);
-  press.captor?.addEventListener("lostpointercapture", cancel, options);
+  // Only the root's own loss: an element that loses a capture the root took over, as a touch's
+  // implicit one, tells the root too, since the event bubbles.
+  document.documentElement.addEventListener(
+    "lostpointercapture",
+    (event) => {
+      if (event.target === document.documentElement) cancel(event);
+    },
+    { signal: press.listening.signal },
+  );
   window.addEventListener(
     "keydown",
     (event) => {
@@ -474,7 +484,6 @@ export function armCarry(down: CarryPress, source: CarrySource): void {
   listen({
     pointerId,
     source,
-    captor: down.target instanceof Element ? down.target : null,
     listening: new AbortController(),
     offset: offsetOf(source, at),
     ghost: null,
