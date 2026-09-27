@@ -1,4 +1,10 @@
-import { startRuntime, type Runtime, type RuntimeData, type RuntimeState } from "@yaklabs/runtime";
+import {
+  startRuntime,
+  type Runtime,
+  type RuntimeData,
+  type RuntimeState,
+  type ThreadId,
+} from "@yaklabs/runtime";
 import {
   createContext,
   useCallback,
@@ -12,7 +18,7 @@ import {
 import { useLocation } from "react-router";
 import { toast } from "sonner";
 import { env } from "./env";
-import { legacyFrom, unknownScenario, wantedFrom, type Wanted } from "./source";
+import { keepScenario, legacyFrom, unknownScenario, wantedFrom, type Wanted } from "./source";
 
 // The runtime the page started, what the address asked it to open, and how to start it again.
 type Door = { runtime: Runtime | null; wanted: Wanted; restart: (() => void) | null };
@@ -171,7 +177,33 @@ export function useRuntime(): Runtime {
   return runtime;
 }
 
+/**
+ * The runtime once its worker has started, else null: for what stays mounted in every state,
+ * such as the shell, which must not throw while the worker starts.
+ */
+export function useStartedRuntime(): Runtime | null {
+  return useDoor().runtime;
+}
+
 /** Starts the runtime again after a failed start; null when trying again cannot help. */
 export function useRestart(): (() => void) | null {
   return useDoor().restart;
+}
+
+/**
+ * The page's addresses, each keeping `?scenario=`, so a mock visit never drifts onto the
+ * device's data: `pathTo` a thread, `hrefTo` home or the lab.
+ */
+export function usePaths(): {
+  pathTo: (id: ThreadId) => string;
+  hrefTo: (path: "/" | "/lab") => string;
+} {
+  const { wanted } = useDoor();
+  return useMemo(
+    () => ({
+      pathTo: (id) => keepScenario(`/t/${encodeURIComponent(id)}`, wanted),
+      hrefTo: (path) => keepScenario(path, wanted),
+    }),
+    [wanted],
+  );
 }

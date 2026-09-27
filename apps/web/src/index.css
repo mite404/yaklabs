@@ -6,6 +6,12 @@
 @import "@yaklabs/catalog/tokens.css" layer(catalog);
 
 @layer components {
+  /* A tab, or a pane inside one, that is kept but not shown (the deck): it skips rendering and
+     keeps its layout and scroll, which display: none would drop. It is inert as well. */
+  [data-retained] {
+    content-visibility: hidden;
+  }
+
   /* The canvas is a dotted field (ADR-089): open ground that invites something to be put down. */
   .canvas {
     background-color: var(--bg);
