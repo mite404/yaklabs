@@ -229,6 +229,18 @@ export async function boxesOf(page) {
 }
 
 // What 0.6 records, per theme; the aria trees are theme-independent but cost nothing twice.
+// The title bar's height at each width in WIDTHS, resizing `page` as it goes: one row of 44px
+// from 768px up, and the tabs on a row of their own below (A2).
+export async function headerHeights(page) {
+  const heights = [];
+  for (const viewport of WIDTHS) {
+    await page.setViewportSize(viewport);
+    await settle(page);
+    heights.push((await titleBar(page).boundingBox()).height); // → number
+  }
+  return heights;
+}
+
 async function record(browser, theme) {
   const out = {};
   const files = {};
@@ -254,6 +266,7 @@ async function record(browser, theme) {
     sidebar: await sidebar(bar.page).ariaSnapshot(),
   };
   files[`lanes-canvas-${theme}`] = await shot(canvasIn(bar.page));
+  out.bar.heights = await headerHeights(bar.page);
   await bar.context.close();
   for (const scenario of ["long", "loading"]) {
     const opened = await openScenario(browser, { scenario, theme, ready: false });

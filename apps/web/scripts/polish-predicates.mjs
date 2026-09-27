@@ -10,6 +10,7 @@ import { shotPath } from "./lever.mjs";
 import {
   boxesOf,
   canvasIn,
+  headerHeights,
   openScenario,
   pixelsOf,
   ratio,
@@ -282,13 +283,11 @@ export const polishChecks = {
       const a1 = bg === chrome && chrome === "rgb(59, 66, 60)";
       // Measured before the widths below, since a tab eases to its new width after a resize.
       const report = await inkReport(page, titleBar(page));
-      const heights = [];
-      for (const viewport of WIDTHS) {
-        await page.setViewportSize(viewport);
-        await settle(page);
-        heights.push((await titleBar(page).boundingBox()).height);
-      }
-      const a2 = heights.every((h) => h === 44);
+      // A2: 44px wherever the bar is one row, and the base's own height where the tabs take
+      // a row of their own below 768px (the base's phone layout, not the polish's).
+      const heights = await headerHeights(page);
+      const before = readBaseline().json[theme].bar.heights;
+      const a2 = heights.every((h, i) => h === before[i] && (WIDTHS[i].width < 768 || h === 44));
       const a3 = report.failures.length === 0;
       ok &&= a1 && a2 && a3;
       notes.push(
