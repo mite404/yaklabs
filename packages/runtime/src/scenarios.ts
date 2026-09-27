@@ -42,10 +42,13 @@ const ago = (minutes: number) => new Date(CLOCK.getTime() - minutes * MINUTE);
 const main = (projectId: ProjectId): Place => ({ kind: "main", projectId });
 const child = (parentId: ThreadId): Place => ({ kind: "child", parentId });
 
-// One turn, `minutes` before the clock, with its time of day as the mint writes it (UTC).
-function turn(write: Writer, id: string, text: string, minutes: number): ThreadMessage {
-  const time = write.mint.turnTime(ago(minutes));
-  return id.startsWith("u") ? { id, role: "user", text, time } : { id, role: "agent", text, time };
+// A user's turn and an agent's, `minutes` before the clock, timed as the mint writes (UTC).
+function userSays(write: Writer, id: string, text: string, minutes: number): ThreadMessage {
+  return { id, role: "user", text, time: write.mint.turnTime(ago(minutes)) };
+}
+
+function agentSays(write: Writer, id: string, text: string, minutes: number): ThreadMessage {
+  return { id, role: "agent", text, time: write.mint.turnTime(ago(minutes)) };
 }
 
 function addProject(write: Writer, name: string, created: number): ProjectId {
@@ -96,15 +99,20 @@ function fillProfit(write: Writer, projectId: ProjectId): ThreadId {
     place: child(profit),
     title: "Saturday leads at every level",
     messages: [
-      turn(write, "u1", "> Saturday leads at every level\n\nMore orders, or bigger baskets?", 80),
-      turn(write, "a1", why, 80),
+      userSays(
+        write,
+        "u1",
+        "> Saturday leads at every level\n\nMore orders, or bigger baskets?",
+        80,
+      ),
+      agentSays(write, "a1", why, 80),
     ],
     created: 80,
   });
   addThread(write, {
     place: child(profit),
     title: "Why is Tuesday quiet?",
-    messages: [turn(write, "u1", "Why is Tuesday the quietest day?", 70)],
+    messages: [userSays(write, "u1", "Why is Tuesday the quietest day?", 70)],
     created: 70,
   });
   write.store.arrange(profit, [profitCardLane(write), threadLane(saturday)]);
@@ -122,8 +130,8 @@ function fillDemo(write: Writer): void {
     place: main(store),
     title: "Refund audit",
     messages: [
-      turn(write, "u1", "Check last week's refunds against their orders.", 30),
-      turn(write, "a1", ask, 30),
+      userSays(write, "u1", "Check last week's refunds against their orders.", 30),
+      agentSays(write, "a1", ask, 30),
     ],
     created: DAY,
     updated: 30,
@@ -155,8 +163,8 @@ function manyTurns(write: Writer, count: number): ThreadMessage[] {
   return Array.from({ length: count }, (_, i) => {
     const n = Math.floor(i / 2) + 1;
     return i % 2 === 0
-      ? turn(write, `u${n}`, `How did week ${n} compare with the week before it?`, count - i)
-      : turn(
+      ? userSays(write, `u${n}`, `How did week ${n} compare with the week before it?`, count - i)
+      : agentSays(
           write,
           `a${n}`,
           `Week ${n} ran close to the week before, with the weekend carrying it.`,

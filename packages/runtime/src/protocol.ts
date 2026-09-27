@@ -27,8 +27,8 @@ const sharedFileSchema: z.ZodType<SharedFile> = z.object({
   size: z.number().nonnegative(),
 });
 
-/** What the thread tells the agent (ADR-041), checked where it crosses into the worker. */
-export const agentEventSchema: z.ZodType<AgentEvent> = z.discriminatedUnion("kind", [
+// What the thread tells the agent (ADR-041), checked where it crosses into the worker.
+const agentEventSchema: z.ZodType<AgentEvent> = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("message"),
     text: z.string(),
@@ -60,15 +60,15 @@ export const threadMessageSchema: z.ZodType<ThreadMessage> = z.discriminatedUnio
   }),
 ]);
 
-/** Which agent answers: the scripted lab stand-in, or the model behind the gateway (ADR-085). */
-export const agentSpecSchema = z.discriminatedUnion("kind", [
+// Which agent answers: the scripted lab stand-in, or the model behind the gateway (ADR-085).
+const agentSpecSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("lab") }),
   // Absolute, because the worker resolves it; the page passes its own origin (ADR-086).
   z.object({ kind: z.literal("gateway"), baseUrl: z.url() }),
 ]);
 
-/** The v1 canvas's two localStorage keys, which only the 1 → 2 migration reads. */
-export const legacyCanvasSchema = z.object({
+// The v1 canvas's two localStorage keys, which only the 1 → 2 migration reads.
+const legacyCanvasSchema = z.object({
   hidden: z.array(z.string()),
   order: z.array(z.string()),
 });

@@ -139,8 +139,13 @@ function breakDown(handle: Handle, reason: string): void {
   show(handle);
 }
 
+// An answer goes to whoever waits for its request; the rest change the runtime's state.
 function receive(handle: Handle, notice: Notice): void {
   if (handle.confirmed.kind === "broken") return;
+  if ("requestId" in notice) {
+    handle.sinks.get(notice.requestId)?.(notice);
+    return;
+  }
   switch (notice.kind) {
     case "opening":
       handle.confirmed = { kind: "starting", source: notice.source };
@@ -154,13 +159,6 @@ function receive(handle: Handle, notice: Notice): void {
     }
     case "broken":
       breakDown(handle, notice.reason);
-      return;
-    case "opened":
-    case "created":
-    case "done":
-    case "failed":
-    case "chunk":
-      handle.sinks.get(notice.requestId)?.(notice);
       return;
     default: {
       const unhandled: never = notice;
