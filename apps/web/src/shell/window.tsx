@@ -43,7 +43,7 @@ function Workspace({ children }: { children: ReactNode }) {
     <div
       // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- a main element cannot drop its role on /lab
       role={onLab ? undefined : "main"}
-      // Pushed aside by the phone's drawer, it shows at the edge but takes no focus (ADR-120).
+      // Pushed aside by the phone's drawer, it shows at the edge but takes no focus (ADR-121).
       inert={isMobile && openMobile}
       className="relative grid min-h-0 w-full min-w-0 flex-1 overflow-hidden bg-background *:[grid-area:1/1] md:rounded-tl-[10px] md:border-t md:border-l md:border-hairline"
     >

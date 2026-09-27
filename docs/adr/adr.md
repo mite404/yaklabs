@@ -1310,8 +1310,9 @@ Theme, so Ethan can switch while he decides.
 
 ## ADR-116 - On a phone the title bar is two rows: what never scrolls, then the views
 
-2026-09-27 - Proposed (Ethan's direction, after Amp's phone layout; he will judge it on a phone);
-amends ADR-094 and ADR-096 below 768px only.
+2026-09-27 - Proposed (Ethan's direction in #14, after Amp's phone layout); competes with ADR-120,
+which puts the tabs in the second row instead, until Ethan picks one. Amends ADR-094 and ADR-096
+below 768px only.
 From 768px up the bar stays one 44px row. Below it, where the window is already full-bleed
 (ADR-111), the one row left the tabs no room: the traffic lights, the marker and the Layout group
 took 250px of 390. The phone bar is two rows instead. The top row never scrolls: the sidebar
@@ -1371,7 +1372,16 @@ limits stay the same on every screen (ADR-106): the thread's panel is now collap
 phone and a wide screen differ only in the layout the switch asks for, and crossing the
 breakpoint remounts nothing.
 
-## ADR-120 - On a phone the sidebar pushes the page aside
+## ADR-120 - On a phone the title bar puts the tabs on a row of their own
+
+2026-09-27 - Accepted (Ethan, relayed by the PR #13 session).
+At 390px the one-row title bar squeezed the tab strip to nothing and slid New thread under the
+data marker. Below 768px the tabs now take a row of their own under the controls, 80px in all,
+so every tab stays whole and tappable. A one-row, 44px bar that hid the Layout switch behind a
+button was tried in #14 and withdrawn: Ethan wants two rows on a phone and one on a wide screen.
+With ADR-119, a phone shows the controls, then the tabs, then one pane.
+
+## ADR-121 - On a phone the sidebar pushes the page aside
 
 2026-09-27 - Proposed (Ethan's direction, after Amp's phone sidebar); amends the phone half of
 ADR-094's sidebar, which was shadcn's sheet over a dimmed page.

@@ -1289,7 +1289,7 @@ try {
       const toggle = own.getByRole("button", { name: "Toggle sidebar" });
       await toggle.click();
       await own.waitForTimeout(600);
-      // Pushed, not covered (ADR-120): the bar starts where the drawer ends, and still shows.
+      // Pushed, not covered (ADR-121): the bar starts where the drawer ends, and still shows.
       const push = await own.evaluate(() => {
         const drawer = document
           .querySelector('dialog[data-slot="sidebar"]')

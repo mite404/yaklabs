@@ -56,7 +56,7 @@ function Place({
   );
 }
 
-// On a phone the sidebar is a drawer that pushes the page aside (ADR-120), so every arrival
+// On a phone the sidebar is a drawer that pushes the page aside (ADR-121), so every arrival
 // somewhere new (by a row, a place or a "+") closes it: what was chosen is what shows.
 function useSheetClosesOnArrival(): void {
   const { key } = useLocation();

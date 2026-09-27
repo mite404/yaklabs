@@ -81,7 +81,7 @@ On a phone the bar then had no room for its own tabs. Below 768px it is now two 
 Amp's phone layout: a top row that never scrolls, with the project's name and a "⋯" for the thread
 and project, and below it the views, Thread, Browser and Canvas (ADR-116); P13 holds 390, 520 and
 767 to that. The phone's sidebar no longer covers the page: like Amp's, it slides in from the left
-and pushes the whole window aside, leaving the page's edge as the way back (ADR-120).
+and pushes the whole window aside, leaving the page's edge as the way back (ADR-121).
 
 ## 2. Cast & Crew
 
