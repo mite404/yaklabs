@@ -752,6 +752,40 @@ try {
     falseNotices.every((each) => each.endsWith(" 0")) && goneShown,
     `frames with the notice: ${falseNotices.join(", ")}; unknown thread shows it: ${goneShown}`,
   );
+
+  // Opening a child whose lane was closed appends the lane again, even when the address
+  // already names it: a second click on its row opens it as the first did.
+  const reopening = await pageAt("/t/t-001?scenario=demo");
+  const reopeningCanvas = shownPanel(reopening).getByRole("region", { name: "Compose canvas" });
+  const childTitle = "Saturday leads at every level";
+  const childRow = reopening
+    .locator('[data-slot="sidebar"]')
+    .getByRole("link", { name: childTitle, exact: true });
+  const childLane = reopeningCanvas.locator(`:scope > article[aria-label="${childTitle}"]`);
+  await childRow.click();
+  await childLane.waitFor({ timeout: 10_000 });
+  await reopeningCanvas.getByRole("button", { name: `Close ${childTitle}`, exact: true }).click();
+  await childLane.waitFor({ state: "detached", timeout: 10_000 });
+  await childRow.click();
+  const laneBack = await childLane.waitFor({ timeout: 5_000 }).then(
+    () => true,
+    () => false,
+  );
+  // The lane slides into view before it is measured.
+  await reopening.waitForTimeout(800);
+  const laneInView =
+    laneBack === true &&
+    (await childLane.evaluate((reopened) => {
+      const edges = reopened.getBoundingClientRect();
+      const pane = reopened.parentElement.getBoundingClientRect();
+      return edges.left >= pane.left - 1 && edges.right <= pane.right + 1;
+    })) === true;
+  record(
+    "a second click on a child's row brings back the lane closed since, in view",
+    laneInView,
+    `lane back ${laneBack}, in view ${laneInView}, at ${new URL(reopening.url()).pathname}`,
+  );
+  await reopening.close();
 } catch (error) {
   record("run", false, String(error));
   await shot("failure");
