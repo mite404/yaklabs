@@ -786,6 +786,32 @@ try {
     `lane back ${laneBack}, in view ${laneInView}, at ${new URL(reopening.url()).pathname}`,
   );
   await reopening.close();
+
+  // Another query parameter asks for the same data, so the first link, which keeps only
+  // ?scenario=, starts no second runtime: a closed tab stays closed and a draft stays typed.
+  const tagged = await pageAt("/t/t-001?scenario=demo&ref=mail");
+  let started = 0;
+  tagged.on("worker", () => {
+    started += 1;
+  });
+  await tagged
+    .getByRole("button", { name: "Close Service desk weekly review", exact: true })
+    .click();
+  const taggedDraft = shownPanel(tagged)
+    .locator('[data-slot="resizable-panel"]')
+    .first()
+    .getByRole("textbox", { name: "Message" });
+  await taggedDraft.fill("kept draft");
+  await openRow(tagged, "Last week's sales");
+  await tagged.waitForTimeout(500);
+  const taggedTabs = await tabNames(tagged);
+  const taggedKept = await taggedDraft.inputValue();
+  record(
+    "a query parameter besides ?scenario= never restarts the runtime on the first link",
+    started === 0 && taggedTabs.join("|") === "Last week's sales" && taggedKept === "kept draft",
+    `${started} workers started; tabs ${taggedTabs.join(" | ")}; draft ${JSON.stringify(taggedKept)}`,
+  );
+  await tagged.close();
 } catch (error) {
   record("run", false, String(error));
   await shot("failure");
