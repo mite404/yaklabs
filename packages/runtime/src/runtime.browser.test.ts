@@ -1,7 +1,9 @@
 import type { AgentEvent } from "@yaklabs/catalog/agent";
 import { describe, expect, it, onTestFinished, vi } from "vitest";
+import { z } from "zod";
 import { startRuntime, type Runtime, type RuntimeState } from "./runtime";
 import { netProfitChoice } from "./testing";
+import { inFreshWorker } from "./testWorkerClient";
 import { lanesOf, locate, threadIdSchema, threadLane, type ThreadId } from "./workspace";
 
 type Ready = Extract<RuntimeState, { kind: "ready" }>;
@@ -12,6 +14,16 @@ const question = "Why is Saturday high?";
 const ask: AgentEvent = { kind: "message", text: question, attachments: [netProfitChoice] };
 // Turn times read like the seeds': "9:02", "10:02".
 const clockTime: unknown = expect.stringMatching(/^\d{1,2}:\d{2}$/);
+
+// The device's database, which the runtime's worker opens.
+const DEVICE_DATABASE = "yaklabs";
+const versionSchema = z.object({ ok: z.literal(true), result: z.int() });
+
+// Sets the device database's schema version from a worker of its own; answers the one it had.
+async function setDeviceVersion(version: number): Promise<number> {
+  const reply = await inFreshWorker({ kind: "set-version", name: DEVICE_DATABASE, version });
+  return versionSchema.parse(reply).result;
+}
 
 // A runtime on the device with the lab stand-in at its real pace, stopped when the test ends.
 function startLab(): Runtime {
@@ -130,6 +142,20 @@ describe("the runtime shows the page's edits at once", () => {
     expect(lanesOf((await ready(runtime)).workspace, profit)).toEqual(before);
   }, 20_000);
 
+  it("keeps a child created while an arrange was on its way", async () => {
+    const runtime = startLab();
+    const reversed = lanesOf((await ready(runtime)).workspace, profit).toReversed();
+    const creating = newChild(runtime); // its lane lands first, left of the rest
+    const arranging = runtime.arrange(profit, reversed);
+    const id = await creating;
+    await arranging;
+    expect(lanesOf((await ready(runtime)).workspace, profit)).toEqual([
+      ...reversed.slice(0, -1),
+      threadLane(id),
+      ...reversed.slice(-1),
+    ]);
+  }, 20_000);
+
   it("keeps the page's shell across workers", async () => {
     const first = startLab();
     await ready(first);
@@ -187,6 +213,28 @@ describe("the runtime falls back and breaks down plainly", () => {
     expect((await ready(second)).source).toEqual({ kind: "device", storage: "memory" });
   }, 20_000);
 
+  it("breaks, rather than hide the saved threads, on a database newer than this build", async () => {
+    const had = await setDeviceVersion(99);
+    const runtime = startLab();
+    try {
+      await vi.waitFor(
+        () => {
+          expect(runtime.state().kind).not.toBe("starting");
+        },
+        { timeout: 10_000 },
+      );
+      expect(runtime.state()).toMatchObject({
+        kind: "broken",
+        reason: expect.stringContaining("newer than this build") as unknown,
+      });
+    } finally {
+      runtime.dispose();
+      await setDeviceVersion(had);
+    }
+  }, 20_000);
+});
+
+describe("the runtime fails what waits when it stops", () => {
   it("fails what is waiting when it is stopped, and every call after", async () => {
     const runtime = startLab();
     await ready(runtime);
@@ -199,5 +247,21 @@ describe("the runtime falls back and breaks down plainly", () => {
       source: { kind: "device", storage: "opfs" },
       reason: "The runtime was stopped",
     });
+  }, 20_000);
+
+  it("fails a reply whose token was still on its way when the runtime stopped", async () => {
+    const runtime = startLab();
+    await ready(runtime);
+    const token = Promise.withResolvers<string>();
+    const session = { getAccessToken: () => token.promise };
+    const replying = collect(
+      runtime.agent(profit, session).respond(ask, new AbortController().signal),
+    );
+    runtime.dispose();
+    token.resolve("a-token");
+    const waited = new Promise((resolve) => {
+      setTimeout(resolve, 2000, "still waiting");
+    });
+    await expect(Promise.race([replying, waited])).rejects.toThrow("The runtime was stopped");
   }, 20_000);
 });

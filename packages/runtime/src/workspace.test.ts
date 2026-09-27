@@ -6,6 +6,7 @@ import {
   lanesOf,
   latestMain,
   locate,
+  mergeLanes,
   moveLane,
   newCardLaneId,
   projectIdSchema,
@@ -149,6 +150,29 @@ describe("lane edits are idempotent list edits", () => {
     const once = resizeLane(lanes, lane("b"), width);
     expect(once.map((each) => each.width)).toEqual([null, width, null]);
     expect(resizeLane(once, lane("b"), width)).toEqual(once);
+  });
+});
+
+// Thread lanes named by one space-separated line: "a x b" is l-a, l-x, l-b.
+const lanesNamed = (names: string) =>
+  names
+    .split(" ")
+    .filter((name) => name !== "")
+    .map((name) => threadLane(t(name)));
+
+describe("mergeLanes keeps what the page never saw", () => {
+  it.each<[string, string, string, string, string]>([
+    ["takes the page's list when nothing changed meanwhile", "a b c", "a b c", "c a", "c a"],
+    ["keeps a new lane after its left neighbour", "a x b", "a b", "b a", "b a x"],
+    ["keeps a new first lane before its right neighbour", "x a b", "a b", "b a", "b x a"],
+    ["keeps new lanes in a row together, in order", "a x y b", "a b", "b a", "b a x y"],
+    ["anchors past a neighbour the page closed", "a b x c", "a b c", "c a", "c a x"],
+    ["appends a new lane whose neighbours the page closed", "a x", "a", "", "x"],
+    ["never doubles a lane the page reopened", "a x", "a", "a x", "a x"],
+    ["reopens a lane the canvas no longer holds", "", "a", "a", "a"],
+  ])("%s", (_, current, base, page, expected) => {
+    const merged = mergeLanes(lanesNamed(current), ids(lanesNamed(base)), lanesNamed(page));
+    expect(merged).toEqual(lanesNamed(expected));
   });
 });
 

@@ -1,105 +1,10 @@
-import type { Agent, AgentEvent } from "@yaklabs/catalog/agent";
-import { createLabAgent } from "@yaklabs/catalog/labAgent";
-import { describe, expect, it, onTestFinished, vi } from "vitest";
-import { createAgentLoop, type LoopHost } from "./agentLoop";
-import { fixedMint } from "./mint";
+import { describe, expect, it } from "vitest";
+import { createAgentLoop } from "./agentLoop";
+import { beats, child, init, lastWorkspace, profit, startLoop, states } from "./agentLoop.harness";
 import type { Command, Notice } from "./protocol";
-import { openSqliteStore } from "./sqliteStore";
-import { ensureStarter, type Store } from "./store";
-import { netProfitChoice } from "./testing";
-import {
-  lanesOf,
-  projectIdSchema,
-  threadIdSchema,
-  threadLane,
-  type ThreadId,
-  type Workspace,
-} from "./workspace";
+import { lanesOf, projectIdSchema, threadIdSchema, threadLane } from "./workspace";
 
-// 10:03 UTC, the minute the user asks; the fixed mint writes turn times in UTC.
-const asked = new Date("2026-09-26T10:03:00.000Z");
-const profit = threadIdSchema.parse("profit");
-const ask: AgentEvent = {
-  kind: "message",
-  text: "Why is Saturday high?",
-  attachments: [netProfitChoice],
-  files: [{ name: "till-roll.png", type: "image/png", size: 2048 }],
-};
-
-const init: Command = { kind: "init", agent: { kind: "lab" }, data: { kind: "device" } };
 const openProfit: Command = { kind: "open", requestId: "r1", threadId: profit };
-const sendAsk: Command = { kind: "send", requestId: "r1", threadId: profit, event: ask };
-const child = (requestId: string, draft = ""): Command => ({
-  kind: "create",
-  requestId,
-  item: { kind: "child", parentId: profit, at: 0, title: "Saturday", draft },
-});
-
-// The lab stand-in with no pauses, so a reply streams at once.
-const quickLab = () => createLabAgent({ replyDelayMs: 0, wordMs: 0 });
-
-// An agent that says `pieces` and then breaks down.
-function failsAfter(pieces: string[], reason: string): Agent {
-  return {
-    async *respond() {
-      yield* pieces;
-      await Promise.reject(new Error(reason));
-    },
-  };
-}
-
-// An agent that says one thing, then waits until it is stopped.
-const waitsForAbort: Agent = {
-  async *respond(_event, signal) {
-    yield "Net profit ";
-    await new Promise((resolve) => {
-      signal.addEventListener("abort", resolve, { once: true });
-    });
-  },
-};
-
-// A loop on a fresh memory store holding the starter's profit thread, with every notice it
-// posts collected in order.
-async function startLoop(createAgent: LoopHost["createAgent"] = quickLab) {
-  const notices: Notice[] = [];
-  const store = await openSqliteStore({ kind: "memory" });
-  onTestFinished(() => {
-    store.close();
-  });
-  const mint = fixedMint(asked);
-  ensureStarter(store, mint.now().toISOString());
-  const run = createAgentLoop({
-    post: (notice) => {
-      notices.push(notice);
-    },
-    open: () =>
-      Promise.resolve({ store, source: { kind: "device", storage: "memory" }, mint, faults: {} }),
-    createAgent,
-  });
-  return { notices, store, run };
-}
-
-// The notices' kinds, with a run of one kind folded into one beat: state, chunk, state, done.
-function beats(notices: Notice[]): string[] {
-  return notices
-    .map((notice) => notice.kind)
-    .filter((kind, i, kinds) => i === 0 || kinds[i - 1] !== kind);
-}
-
-function states(notices: Notice[]): Extract<Notice, { kind: "state" }>[] {
-  return notices.flatMap((notice) => (notice.kind === "state" ? [notice] : []));
-}
-
-function lastWorkspace(notices: Notice[]): Workspace {
-  const last = states(notices).at(-1);
-  if (last === undefined) throw new Error("The loop pushed no state");
-  return last.workspace;
-}
-
-const streamed = (notices: Notice[]): string =>
-  notices.flatMap((notice) => (notice.kind === "chunk" ? [notice.text] : [])).join("");
-const turnIds = (store: Store, id: ThreadId = profit) =>
-  store.transcript(id)?.messages.map((message) => message.id);
 
 describe("the agent loop starts", () => {
   it("says where its data lives, then pushes the workspace", async () => {
@@ -209,7 +114,7 @@ describe("the agent loop pushes the state before it answers a write", () => {
       target: { kind: "thread", id: profit },
       name: "Margins",
     });
-    await run({ kind: "arrange", requestId: "r3", mainId: profit, lanes: [] });
+    await run({ kind: "arrange", requestId: "r3", mainId: profit, lanes: [], base: [] });
     await run({ kind: "saveShell", requestId: "r4", shell: { version: 1 } });
     expect(beats(notices)).toEqual([
       "opening",
@@ -232,7 +137,7 @@ describe("the agent loop pushes a state only when the workspace changes", () => 
     await run(init);
     await run(child("r1"));
     const lanes = [threadLane(threadIdSchema.parse("t-001"))];
-    await run({ kind: "arrange", requestId: "r2", mainId: profit, lanes });
+    await run({ kind: "arrange", requestId: "r2", mainId: profit, lanes, base: [] });
     expect(beats(notices).slice(-2)).toEqual(["created", "done"]);
     expect(states(notices)).toHaveLength(2);
   });
@@ -241,74 +146,33 @@ describe("the agent loop pushes a state only when the workspace changes", () => 
     const { notices, run } = await startLoop();
     await run(init);
     const lanes = [threadLane(threadIdSchema.parse("stranger"))];
-    await run({ kind: "arrange", requestId: "r1", mainId: profit, lanes });
+    await run({ kind: "arrange", requestId: "r1", mainId: profit, lanes, base: [] });
     expect(beats(notices)).toEqual(["opening", "state", "failed"]);
   });
 });
 
-describe("the agent loop replies", () => {
-  it("saves the user's turn and marks the thread replying before it streams", async () => {
-    const { notices, store, run } = await startLoop();
+describe("the agent loop keeps the lanes an arrange had not seen", () => {
+  it("keeps a child created while an arrange was on its way, beside its neighbour", async () => {
+    const { notices, run } = await startLoop();
     await run(init);
-    await run(sendAsk);
-    expect(beats(notices)).toEqual(["opening", "state", "chunk", "state", "done"]);
-    expect(states(notices).map((state) => state.replying)).toEqual([[], ["profit"], []]);
-    expect(streamed(notices)).toContain("Net profit · Sep 14–20");
-    expect(store.transcript(profit)?.messages.slice(2)).toEqual([
-      {
-        id: "u2",
-        role: "user",
-        text: "Why is Saturday high?",
-        time: "10:03",
-        attachments: [netProfitChoice],
-        files: [{ id: "u2-f1", label: "till-roll.png" }],
-      },
-      { id: "a2", role: "agent", text: streamed(notices), time: "10:03" },
+    await run(child("r1"));
+    await run(child("r2"));
+    const seen = lanesOf(lastWorkspace(notices), profit); // → [l-t-002, l-t-001]
+    const sunday = { kind: "child", parentId: profit, at: 1, title: "Sunday", draft: "" };
+    await Promise.all([
+      run({ kind: "create", requestId: "r3", item: sunday }),
+      run({
+        kind: "arrange",
+        requestId: "r4",
+        mainId: profit,
+        lanes: [seen[1], seen[0]],
+        base: seen.map((lane) => lane.id),
+      }),
     ]);
-  });
-
-  it("spends a child's draft with its first turn", async () => {
-    const { notices, store, run } = await startLoop();
-    await run(init);
-    await run(child("r1", "> Saturday\n\n"));
-    const id = threadIdSchema.parse("t-001");
-    await run({ ...sendAsk, requestId: "r2", threadId: id });
-    expect(store.transcript(id)?.draft).toBe("");
-    expect(lastWorkspace(notices).threads.find((thread) => thread.id === id)?.draft).toBe("");
-  });
-
-  it("adds no user turn for a rejected question, only the agent's plain-words ask", async () => {
-    const { store, run } = await startLoop();
-    await run(init);
-    const rejected: AgentEvent = { kind: "question-rejected", reason: "too long", question: {} };
-    await run({ ...sendAsk, event: rejected });
-    expect(turnIds(store)).toEqual(["u1", "a1", "a2"]);
-  });
-});
-
-describe("the agent loop recovers", () => {
-  it("keeps the user's turn but no reply when the agent fails", async () => {
-    const { notices, store, run } = await startLoop(() =>
-      failsAfter(["Half a"], "The gateway replied 502"),
-    );
-    await run(init);
-    await run(sendAsk);
-    const failed = { kind: "failed", requestId: "r1", reason: "The gateway replied 502" };
-    expect(notices.at(-1)).toEqual(failed);
-    expect(states(notices).at(-1)?.replying).toEqual([]);
-    expect(turnIds(store)).toEqual(["u1", "a1", "u2"]);
-  });
-
-  it("stops a reply on abort and keeps what streamed so far", async () => {
-    const { notices, store, run } = await startLoop(() => waitsForAbort);
-    await run(init);
-    const sending = run(sendAsk);
-    await vi.waitFor(() => {
-      expect(streamed(notices)).toBe("Net profit ");
-    });
-    await run({ kind: "abort", requestId: "r1" });
-    await sending;
-    expect(notices.at(-1)).toEqual({ kind: "done", requestId: "r1" });
-    expect(store.transcript(profit)?.messages.at(-1)?.text).toBe("Net profit ");
+    expect(lanesOf(lastWorkspace(notices), profit).map((lane) => lane.id)).toEqual([
+      "l-t-001",
+      "l-t-002",
+      "l-t-003",
+    ]);
   });
 });

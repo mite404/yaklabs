@@ -2,8 +2,9 @@ import type { ThreadMessage } from "@yaklabs/catalog/thread";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { threadMessageSchema } from "./protocol";
-import { openSqliteStore } from "./sqliteStore";
+import { openSqliteStore, StorageUnavailableError } from "./sqliteStore";
 import { netProfitChoice, profitThread } from "./testing";
+import { inFreshWorker } from "./testWorkerClient";
 
 // The user's next turn on the starter's profit thread, with the card choice riding along.
 const turn: ThreadMessage = {
@@ -15,11 +16,6 @@ const turn: ThreadMessage = {
 };
 const kept = [...profitThread.messages, turn];
 
-// What the test worker answers.
-const replySchema = z.discriminatedUnion("ok", [
-  z.object({ ok: z.literal(true), result: z.unknown() }),
-  z.object({ ok: z.literal(false), reason: z.string() }),
-]);
 const readSchema = z.object({
   ok: z.literal(true),
   result: z.object({ messages: z.array(threadMessageSchema) }),
@@ -39,27 +35,6 @@ const migrationSchema = z.object({
   }),
 });
 
-// Runs one request in a fresh worker, then ends that worker the way closing a tab would.
-async function inFreshWorker(request: unknown): Promise<z.infer<typeof replySchema>> {
-  const url = new URL("./sqliteStore.testWorker.ts", import.meta.url);
-  const worker = new Worker(url, { type: "module" });
-  try {
-    const data = await new Promise<unknown>((resolve, reject) => {
-      worker.addEventListener("message", (event) => {
-        resolve(event.data);
-      });
-      worker.addEventListener("error", () => {
-        reject(new Error("The test worker failed"));
-      });
-      // oxlint-disable-next-line unicorn/require-post-message-target-origin -- workers have none
-      worker.postMessage(request);
-    });
-    return replySchema.parse(data);
-  } finally {
-    worker.terminate();
-  }
-}
-
 const freshName = (prefix: string) => `${prefix}-${crypto.randomUUID().slice(0, 8)}`;
 
 describe("SQLite store in the browser's private file system", () => {
@@ -77,9 +52,9 @@ describe("SQLite store in the browser's private file system", () => {
   });
 
   it("refuses the private file system outside a Worker, so the runtime can fall back", async () => {
-    await expect(openSqliteStore({ kind: "opfs", name: "main-thread" })).rejects.toThrow(
-      "Missing required OPFS APIs",
-    );
+    const opening = openSqliteStore({ kind: "opfs", name: "main-thread" });
+    await expect(opening).rejects.toThrow(StorageUnavailableError);
+    await expect(opening).rejects.toThrow("Missing required OPFS APIs");
   });
 });
 

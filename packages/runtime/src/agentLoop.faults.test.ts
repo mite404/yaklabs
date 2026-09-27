@@ -84,6 +84,23 @@ describe("the agent loop meets a scenario's faults before it handles anything", 
   });
 });
 
+describe("a scenario says where its data is before anything can fail", () => {
+  it("names a scenario before it opens, so one that cannot open still says so", async () => {
+    const notices: Notice[] = [];
+    const run = createAgentLoop({
+      post: (notice) => {
+        notices.push(notice);
+      },
+      open: () => Promise.reject(new Error("The scenarios could not load")),
+    });
+    await run(init("demo"));
+    expect(notices).toEqual([
+      { kind: "opening", source: { kind: "scenario", name: "demo" } },
+      { kind: "broken", reason: "The scenarios could not load" },
+    ]);
+  });
+});
+
 describe("a scenario never reaches a model", () => {
   it("answers with the lab stand-in even when the page asked for the gateway", async () => {
     const createAgent = vi.fn<NonNullable<LoopHost["createAgent"]>>(() =>

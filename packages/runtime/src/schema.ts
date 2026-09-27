@@ -82,15 +82,17 @@ const V2_SWAP = `
   alter table conversations_next rename to conversations;
 `;
 // A check cannot read another row, so the rules that span rows are triggers: a child's parent
-// is a main (depth one), no thread changes place, and a thread lane sits on its own main.
+// is a main (depth one), no thread changes place, and a thread lane sits on its own main. The
+// depth rule asks for the parent's project: the trigger runs before the row exists, so a child
+// of itself finds no parent, and a missing parent and a sub-thread have no project either.
 const V2_RULES = `
   create index conversations_by_project on conversations (project_id);
   create index conversations_by_parent on conversations (parent_id);
   create trigger conversations_depth_one before insert on conversations
   when new.parent_id is not null
-    and (select parent_id from conversations where id = new.parent_id) is not null
+    and (select project_id from conversations where id = new.parent_id) is null
   begin
-    select raise(abort, 'A sub-thread cannot have sub-threads');
+    select raise(abort, 'A sub-thread''s parent is a main thread');
   end;
   create trigger conversations_place_fixed before update of project_id, parent_id on conversations
   when new.project_id is not old.project_id or new.parent_id is not old.parent_id
@@ -172,7 +174,11 @@ function laneRow(mainId: ThreadId, seq: number, lane: Lane): BindingSpec {
     : [mainId, seq, lane.id, null, JSON.stringify(lane.card), lane.title, lane.width];
 }
 
-/** Replaces a main thread's lanes with exactly `lanes`, left to right. */
+/**
+ * Replaces a main thread's lanes with exactly `lanes`, left to right.
+ * @throws When a lane breaks a rule: the main is missing or a sub-thread, a thread lane is not
+ *   one of its own children or its id is not `l-<threadId>`, or an id appears twice.
+ */
 export function writeLanes(db: Database, mainId: ThreadId, lanes: Lane[]): void {
   db.exec({ sql: "delete from lanes where main_id = ?", bind: [mainId] });
   for (const [seq, lane] of lanes.entries()) {

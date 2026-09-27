@@ -63,7 +63,7 @@ describe("commandSchema checks the workspace's writes", () => {
 
   it("refuses a thread lane whose id is not l-<threadId>", () => {
     const lane = { id: "l-other", width: null, kind: "thread", threadId: "thread-a" };
-    const arrange = { kind: "arrange", requestId: "r1", mainId: "profit" };
+    const arrange = { kind: "arrange", requestId: "r1", mainId: "profit", base: [] };
     expect(accepts({ ...arrange, lanes: [{ ...lane, id: "l-thread-a" }] })).toBe(true);
     expect(accepts({ ...arrange, lanes: [lane] })).toBe(false);
   });

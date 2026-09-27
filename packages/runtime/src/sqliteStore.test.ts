@@ -1,6 +1,7 @@
 import type { ThreadMessage } from "@yaklabs/catalog/thread";
-import { describe, expect, it, onTestFinished } from "vitest";
-import { openSqliteStore } from "./sqliteStore";
+import type { Database } from "@sqlite.org/sqlite-wasm";
+import { describe, expect, it, onTestFinished, vi } from "vitest";
+import { openDatabase, openSqliteStore } from "./sqliteStore";
 import { ensureStarter, type NewThread, type Store } from "./store";
 import { netProfitChoice, profitThread } from "./testing";
 import {
@@ -240,5 +241,21 @@ describe("ensureStarter", () => {
     const before = store.workspace();
     ensureStarter(store, at(5));
     expect(store.workspace()).toEqual(before);
+  });
+});
+
+describe("the store opens", () => {
+  it("closes the database when it cannot bring it up to date", async () => {
+    const probe = await openDatabase({ kind: "memory" });
+    probe.close();
+    // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- every database shares it
+    const prototype = Object.getPrototypeOf(probe) as Database;
+    onTestFinished(() => {
+      vi.restoreAllMocks();
+    });
+    vi.spyOn(prototype, "selectValue").mockReturnValueOnce(99); // migrate reads user_version first
+    const close = vi.spyOn(prototype, "close");
+    await expect(openSqliteStore({ kind: "memory" })).rejects.toThrow("newer than this build");
+    expect(close).toHaveBeenCalledOnce();
   });
 });

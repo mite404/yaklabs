@@ -212,6 +212,44 @@ export const CardCarryCancels: Story = {
   },
 };
 
+// What the thread's styles decide for how an element looks, all but the dimming of the card
+// left behind.
+function looks(element: Element): string {
+  const style = getComputedStyle(element);
+  return [
+    style.fontFamily,
+    style.fontSize,
+    style.lineHeight,
+    style.color,
+    style.backgroundColor,
+    style.margin,
+    style.transform,
+  ].join(" / ");
+}
+
+/**
+ * The card that rides the pointer is the card as the thread shows it: the same type, spacing,
+ * colours and height, though it is drawn outside the thread, and it holds still.
+ */
+export const CardCarryPicture: Story = {
+  args: { thread: threads.profit },
+  render: withCarryTarget,
+  play: async ({ canvasElement }) => {
+    const { handle, card, start } = carryScene(canvasElement);
+    await Promise.all(card.getAnimations({ subtree: true }).map(async (played) => played.finished));
+    handle.dispatchEvent(pointer("pointerdown", start.x, start.y, 1));
+    handle.dispatchEvent(pointer("pointermove", start.x + 20, start.y + 20, 1));
+    const picture = document.querySelector(".carry-ghost .card");
+    if (!picture) throw new Error("nothing rides the pointer");
+
+    await expect([picture, ...picture.querySelectorAll("*")].map(looks)).toEqual(
+      [card, ...card.querySelectorAll("*")].map(looks),
+    );
+    await expect(picture.getBoundingClientRect().height).toBe(card.getBoundingClientRect().height);
+    handle.dispatchEvent(pointer("pointerup", start.x + 20, start.y + 20));
+  },
+};
+
 /** Fallbacks and catalog limits must stay honest at thread size too. */
 export const Fallbacks: Story = { args: { thread: threads.fallbacks } };
 
@@ -297,6 +335,50 @@ export const DictationLiveMicrophone: Story = {
 /** Interactive card (ADR-029): a stepped slider walks gross to net profit; the chart and
  *  the agent's sentence update instantly, and the choice rides along with the next message. */
 export const InteractiveProfit: Story = { args: { thread: threads.profit } };
+
+function nextFrame(): Promise<number> {
+  return new Promise((resolve) => requestAnimationFrame(resolve));
+}
+
+// The thread lands on its latest turn as it mounts and stays pinned there as its fonts load, and
+// any scroll closes an open menu (Menu), so a menu opened before those scrolls arrive would close
+// by itself: wait for the fonts, then for frames with no scroll in them.
+async function scrollsSettled(): Promise<void> {
+  await document.fonts.ready;
+  let scrolled = true;
+  const note = () => {
+    scrolled = true;
+  };
+  window.addEventListener("scroll", note, true);
+  while (scrolled) {
+    scrolled = false;
+    await nextFrame();
+    await nextFrame();
+  }
+  window.removeEventListener("scroll", note, true);
+}
+
+/**
+ * A press on a card's header closes its open share menu, as a press anywhere else does: the
+ * header claims the press for a carry without hiding it from the page.
+ */
+export const ShareMenuClosesOnHeaderPress: Story = {
+  args: { thread: threads.profit },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const [share] = canvas.getAllByRole("button", { name: "Share this card" });
+    const header = share?.closest("header");
+    if (!share || !header) throw new Error("no card to share");
+    await scrollsSettled();
+    await userEvent.click(share);
+    const menu = canvas.getByRole("menu", { name: "Share this card" });
+    await waitFor(() => expect(menu).toBeVisible());
+
+    await userEvent.click(within(header).getByRole("heading"));
+    await expect(canvas.queryByRole("menu")).toBeNull();
+    await expect(document.documentElement).not.toHaveAttribute("data-carrying");
+  },
+};
 
 export const InteractiveProfitNarrow: Story = {
   args: { thread: threads.profit, width: 420 },
@@ -423,7 +505,9 @@ export const HighlightCarry: Story = {
     paragraph.dispatchEvent(pointer("pointermove", x, y));
     paragraph.dispatchEvent(pointer("pointerdown", x, y, 1));
     paragraph.dispatchEvent(pointer("pointerup", x, y));
-    paragraph.dispatchEvent(new MouseEvent("click", { bubbles: true, clientX: x, clientY: y }));
+    paragraph.dispatchEvent(
+      new MouseEvent("click", { bubbles: true, clientX: x, clientY: y, detail: 1 }),
+    );
     await expect(highlighted()).toBe("");
     await expect(heardBy(target)).toEqual(["over text", "drop text"]);
 

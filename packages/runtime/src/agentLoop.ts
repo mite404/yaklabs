@@ -14,7 +14,7 @@ import {
   type Source,
 } from "./protocol";
 import type { Store } from "./store";
-import type { ThreadId } from "./workspace";
+import { lanesOf, mergeLanes, type ThreadId } from "./workspace";
 
 /** A deterministic stall or failure: `hold` never answers, `fail` answers with its reason. */
 export type Fault = "hold" | { fail: string };
@@ -192,10 +192,17 @@ async function send(loop: Loop, command: CommandOf<"send">): Promise<void> {
   loop.host.post({ kind: "done", requestId });
 }
 
+// A scenario is named by `init` alone; the device's storage is known only once it opens.
+function sourceBeforeOpen(data: RuntimeData): Source | undefined {
+  return data.kind === "scenario" ? { kind: "scenario", name: data.name } : undefined;
+}
+
 async function init(loop: Loop, { agent, data }: CommandOf<"init">): Promise<void> {
   if (loop.session !== undefined) return; // one start per worker
+  const early = sourceBeforeOpen(data); // → Source | undefined
+  if (early !== undefined) loop.host.post({ kind: "opening", source: early });
   loop.session = loop.host.open(data).then(async (opened) => {
-    loop.host.post({ kind: "opening", source: opened.source });
+    if (early === undefined) loop.host.post({ kind: "opening", source: opened.source });
     await meet(opened.faults.start);
     // A scenario always answers with the lab stand-in, so a mock never reaches a model.
     return { ...opened, agent: opened.source.kind === "scenario" ? LAB : agent };
@@ -221,7 +228,8 @@ function handleRequest(loop: Loop, command: Exclude<Command, { kind: "init" }>):
       });
     case "arrange":
       return write(loop, ({ store }) => {
-        store.arrange(command.mainId, command.lanes);
+        const { mainId, lanes, base } = command;
+        store.arrange(mainId, mergeLanes(lanesOf(store.workspace(), mainId), base, lanes));
         return { kind: "done", requestId: command.requestId };
       });
     case "saveShell":

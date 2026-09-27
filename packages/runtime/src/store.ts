@@ -79,6 +79,7 @@ export function seedThread(name: string): Thread {
  * Gives an empty device store the Demo store project and its `profit` main thread, seeded from
  * the catalog's profit thread, as the page used to. A store with any thread is left alone, so
  * running it again changes nothing.
+ * @throws When the catalog has no profit thread, or the store refuses the project or thread.
  */
 export function ensureStarter(store: Store, at: string): void {
   const { projects, threads: existing } = store.workspace();

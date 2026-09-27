@@ -15,8 +15,16 @@ type Grab = "ready" | "held";
 // The pointer's last known place and the buttons down there, as `PointerEvent` reports them.
 type Pointer = { x: number; y: number; buttons: number };
 
+// Where and when a click landed, on the event's own clock.
+type Click = { x: number; y: number; at: number };
+
 // A hand a pixel or two off a line box is still on it.
 const SLACK_PX = 2;
+
+// How far apart in time and space two clicks may land and still make one double or triple
+// click: half a second and a few pixels, about what most systems allow.
+const MULTI_CLICK_MS = 500;
+const MULTI_CLICK_PX = 4;
 
 /** Whether the point lies inside any of the boxes, with a little slack at the edges. */
 export function pointInBoxes(boxes: Iterable<Box>, x: number, y: number): boolean {
@@ -30,6 +38,20 @@ export function pointInBoxes(boxes: Iterable<Box>, x: number, y: number): boolea
       return true;
   }
   return false;
+}
+
+/**
+ * Whether a press at `x`, `y` and time `at` is the next click of a double or triple click that
+ * `click` began, which the browser turns into a word or paragraph highlight.
+ */
+export function continuesClicks(
+  click: Click | undefined,
+  x: number,
+  y: number,
+  at: number,
+): boolean {
+  if (click === undefined) return false;
+  return at - click.at <= MULTI_CLICK_MS && Math.hypot(x - click.x, y - click.y) <= MULTI_CLICK_PX;
 }
 
 function pointerOf(event: PointerEvent): Pointer {
@@ -73,6 +95,12 @@ export function markGrabbableHighlight(thread: HTMLElement): () => void {
   // Where the pointer last was and which buttons were down there. A button down is a highlight
   // being made, so the selection growing under it never shows the hand until it is released.
   let last: Pointer = { x: -1, y: -1, buttons: 0 };
+  // Whether the latest press took hold of a highlight that was there before it. Only the click
+  // that ends such a press clears the highlight; a click that ends a press making one, a drag
+  // or a double or triple click, leaves it. A press close to a click and soon after it makes
+  // one too, so it stays the browser's.
+  let grabbed = false;
+  let click: Click | undefined;
   const mark = (state?: Grab) => {
     if (state === undefined) delete thread.dataset.grab;
     else thread.dataset.grab = state;
@@ -88,14 +116,20 @@ export function markGrabbableHighlight(thread: HTMLElement): () => void {
   const onDown = (event: PointerEvent) => {
     last = pointerOf(event);
     const text = highlightIn(thread)?.toString();
+    grabbed = false;
     if (event.button !== 0 || thread.dataset.grab !== "ready" || text === undefined) return;
+    if (continuesClicks(click, event.clientX, event.clientY, event.timeStamp)) return;
+    grabbed = true;
     held = true;
     mark("held");
     armCarry(event, { carried: { kind: "text", text }, picture: () => quoteChip(document, text) });
   };
+  // A lifted carry swallows its click (carry.ts), so a single click here ends a press that never
+  // lifted; a click from the keyboard counts none.
   const onClick = (event: MouseEvent) => {
-    if (pointInBoxes(highlightBoxes(thread), event.clientX, event.clientY))
-      document.getSelection()?.removeAllRanges();
+    if (grabbed && event.detail === 1) document.getSelection()?.removeAllRanges();
+    grabbed = false;
+    click = { x: event.clientX, y: event.clientY, at: event.timeStamp };
   };
   const release = () => {
     held = false;
