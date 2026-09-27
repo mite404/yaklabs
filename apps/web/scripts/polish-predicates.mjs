@@ -91,7 +91,7 @@ function inksOf(scope) {
         height: Math.max(0, bottom - top),
       };
     };
-    for (const el of root.querySelectorAll("*")) {
+    for (const el of [root, ...root.querySelectorAll("*")]) {
       if (!shownEl(el)) continue;
       const colour = getComputedStyle(el).color;
       if (el.tagName.toLowerCase() === "svg") {
@@ -135,7 +135,7 @@ async function inkReport(page, scope) {
   });
   const style = await page.addStyleTag({
     content:
-      "[data-polish-scope] *{color:transparent!important;-webkit-text-fill-color:transparent!important} [data-polish-scope] svg{visibility:hidden!important}",
+      "[data-polish-scope],[data-polish-scope] *{color:transparent!important;-webkit-text-fill-color:transparent!important} [data-polish-scope] svg,svg[data-polish-scope]{visibility:hidden!important}",
   });
   const png = await page.screenshot({ clip: box, animations: "disabled", caret: "hide" });
   await style.evaluate((node) => {
@@ -168,6 +168,8 @@ async function inkReport(page, scope) {
     if (lowest < (ink.kind === "text" ? 4.5 : 3))
       failures.push(`${ink.kind} "${ink.label}" ${lowest}`);
   }
+  // A scope with no ink measured nothing, which must never read as a pass.
+  if (list.length === 0) failures.push("no inks found");
   return { text: min(worstOf.text), icons: min(worstOf.icon), failures };
 }
 
@@ -534,14 +536,27 @@ export const polishChecks = {
     const d4 = mask !== "none" && edge.every((c, i) => Math.abs(c - bar[i]) <= 2);
     await long.context.close();
 
-    const loading = await openScenario(browser, { scenario: "loading", ready: false });
-    await loading.page.locator('[data-slot="data-marker"]').waitFor();
-    const skeleton = titleBar(loading.page).locator('[data-slot="skeleton"]');
-    const skeletonFill = rgbOf(
-      await skeleton.evaluate((el) => getComputedStyle(el).backgroundColor),
-    );
-    const d5 = ratio(skeletonFill, await barColour(loading.page));
-    await loading.context.close();
+    // D5 in pixels, on both bars: the painted bar's fill is a translucent wash, so what counts is
+    // the skeleton against the bar just beside it.
+    const skeletons = {};
+    for (const variant of VARIANTS) {
+      const loading = await openScenario(browser, {
+        scenario: "loading",
+        query: query(variant),
+        ready: false,
+      });
+      await loading.page.locator('[data-slot="data-marker"]').waitFor();
+      const held = await titleBar(loading.page).locator('[data-slot="skeleton"]').boundingBox();
+      const mid = held.y + held.height / 2;
+      skeletons[variant] = round(
+        ratio(
+          await pixelAt(loading.page, held.x + held.width / 2, mid),
+          await pixelAt(loading.page, held.x + held.width + 3, mid),
+        ),
+      );
+      await loading.context.close();
+    }
+    const d5 = Math.min(...Object.values(skeletons));
 
     const keys = await openScenario(browser, {});
     const count = await tabs(keys.page).count();
@@ -557,7 +572,7 @@ export const polishChecks = {
     ok &&= d3 && d4 && d5 >= 1.2 && d6;
     return {
       ok,
-      detail: `${notes.join("; ")}; D3 ${d3}; D4 mask ${mask !== "none"} edge ${edge} bar ${bar} ${d4}; D5 ${round(d5)}; D6 ${count}→${afterDelete}→${afterMiddle}`,
+      detail: `${notes.join("; ")}; D3 ${d3}; D4 mask ${mask !== "none"} edge ${edge} bar ${bar} ${d4}; D5 ${JSON.stringify(skeletons)}; D6 ${count}→${afterDelete}→${afterMiddle}`,
     };
   },
 
@@ -655,6 +670,24 @@ export const polishChecks = {
       ok &&= right.failures.length === 0;
       notes.push(`painting right group ${right.text}/${right.icons}`);
       await painted.context.close();
+    }
+    // E1 for a signed-in account with no picture: the same fallback, holding initials, as a WorkOS
+    // user's is. The local face is blocked so the fallback shows.
+    for (const variant of VARIANTS) {
+      const bare = await openScenario(browser, { query: query(variant), ready: false });
+      await bare.context.route("**/kay/kay-face.webp", (route) => route.abort());
+      await bare.page.reload();
+      await bare.page.locator('[data-slot="data-marker"]').waitFor();
+      const fallback = titleBar(bare.page).locator('[data-slot="avatar-fallback"]');
+      await fallback.waitFor();
+      await fallback.evaluate((el) => {
+        el.textContent = "EA";
+      });
+      await settle(bare.page);
+      const initials = await inkReport(bare.page, fallback);
+      ok &&= initials.failures.length === 0;
+      notes.push(`${variant} initials ${initials.text} ${initials.failures.join(", ")}`);
+      await bare.context.close();
     }
     return { ok, detail: notes.join("; ") };
   },
@@ -941,16 +974,25 @@ export const polishChecks = {
 
   // Section 9: dark mode. A to G loop over both themes; this adds I2 and I3.
   async I(browser) {
+    // I2 at rest, and with a ghost button hovered, whose shadcn hover differs by theme.
     const heads = [];
+    const hovered = [];
     for (const theme of THEMES) {
       const { page, context } = await openScenario(browser, { theme, query: query("solid") });
       await page.mouse.move(700, 600);
+      await settle(page);
       heads.push(await shot(titleBar(page)));
+      const plus = titleBar(page).getByRole("button", { name: "New thread" });
+      await plus.hover();
+      await settle(page);
+      hovered.push(await shot(plus));
       await context.close();
     }
     const probe = await openScenario(browser, { theme: "light" });
     // The window's rounded top corners show the desk, which is the page's and changes with it.
-    const i2 = await samePixels(probe.page, heads[0], heads[1], 0, 12);
+    const i2rest = await samePixels(probe.page, heads[0], heads[1], 0, 12);
+    const i2hover = await samePixels(probe.page, hovered[0], hovered[1]);
+    const i2 = { same: i2rest.same && i2hover.same, differ: i2rest.differ + i2hover.differ };
     const look = async () => ({
       paper: await tokenColour(probe.page, "--paper"),
       ink: await tokenColour(probe.page, "--ink"),
@@ -997,10 +1039,12 @@ export const polishChecks = {
       const style = getComputedStyle(el);
       return `${style.transitionDuration} ${style.animationName}`;
     });
-    const kayMotion = await kay(reduce.page).evaluate(
-      (el) => getComputedStyle(el).transitionDuration,
-    );
-    const j3 = motion === "0s none" && kayMotion === "0s";
+    // Kay fades in by an animation, so its name is what reduced motion must clear.
+    const kayMotion = await kay(reduce.page).evaluate((el) => {
+      const style = getComputedStyle(el);
+      return `${style.transitionDuration} ${style.animationName}`;
+    });
+    const j3 = motion === "0s none" && kayMotion === "0s none";
     notes.push(
       `J1 ${barRunning}|${emptyRunning}|${cycleRunning} same ${Buffer.compare(one, two) === 0}; J3 ${motion} / ${kayMotion}`,
     );
