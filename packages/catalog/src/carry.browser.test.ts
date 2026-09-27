@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { userEvent } from "vitest/browser";
 import { acceptCarry, armCarry, type Carried, type CarryTarget } from "./carry";
 
 const carried: Carried = { kind: "text", text: "Saturday leads at every level" };
@@ -99,6 +100,30 @@ describe("a press on a handle inside another handle", () => {
     inner.dispatchEvent(pointer("pointerup", start.x + 20, start.y));
     document.removeEventListener("pointerdown", hear);
     expect(pressesHeard).toEqual([inner]);
+  });
+});
+
+describe("a carry the window's blur cancels", () => {
+  it("leaves the next click from the keyboard alone", async () => {
+    const card = handle("card", 20, 20);
+    const send = document.createElement("button");
+    send.textContent = "Send";
+    let sent = 0;
+    send.addEventListener("click", () => {
+      sent += 1;
+    });
+    document.body.append(send);
+
+    const start = middleOf(card);
+    card.dispatchEvent(pointer("pointerdown", start.x, start.y, 1));
+    card.dispatchEvent(pointer("pointermove", start.x + 20, start.y, 1));
+    expect(document.documentElement).toHaveAttribute("data-carrying", "text");
+    window.dispatchEvent(new Event("blur"));
+    expect(document.documentElement).not.toHaveAttribute("data-carrying");
+
+    send.focus();
+    await userEvent.keyboard("{Enter}");
+    expect(sent).toBe(1);
   });
 });
 
