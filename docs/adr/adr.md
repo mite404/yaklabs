@@ -1232,7 +1232,8 @@ it.
 
 ## ADR-118 - One tab at a time opens the device's threads, and a failed open cannot delete them
 
-2026-09-27 - Accepted; extends ADR-081 and ADR-100.
+2026-09-27 - Accepted for the guard against the delete; the held second tab is Proposed until Ethan
+decides whether a blocked second tab is the experience he wants. Extends ADR-081 and ADR-100.
 sqlite-wasm's `opfs-sahpool` installer answers any failure by deleting the pool's directory,
 every database in it included (`removeVfs`, recursive). A second tab always failed, since the
 first holds the pool's access handles, so it tried that delete on every open, and only the first

@@ -70,6 +70,7 @@ type Source =
   | { kind: "scenario"; name: ScenarioName };
 type RuntimeState =
   | { kind: "starting"; source: Source | null }      // source arrives with the worker's `opening`
+  | { kind: "held"; source: null }                  // another tab has the database (ADR-118)
   | { kind: "ready"; source: Source; workspace: Workspace; replying: ThreadId[] }
   | { kind: "broken"; source: Source | null; reason: string };
 type NewItem =
@@ -119,6 +120,9 @@ function startRuntime(config: {
   - `opening { source }` is posted before any `state`: at once for a scenario, and on the device
     once the storage kind (OPFS or memory) is known. A held start still shows its source. A
     migration or version error ends the start in `broken` with its reason, never in memory.
+  - `held` (amended by ADR-118): a device worker whose Web Lock another tab has waits, and the
+    page shows "Your threads are open in another tab" until the lock is granted. A second tab
+    never falls back to memory; memory is only for a browser without the file system or locks.
   - `state { source, workspace, replying }` is posted after init and after every write (reply
     start and end included). It is skipped when the serialized form equals the last push.
   - Per-request answers: `opened { requestId, messages }`, `created { requestId, id }`,

@@ -70,9 +70,6 @@ this list when it ships.
 - **Focus after a failed start's Try again.** A restart remounts the whole window, so the button
   that was pressed is gone and the focus goes back to the page. Restarting below the window, or
   handing the focus to the tree, would keep it.
-- **The contract's second-tab line.** `docs/trail/evidence/projects-sidebar/contract.md` still says
-  a second tab falls back to memory; ADR-117 replaced that with the held state, and the contract
-  snapshot should say so.
 - **Run `auth-check.mjs` again.** `apps/web/scripts/auth-check.mjs` has only been syntax-checked
   since its browser setup moved into `harness.mjs`. Running it needs a web build with WorkOS
   turned on (`VITE_AUTH=workos` and a client id).
