@@ -421,6 +421,36 @@ try {
     labelsAfter.map((label) => label.slice(0, 12)).join(" → "),
   );
 
+  // A card's header inside a thread lane arms a carry, which claims its press with
+  // preventDefault and lets it travel on. A stand-in header that claims its press the same way
+  // shows whether the lane leaves a claimed press alone, as it must for the card to go alone.
+  const threadLanes = canvas.locator("article").filter({ has: page.locator(".thread-header") });
+  await threadLanes.first().scrollIntoViewIfNeeded();
+  const claimed = threadLanes.first().locator(".thread-panel");
+  await claimed.evaluate((panel) => {
+    const standIn = document.createElement("header");
+    standIn.className = "card-heading";
+    standIn.dataset.claims = "";
+    standIn.style.height = "40px";
+    standIn.addEventListener("pointerdown", (event) => {
+      event.preventDefault();
+    });
+    panel.prepend(standIn);
+  });
+  const claimBox = await page.locator("[data-claims]").boundingBox();
+  await page.mouse.move(claimBox.x + 40, claimBox.y + 20);
+  await page.mouse.down();
+  await page.mouse.move(claimBox.x + 200, claimBox.y + 40, { steps: 6 });
+  await page.waitForTimeout(250);
+  const liftedByClaim = await page.locator("[data-lifted]").count();
+  await page.mouse.up();
+  await page.locator("[data-claims]").evaluate((el) => el.remove());
+  record(
+    "a press something in a lane has claimed, as a card's header does, never lifts the lane",
+    liftedByClaim === 0,
+    `${liftedByClaim} lifted`,
+  );
+
   const handle = page.locator('[data-slot="resizable-handle"]');
   const handleBox = await handle.boundingBox();
   const panel = page.locator('[data-slot="resizable-panel"]').first();
