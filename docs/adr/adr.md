@@ -1308,7 +1308,7 @@ in localStorage and held for the visit in memory too, so a refused storage still
 Account menu has a Title bar choice beside
 Theme, so Ethan can switch while he decides.
 
-## ADR-116 - A lane's gap reports the lane's width, and a lane is 320 to 1800px wide
+## ADR-117 - A lane's gap reports the lane's width, and a lane is 320 to 1800px wide
 
 2026-09-27 - Accepted; amends ADR-089.
 The gap after a lane takes the focus and resizes by arrow key, so ARIA requires it to carry a
@@ -1318,9 +1318,10 @@ before, up to 1800px, which fills the widest canvas a 2560px screen lays out. A 
 a pane too narrow for 320px widens the range to hold its width rather than report a value outside
 it.
 
-## ADR-117 - One tab at a time opens the device's threads, and a failed open cannot delete them
+## ADR-118 - One tab at a time opens the device's threads, and a failed open cannot delete them
 
-2026-09-27 - Accepted; extends ADR-081 and ADR-100.
+2026-09-27 - Accepted for the guard against the delete; the held second tab is Proposed until Ethan
+decides whether a blocked second tab is the experience he wants. Extends ADR-081 and ADR-100.
 sqlite-wasm's `opfs-sahpool` installer answers any failure by deleting the pool's directory,
 every database in it included (`removeVfs`, recursive). A second tab always failed, since the
 first holds the pool's access handles, so it tried that delete on every open, and only the first

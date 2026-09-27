@@ -200,25 +200,26 @@ function flash(lane: HTMLElement): void {
   lane.addEventListener("animationend", settle, { once: true });
 }
 
-// Flashes the focused lane each time the focus arrives on it, as soon as the lane is on the
-// canvas: a lane that arrives after the focus did (reopened for it) flashes when it lands.
+// Flashes the focused lane once for each visit, as soon as the lane is on the canvas: a lane
+// that arrives after the visit did (reopened for it) flashes when it lands.
 function useFocusedLane(
   row: RefObject<HTMLElement | null>,
   focus: LaneId | null,
+  visit: string,
   lanes: LaneView[],
 ) {
-  const shown = useRef<LaneId | null>(null);
+  const shown = useRef<string | null>(null); // → the visit whose lane has flashed
   const target = lanes.some((lane) => lane.id === focus) ? focus : null;
   useEffect(() => {
     if (target === null) {
       shown.current = null;
       return;
     }
-    const lane = shown.current === target ? null : laneIn(row.current, target);
+    const lane = shown.current === visit ? null : laneIn(row.current, target);
     if (lane === null) return;
-    shown.current = target;
+    shown.current = visit;
     flash(lane);
-  }, [row, target]);
+  }, [row, target, visit]);
 }
 
 /**
@@ -233,13 +234,16 @@ function useFocusedLane(
 export function Canvas({
   lanes,
   focus,
+  visit,
   actions,
   onBlank,
   onCarry,
 }: {
   lanes: LaneView[];
-  /** The lane to bring into view and flash once, a focused child's. */
+  /** The lane to bring into view and flash, a focused child's. */
   focus: LaneId | null;
+  /** The visit to the focused lane's address: each new one flashes the lane again. */
+  visit: string;
   actions: LaneActions;
   onBlank: () => void;
   onCarry: (carried: Carried, at: number) => void;
@@ -247,7 +251,7 @@ export function Canvas({
   const row = useRef<HTMLElement>(null);
   const pan = usePan();
   const landing = useLanding(row, onCarry);
-  useFocusedLane(row, focus, lanes);
+  useFocusedLane(row, focus, visit, lanes);
   const onClose = (id: LaneId) => {
     if (row.current !== null) handOnFocus(row.current, lanes, id);
     actions.onClose(id);

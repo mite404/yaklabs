@@ -666,6 +666,34 @@ The first entries are ideas from before any code existed; the rest are parts of 
   all four stories, and 0 of 360 loads rest short (ADR-109). Lesson: a scroll event does not say
   who scrolled, and it arrives late. Decide at the moment you know what changed, which here is the
   resize. It is "The 20px that was really 16", two levels deeper.
+- **The tab that was never saved.** Open a thread from the sidebar, switch to another tab, and the
+  new tab was gone, with its draft. The page drew the tab from the address, so it looked open,
+  but the save step compared the change against a copy that already held the visit, saw no
+  difference, and never wrote it. Every check that opened a tab happened to run another verb
+  first, which saved the tab by accident, so the levers never saw it. An independent review with
+  four lenses did, and three of the four reported it. Fix: a change is weighed against the
+  document the worker holds, never against the one the screen shows. Lesson: when the screen and
+  the store can disagree, test what the store kept, not what the screen drew. A continuity report
+  that only reads the monitor misses the take that was never recorded.
+- **The second tab that could delete the first.** The database library answers a failed start by
+  deleting its whole folder, every saved thread in it. A second browser tab always failed to
+  start, because the first held the files, and only those open files stopped the delete. If the
+  first tab let go at the wrong moment, everything went. Fix, twice over: every tab queues on a
+  browser lock before it touches the database, so a second tab waits and says "Your threads are
+  open in another tab"; and the worker keeps a file of its own open inside the library's folder,
+  so the delete is refused whatever happens (ADR-118). Lesson: read what a library does when it
+  fails, not only when it works. The stunt looked safe until someone read the insurance terms.
+- **Two agents, one stash.** Two fixers worked in separate folders of the same repository. One
+  set a change aside with `git stash` to show a test failing first; the stash list is shared by
+  every folder, so the other fixer's `stash pop` picked it up and landed it in the wrong place. The
+  stray edit matched a commit that already existed, so nothing was lost, and the briefs now forbid
+  `git stash`. Lesson: separate rooms are not separate if they share one shelf.
+- **Green here, red in CI.** A fix read the thread's id through types React Router generates. My
+  machine had them from an earlier typecheck; CI lints before it generates them, so there the id
+  was an error type and lint failed twice. Fix: read the id with `useParams`, which needs no
+  generated file, and lint the way CI does, with the generated folder moved aside. Lesson: a local
+  run proves the local machine. Match the order of the real pipeline, like grading a shot on the
+  monitor the client will watch.
 
 - **The runtime that restarted for a parameter it never reads.** With `?chrome=painting` in the
   address, the tabs and the marker blinked out a moment after load. The runtime was keyed on the

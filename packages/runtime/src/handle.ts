@@ -5,7 +5,7 @@ import type { ThreadId, Workspace } from "./workspace";
 /**
  * What the page sees of the worker. `starting` learns its source from the worker's `opening`,
  * so a start that hangs still says where its data would come from; `held` waits while another
- * tab has the device's database (ADR-117); `broken` is for good.
+ * tab has the device's database (ADR-118); `broken` is for good.
  */
 export type RuntimeState =
   | { kind: "starting"; source: Source | null }

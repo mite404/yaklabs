@@ -11,7 +11,7 @@ declare const self: DedicatedWorkerGlobalScope;
 // The one database the app keeps its threads in (ADR-081).
 const DATABASE = "yaklabs";
 // What every tab on the device queues on before it opens that database: sqlite-wasm's pool
-// takes one worker at a time, and deletes itself when a second fails to take it (ADR-117).
+// takes one worker at a time, and deletes itself when a second fails to take it (ADR-118).
 const LOCK = "yaklabs-database";
 
 // Never settles, so a lock whose callback returns it is held until the worker ends.

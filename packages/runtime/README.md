@@ -167,7 +167,7 @@ agent turn carries each card it showed as compact JSON in a fenced block. When a
 the gateway's 200 turns, the oldest go first, and the request always starts with a user turn.
 
 Only one worker at a time can hold a database's OPFS pool, and sqlite-wasm answers a failed
-install by deleting the whole pool (ADR-117). So a device worker first takes the Web Lock
+install by deleting the whole pool (ADR-118). So a device worker first takes the Web Lock
 `yaklabs-database` and keeps it for its life: a second worker (a second tab, say) posts `held` and
 waits in line, then opens the same file once the first lets go. The store also holds a file inside
 the pool's own directory for as long as its worker lives, so the installer's clean-up can never
