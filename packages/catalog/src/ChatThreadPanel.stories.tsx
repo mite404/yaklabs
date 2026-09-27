@@ -74,10 +74,11 @@ function middleOf(element: Element): { x: number; y: number } {
 // size: it takes whatever is carried to it and lists what it heard, once per change.
 function CarryTarget() {
   const ref = useRef<HTMLElement>(null);
-  const [heard, setHeard] = useState<string[]>([]);
+  // Each line keeps its place in the log, which only grows, as its key.
+  const [heard, setHeard] = useState<{ n: number; line: string }[]>([]);
   const [landed, setLanded] = useState<string>();
   const hear = (line: string) => {
-    setHeard((lines) => (lines.at(-1) === line ? lines : [...lines, line]));
+    setHeard((log) => (log.at(-1)?.line === line ? log : [...log, { n: log.length, line }]));
   };
   useCarryTarget(ref, {
     over: (carried) => {
@@ -112,8 +113,8 @@ function CarryTarget() {
     >
       <p style={{ margin: 0 }}>Drop a card or a highlight here</p>
       <ol aria-label="Heard" style={{ margin: 0, paddingLeft: 18 }}>
-        {heard.map((line, i) => (
-          <li key={`${i}-${line}`}>{line}</li>
+        {heard.map(({ n, line }) => (
+          <li key={n}>{line}</li>
         ))}
       </ol>
     </section>
