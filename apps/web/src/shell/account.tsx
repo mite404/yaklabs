@@ -15,6 +15,7 @@ import {
 import { UserRound } from "lucide-react";
 import type { ReactNode } from "react";
 import { env } from "../env";
+import type { ChromeChoice, ChromeStyle } from "../chrome";
 import type { ThemeChoice, ThemePreference } from "../theme";
 
 const THEMES: { value: ThemePreference; label: string }[] = [
@@ -27,6 +28,33 @@ const THEMES: { value: ThemePreference; label: string }[] = [
 function initialsOf(names: (string | null)[], email: string): string {
   const letters = names.map((name) => name?.charAt(0) ?? "").join("");
   return (letters === "" ? email.charAt(0) : letters).toUpperCase();
+}
+
+const CHROMES: { value: ChromeStyle; label: string }[] = [
+  { value: "solid", label: "Solid" },
+  { value: "painting", label: "Painting" },
+];
+
+// The title bar's flat green or its painting (ADR-110), while Ethan chooses between them.
+function ChromeChoices({ chrome }: { chrome: ChromeChoice }) {
+  return (
+    <DropdownMenuGroup>
+      <DropdownMenuLabel>Title bar</DropdownMenuLabel>
+      <DropdownMenuRadioGroup
+        value={chrome.style}
+        onValueChange={(value) => {
+          const chosen = CHROMES.find((each) => each.value === value);
+          if (chosen) chrome.choose(chosen.value);
+        }}
+      >
+        {CHROMES.map(({ value, label }) => (
+          <DropdownMenuRadioItem key={value} value={value}>
+            {label}
+          </DropdownMenuRadioItem>
+        ))}
+      </DropdownMenuRadioGroup>
+    </DropdownMenuGroup>
+  );
 }
 
 // The light, dark or system look (ADR-090), which every account menu ends with.
@@ -70,7 +98,7 @@ function AccountMenu({ face, children }: { face: ReactNode; children: ReactNode 
 }
 
 // Signed in with WorkOS (ADR-084): the picture or initials, the email, and the way out.
-function WorkOsAccount({ theme }: { theme: ThemeChoice }) {
+function WorkOsAccount({ theme, chrome }: { theme: ThemeChoice; chrome: ChromeChoice }) {
   const { user, signOut } = useAuth();
   if (user === null) return null;
   const face = (
@@ -93,13 +121,15 @@ function WorkOsAccount({ theme }: { theme: ThemeChoice }) {
       </DropdownMenuGroup>
       <DropdownMenuSeparator />
       <ThemeChoices theme={theme} />
+      <DropdownMenuSeparator />
+      <ChromeChoices chrome={chrome} />
     </AccountMenu>
   );
 }
 
 // A build without sign-in: Kay's face, the one person who is always there (ADR-109), and a
 // menu that says sign-in is off. A signed-in account keeps its own face.
-function LocalAccount({ theme }: { theme: ThemeChoice }) {
+function LocalAccount({ theme, chrome }: { theme: ThemeChoice; chrome: ChromeChoice }) {
   const face = (
     <>
       <AvatarImage src="/kay/kay-face.webp" alt="" />
@@ -117,9 +147,14 @@ function LocalAccount({ theme }: { theme: ThemeChoice }) {
       </DropdownMenuGroup>
       <DropdownMenuSeparator />
       <ThemeChoices theme={theme} />
+      <DropdownMenuSeparator />
+      <ChromeChoices chrome={chrome} />
     </AccountMenu>
   );
 }
 
-/** The account in the title bar's corner, with the theme; WorkOS's user when the build signs in. */
+/**
+ * The account in the title bar's corner, with the theme and the bar's look; WorkOS's user when
+ * the build signs in.
+ */
 export const Account = env.auth.kind === "workos" ? WorkOsAccount : LocalAccount;

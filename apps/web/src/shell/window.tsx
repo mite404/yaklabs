@@ -1,6 +1,7 @@
 import { SidebarInset, SidebarProvider } from "@yaklabs/ui/components/sidebar";
 import { cssVars } from "@yaklabs/ui/lib/utils";
 import { useState, type ReactNode } from "react";
+import { useChrome } from "../chrome";
 import type { ThemeChoice } from "../theme";
 import { AppSidebar } from "./sidebar";
 import { TitleBar } from "./title-bar";
@@ -38,6 +39,7 @@ function rememberSidebar(open: boolean): void {
  */
 export function Window({ theme, children }: { theme: ThemeChoice; children: ReactNode }) {
   const [open, setOpen] = useState(readSidebarOpen);
+  const chrome = useChrome();
   return (
     <>
       <div data-slot="desk" aria-hidden="true" className="fixed inset-0 bg-[var(--desk)]" />
@@ -54,7 +56,7 @@ export function Window({ theme, children }: { theme: ThemeChoice; children: Reac
           className="min-h-0 flex-1 flex-col"
           style={cssVars({ "--sidebar-width": "16rem", "--sidebar-width-icon": "3.5rem" })}
         >
-          <TitleBar theme={theme} />
+          <TitleBar theme={theme} chrome={chrome} />
           <div data-slot="window-body" className="window-trim relative flex min-h-0 flex-1">
             <AppSidebar />
             <SidebarInset className="m-0 grid min-h-0 max-w-none min-w-0 overflow-hidden bg-background p-0 *:[grid-area:1/1] md:rounded-tl-[10px] md:border-t md:border-l md:border-hairline">

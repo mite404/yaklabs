@@ -115,6 +115,21 @@
     }
   }
 
+  /* The painted bar (ADR-110): the painting under a subtle green wash, darkest at the ends
+     where the traffic lights and the account sit, over the painting's mean colour. */
+  .chrome-surface[data-chrome="painting"] {
+    background:
+      linear-gradient(
+        to right,
+        var(--chrome-painting-wash),
+        transparent 30%,
+        transparent 70%,
+        var(--chrome-painting-wash)
+      ),
+      url("/chrome/painting.webp") center / cover no-repeat,
+      var(--chrome-painting);
+  }
+
   /* The empty canvas's splash (ADR-108): the drawing is a mask filled with --splash-line, so it
      themes with the ink and shows only its strokes, never the bounds of an image. It sits
      behind the words and fades in once, with no fade under reduced motion. */
