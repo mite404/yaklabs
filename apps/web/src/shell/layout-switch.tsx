@@ -1,22 +1,29 @@
+import type { ThreadId } from "@yaklabs/runtime";
 import { ToggleGroup, ToggleGroupItem } from "@yaklabs/ui/components/toggle-group";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@yaklabs/ui/components/tooltip";
 import { LAYOUTS, PANES } from "./layouts";
 import type { Shell } from "./model";
-import { viewOf } from "./state";
+import { viewOf, type PaneKind } from "./state";
+
+// The tab on screen and what sits beside its thread, or null with no tab on screen.
+function shownPane(shell: Shell): { main: ThreadId; pane: PaneKind } | null {
+  if (shell.active === null) return null;
+  const { main } = shell.active;
+  return { main, pane: viewOf(shell.doc, main).pane };
+}
 
 /** Thread, Browser or Canvas beside the active tab's thread; nothing to switch with no tab. */
 export function LayoutSwitch({ shell }: { shell: Shell | null }) {
-  const main = shell?.active?.main ?? null;
-  const pane = shell !== null && main !== null ? viewOf(shell.doc, main).pane : null;
+  const shown = shell === null ? null : shownPane(shell);
   return (
     <ToggleGroup
       aria-label="Layout"
       spacing={0}
-      value={pane === null ? [] : [pane]}
-      disabled={pane === null}
+      value={shown === null ? [] : [shown.pane]}
+      disabled={shown === null}
       onValueChange={(values: unknown[]) => {
         const next = PANES.find((each) => values.includes(each));
-        if (shell !== null && main !== null && next !== undefined) shell.setPane(main, next);
+        if (shown !== null && next !== undefined) shell?.setPane(shown.main, next);
       }}
       className="rounded-[var(--radius)] border border-hairline p-0.5"
     >

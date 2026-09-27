@@ -5,6 +5,7 @@ import {
   ResizablePanelGroup,
 } from "@yaklabs/ui/components/resizable";
 import {
+  useCallback,
   useEffect,
   useRef,
   useState,
@@ -30,29 +31,39 @@ function layoutFor(pane: PaneKind, split: number): Record<string, number> {
   return pane === "thread" ? { thread: 100, side: 0 } : { thread: split, side: 100 - split };
 }
 
+// The thread's share a drag left behind, or null when the drag closed the side pane at the far
+// edge, which only the layout switch may do.
+function keptSplit(layout: Record<string, number>): number | null {
+  const sizes = new Map(Object.entries(layout)); // → Map<panel id, percent>
+  const thread = sizes.get("thread");
+  return thread === undefined || sizes.get("side") === 0 ? null : thread;
+}
+
 /** The id of the tab panel that holds a main thread's workspace, for the tab that controls it. */
 export function panelId(main: ThreadId): string {
   return `panel-${main}`;
 }
 
+// Whether something has been on screen at least once.
+function useSeen(shown: boolean): boolean {
+  const [seen, setSeen] = useState(shown);
+  if (shown && !seen) setSeen(true);
+  return seen || shown;
+}
+
 // Mounts its children the first time it is shown and keeps them until it goes. Hidden, they
 // keep their state, scroll and running replies, take no input (inert), and skip rendering
-// (content-visibility, from [data-retained] in index.css), which keeps what display: none drops.
+// (content-visibility, from [data-retain][inert] in index.css), which keeps what display: none
+// drops.
 function Retain({
   shown,
   children,
   ...rest
 }: { shown: boolean; children: ReactNode } & HTMLAttributes<HTMLDivElement>) {
-  const [seen, setSeen] = useState(shown);
-  if (shown && !seen) setSeen(true);
+  const seen = useSeen(shown);
   if (!seen) return null;
   return (
-    <div
-      {...rest}
-      inert={!shown}
-      data-retained={shown ? undefined : ""}
-      className="min-h-0 min-w-0 [grid-area:1/1]"
-    >
+    <div {...rest} inert={!shown} data-retain="" className="min-h-0 min-w-0 [grid-area:1/1]">
       {children}
     </div>
   );
@@ -97,9 +108,12 @@ function Workspace(beside: Beside) {
   const { shell, thread, view } = beside;
   const group = useRef<GroupHandle>(null);
   const alone = view.pane === "thread";
-  useEffect(() => {
+  const place = useCallback(() => {
     group.current?.setLayout(layoutFor(view.pane, view.split));
   }, [view.pane, view.split]);
+  useEffect(() => {
+    place();
+  }, [place]);
   return (
     <ResizablePanelGroup
       orientation="horizontal"
@@ -107,10 +121,9 @@ function Workspace(beside: Beside) {
       groupRef={group}
       defaultLayout={layoutFor(view.pane, view.split)}
       onLayoutChanged={(layout, { isUserInteraction }) => {
-        const sizes = new Map(Object.entries(layout)); // → Map<panel id, percent>
-        const split = sizes.get("thread");
-        if (!isUserInteraction || alone || split === undefined) return;
-        if (sizes.get("side") === 0) group.current?.setLayout(layoutFor(view.pane, view.split));
+        if (!isUserInteraction) return;
+        const split = keptSplit(layout);
+        if (split === null) place();
         else shell.setSplit(thread.id, split);
       }}
     >
