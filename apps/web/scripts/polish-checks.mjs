@@ -72,6 +72,13 @@ export async function settle(page) {
   await page.evaluate(async () => {
     await document.fonts.ready;
     await Promise.all([...document.images].map((img) => img.decode().catch(() => {})));
+    // shadcn's transition-all eases colours and fills even under reduced motion.
+    await Promise.all(
+      document
+        .getAnimations()
+        .filter((a) => a instanceof CSSTransition)
+        .map((a) => a.finished.catch(() => {})),
+    );
     await new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done)));
   });
 }
@@ -94,6 +101,11 @@ export async function toLanes(page) {
   await tabs(page).filter({ hasText: "Last week's sales" }).click();
   await page.locator(`[role="tabpanel"][aria-label="Last week's sales"]:not([inert])`).waitFor();
   await canvasIn(page).waitFor();
+  // A lane shows "Opening …" until its thread has loaded.
+  await canvasIn(page)
+    .getByText(/^Opening /)
+    .first()
+    .waitFor({ state: "detached" });
   await page.mouse.move(0, 0);
   await settle(page);
 }
@@ -112,22 +124,48 @@ export function ratio(a, b) {
   return (hi + 0.05) / (lo + 0.05);
 }
 
+// "rgb(59, 66, 60)", "rgba(…)" or a color-mix()'s "color(srgb 0.23 0.26 0.24)" → [59, 66, 60];
+// alpha is ignored.
+export function rgbOf(css) {
+  const numbers = css
+    .match(/[\d.]+/g)
+    .slice(0, 3)
+    .map(Number);
+  return css.startsWith("color(srgb") ? numbers.map((n) => Math.round(n * 255)) : numbers;
+}
+
+/** Every pixel of a PNG as [r, g, b] triples, decoded by the page itself. */
+export function pixelsOf(page, png) {
+  return page.evaluate(async (b64) => {
+    const blob = await (await fetch(`data:image/png;base64,${b64}`)).blob();
+    const bitmap = await createImageBitmap(blob);
+    const canvas = new OffscreenCanvas(bitmap.width, bitmap.height);
+    const context = canvas.getContext("2d");
+    context.drawImage(bitmap, 0, 0);
+    const { data } = context.getImageData(0, 0, bitmap.width, bitmap.height);
+    const out = [];
+    for (let i = 0; i < data.length; i += 4) out.push([data[i], data[i + 1], data[i + 2]]);
+    return { width: bitmap.width, height: bitmap.height, pixels: out };
+  }, png.toString("base64"));
+}
+
 /**
- * worst(el, fg): the lowest contrast of `fg` against any pixel of `el`'s box with the
- * foreground hidden, so a painted ground is measured pixel by pixel. `hide` names the nodes to
- * hide, inside `el`; `grow` widens the box (a focus ring's reach).
+ * worst(el, fg): the lowest contrast of `fg` against any pixel of `el`'s box with its
+ * foreground taken away, so a painted ground is measured pixel by pixel. "text" turns only the
+ * element's glyphs transparent and keeps its own fill (a badge); "hide" hides it whole (an icon,
+ * or a button whose border is the foreground). `grow` widens the box.
  */
-export async function worst(page, el, fg, { hide = ":scope *", grow = 0 } = {}) {
+export async function worst(page, el, fg, { mode = "text", grow = 0 } = {}) {
   const box = await el.boundingBox();
-  const marked = await el.evaluate((node, selector) => {
-    const targets = [...node.querySelectorAll(selector)];
-    if (selector === ":scope") targets.push(node);
-    for (const each of targets) each.dataset.polishHidden = "";
-    return targets.length;
-  }, hide);
+  if (box === null) throw new Error(`worst(): ${String(el)} has no box`);
+  await el.evaluate((node) => {
+    node.dataset.polishProbe = "";
+  });
   const style = await page.addStyleTag({
     content:
-      "[data-polish-hidden]{visibility:hidden!important} [data-polish-hidden]::before,[data-polish-hidden]::after{visibility:hidden!important}",
+      mode === "text"
+        ? "[data-polish-probe],[data-polish-probe] *{color:transparent!important;-webkit-text-fill-color:transparent!important}"
+        : "[data-polish-probe]{visibility:hidden!important}",
   });
   const png = await page.screenshot({
     clip: {
@@ -139,15 +177,16 @@ export async function worst(page, el, fg, { hide = ":scope *", grow = 0 } = {}) 
     animations: "disabled",
     caret: "hide",
   });
-  await style.evaluate((node) => node.remove());
-  await page.evaluate(() => {
-    for (const node of document.querySelectorAll("[data-polish-hidden]"))
-      delete node.dataset.polishHidden;
+  await style.evaluate((node) => {
+    node.remove();
+  });
+  await el.evaluate((node) => {
+    delete node.dataset.polishProbe;
   });
   const { pixels } = await pixelsOf(page, png);
   let min = Infinity;
   for (const pixel of pixels) min = Math.min(min, ratio(fg, pixel));
-  return { min: Math.round(min * 100) / 100, hidden: marked };
+  return Math.round(min * 100) / 100;
 }
 
 /** running(): document-timeline animations still playing (the scroll-driven tab fade excluded). */
@@ -173,7 +212,8 @@ export const tokenColour = (page, name, within = "html") =>
     { token: name, host: within },
   );
 
-async function boxesOf(page) {
+/** The boxes 0.6 records: the tab panel on screen, the sidebar, and every tab. */
+export async function boxesOf(page) {
   return {
     tabpanel: await shown(page).boundingBox(),
     sidebar: await sidebar(page).boundingBox(),
@@ -241,5 +281,3 @@ export const readBaseline = (dir = BASELINE) => ({
   json: JSON.parse(readFileSync(path.join(dir, "baseline.json"), "utf8")),
   png: (name) => readFileSync(path.join(dir, `${name}.png`)),
 });
-
-export { record };
