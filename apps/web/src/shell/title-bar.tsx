@@ -32,7 +32,8 @@ function TrafficLights() {
 }
 
 // The sidebar's toggle is a disclosure: it says whether the sidebar is open (on a phone, its
-// sheet) and names the landmark it shows and hides.
+// sheet) and names the landmark it shows and hides. Open, it looks as it does closed; the ghost
+// button's expanded fill is for a menu's trigger while its menu is up.
 function SidebarToggle() {
   const { open, openMobile, isMobile } = useSidebar();
   return (
@@ -40,7 +41,7 @@ function SidebarToggle() {
       aria-label="Toggle sidebar"
       aria-expanded={isMobile ? openMobile : open}
       aria-controls={SIDEBAR_ID}
-      className="shrink-0 rounded-[var(--radius)] text-soft-ink hover:text-ink"
+      className="shrink-0 rounded-[var(--radius)] text-soft-ink hover:text-ink aria-expanded:bg-transparent aria-expanded:text-soft-ink aria-expanded:hover:bg-muted aria-expanded:hover:text-ink dark:aria-expanded:hover:bg-muted/50"
     />
   );
 }

@@ -825,6 +825,31 @@ try {
       };
     },
   );
+
+  await onOwnPage(
+    "Toggle sidebar looks the same at rest whether the sidebar is open or not",
+    "/t/t-005?scenario=demo",
+    {},
+    async (own) => {
+      await tabsOf(own).first().waitFor({ timeout: 15_000 });
+      const toggle = own.getByRole("button", { name: "Toggle sidebar" });
+      const look = async () => {
+        await own.mouse.move(900, 600);
+        await own.waitForTimeout(250);
+        return toggle.evaluate((el) => {
+          const style = getComputedStyle(el);
+          return `${style.backgroundColor} ${style.color}`;
+        });
+      };
+      const expanded = await look();
+      await toggle.click();
+      const collapsed = await look();
+      return {
+        ok: expanded === collapsed,
+        detail: `expanded ${expanded}; collapsed ${collapsed}`,
+      };
+    },
+  );
 } catch (error) {
   record("run", false, String(error));
   await shot("failure");
