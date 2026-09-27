@@ -496,6 +496,7 @@ try {
   await page.waitForTimeout(500);
   const closedOnce = (await canvas.locator("article").count()) === open - 1;
   for (let left = open - 1; left > 0; left--) {
+    // oxlint-disable-next-line no-await-in-loop -- each close changes the row the next one reads
     await canvas
       .getByRole("button", { name: /^Close / })
       .first()
