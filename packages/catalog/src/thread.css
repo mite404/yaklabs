@@ -56,13 +56,14 @@
   text-decoration: underline dotted var(--rule);
   text-underline-offset: 4px;
 }
+/* No rule under the field (ADR-089): the title reads the same, in the same box, the moment
+   editing starts, rather than jumping a pixel to make room for an underline. */
 .thread-rename {
   display: block;
   width: 100%;
   margin: 0;
   padding: 0;
   border: 0;
-  border-bottom: 1px solid var(--rule);
   border-radius: 0;
   background: transparent;
   color: var(--ink);
