@@ -13,6 +13,14 @@
   }
 }
 
+/* A focused control on the green bar shows the site's own ring (tokens.css): 2px of --focus,
+   cream there, 8.98:1 against the bar. shadcn's outline-none would leave only a 1px ring at half
+   strength, 3.6:1 at best and less on the painting, so this sits outside every layer too. */
+.chrome-surface :focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
 /* The window's decorative traffic lights (ADR-094): a desktop window's own colours, the one
    place the app draws something that is not Kay's; the same in either theme, as the OS's are. */
 :root {
