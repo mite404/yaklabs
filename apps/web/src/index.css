@@ -116,8 +116,10 @@
   }
 
   /* The painted bar (ADR-110): the painting under a subtle green wash, darkest at the ends
-     where the traffic lights and the account sit, over the painting's mean colour. */
+     where the traffic lights and the account sit, over the painting's mean colour. Its soft ink
+     is a step brighter than the flat bar's, since the painting is lighter than the flat green. */
   .chrome-surface[data-chrome="painting"] {
+    --soft-ink: var(--on-chrome-painting-soft);
     background:
       linear-gradient(
         to right,

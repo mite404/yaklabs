@@ -13,9 +13,9 @@ const ROOT = path.resolve(import.meta.dirname, "../../..");
 const OUT = path.join(ROOT, "apps/web/public/chrome");
 // 1440x44 CSS pixels at 2x; the bar is 44px tall (tasks.md A2).
 const [WIDTH, HEIGHT, SCALE] = [1440, 44, 2];
-// Cream (#f0efea, luminance 0.862) at 4.5:1 needs a ground at or below 0.1527; this leaves room
-// for the WebP's own rounding.
-const MAX_LUMINANCE = 0.13;
+// The painted bar's soft ink, cream at 85% (luminance 0.663), needs a ground at or below 0.108
+// for 4.5:1, and cream itself one at or below 0.153; this leaves room for the WebP's rounding.
+const MAX_LUMINANCE = 0.1;
 
 // Mist: low, stretched noise tinted between the bar's green and a lighter sage-grey.
 // Foliage: finer noise, cut hard into leaf clumps and shown only near the top corners.
