@@ -69,6 +69,35 @@ async function chooseTheme(name) {
   await page.keyboard.press("Escape");
 }
 
+// A page of its own at `address` (a mock scenario's, ADR-096), with its console errors counted
+// among the rest, once a thread is on screen.
+async function pageAt(address) {
+  const opened = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  opened.on("console", (message) => {
+    if (message.type() === "error") errors.push(message.text());
+  });
+  opened.on("pageerror", (error) => errors.push(String(error)));
+  await opened.goto(`${BASE}${address}`, { waitUntil: "load" });
+  await opened
+    .locator('[role="tabpanel"]:not([inert]) .thread-panel')
+    .first()
+    .waitFor({ timeout: 20_000 });
+  return opened;
+}
+
+const tabNames = (on) =>
+  on.getByRole("tablist", { name: "Open threads" }).getByRole("tab").allInnerTexts();
+const shownPanel = (on) => on.locator('[role="tabpanel"]:not([inert])');
+
+// Clicks a thread's row in the sidebar and waits for its tab to be the one on screen.
+async function openRow(on, title) {
+  await on.locator('[data-slot="sidebar"]').getByRole("link", { name: title, exact: true }).click();
+  await on
+    .locator(`[role="tabpanel"]:not([inert])[aria-label="${title}"] .thread-panel`)
+    .first()
+    .waitFor({ timeout: 10_000 });
+}
+
 try {
   await page.goto(`${BASE}/`, { waitUntil: "load" });
   const title = page.getByRole("heading", { name: "Last week's profit by day" });
@@ -632,6 +661,39 @@ try {
     `${spoiled.length} file spoiled; ${reason.replaceAll(/\s+/g, " ").slice(0, 140)}`,
   );
   await device.close();
+
+  // A tab a visit opened is kept like any other (ADR-105): a switch away neither closes it nor
+  // unmounts its draft, and each New thread keeps a tab of its own.
+  const visited = await pageAt("/t/t-001?scenario=demo");
+  await openRow(visited, "Refund audit");
+  const refundDraft = shownPanel(visited)
+    .locator('[data-slot="resizable-panel"]')
+    .first()
+    .getByRole("textbox", { name: "Message" });
+  await refundDraft.fill("half-written question");
+  await openRow(visited, "Last week's sales");
+  await openRow(visited, "Refund audit");
+  const keptDraft = await refundDraft.inputValue();
+  const newThread = visited
+    .locator('header[data-slot="title-bar"]')
+    .getByRole("button", { name: "New thread", exact: true });
+  for (let made = 0; made < 2; made++) {
+    const from = visited.url();
+    // oxlint-disable-next-line no-await-in-loop -- the second thread starts from the first one's page
+    await newThread.click();
+    // oxlint-disable-next-line no-await-in-loop -- as above
+    await visited.waitForURL((url) => url.href !== from, { timeout: 10_000 });
+  }
+  await openRow(visited, "Last week's sales");
+  const visitedTabs = await tabNames(visited);
+  record(
+    "a tab opened from the sidebar or New thread stays open, draft and all, after a switch",
+    keptDraft === "half-written question" &&
+      visitedTabs.join("|") ===
+        "Last week's sales|Service desk weekly review|Refund audit|New thread|New thread",
+    `draft ${JSON.stringify(keptDraft)}; tabs ${visitedTabs.join(" | ")}`,
+  );
+  await visited.close();
 } catch (error) {
   record("run", false, String(error));
   await shot("failure");
