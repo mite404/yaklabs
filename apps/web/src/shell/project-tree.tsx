@@ -42,8 +42,9 @@ function threadOn(active: Located | null): ThreadId | null {
 // New project leaves with the empty tree it sat in, taking focus with it; once the thread it
 // starts is open, its row takes focus, unless something else has taken it meanwhile. Returns
 // what arms that hand-off.
-function useHandOff(tree: RefObject<HTMLElement | null>, at: ThreadId | null): () => void {
+function useHandOff(tree: RefObject<HTMLElement | null>, shell: Shell | null): () => void {
   const armed = useRef(false);
+  const at = shell === null ? null : threadOn(shell.active); // → ThreadId | null
   useEffect(() => {
     if (!armed.current || at === null) return;
     armed.current = false;
@@ -166,7 +167,7 @@ export function ProjectTree() {
   const shell = useShell();
   const folds = useFolds();
   const group = useRef<HTMLDivElement>(null);
-  const handOff = useHandOff(group, threadOn(shell?.active ?? null));
+  const handOff = useHandOff(group, shell);
   const tree = shell === null ? [] : sidebarTree(shell.workspace);
   return (
     <SidebarGroup ref={group} className="group-data-[collapsible=icon]:hidden">
