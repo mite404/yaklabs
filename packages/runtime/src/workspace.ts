@@ -51,7 +51,8 @@ const threadSummarySchema = z.object({
 // Null width means the default column.
 const widthSchema = z.number().positive().nullable();
 
-const laneSchema = z.discriminatedUnion("kind", [
+/** One lane; a thread lane's id is always `l-<threadId>`. */
+export const laneSchema = z.discriminatedUnion("kind", [
   z
     .object({
       id: laneIdSchema,

@@ -1,28 +1,41 @@
 /// <reference lib="webworker" />
-import { createAgentLoop } from "./agentLoop";
-import type { StorageKind } from "./protocol";
+import { createAgentLoop, type Opened } from "./agentLoop";
+import { liveMint } from "./mint";
+import type { LegacyCanvas, RuntimeData, Source } from "./protocol";
 import { openSqliteStore } from "./sqliteStore";
-import { createMemoryStore, type ConversationStore } from "./store";
+import { ensureStarter, type Store } from "./store";
 
 // This file only ever runs as the dedicated worker `startRuntime` creates (ADR-083).
 declare const self: DedicatedWorkerGlobalScope;
 
-// The one database the app keeps its conversations in (ADR-081).
+// The one database the app keeps its threads in (ADR-081).
 const DATABASE = "yaklabs";
 
 // SQLite in the private file system when the browser allows it; memory otherwise, which the
-// page learns from `ready.storage`.
-async function openStore(): Promise<{ store: ConversationStore; storage: StorageKind }> {
+// page learns from the source. Only the file on disk may migrate the v1 canvas keys: a memory
+// store starts empty, so the page keeps the keys for a later run that reaches the file.
+async function openDeviceStore(
+  legacy: LegacyCanvas | undefined,
+): Promise<{ store: Store; source: Source }> {
   try {
-    return { store: await openSqliteStore({ kind: "opfs", name: DATABASE }), storage: "opfs" };
+    const store = await openSqliteStore({ kind: "opfs", name: DATABASE }, legacy);
+    return { store, source: { kind: "device", storage: "opfs" } };
   } catch (error) {
     // oxlint-disable-next-line no-console -- the one place a worker can say why it fell back
     console.warn(
-      "[runtime] Conversations stay in memory: the private file system is unavailable.",
+      "[runtime] Threads stay in memory: the private file system is unavailable.",
       error,
     );
-    return { store: createMemoryStore(), storage: "memory" };
+    const store = await openSqliteStore({ kind: "memory" });
+    return { store, source: { kind: "device", storage: "memory" } };
   }
+}
+
+async function open(data: RuntimeData): Promise<Opened> {
+  const mint = liveMint();
+  const { store, source } = await openDeviceStore(data.legacy);
+  ensureStarter(store, mint.now().toISOString());
+  return { store, source, mint };
 }
 
 const handle = createAgentLoop({
@@ -30,7 +43,7 @@ const handle = createAgentLoop({
     // oxlint-disable-next-line unicorn/require-post-message-target-origin -- workers have none
     self.postMessage(notice);
   },
-  openStore,
+  open,
 });
 
 self.addEventListener("message", (event) => {

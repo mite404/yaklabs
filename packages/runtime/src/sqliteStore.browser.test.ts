@@ -1,31 +1,29 @@
+import type { ThreadMessage } from "@yaklabs/catalog/thread";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
-import { conversationSchema, type Conversation } from "./protocol";
+import { threadMessageSchema } from "./protocol";
 import { openSqliteStore } from "./sqliteStore";
 import { netProfitChoice, profitThread } from "./testing";
 
-const demo: Conversation = {
-  id: "demo",
-  title: profitThread.title,
-  updatedAt: "2026-09-26T10:03:00.000Z",
-  messages: [
-    ...profitThread.messages,
-    {
-      id: "u2",
-      role: "user",
-      text: "Why is Saturday high?",
-      time: "10:03",
-      attachments: [netProfitChoice],
-    },
-  ],
+// The user's next turn on the starter's profit thread, with the card choice riding along.
+const turn: ThreadMessage = {
+  id: "u2",
+  role: "user",
+  text: "Why is Saturday high?",
+  time: "10:03",
+  attachments: [netProfitChoice],
 };
+const kept = [...profitThread.messages, turn];
 
 // What the test worker answers.
 const replySchema = z.discriminatedUnion("ok", [
   z.object({ ok: z.literal(true), result: z.unknown() }),
   z.object({ ok: z.literal(false), reason: z.string() }),
 ]);
-const readSchema = z.object({ ok: z.literal(true), result: conversationSchema });
+const readSchema = z.object({
+  ok: z.literal(true),
+  result: z.object({ messages: z.array(threadMessageSchema) }),
+});
 const dumpSchema = z.record(z.string(), z.unknown());
 const migrationSchema = z.object({
   ok: z.literal(true),
@@ -65,17 +63,17 @@ async function inFreshWorker(request: unknown): Promise<z.infer<typeof replySche
 const freshName = (prefix: string) => `${prefix}-${crypto.randomUUID().slice(0, 8)}`;
 
 describe("SQLite store in the browser's private file system", () => {
-  it("reads a conversation back from a new store on the same file", async () => {
+  it("reads a thread back from a new store on the same file", async () => {
     const name = freshName("store");
-    const reply = await inFreshWorker({ kind: "save-then-reopen", name, conversation: demo });
-    expect(readSchema.parse(reply).result).toEqual(demo);
+    const reply = await inFreshWorker({ kind: "save-then-reopen", name, turn });
+    expect(readSchema.parse(reply).result.messages).toEqual(kept);
   });
 
   it("still has it in the next worker, after the first one is gone", async () => {
     const name = freshName("store");
-    await inFreshWorker({ kind: "save-then-reopen", name, conversation: demo });
-    const reply = await inFreshWorker({ kind: "read", name, id: "demo" });
-    expect(readSchema.parse(reply).result).toEqual(demo);
+    await inFreshWorker({ kind: "save-then-reopen", name, turn });
+    const reply = await inFreshWorker({ kind: "read", name });
+    expect(readSchema.parse(reply).result.messages).toEqual(kept);
   });
 
   it("refuses the private file system outside a Worker, so the runtime can fall back", async () => {

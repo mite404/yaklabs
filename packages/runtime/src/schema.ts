@@ -145,9 +145,10 @@ const INSERT_LANE = `
   values (?, ?, ?, ?, ?, ?, ?)
 `;
 
-// The project and main thread a v1 database's `profit` conversation becomes.
-const DEMO_PROJECT = { id: projectIdSchema.parse("demo-store"), name: "Demo store" };
-const PROFIT = threadIdSchema.parse("profit");
+/** The project a v1 database's conversations join, and the one the device starts with. */
+export const DEMO_PROJECT = { id: projectIdSchema.parse("demo-store"), name: "Demo store" };
+/** The main thread a v1 database's `profit` conversation becomes, and the device's first. */
+export const PROFIT = threadIdSchema.parse("profit");
 
 const v1RowSchema = z.object({ id: threadIdSchema, updated_at: z.string() });
 
@@ -171,8 +172,8 @@ function laneRow(mainId: ThreadId, seq: number, lane: Lane): BindingSpec {
     : [mainId, seq, lane.id, null, JSON.stringify(lane.card), lane.title, lane.width];
 }
 
-// Replaces a main thread's lanes with exactly `lanes`, left to right.
-function writeLanes(db: Database, mainId: ThreadId, lanes: Lane[]): void {
+/** Replaces a main thread's lanes with exactly `lanes`, left to right. */
+export function writeLanes(db: Database, mainId: ThreadId, lanes: Lane[]): void {
   db.exec({ sql: "delete from lanes where main_id = ?", bind: [mainId] });
   for (const [seq, lane] of lanes.entries()) {
     db.exec({ sql: INSERT_LANE, bind: laneRow(mainId, seq, lane) });

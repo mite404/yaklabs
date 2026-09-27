@@ -3,10 +3,10 @@ import { gatewayRequestSchema, type GatewayRequest } from "gateway/contract";
 import { Hono } from "hono";
 import { validator } from "hono/validator";
 import { describe, expect, it } from "vitest";
+import type { Transcript } from "./conversation";
 import { createGatewayAgent } from "./gatewayAgent";
-import type { Conversation } from "./protocol";
-import { createMemoryStore } from "./store";
 import { netProfitChoice, profitThread } from "./testing";
+import { threadIdSchema, type ThreadId } from "./workspace";
 
 // What the fake gateway saw, for the assertions.
 type Seen = { request?: GatewayRequest; authorization?: string };
@@ -19,15 +19,17 @@ const question = "Why is Saturday high?";
 const ask: AgentEvent = { kind: "message", text: question, attachments: [netProfitChoice] };
 
 // The thread as the worker leaves it before the agent runs: the user's turn already saved.
-const saved: Conversation = {
-  id: "demo",
-  title: profitThread.title,
+const demo = threadIdSchema.parse("demo");
+const saved: Transcript = {
+  draft: "",
   updatedAt: "2026-09-26T10:03:00.000Z",
   messages: [
     ...profitThread.messages,
     { id: "u2", role: "user", text: question, time: "10:03", attachments: [netProfitChoice] },
   ],
 };
+// A store that holds only that thread.
+const store = { transcript: (id: ThreadId) => (id === demo ? saved : undefined) };
 
 const encoder = new TextEncoder();
 
@@ -92,16 +94,13 @@ function fakeGateway(reply: Reply, seen: Seen): typeof fetch {
 }
 
 // An agent on the saved thread, talking to a fake gateway that answers with `reply`.
-async function agentFor(reply: Reply, seen: Seen = {}, accessToken?: string): Promise<Agent> {
-  const store = createMemoryStore();
-  await store.save(saved);
-  const fetch = fakeGateway(reply, seen);
+function agentFor(reply: Reply, seen: Seen = {}, accessToken?: string): Agent {
   return createGatewayAgent({
     baseUrl: "http://gateway.test",
     accessToken,
     store,
-    conversationId: "demo",
-    fetch,
+    threadId: demo,
+    fetch: fakeGateway(reply, seen),
   });
 }
 
@@ -114,13 +113,13 @@ async function collect(pieces: AsyncIterable<string>): Promise<string[]> {
 describe("createGatewayAgent streams", () => {
   it("yields the model's reply as text pieces", async () => {
     const pieces = ["Net profit ", "peaks on Saturday ", "at $5,900."];
-    const agent = await agentFor({ kind: "stream", body: () => ndjson(replyEvents(pieces)) });
+    const agent = agentFor({ kind: "stream", body: () => ndjson(replyEvents(pieces)) });
     expect(await collect(agent.respond(ask, new AbortController().signal))).toEqual(pieces);
   });
 
   it("stops when the signal aborts, even while the gateway is still sending", async () => {
     const events = replyEvents(["Net ", "profit"]).slice(0, 3);
-    const agent = await agentFor({ kind: "stream", body: () => ndjson(events, { open: true }) });
+    const agent = agentFor({ kind: "stream", body: () => ndjson(events, { open: true }) });
     const controller = new AbortController();
     const pieces: string[] = [];
     for await (const piece of agent.respond(ask, controller.signal)) {
@@ -135,7 +134,7 @@ describe("createGatewayAgent asks", () => {
   it("sends the token and the thread, with the user's turn once and its card view last", async () => {
     const seen: Seen = {};
     const reply: Reply = { kind: "stream", body: () => ndjson(replyEvents(["Ok."])) };
-    const agent = await agentFor(reply, seen, "token-1");
+    const agent = agentFor(reply, seen, "token-1");
     await collect(agent.respond(ask, new AbortController().signal));
     expect(seen.authorization).toBe("Bearer token-1");
     expect(seen.request?.messages.map((turn) => turn.role)).toEqual(["user", "assistant", "user"]);
@@ -145,19 +144,19 @@ describe("createGatewayAgent asks", () => {
   });
 
   it("names the status of a refusal and never its body", async () => {
-    const agent = await agentFor({ kind: "refuse", status: 401 });
+    const agent = agentFor({ kind: "refuse", status: 401 });
     const reply = collect(agent.respond(ask, new AbortController().signal));
     await expect(reply).rejects.toThrow(/^The gateway replied 401$/);
   });
 
-  it("refuses a conversation it cannot find", async () => {
+  it("refuses a thread it cannot find", async () => {
     const agent = createGatewayAgent({
       baseUrl: "http://gateway.test",
-      store: createMemoryStore(),
-      conversationId: "missing",
+      store,
+      threadId: threadIdSchema.parse("missing"),
     });
     await expect(collect(agent.respond(ask, new AbortController().signal))).rejects.toThrow(
-      "No conversation missing",
+      "No thread missing",
     );
   });
 });

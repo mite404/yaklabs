@@ -1,23 +1,21 @@
 /// <reference lib="webworker" />
 import type { Database } from "@sqlite.org/sqlite-wasm";
+import type { ThreadMessage } from "@yaklabs/catalog/thread";
 import { z } from "zod";
-import { conversationSchema, type Conversation } from "./protocol";
-import { migrate, migrationSteps } from "./schema";
+import { threadMessageSchema } from "./protocol";
+import { migrate, migrationSteps, PROFIT } from "./schema";
 import { openDatabase, openSqliteStore } from "./sqliteStore";
+import { ensureStarter } from "./store";
 import { dumpDatabase, v1Legacy, writeV1 } from "./testing";
 
 // Started only by sqliteStore.browser.test.ts: OPFS's fast mode exists only inside a Worker.
 declare const self: DedicatedWorkerGlobalScope;
 
-// What the test asks for: save then reopen in this worker, read what an earlier one saved, or
-// migrate Ethan's v1 database on a clean run and through a crash.
+// What the test asks for: add a turn to the starter's thread then reopen in this worker, read
+// what an earlier one saved, or migrate Ethan's v1 database on a clean run and through a crash.
 const requestSchema = z.discriminatedUnion("kind", [
-  z.object({
-    kind: z.literal("save-then-reopen"),
-    name: z.string(),
-    conversation: conversationSchema,
-  }),
-  z.object({ kind: z.literal("read"), name: z.string(), id: z.string() }),
+  z.object({ kind: z.literal("save-then-reopen"), name: z.string(), turn: threadMessageSchema }),
+  z.object({ kind: z.literal("read"), name: z.string() }),
   z.object({ kind: z.literal("migrate-v1"), name: z.string() }),
 ]);
 type Request = z.infer<typeof requestSchema>;
@@ -31,22 +29,18 @@ const crashingSteps: typeof migrationSteps = [
   },
 ];
 
-async function saveThenReopen(name: string, conversation: Conversation) {
+async function saveThenReopen(name: string, turn: ThreadMessage) {
   const first = await openSqliteStore({ kind: "opfs", name });
-  await first.save(conversation);
+  ensureStarter(first, "2026-09-26T10:02:00.000Z");
+  first.changeTranscript(PROFIT, (now) => ({ ...now, messages: [...now.messages, turn] }));
   first.close();
-  const second = await openSqliteStore({ kind: "opfs", name }); // a new instance, same file
-  try {
-    return await second.open(conversation.id);
-  } finally {
-    second.close();
-  }
+  return read(name); // a new instance, same file
 }
 
-async function read(name: string, id: string) {
+async function read(name: string) {
   const store = await openSqliteStore({ kind: "opfs", name });
   try {
-    return await store.open(id);
+    return store.transcript(PROFIT);
   } finally {
     store.close();
   }
@@ -94,9 +88,9 @@ async function migrateV1(name: string) {
 function run(request: Request): Promise<unknown> {
   switch (request.kind) {
     case "read":
-      return read(request.name, request.id);
+      return read(request.name);
     case "save-then-reopen":
-      return saveThenReopen(request.name, request.conversation);
+      return saveThenReopen(request.name, request.turn);
     case "migrate-v1":
       return migrateV1(request.name);
     default: {

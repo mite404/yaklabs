@@ -1,48 +1,54 @@
 import type { Agent } from "@yaklabs/catalog/agent";
 import { createLabAgent } from "@yaklabs/catalog/labAgent";
 import { z } from "zod";
-import { blankConversation, fromSeed, withAgentReply, withUserTurn } from "./conversation";
+import { withAgentReply, withUserTurn, type Stamp } from "./conversation";
 import { createGatewayAgent } from "./gatewayAgent";
+import type { Mint } from "./mint";
 import {
   commandSchema,
   type AgentSpec,
   type Command,
-  type Conversation,
+  type NewItem,
   type Notice,
-  type StorageKind,
+  type RuntimeData,
+  type Source,
 } from "./protocol";
-import type { ConversationStore } from "./store";
+import type { Store } from "./store";
+import type { ThreadId } from "./workspace";
 
-// An open store and where it keeps its data.
-type OpenedStore = { store: ConversationStore; storage: StorageKind };
-// What `init` sets up: the store, and which agent answers.
-type Session = OpenedStore & { agent: AgentSpec };
+/** What the worker opened for `init`: the store, where it lives, and how it mints. */
+export type Opened = { store: Store; source: Source; mint: Mint };
+
 // What an agent may need to answer one message.
-type AgentContext = { store: ConversationStore; conversationId: string; accessToken?: string };
-type CommandOf<K extends Command["kind"]> = Extract<Command, { kind: K }>;
-type Queue = <T>(task: () => Promise<T>) => Promise<T>;
+type AgentContext = { store: Store; threadId: ThreadId; accessToken?: string };
 
 /** What the loop needs from where it runs: the worker entry gives the real ones, tests fakes. */
 export type LoopHost = {
   /** Sends a notice to the page. */
   post: (notice: Notice) => void;
-  /** Opens the store at `init`; it should fall back rather than fail. */
-  openStore: () => Promise<OpenedStore>;
-  /** The clock for turn times and `updatedAt`; defaults to the real one. */
-  now?: () => Date;
+  /** Opens what `init` asked for; the device should fall back rather than fail. */
+  open: (data: RuntimeData) => Promise<Opened>;
   /** Builds the agent for one message; defaults to the lab stand-in or the gateway agent. */
   createAgent?: (spec: AgentSpec, context: AgentContext) => Agent;
 };
 
-// Everything the handlers share: the host, the write queue, the live replies and the session.
+type CommandOf<K extends Command["kind"]> = Extract<Command, { kind: K }>;
+type Session = Opened & { agent: AgentSpec };
+
+// Everything the handlers share: the host, the session `init` started, the live replies, and
+// the last state pushed, so an unchanged one is not pushed again.
 type Loop = {
   host: Required<LoopHost>;
-  exclusive: Queue;
-  replies: Map<string, AbortController>; // requestId → that reply's stop button
   session?: Promise<Session>;
+  replies: Map<string, { stop: AbortController; threadId: ThreadId }>; // requestId → live reply
+  lastState?: string;
 };
 
-const noop = (): void => {};
+// What a main thread is called until someone names it.
+const NEW_THREAD = "New thread";
+
+// The request a malformed command still names, so its failure reaches the right caller.
+const requestIdSchema = z.object({ requestId: z.string().min(1) });
 
 function defaultAgent(spec: AgentSpec, context: AgentContext): Agent {
   return spec.kind === "lab"
@@ -54,118 +60,162 @@ function reasonOf(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-// Runs one task at a time. Every read-modify-write of a conversation goes through it, so two
-// replies finishing together cannot lose each other's turns.
-function createQueue(): Queue {
-  let tail: Promise<unknown> = Promise.resolve();
-  return (task) => {
-    const run = tail.then(task);
-    tail = run.then(noop, noop);
-    return run;
-  };
+function stampOf(mint: Mint): Stamp {
+  const now = mint.now();
+  return { at: now.toISOString(), time: mint.turnTime(now) };
 }
 
 function started(loop: Loop): Promise<Session> {
   return loop.session ?? Promise.reject(new Error("The runtime has not been started"));
 }
 
-// Reads, changes and saves one conversation as a single step.
-function update(
-  loop: Loop,
-  store: ConversationStore,
-  id: string,
-  change: (conversation: Conversation) => Conversation,
-): Promise<void> {
-  return loop.exclusive(async () => {
-    const current = (await store.open(id)) ?? blankConversation(id, loop.host.now());
-    await store.save(change(current));
-  });
+// The threads with a reply in flight, each once, in the order their replies began.
+function replying(loop: Loop): ThreadId[] {
+  return [...new Set([...loop.replies.values()].map((live) => live.threadId))];
 }
 
-async function init(loop: Loop, { agent }: CommandOf<"init">): Promise<void> {
-  const opened = loop.session ?? loop.host.openStore(); // a second init keeps the store
-  loop.session = opened.then(({ store, storage }) => ({ store, storage, agent }));
-  loop.host.post({ kind: "ready", storage: (await loop.session).storage });
+// Posts the workspace as it now is, unless the page already has exactly this.
+function pushState(loop: Loop, { store, source }: Session): void {
+  const notice: Notice = {
+    kind: "state",
+    source,
+    workspace: store.workspace(),
+    replying: replying(loop),
+  };
+  const serialized = JSON.stringify(notice);
+  if (serialized === loop.lastState) return;
+  loop.lastState = serialized;
+  loop.host.post(notice);
 }
 
-async function open(loop: Loop, { conversationId, seed }: CommandOf<"open">): Promise<void> {
-  const { store } = await started(loop);
-  const { now, post } = loop.host;
-  const conversation = await loop.exclusive(async () => {
-    const stored = await store.open(conversationId); // → Conversation | undefined
-    if (stored !== undefined || seed === undefined) {
-      return stored ?? blankConversation(conversationId, now());
+// Makes the item with a freshly minted id; a child's lane lands at `at` in the same write.
+function create({ store, mint }: Session, item: NewItem): string {
+  const now = mint.now().toISOString();
+  const blank = { createdAt: now, updatedAt: now, messages: [] };
+  switch (item.kind) {
+    case "project": {
+      const id = mint.project();
+      store.addProject({ id, name: item.name, createdAt: now });
+      return id;
     }
-    const seeded = fromSeed(conversationId, seed, now());
-    await store.save(seeded);
-    return seeded;
-  });
-  post({ kind: "opened", conversation });
+    case "main": {
+      const id = mint.thread();
+      const place = { kind: "main", projectId: item.projectId } as const;
+      store.addThread({ ...blank, id, title: item.title ?? NEW_THREAD, place, draft: "" });
+      return id;
+    }
+    case "child": {
+      const id = mint.thread();
+      const place = { kind: "child", parentId: item.parentId } as const;
+      store.addThread({ ...blank, id, title: item.title, place, draft: item.draft }, item.at);
+      return id;
+    }
+    default: {
+      const unhandled: never = item;
+      return unhandled;
+    }
+  }
 }
 
-async function reply(loop: Loop, command: CommandOf<"send">, signal: AbortSignal): Promise<void> {
-  const { requestId, conversationId, event, accessToken } = command;
-  const { now, post, createAgent } = loop.host;
-  const { store, agent: spec } = await started(loop);
-  await update(loop, store, conversationId, (c) => withUserTurn(c, event, now()));
-  const agent = createAgent(spec, { store, conversationId, accessToken });
+// Runs one write, then pushes the state it left before answering, so an id the answer names
+// is already in the page's snapshot.
+async function write(
+  loop: Loop,
+  apply: (session: Session) => Extract<Notice, { kind: "created" | "done" }>,
+): Promise<void> {
+  const session = await started(loop);
+  const answer = apply(session);
+  pushState(loop, session);
+  loop.host.post(answer);
+}
+
+async function open(loop: Loop, { requestId, threadId }: CommandOf<"open">): Promise<void> {
+  const { store } = await started(loop);
+  const transcript = store.transcript(threadId); // → Transcript | undefined
+  if (transcript === undefined) throw new Error(`No thread ${threadId}`);
+  loop.host.post({ kind: "opened", requestId, messages: transcript.messages });
+}
+
+// The user's turn is saved before the agent runs, so it survives a failed reply; the reply is
+// saved once it ends, or when it is stopped, with what streamed so far.
+async function reply(
+  loop: Loop,
+  session: Session,
+  command: CommandOf<"send">,
+  signal: AbortSignal,
+): Promise<void> {
+  const { requestId, threadId, event, accessToken } = command;
+  const { store, mint, agent: spec } = session;
+  store.changeTranscript(threadId, (transcript) => withUserTurn(transcript, event, stampOf(mint)));
+  pushState(loop, session);
+  const agent = loop.host.createAgent(spec, { store, threadId, accessToken });
   let text = "";
   for await (const piece of agent.respond(event, signal)) {
     if (signal.aborted) break;
     text += piece;
-    post({ kind: "chunk", requestId, text: piece });
+    loop.host.post({ kind: "chunk", requestId, text: piece });
   }
   if (text.trim() !== "") {
-    await update(loop, store, conversationId, (c) => withAgentReply(c, text, now()));
+    store.changeTranscript(threadId, (transcript) =>
+      withAgentReply(transcript, text, stampOf(mint)),
+    );
   }
-  post({ kind: "done", requestId });
 }
 
 async function send(loop: Loop, command: CommandOf<"send">): Promise<void> {
-  const controller = new AbortController();
-  loop.replies.set(command.requestId, controller);
+  const { requestId, threadId } = command;
+  const session = await started(loop);
+  const stop = new AbortController();
+  loop.replies.set(requestId, { stop, threadId });
   try {
-    await reply(loop, command, controller.signal);
-  } catch (error) {
-    loop.host.post({ kind: "failed", requestId: command.requestId, reason: reasonOf(error) });
+    await reply(loop, session, command, stop.signal);
   } finally {
-    loop.replies.delete(command.requestId);
+    loop.replies.delete(requestId);
+    pushState(loop, session);
   }
+  loop.host.post({ kind: "done", requestId });
 }
 
-// A new title, answered like an open: the conversation as it now is.
-async function rename(loop: Loop, { conversationId, title }: CommandOf<"rename">): Promise<void> {
-  const { store } = await started(loop);
-  const { now, post } = loop.host;
-  const conversation = await loop.exclusive(async () => {
-    const current = (await store.open(conversationId)) ?? blankConversation(conversationId, now());
-    const renamed = { ...current, title, updatedAt: now().toISOString() }; // → Conversation
-    await store.save(renamed);
-    return renamed;
+async function init(loop: Loop, { agent, data }: CommandOf<"init">): Promise<void> {
+  if (loop.session !== undefined) return; // one start per worker
+  loop.session = loop.host.open(data).then((opened) => {
+    loop.host.post({ kind: "opening", source: opened.source });
+    return { ...opened, agent };
   });
-  post({ kind: "opened", conversation });
+  pushState(loop, await loop.session);
 }
 
-async function list(loop: Loop): Promise<void> {
-  const { store } = await started(loop);
-  loop.host.post({ kind: "listed", conversations: await store.list() });
-}
-
-function handle(loop: Loop, command: Command): Promise<void> {
+// Handles a command that names a request; whatever it throws fails that request alone.
+function handleRequest(loop: Loop, command: Exclude<Command, { kind: "init" }>): Promise<void> {
   switch (command.kind) {
-    case "init":
-      return init(loop, command);
     case "open":
       return open(loop, command);
+    case "create":
+      return write(loop, (session) => ({
+        kind: "created",
+        requestId: command.requestId,
+        id: create(session, command.item),
+      }));
+    case "rename":
+      return write(loop, ({ store }) => {
+        store.rename(command.target, command.name);
+        return { kind: "done", requestId: command.requestId };
+      });
+    case "arrange":
+      return write(loop, ({ store }) => {
+        store.arrange(command.mainId, command.lanes);
+        return { kind: "done", requestId: command.requestId };
+      });
+    case "saveShell":
+      return write(loop, ({ store }) => {
+        store.saveShell(command.shell);
+        return { kind: "done", requestId: command.requestId };
+      });
     case "send":
       return send(loop, command);
     case "abort":
-      loop.replies.get(command.requestId)?.abort();
+      loop.replies.get(command.requestId)?.stop.abort();
       return Promise.resolve();
-    case "list":
-      return list(loop);
-    case "rename":
-      return rename(loop, command);
     default: {
       const unhandled: never = command;
       return unhandled;
@@ -173,35 +223,47 @@ function handle(loop: Loop, command: Command): Promise<void> {
   }
 }
 
+async function handle(loop: Loop, command: Command): Promise<void> {
+  if (command.kind === "init") {
+    try {
+      await init(loop, command);
+    } catch (error) {
+      loop.host.post({ kind: "broken", reason: reasonOf(error) });
+    }
+    return;
+  }
+  try {
+    await handleRequest(loop, command);
+  } catch (error) {
+    loop.host.post({ kind: "failed", requestId: command.requestId, reason: reasonOf(error) });
+  }
+}
+
 /**
- * The loop that stands in for Kay's daemon (ADR-076): it owns the conversation store and the
- * agent, and talks to the page only through commands in and notices out, each checked on
- * arrival (ADR-086). The user's turn is saved before the agent runs, so it survives a failed
- * reply; the reply is saved once it ends, or when it is stopped, with what streamed so far.
+ * The loop that stands in for Kay's daemon (ADR-076): it owns the store and the agent, and talks
+ * to the page only through commands in and notices out, each checked on arrival (ADR-086).
+ * After every write it pushes the workspace, unless unchanged, and only then answers the write.
+ * A request that fails answers `failed` on its own; `broken` is for a failed start, or a command
+ * so malformed it names no request.
  *
  * @returns A handler for each raw message from the page; it settles once the command is done.
  */
 export function createAgentLoop(host: LoopHost): (data: unknown) => Promise<void> {
   const loop: Loop = {
-    host: {
-      ...host,
-      now: host.now ?? (() => new Date()),
-      createAgent: host.createAgent ?? defaultAgent,
-    },
-    exclusive: createQueue(),
+    host: { ...host, createAgent: host.createAgent ?? defaultAgent },
     replies: new Map(),
   };
 
-  return async (data) => {
+  return (data) => {
     const parsed = commandSchema.safeParse(data); // → { success, data } | { success, error }
-    if (!parsed.success) {
-      host.post({ kind: "error", reason: `Unknown command: ${z.prettifyError(parsed.error)}` });
-      return;
-    }
-    try {
-      await handle(loop, parsed.data);
-    } catch (error) {
-      host.post({ kind: "error", reason: reasonOf(error) });
-    }
+    if (parsed.success) return handle(loop, parsed.data);
+    const reason = `Unknown command: ${z.prettifyError(parsed.error)}`;
+    const named = requestIdSchema.safeParse(data);
+    host.post(
+      named.success
+        ? { kind: "failed", requestId: named.data.requestId, reason }
+        : { kind: "broken", reason },
+    );
+    return Promise.resolve();
   };
 }

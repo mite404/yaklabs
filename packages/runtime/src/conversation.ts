@@ -1,14 +1,11 @@
 import type { AgentEvent } from "@yaklabs/catalog/agent";
-import type { Thread, ThreadMessage } from "@yaklabs/catalog/thread";
-import type { Conversation } from "./protocol";
+import type { ThreadMessage } from "@yaklabs/catalog/thread";
 
-// What a conversation is called until someone names it.
-const UNTITLED = "New conversation";
+/** A thread's turns and the opening draft a dropped highlight left: what a reply rewrites. */
+export type Transcript = { messages: ThreadMessage[]; draft: string; updatedAt: string };
 
-// The time of day the way the seed threads write it: "9:02", "10:02".
-function clockTime(at: Date): string {
-  return `${at.getHours()}:${String(at.getMinutes()).padStart(2, "0")}`;
-}
+/** When something happened: the instant for `updatedAt`, and the time of day a turn shows. */
+export type Stamp = { at: string; time: string };
 
 // "u" → u<n+1>, where n is the highest u-number so far; the same for "a". Seeds pair u1 with
 // a1, u2 with a2, and a new turn keeps that pattern.
@@ -47,36 +44,23 @@ function userTurn(event: AgentEvent, id: string, time: string): ThreadMessage | 
   }
 }
 
-function appended(conversation: Conversation, message: ThreadMessage, at: Date): Conversation {
-  return {
-    ...conversation,
-    messages: [...conversation.messages, message],
-    updatedAt: at.toISOString(),
+/**
+ * The transcript with the user's side of `event` added and the draft spent, or unchanged when
+ * the event has no user side.
+ */
+export function withUserTurn(transcript: Transcript, event: AgentEvent, stamp: Stamp): Transcript {
+  const turn = userTurn(event, nextId(transcript.messages, "u"), stamp.time);
+  if (turn === undefined) return transcript;
+  return { messages: [...transcript.messages, turn], draft: "", updatedAt: stamp.at };
+}
+
+/** The transcript with the agent's finished reply added. */
+export function withAgentReply(transcript: Transcript, text: string, stamp: Stamp): Transcript {
+  const turn: ThreadMessage = {
+    id: nextId(transcript.messages, "a"),
+    role: "agent",
+    text,
+    time: stamp.time,
   };
-}
-
-/** A conversation with nothing in it yet; it is saved with its first turn. */
-export function blankConversation(id: string, at: Date): Conversation {
-  return { id, title: UNTITLED, messages: [], updatedAt: at.toISOString() };
-}
-
-/** The conversation a seed thread starts: its title and turns, under the page's id. */
-export function fromSeed(id: string, seed: Thread, at: Date): Conversation {
-  return { id, title: seed.title, messages: seed.messages, updatedAt: at.toISOString() };
-}
-
-/** The conversation with the user's side of `event` added, or unchanged when it has none. */
-export function withUserTurn(
-  conversation: Conversation,
-  event: AgentEvent,
-  at: Date,
-): Conversation {
-  const turn = userTurn(event, nextId(conversation.messages, "u"), clockTime(at));
-  return turn === undefined ? conversation : appended(conversation, turn, at);
-}
-
-/** The conversation with the agent's finished reply added. */
-export function withAgentReply(conversation: Conversation, text: string, at: Date): Conversation {
-  const id = nextId(conversation.messages, "a");
-  return appended(conversation, { id, role: "agent", text, time: clockTime(at) }, at);
+  return { ...transcript, messages: [...transcript.messages, turn], updatedAt: stamp.at };
 }

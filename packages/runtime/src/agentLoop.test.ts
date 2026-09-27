@@ -1,13 +1,23 @@
 import type { Agent, AgentEvent } from "@yaklabs/catalog/agent";
 import { createLabAgent } from "@yaklabs/catalog/labAgent";
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it, onTestFinished, vi } from "vitest";
 import { createAgentLoop, type LoopHost } from "./agentLoop";
-import type { Command, Conversation, Notice } from "./protocol";
-import { createMemoryStore } from "./store";
-import { netProfitChoice, profitThread } from "./testing";
+import { fixedMint } from "./mint";
+import type { Command, Notice } from "./protocol";
+import { openSqliteStore } from "./sqliteStore";
+import { ensureStarter, type Store } from "./store";
+import { netProfitChoice } from "./testing";
+import {
+  projectIdSchema,
+  threadIdSchema,
+  threadLane,
+  type ThreadId,
+  type Workspace,
+} from "./workspace";
 
-// 10:03 local time, the minute the user asks.
-const asked = new Date(2026, 8, 26, 10, 3);
+// 10:03 UTC, the minute the user asks; the fixed mint writes turn times in UTC.
+const asked = new Date("2026-09-26T10:03:00.000Z");
+const profit = threadIdSchema.parse("profit");
 const ask: AgentEvent = {
   kind: "message",
   text: "Why is Saturday high?",
@@ -15,9 +25,14 @@ const ask: AgentEvent = {
   files: [{ name: "till-roll.png", type: "image/png", size: 2048 }],
 };
 
-const init: Command = { kind: "init", agent: { kind: "lab" } };
-const openDemo: Command = { kind: "open", conversationId: "demo", seed: profitThread };
-const sendAsk: Command = { kind: "send", requestId: "r1", conversationId: "demo", event: ask };
+const init: Command = { kind: "init", agent: { kind: "lab" }, data: { kind: "device" } };
+const openProfit: Command = { kind: "open", requestId: "r1", threadId: profit };
+const sendAsk: Command = { kind: "send", requestId: "r1", threadId: profit, event: ask };
+const child = (requestId: string, draft = ""): Command => ({
+  kind: "create",
+  requestId,
+  item: { kind: "child", parentId: profit, at: 0, title: "Saturday", draft },
+});
 
 // The lab stand-in with no pauses, so a reply streams at once.
 const quickLab = () => createLabAgent({ replyDelayMs: 0, wordMs: 0 });
@@ -42,75 +57,202 @@ const waitsForAbort: Agent = {
   },
 };
 
-// A loop on a fresh memory store, with every notice it posts collected in order.
-function startLoop(createAgent: LoopHost["createAgent"] = quickLab) {
+// A loop on a fresh memory store holding the starter's profit thread, with every notice it
+// posts collected in order.
+async function startLoop(createAgent: LoopHost["createAgent"] = quickLab) {
   const notices: Notice[] = [];
-  const store = createMemoryStore();
+  const store = await openSqliteStore({ kind: "memory" });
+  onTestFinished(() => {
+    store.close();
+  });
+  const mint = fixedMint(asked);
+  ensureStarter(store, mint.now().toISOString());
   const run = createAgentLoop({
     post: (notice) => {
       notices.push(notice);
     },
-    openStore: () => Promise.resolve({ store, storage: "memory" }),
-    now: () => asked,
+    open: () => Promise.resolve({ store, source: { kind: "device", storage: "memory" }, mint }),
     createAgent,
   });
   return { notices, store, run };
 }
 
-// What the page would read from the notices: the last opened conversation, the streamed text.
-const lastOpened = (notices: Notice[]): Conversation | undefined =>
-  notices.flatMap((notice) => (notice.kind === "opened" ? [notice.conversation] : [])).at(-1);
+// The notices' kinds, with a run of one kind folded into one beat: state, chunk, state, done.
+function beats(notices: Notice[]): string[] {
+  return notices
+    .map((notice) => notice.kind)
+    .filter((kind, i, kinds) => i === 0 || kinds[i - 1] !== kind);
+}
+
+function states(notices: Notice[]): Extract<Notice, { kind: "state" }>[] {
+  return notices.flatMap((notice) => (notice.kind === "state" ? [notice] : []));
+}
+
+function lastWorkspace(notices: Notice[]): Workspace | undefined {
+  return states(notices).at(-1)?.workspace;
+}
+
 const streamed = (notices: Notice[]): string =>
   notices.flatMap((notice) => (notice.kind === "chunk" ? [notice.text] : [])).join("");
-const ids = async (loop: ReturnType<typeof startLoop>) =>
-  (await loop.store.open("demo"))?.messages.map((message) => message.id);
+const turnIds = (store: Store, id: ThreadId = profit) =>
+  store.transcript(id)?.messages.map((message) => message.id);
 
-describe("the agent loop starts and opens", () => {
-  it("says it is ready, and where it keeps conversations", async () => {
-    const { notices, run } = startLoop();
+describe("the agent loop starts", () => {
+  it("says where its data lives, then pushes the workspace", async () => {
+    const { notices, run } = await startLoop();
     await run(init);
-    expect(notices).toEqual([{ kind: "ready", storage: "memory" }]);
+    expect(beats(notices)).toEqual(["opening", "state"]);
+    expect(notices[0]).toEqual({ kind: "opening", source: { kind: "device", storage: "memory" } });
+    expect(lastWorkspace(notices)?.threads.map((thread) => thread.id)).toEqual(["profit"]);
   });
 
-  it("starts a new conversation from the seed and keeps it", async () => {
-    const { notices, store, run } = startLoop();
+  it("starts once, however often it is asked", async () => {
+    const { notices, run } = await startLoop();
     await run(init);
-    await run(openDemo);
-    expect(lastOpened(notices)?.messages).toEqual(profitThread.messages);
-    expect((await store.list()).map((summary) => summary.id)).toEqual(["demo"]);
+    await run(init);
+    expect(beats(notices)).toEqual(["opening", "state"]);
   });
 
-  it("opens an unknown id with no seed as an empty conversation it does not save yet", async () => {
-    const { notices, store, run } = startLoop();
+  it("breaks when its data cannot open, and fails every request after", async () => {
+    const notices: Notice[] = [];
+    const run = createAgentLoop({
+      post: (notice) => {
+        notices.push(notice);
+      },
+      open: () => Promise.reject(new Error("The disk is full")),
+    });
     await run(init);
-    await run({ kind: "open", conversationId: "fresh" });
-    expect(lastOpened(notices)?.messages).toEqual([]);
-    expect(await store.list()).toEqual([]);
+    await run(openProfit);
+    expect(notices).toEqual([
+      { kind: "broken", reason: "The disk is full" },
+      { kind: "failed", requestId: "r1", reason: "The disk is full" },
+    ]);
   });
 
-  it("answers a command it does not know with an error", async () => {
-    const { notices, run } = startLoop();
+  it("fails a request sent before init", async () => {
+    const { notices, run } = await startLoop();
+    await run(openProfit);
+    const reason = "The runtime has not been started";
+    expect(notices).toEqual([{ kind: "failed", requestId: "r1", reason }]);
+  });
+
+  it("fails a malformed command that names its request, and breaks on one that does not", async () => {
+    const { notices, run } = await startLoop();
+    await run({ kind: "shout", requestId: "r7" });
     await run({ kind: "shout" });
-    expect(notices.map((notice) => notice.kind)).toEqual(["error"]);
+    expect(notices).toEqual([
+      expect.objectContaining({ kind: "failed", requestId: "r7" }),
+      { kind: "broken", reason: expect.stringContaining("Unknown command") as unknown },
+    ]);
+  });
+});
+
+describe("the agent loop answers each request on its own", () => {
+  it("opens a thread's turns", async () => {
+    const { notices, store, run } = await startLoop();
+    await run(init);
+    await run(openProfit);
+    const messages = store.transcript(profit)?.messages;
+    expect(notices.at(-1)).toEqual({ kind: "opened", requestId: "r1", messages });
   });
 
-  it("answers a command sent before init with an error", async () => {
-    const { notices, run } = startLoop();
-    await run({ kind: "list" });
-    expect(notices).toEqual([{ kind: "error", reason: "The runtime has not been started" }]);
+  it("fails one open without failing another", async () => {
+    const { notices, run } = await startLoop();
+    await run(init);
+    const missing = threadIdSchema.parse("missing");
+    await Promise.all([
+      run({ kind: "open", requestId: "bad", threadId: missing }),
+      run({ kind: "open", requestId: "good", threadId: profit }),
+    ]);
+    const answers = notices.slice(2);
+    expect(answers).toHaveLength(2);
+    expect(answers).toContainEqual({
+      kind: "failed",
+      requestId: "bad",
+      reason: "No thread missing",
+    });
+    expect(answers).toContainEqual(expect.objectContaining({ kind: "opened", requestId: "good" }));
+  });
+});
+
+describe("the agent loop pushes the state before it answers a write", () => {
+  it("lists a new child, its lane and its draft before naming its id", async () => {
+    const { notices, run } = await startLoop();
+    await run(init);
+    await run(child("r2", "> Saturday\n\n"));
+    expect(beats(notices).slice(-2)).toEqual(["state", "created"]);
+    const created = notices.at(-1);
+    const workspace = lastWorkspace(notices);
+    expect(created).toEqual({ kind: "created", requestId: "r2", id: "t-001" });
+    expect(workspace?.threads.find((thread) => thread.id === "t-001")).toMatchObject({
+      place: { kind: "child", parentId: "profit" },
+      draft: "> Saturday\n\n",
+    });
+    expect(workspace?.lanes[profit].map((lane) => lane.id)).toEqual(["l-t-001"]);
+  });
+
+  it("names an untitled main thread, and answers rename, arrange and shell with done", async () => {
+    const { notices, run } = await startLoop();
+    await run(init);
+    await run({
+      kind: "create",
+      requestId: "r1",
+      item: { kind: "main", projectId: projectIdSchema.parse("demo-store") },
+    });
+    await run({
+      kind: "rename",
+      requestId: "r2",
+      target: { kind: "thread", id: profit },
+      name: "Margins",
+    });
+    await run({ kind: "arrange", requestId: "r3", mainId: profit, lanes: [] });
+    await run({ kind: "saveShell", requestId: "r4", shell: { version: 1 } });
+    expect(beats(notices)).toEqual([
+      "opening",
+      "state",
+      "created",
+      "state",
+      "done",
+      "state",
+      "done",
+    ]);
+    const workspace = lastWorkspace(notices);
+    expect(workspace?.threads.map((thread) => thread.title)).toEqual(["Margins", "New thread"]);
+    expect(workspace?.shell).toEqual({ version: 1 });
+  });
+});
+
+describe("the agent loop pushes a state only when the workspace changes", () => {
+  it("pushes no second state for a write that changes nothing", async () => {
+    const { notices, run } = await startLoop();
+    await run(init);
+    await run(child("r1"));
+    const lanes = [threadLane(threadIdSchema.parse("t-001"))];
+    await run({ kind: "arrange", requestId: "r2", mainId: profit, lanes });
+    expect(beats(notices).slice(-2)).toEqual(["created", "done"]);
+    expect(states(notices)).toHaveLength(2);
+  });
+
+  it("answers a refused write with failed and pushes nothing", async () => {
+    const { notices, run } = await startLoop();
+    await run(init);
+    const lanes = [threadLane(threadIdSchema.parse("stranger"))];
+    await run({ kind: "arrange", requestId: "r1", mainId: profit, lanes });
+    expect(beats(notices)).toEqual(["opening", "state", "failed"]);
   });
 });
 
 describe("the agent loop replies", () => {
-  it("streams the reply, then keeps the user's turn and the agent's", async () => {
-    const { notices, store, run } = startLoop();
+  it("saves the user's turn and marks the thread replying before it streams", async () => {
+    const { notices, store, run } = await startLoop();
     await run(init);
-    await run(openDemo);
     await run(sendAsk);
+    expect(beats(notices)).toEqual(["opening", "state", "chunk", "state", "done"]);
+    const [, during, after] = states(notices);
+    expect(during.replying).toEqual(["profit"]);
+    expect(after.replying).toEqual([]);
     expect(streamed(notices)).toContain("Net profit · Sep 14–20");
-    expect(notices.at(-1)).toEqual({ kind: "done", requestId: "r1" });
-    const saved = await store.open("demo");
-    expect(saved?.messages.slice(2)).toEqual([
+    expect(store.transcript(profit)?.messages.slice(2)).toEqual([
       {
         id: "u2",
         role: "user",
@@ -121,41 +263,50 @@ describe("the agent loop replies", () => {
       },
       { id: "a2", role: "agent", text: streamed(notices), time: "10:03" },
     ]);
-    expect(saved?.updatedAt).toBe(asked.toISOString());
+  });
+
+  it("spends a child's draft with its first turn", async () => {
+    const { notices, store, run } = await startLoop();
+    await run(init);
+    await run(child("r1", "> Saturday\n\n"));
+    const id = threadIdSchema.parse("t-001");
+    await run({ ...sendAsk, requestId: "r2", threadId: id });
+    expect(store.transcript(id)?.draft).toBe("");
+    expect(lastWorkspace(notices)?.threads.find((thread) => thread.id === id)?.draft).toBe("");
   });
 
   it("adds no user turn for a rejected question, only the agent's plain-words ask", async () => {
-    const loop = startLoop();
-    await loop.run(init);
-    await loop.run(openDemo);
+    const { store, run } = await startLoop();
+    await run(init);
     const rejected: AgentEvent = { kind: "question-rejected", reason: "too long", question: {} };
-    await loop.run({ ...sendAsk, event: rejected });
-    expect(await ids(loop)).toEqual(["u1", "a1", "a2"]);
+    await run({ ...sendAsk, event: rejected });
+    expect(turnIds(store)).toEqual(["u1", "a1", "a2"]);
   });
 });
 
 describe("the agent loop recovers", () => {
   it("keeps the user's turn but no reply when the agent fails", async () => {
-    const loop = startLoop(() => failsAfter(["Half a"], "The gateway replied 502"));
-    await loop.run(init);
-    await loop.run(openDemo);
-    await loop.run(sendAsk);
+    const { notices, store, run } = await startLoop(() =>
+      failsAfter(["Half a"], "The gateway replied 502"),
+    );
+    await run(init);
+    await run(sendAsk);
     const failed = { kind: "failed", requestId: "r1", reason: "The gateway replied 502" };
-    expect(loop.notices.at(-1)).toEqual(failed);
-    expect(await ids(loop)).toEqual(["u1", "a1", "u2"]);
+    expect(notices.at(-1)).toEqual(failed);
+    expect(states(notices).at(-1)?.replying).toEqual([]);
+    expect(turnIds(store)).toEqual(["u1", "a1", "u2"]);
   });
 
   it("stops a reply on abort and keeps what streamed so far", async () => {
-    const loop = startLoop(() => waitsForAbort);
-    await loop.run(init);
-    await loop.run(openDemo);
-    const sending = loop.run(sendAsk);
+    const { notices, store, run } = await startLoop(() => waitsForAbort);
+    await run(init);
+    const sending = run(sendAsk);
     await vi.waitFor(() => {
-      expect(streamed(loop.notices)).toBe("Net profit ");
+      expect(streamed(notices)).toBe("Net profit ");
     });
-    await loop.run({ kind: "abort", requestId: "r1" });
+    await run({ kind: "abort", requestId: "r1" });
     await sending;
-    expect(loop.notices.at(-1)).toEqual({ kind: "done", requestId: "r1" });
-    expect((await loop.store.open("demo"))?.messages.at(-1)?.text).toBe("Net profit ");
+    expect(notices.at(-1)).toEqual({ kind: "done", requestId: "r1" });
+    expect(store.transcript(profit)?.messages.at(-1)?.text).toBe("Net profit ");
   });
 });

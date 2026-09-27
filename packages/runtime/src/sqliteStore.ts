@@ -6,50 +6,87 @@ import sqlite3InitModule, {
 } from "@sqlite.org/sqlite-wasm";
 import type { ThreadMessage } from "@yaklabs/catalog/thread";
 import { z } from "zod";
-import { threadMessageSchema, type Conversation, type ConversationSummary } from "./protocol";
-import { migrate, migrationSteps } from "./schema";
-import { foldWords, newestFirst, toSummary, type ConversationStore } from "./store";
+import type { Transcript } from "./conversation";
+import { threadMessageSchema, type LegacyCanvas, type RenameTarget } from "./protocol";
+import { migrate, writeLanes } from "./schema";
+import { matchQuery, newestFirst } from "./search";
+import type { NewThread, Store } from "./store";
+import {
+  insertLane,
+  lanesOf,
+  threadLane,
+  workspaceSchema,
+  type Lane,
+  type ThreadId,
+  type ThreadSummary,
+  type Workspace,
+} from "./workspace";
 
 /**
  * Where the database lives: a named file in the browser's private file system (ADR-081; only
- * inside a Worker), or memory (node and tests).
+ * inside a Worker), or memory (node, tests, scenarios, and the fallback when OPFS is refused).
  */
 export type StoreLocation = { kind: "opfs"; name: string } | { kind: "memory" };
 
-/** A SQLite-backed store; close it before opening the same file again elsewhere. */
-export type SqliteStore = ConversationStore & { close(): void };
-
 // Names become an OPFS directory and a file, so they stay plain.
 const NAME = /^[a-z0-9][a-z0-9-]{0,39}$/;
+// The sidebar shows one line of the latest message, cut at a word-ish length.
+const PREVIEW_LENGTH = 80;
 
-const UPSERT_CONVERSATION = `
-  insert into conversations (id, title, updated_at) values (?, ?, ?)
-  on conflict (id) do update set title = excluded.title, updated_at = excluded.updated_at
+const PROJECTS = "select id, name, created_at as createdAt from projects order by created_at, id";
+// Every thread, oldest first, with the text of its latest message for the preview.
+const THREADS = `
+  select c.id, c.title, c.project_id, c.parent_id, c.created_at, c.updated_at, c.draft,
+    coalesce((select m.text from messages m where m.conversation_id = c.id
+              order by m.seq desc limit 1), '') as last_text
+  from conversations c order by c.created_at, c.id
+`;
+const LANES = `
+  select main_id, id, thread_id, card_json, title, width from lanes order by main_id, seq
+`;
+const NOTIFICATIONS = `
+  select id, thread_id as threadId, text, at from notifications order by at desc, id
+`;
+const MATCHING = `
+  select distinct m.conversation_id from messages_fts f join messages m on m.rowid = f.rowid
+  where messages_fts match ?
+`;
+const INSERT_THREAD = `
+  insert into conversations (id, title, created_at, updated_at, project_id, parent_id, draft)
+  values (?, ?, ?, ?, ?, ?, ?)
 `;
 const INSERT_MESSAGE = `
   insert into messages (conversation_id, seq, role, text, time, extra_json)
   values (?, ?, ?, ?, ?, ?)
 `;
-// One row per conversation, with the text of its latest message for the preview.
-const SUMMARIES = `
-  select c.id, c.title, c.updated_at,
-    coalesce((select m.text from messages m where m.conversation_id = c.id
-              order by m.seq desc limit 1), '') as last_text
-  from conversations c
-`;
-const MATCHING = `
-  where c.id in (select m.conversation_id from messages_fts f
-                 join messages m on m.rowid = f.rowid
-                 where messages_fts match ?)
+const RENAME: Record<RenameTarget["kind"], string> = {
+  project: "update projects set name = ? where id = ?",
+  thread: "update conversations set title = ? where id = ?",
+};
+const SAVE_SHELL = `
+  insert into shell (id, json) values (1, ?) on conflict (id) do update set json = excluded.json
 `;
 
 // What SQLite hands back, checked before it becomes a domain type.
-const conversationRowSchema = z.object({
+const threadRowSchema = z.object({
   id: z.string(),
   title: z.string(),
+  project_id: z.string().nullable(),
+  parent_id: z.string().nullable(),
+  created_at: z.string(),
   updated_at: z.string(),
+  draft: z.string(),
+  last_text: z.string(),
 });
-const summaryRowSchema = conversationRowSchema.extend({ last_text: z.string() });
+const laneRowSchema = z.object({
+  main_id: z.string(),
+  id: z.string(),
+  thread_id: z.string().nullable(),
+  card_json: z.string().nullable(),
+  title: z.string().nullable(),
+  width: z.number().nullable(),
+});
+const transcriptRowSchema = z.object({ updated_at: z.string(), draft: z.string() });
 const messageRowSchema = z.object({
   role: z.string(),
   text: z.string(),
@@ -61,16 +98,15 @@ const extraSchema = z.record(z.string(), z.unknown());
 // The wasm module loads once per worker; later stores reuse it and its registered VFS.
 let sqlite3: Promise<Sqlite3Static> | undefined;
 
-// SQLite's calls are synchronous; this keeps a thrown error a rejection, as a caller expects.
-function settle<T>(work: () => T): Promise<T> {
-  return new Promise((resolve) => {
-    resolve(work());
-  });
+// The latest message's text on one line, shortened with an ellipsis when it runs long.
+function toPreview(text: string): string {
+  const line = text.replaceAll(/\s+/g, " ").trim();
+  return line.length <= PREVIEW_LENGTH ? line : `${line.slice(0, PREVIEW_LENGTH - 1).trimEnd()}…`;
 }
 
-function toMessageRow(conversationId: string, seq: number, message: ThreadMessage): BindingSpec {
+function toMessageRow(threadId: ThreadId, seq: number, message: ThreadMessage): BindingSpec {
   const { role, text, time, ...extra } = message;
-  return [conversationId, seq, role, text, time, JSON.stringify(extra)];
+  return [threadId, seq, role, text, time, JSON.stringify(extra)];
 }
 
 function fromMessageRow(row: Record<string, SqlValue>): ThreadMessage {
@@ -79,52 +115,124 @@ function fromMessageRow(row: Record<string, SqlValue>): ThreadMessage {
   return threadMessageSchema.parse({ ...extra, role, text, time });
 }
 
-function fromSummaryRow(row: Record<string, SqlValue>): ConversationSummary {
-  const { id, title, updated_at, last_text } = summaryRowSchema.parse(row);
-  return toSummary({ id, title, updatedAt: updated_at }, last_text);
+// A thread row in the workspace's shape; the workspace schema checks it.
+function fromThreadRow(row: Record<string, SqlValue>) {
+  const { project_id, parent_id, created_at, updated_at, last_text, ...rest } =
+    threadRowSchema.parse(row);
+  const place =
+    project_id === null
+      ? { kind: "child", parentId: parent_id }
+      : { kind: "main", projectId: project_id };
+  return {
+    ...rest,
+    place,
+    createdAt: created_at,
+    updatedAt: updated_at,
+    preview: toPreview(last_text),
+  };
 }
 
-// ["sat", "net"] → `"sat"* "net"*`: every word, as a prefix. Folded words hold only letters
-// and digits, so quoting them needs no escaping.
-function toMatchQuery(terms: string[]): string {
-  return terms.map((term) => `"${term}"*`).join(" ");
+// A lane row in the workspace's shape; the workspace schema checks it and its card.
+function fromLaneRow(row: z.infer<typeof laneRowSchema>) {
+  const { id, width, thread_id, card_json, title } = row;
+  if (thread_id !== null) return { id, width, kind: "thread", threadId: thread_id };
+  const card: unknown = JSON.parse(card_json ?? "null");
+  return { id, width, kind: "card", card, title };
 }
 
-function writeConversation(db: Database, conversation: Conversation): void {
-  const { id, title, updatedAt, messages } = conversation;
-  db.transaction((tx) => {
-    tx.exec({ sql: UPSERT_CONVERSATION, bind: [id, title, updatedAt] });
-    tx.exec({ sql: "delete from messages where conversation_id = ?", bind: [id] });
-    const insert = tx.prepare(INSERT_MESSAGE);
-    try {
-      for (const [seq, message] of messages.entries()) {
-        insert.bind(toMessageRow(id, seq, message)).stepReset();
-      }
-    } finally {
-      insert.finalize();
-    }
+function readWorkspace(db: Database): Workspace {
+  const threadRows = db.selectObjects(THREADS).map((row) => fromThreadRow(row));
+  const lanes = new Map<string, unknown[]>(
+    threadRows.filter((row) => row.place.kind === "main").map((row) => [row.id, []]),
+  );
+  for (const row of db.selectObjects(LANES).map((each) => laneRowSchema.parse(each))) {
+    lanes.get(row.main_id)?.push(fromLaneRow(row));
+  }
+  const saved = db.selectValue("select json from shell where id = 1"); // → JSON text, or undefined
+  const shell: unknown = typeof saved === "string" ? JSON.parse(saved) : null;
+  return workspaceSchema.parse({
+    projects: db.selectObjects(PROJECTS),
+    threads: threadRows,
+    lanes: Object.fromEntries(lanes),
+    shell,
+    notifications: db.selectObjects(NOTIFICATIONS),
   });
 }
 
-function readConversation(db: Database, id: string): Conversation | undefined {
-  const row = db.selectObject("select id, title, updated_at from conversations where id = ?", [id]);
+function readTranscript(db: Database, id: ThreadId): Transcript | undefined {
+  const row = db.selectObject("select updated_at, draft from conversations where id = ?", [id]);
   if (row === undefined) return undefined;
-  const { title, updated_at } = conversationRowSchema.parse(row);
+  const { updated_at, draft } = transcriptRowSchema.parse(row);
   const messages = db
     .selectObjects(
       "select role, text, time, extra_json from messages where conversation_id = ? order by seq",
       [id],
     )
     .map((message) => fromMessageRow(message)); // → ThreadMessage[]
-  return { id, title, updatedAt: updated_at, messages };
+  return { messages, draft, updatedAt: updated_at };
 }
 
-function readSummaries(db: Database, query?: string): ConversationSummary[] {
-  const rows =
-    query === undefined
-      ? db.selectObjects(SUMMARIES)
-      : db.selectObjects(`${SUMMARIES} ${MATCHING}`, [query]); // → Record<string, SqlValue>[]
-  return rows.map((row) => fromSummaryRow(row)).toSorted(newestFirst);
+function writeMessages(db: Database, id: ThreadId, messages: ThreadMessage[]): void {
+  db.exec({ sql: "delete from messages where conversation_id = ?", bind: [id] });
+  const insert = db.prepare(INSERT_MESSAGE);
+  try {
+    for (const [seq, message] of messages.entries()) {
+      insert.bind(toMessageRow(id, seq, message)).stepReset();
+    }
+  } finally {
+    insert.finalize();
+  }
+}
+
+function addThread(db: Database, thread: NewThread, laneAt: number | undefined): void {
+  const { id, title, place, createdAt, updatedAt, draft, messages } = thread;
+  const projectId = place.kind === "main" ? place.projectId : null;
+  const parentId = place.kind === "child" ? place.parentId : null;
+  db.exec({
+    sql: INSERT_THREAD,
+    bind: [id, title, createdAt, updatedAt, projectId, parentId, draft],
+  });
+  writeMessages(db, id, messages);
+  if (laneAt === undefined) return;
+  if (parentId === null) throw new Error(`${id} is a main thread, so it has no lane`);
+  const lanes = lanesOf(readWorkspace(db), parentId);
+  writeLanes(db, parentId, insertLane(lanes, laneAt, threadLane(id)));
+}
+
+function changeTranscript(
+  db: Database,
+  id: ThreadId,
+  change: (transcript: Transcript) => Transcript,
+): void {
+  const current = readTranscript(db, id);
+  if (current === undefined) throw new Error(`No thread ${id}`);
+  const { messages, draft, updatedAt } = change(current);
+  db.exec({
+    sql: "update conversations set updated_at = ?, draft = ? where id = ?",
+    bind: [updatedAt, draft, id],
+  });
+  writeMessages(db, id, messages);
+}
+
+function rename(db: Database, target: RenameTarget, name: string): void {
+  db.exec({ sql: RENAME[target.kind], bind: [name, target.id] });
+  if (db.changes() === 0) throw new Error(`No ${target.kind} ${target.id}`);
+}
+
+function arrange(db: Database, mainId: ThreadId, lanes: Lane[]): void {
+  const row = db.selectObject("select parent_id from conversations where id = ?", [mainId]);
+  if (row === undefined) throw new Error(`No thread ${mainId}`);
+  if (row.parent_id !== null) throw new Error(`${mainId} is a sub-thread, so it has no canvas`);
+  writeLanes(db, mainId, lanes);
+}
+
+function search(db: Database, query: string): ThreadSummary[] {
+  const match = matchQuery(query); // → FTS5 query, or undefined with no words
+  if (match === undefined) return [];
+  const hits = new Set(db.selectValues(MATCHING, [match]));
+  return readWorkspace(db)
+    .threads.filter((thread) => hits.has(thread.id))
+    .toSorted(newestFirst);
 }
 
 /**
@@ -143,29 +251,59 @@ export async function openDatabase(location: StoreLocation): Promise<Database> {
 }
 
 /**
- * Opens (creating when new) a conversation store in SQLite (ADR-081). In the browser it uses
- * the `opfs-sahpool` VFS, which needs no cross-origin isolation headers but works only inside
- * a Worker; in node only `memory` works.
+ * Opens (creating when new) the store in SQLite (ADR-081) and migrates it to the newest schema,
+ * reading `legacy` only in the step from version 1. In the browser it uses the `opfs-sahpool`
+ * VFS, which needs no cross-origin isolation headers but works only inside a Worker; in node
+ * only `memory` works.
  *
  * @throws When the name is not lowercase letters, digits and dashes, when the private file
  *   system or its access handles are unavailable (outside a Worker, or another worker holds
- *   the pool), or when the database cannot be opened.
+ *   the pool), when the database cannot be opened, or when a migration step fails.
  */
-export async function openSqliteStore(location: StoreLocation): Promise<SqliteStore> {
+export async function openSqliteStore(
+  location: StoreLocation,
+  legacy?: LegacyCanvas,
+): Promise<Store> {
   const db = await openDatabase(location);
   db.exec("pragma foreign_keys = on");
-  migrate(db, undefined, migrationSteps.slice(0, 1));
+  migrate(db, legacy);
 
   return {
-    open: (id) => settle(() => readConversation(db, id)),
-    save: (conversation) =>
-      settle(() => {
-        writeConversation(db, conversation);
-      }),
-    list: () => settle(() => readSummaries(db)),
-    search: (query) => {
-      const terms = foldWords(query); // → string[]
-      return settle(() => (terms.length === 0 ? [] : readSummaries(db, toMatchQuery(terms))));
+    workspace: () => readWorkspace(db),
+    transcript: (id) => readTranscript(db, id),
+    search: (query) => search(db, query),
+    addProject: ({ id, name, createdAt }) => {
+      db.exec({
+        sql: "insert into projects (id, name, created_at) values (?, ?, ?)",
+        bind: [id, name, createdAt],
+      });
+    },
+    addThread: (thread, laneAt) => {
+      db.transaction(() => {
+        addThread(db, thread, laneAt);
+      });
+    },
+    changeTranscript: (id, change) => {
+      db.transaction(() => {
+        changeTranscript(db, id, change);
+      });
+    },
+    rename: (target, name) => {
+      rename(db, target, name);
+    },
+    arrange: (mainId, lanes) => {
+      db.transaction(() => {
+        arrange(db, mainId, lanes);
+      });
+    },
+    saveShell: (shell) => {
+      db.exec({ sql: SAVE_SHELL, bind: [JSON.stringify(shell)] });
+    },
+    addNotification: ({ id, threadId, text, at }) => {
+      db.exec({
+        sql: "insert into notifications (id, thread_id, text, at) values (?, ?, ?, ?)",
+        bind: [id, threadId, text, at],
+      });
     },
     close: () => {
       db.close();
