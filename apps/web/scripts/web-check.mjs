@@ -694,6 +694,64 @@ try {
     `draft ${JSON.stringify(keptDraft)}; tabs ${visitedTabs.join(" | ")}`,
   );
   await visited.close();
+
+  // Leaving a thread never says it is gone while the next page loads; the notice is for an
+  // address no thread has. Each way out starts on a fresh page, so its route is not loaded yet.
+  const leaving = {
+    "the Lab link": (on) =>
+      on
+        .locator('[data-slot="sidebar"]')
+        .getByRole("link", { name: "Lab", exact: true })
+        .click()
+        .then(() => on.getByText("Useful answers.").waitFor({ timeout: 10_000 })),
+    "the Kay link": (on) =>
+      on
+        .locator('[data-slot="sidebar"]')
+        .getByRole("link", { name: "Kay", exact: true })
+        .click()
+        .then(() => shownPanel(on).locator(".thread-panel").first().waitFor({ timeout: 10_000 })),
+    "closing the last tab": async (on) => {
+      for (const closing of ["Service desk weekly review", "Last week's sales"]) {
+        // oxlint-disable-next-line no-await-in-loop -- each close changes the strip the next one reads
+        await on.getByRole("button", { name: `Close ${closing}`, exact: true }).click();
+      }
+      await on.getByText("Nothing open").waitFor({ timeout: 10_000 });
+    },
+  };
+  const falseNotices = [];
+  for (const [way, leave] of Object.entries(leaving)) {
+    // oxlint-disable-next-line no-await-in-loop -- one fresh page at a time
+    const on = await pageAt("/t/t-001?scenario=demo");
+    // oxlint-disable-next-line no-await-in-loop -- as above
+    await on.evaluate(() => {
+      window.goneFrames = 0;
+      requestAnimationFrame(function tick() {
+        if (document.body.innerText.includes("This thread is gone")) window.goneFrames += 1;
+        requestAnimationFrame(tick);
+      });
+    });
+    // oxlint-disable-next-line no-await-in-loop -- as above
+    await leave(on);
+    // oxlint-disable-next-line no-await-in-loop -- as above
+    await on.waitForTimeout(300);
+    // oxlint-disable-next-line no-await-in-loop -- as above
+    falseNotices.push(`${way} ${await on.evaluate(() => window.goneFrames)}`);
+    // oxlint-disable-next-line no-await-in-loop -- as above
+    await on.close();
+  }
+  const nowhere = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  await nowhere.goto(`${BASE}/t/t-999?scenario=demo`, { waitUntil: "load" });
+  const goneShown = await nowhere
+    .getByText("This thread is gone")
+    .waitFor({ timeout: 20_000 })
+    .then(() => true)
+    .catch(() => false);
+  await nowhere.close();
+  record(
+    "leaving a thread never flashes 'This thread is gone', which an unknown thread still shows",
+    falseNotices.every((each) => each.endsWith(" 0")) && goneShown,
+    `frames with the notice: ${falseNotices.join(", ")}; unknown thread shows it: ${goneShown}`,
+  );
 } catch (error) {
   record("run", false, String(error));
   await shot("failure");
