@@ -36,15 +36,15 @@ function PaneButton({
 }
 
 // Why the address field refused what was typed: a note hung under the field, which describes
-// it and is announced as it appears.
-function Refusal({ id }: { id: string }) {
+// it. The alert stays mounted, hidden while empty, so its words are announced as they arrive.
+function Refusal({ id, refused }: { id: string; refused: boolean }) {
   return (
     <p
       id={id}
       role="alert"
-      className="absolute top-full left-0 z-10 mt-1.5 w-max max-w-full bg-foreground px-3 py-1.5 text-xs text-background"
+      className="absolute top-full left-0 z-10 mt-1.5 w-max max-w-full bg-foreground px-3 py-1.5 text-xs text-background empty:hidden"
     >
-      Not a web address
+      {refused ? "Not a web address" : null}
     </p>
   );
 }
@@ -77,7 +77,7 @@ function AddressField({ current, onGo }: { current: PageAddress; onGo: Go }) {
       <Input
         aria-label="Address"
         aria-invalid={field.refused || undefined}
-        aria-describedby={field.refused ? refusal : undefined}
+        aria-describedby={refusal}
         value={field.text}
         spellCheck={false}
         className="h-7 rounded-[var(--radius)] border-hairline bg-[var(--control-bg)] pr-22 pl-8 text-xs text-ellipsis dark:bg-[var(--control-bg)]"
@@ -91,7 +91,7 @@ function AddressField({ current, onGo }: { current: PageAddress; onGo: Go }) {
       >
         Simulated
       </Badge>
-      {field.refused && <Refusal id={refusal} />}
+      <Refusal id={refusal} refused={field.refused} />
     </form>
   );
 }
