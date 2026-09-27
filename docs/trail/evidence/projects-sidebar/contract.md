@@ -250,6 +250,9 @@ const LIFT_PX = 6;
 - **Title bar, left to right.** Decorative traffic lights, then the sidebar toggle, then
   `TabStrip`. At the right end: the data marker, the layout switch, the bell, and the account
   avatar in the corner.
+- **Sidebar below 768px (ADR-120).** A drawer that pushes the whole window right, not a sheet
+  over it: `dialog[data-slot="sidebar"]` named "Sidebar", 85% of the width up to 20rem. The
+  pushed page is inert, and a tap on it, Escape, or an arrival anywhere closes the drawer.
 - **Title bar below 768px (ADR-116).** Two rows. The top row does not scroll: the sidebar toggle,
   the project's name (`[data-slot="project-name"]`), the marker's short word (its full label kept
   for screen readers), the bell, the account, and button "Thread and project actions". The second

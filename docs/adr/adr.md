@@ -1370,3 +1370,17 @@ and inert, so a draft or a streaming reply survives a switch. The panel group an
 limits stay the same on every screen (ADR-106): the thread's panel is now collapsible too, so a
 phone and a wide screen differ only in the layout the switch asks for, and crossing the
 breakpoint remounts nothing.
+
+## ADR-120 - On a phone the sidebar pushes the page aside
+
+2026-09-27 - Proposed (Ethan's direction, after Amp's phone sidebar); amends the phone half of
+ADR-094's sidebar, which was shadcn's sheet over a dimmed page.
+Below 768px the Toggle sidebar button slides the whole window, title bar included, to the right,
+and the sidebar comes in with it from the left, in one 300ms move (none under reduced motion).
+The drawer is 85% of the width, at most 20rem (320px of 390), so the page's own edge stays in
+view: it is the way back, and a tap on it closes the drawer, as Escape and choosing a place do.
+While it is open the pushed page is inert, and focus goes into the drawer and comes back to the
+toggle. The drawer is `mobile="push"` on shadcn's Sidebar: it sits just off the sliding wrapper's
+left edge, fixed inside a translated parent, so one transform moves both and no width is
+measured. The sheet stays the primitive's default.
+
