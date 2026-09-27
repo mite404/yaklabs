@@ -759,6 +759,31 @@ try {
       return { ok: Object.values(held).every((n) => n === 1), detail: JSON.stringify(held) };
     },
   );
+
+  await onOwnPage(
+    "Toggle sidebar says whether the sidebar is expanded, and names what it controls",
+    "/t/t-005?scenario=demo",
+    {},
+    async (own) => {
+      await tabsOf(own).first().waitFor({ timeout: 15_000 });
+      const toggle = own.getByRole("button", { name: "Toggle sidebar" });
+      const state = () =>
+        toggle.evaluate((el) => ({
+          expanded: el.getAttribute("aria-expanded"),
+          controls:
+            document.getElementById(el.getAttribute("aria-controls"))?.getAttribute("aria-label") ??
+            null,
+        }));
+      const before = await state();
+      await toggle.click();
+      const after = await state();
+      return {
+        ok:
+          before.expanded === "true" && after.expanded === "false" && before.controls === "Sidebar",
+        detail: `before ${JSON.stringify(before)}, after ${JSON.stringify(after)}`,
+      };
+    },
+  );
 } catch (error) {
   record("run", false, String(error));
   await shot("failure");

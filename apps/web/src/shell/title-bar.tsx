@@ -1,4 +1,4 @@
-import { SidebarTrigger } from "@yaklabs/ui/components/sidebar";
+import { SidebarTrigger, useSidebar } from "@yaklabs/ui/components/sidebar";
 import { useRuntimeState } from "../runtime";
 import type { ThemeChoice } from "../theme";
 import { Account } from "./account";
@@ -6,6 +6,7 @@ import { Bell } from "./bell";
 import { DataMarker } from "./data-marker";
 import { LayoutSwitch } from "./layout-switch";
 import { useShell } from "./model";
+import { SIDEBAR_ID } from "./sidebar";
 import { TabStrip } from "./tab-strip";
 
 // Decorative, as a desktop window's: they do nothing, and a screen reader never meets them. On
@@ -30,6 +31,20 @@ function TrafficLights() {
   );
 }
 
+// The sidebar's toggle is a disclosure: it says whether the sidebar is open (on a phone, its
+// sheet) and names the landmark it shows and hides.
+function SidebarToggle() {
+  const { open, openMobile, isMobile } = useSidebar();
+  return (
+    <SidebarTrigger
+      aria-label="Toggle sidebar"
+      aria-expanded={isMobile ? openMobile : open}
+      aria-controls={SIDEBAR_ID}
+      className="shrink-0 rounded-[var(--radius)] text-soft-ink hover:text-ink"
+    />
+  );
+}
+
 /**
  * The window's one title bar, across its whole width: decorative traffic lights, the sidebar
  * toggle and the open threads at the left; at the right where the data lives, the layout, the
@@ -45,10 +60,7 @@ export function TitleBar({ theme }: { theme: ThemeChoice }) {
       className="grid shrink-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-x-2 gap-y-1 bg-paper px-3 py-[5px] select-none md:flex md:h-11 md:py-0 md:pl-0"
     >
       <TrafficLights />
-      <SidebarTrigger
-        aria-label="Toggle sidebar"
-        className="shrink-0 rounded-[var(--radius)] text-soft-ink hover:text-ink"
-      />
+      <SidebarToggle />
       <TabStrip shell={shell} starting={starting} />
       <div className="flex shrink-0 items-center gap-2 max-md:col-start-2 max-md:row-start-1 max-md:min-w-0 max-md:justify-end">
         <DataMarker />
