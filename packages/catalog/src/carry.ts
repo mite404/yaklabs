@@ -125,6 +125,23 @@ function abandon(state: Carrying): [CarryState, CarryEffect[]] {
   return [IDLE, [...effects, { kind: "end", lifted: true }]];
 }
 
+// A target's answer to `over`, kept only while that target is still under the carry.
+function answered(state: Carrying, target: CarryTarget, accepted: boolean): Carrying {
+  return state.hover?.target === target ? { ...state, hover: { target, accepted } } : state;
+}
+
+// A release drops on the target under the carry if it accepted, and drops nothing otherwise.
+function land(state: Carrying, at: CarryPoint): [CarryState, CarryEffect[]] {
+  if (state.hover === null || !state.hover.accepted) return abandon(state);
+  const drop: CarryEffect = {
+    kind: "drop",
+    target: state.hover.target,
+    carried: state.carried,
+    at,
+  };
+  return [IDLE, [drop, { kind: "end", lifted: true }]];
+}
+
 function stepArmed(state: Armed, input: CarryInput): [CarryState, CarryEffect[]] {
   switch (input.kind) {
     case "move": {
@@ -158,20 +175,9 @@ function stepCarrying(state: Carrying, input: CarryInput): [CarryState, CarryEff
       return [next, [{ kind: "follow", at: input.at }, ...hover]];
     }
     case "answer":
-      return state.hover?.target === input.target
-        ? [{ ...state, hover: { target: input.target, accepted: input.accepted } }, []]
-        : [state, []];
-    case "release": {
-      if (state.hover === null || !state.hover.accepted) return abandon(state);
-      const { target } = state.hover;
-      return [
-        IDLE,
-        [
-          { kind: "drop", target, carried: state.carried, at: input.at },
-          { kind: "end", lifted: true },
-        ],
-      ];
-    }
+      return [answered(state, input.target, input.accepted), []];
+    case "release":
+      return land(state, input.at);
     case "pointercancel":
     case "cancel":
       return abandon(state);
