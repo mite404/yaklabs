@@ -1300,3 +1300,18 @@ The solid bar is the default. `?chrome=painting` or `?chrome=solid` picks one on
 localStorage and taken out of the address, since the app's own links keep only the scenario and a
 leftover parameter would undo a later choice. The Account menu has a Title bar choice beside
 Theme, so Ethan can switch while he decides.
+
+## ADR-116 - Below 768px the title bar drops the window's dress and keeps the thread
+
+2026-09-27 - Proposed (the Layout trigger and the marker's short words are Ethan's to confirm);
+amends ADR-094 and ADR-096 below 768px only.
+On a phone the bar had no room for its tabs: the traffic lights, the marker and the Layout group
+took 250px of 390, and the tab strip got nothing. Below `md`, where the window is already
+full-bleed (ADR-111), the traffic lights go, since the page no longer reads as a window. The
+marker shows one word ("Mock", "On device", "Not saved", "Live") and keeps its full label for a
+screen reader. The Layout group moves behind one button named "Layout", which opens the same
+group, so its names do not change. The active tab's floor becomes the strip's width less the "+",
+so the thread on screen shows whole, and the other tabs scroll.
+Measured on four prototypes at 390px: keeping the Layout group inline left 17px to 37px of the
+active title however tight the rest was; a trigger leaves the whole tab and about 84px of title.
+From 768px up nothing changes, and P13 in the workspace lever holds 390, 520 and 767 to it.

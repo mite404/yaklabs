@@ -246,6 +246,10 @@ const LIFT_PX = 6;
 - **Title bar, left to right.** Decorative traffic lights, then the sidebar toggle, then
   `TabStrip`. At the right end: the data marker, the layout switch, the bell, and the account
   avatar in the corner.
+- **Title bar below 768px (ADR-116).** No traffic lights. The marker shows its short word, with
+  the full label kept for screen readers. The layout switch is a button "Layout" that opens the
+  same group. The active tab is at least the strip's width less the "+". The bar stays 44px and
+  never scrolls sideways.
 - **Rail and sidebar.** shadcn `Sidebar collapsible="icon"` below the title bar (the
   `sidebar-16` pattern):
   - The header holds `KayMark` (the site's polygon), then Documentation and Lab.
@@ -263,7 +267,7 @@ const LIFT_PX = 6;
   - Title bar: `header[data-slot="title-bar"]`, button "Toggle sidebar", tablist "Open threads"
     (tab names are thread titles), button "Close <title>", button "New thread", group "Layout"
     with "Thread", "Browser" and "Canvas" (`aria-pressed`), button "Notifications", button
-    "Account".
+    "Account". Below 768px the group is inside the popover of button "Layout".
   - Sidebar: group label "Projects". Project rows are buttons named by the project, with
     `aria-expanded`. Each has a "+" named "New thread in <project>". Thread rows are links named
     by the title. Main rows carry `data-thread="main"`; child rows carry `data-thread="child"`
