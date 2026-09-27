@@ -136,6 +136,10 @@ async function onOwnPage(step, address, options, measure) {
   }
 }
 
+// Whether only `wide` of a workspace's panes is on screen, across most of the width.
+const paneAlone = (shown, wide) =>
+  Object.entries(shown).every(([name, value]) => (name === wide ? value >= 85 : value === 0));
+
 // The open threads, by the tablist the title bar names.
 const tabsOf = (own) => own.getByRole("tablist", { name: "Open threads" }).getByRole("tab");
 
@@ -1778,6 +1782,48 @@ try {
       return {
         ok: pannedAway === once && closed === once,
         detail: `after panning it away: ${pannedAway}; after closing it: ${closed}`,
+      };
+    },
+  );
+
+  // On a phone the workspace shows one pane at a time, the one the Layout switch names, across
+  // the whole width; the others stay mounted but inert, so a draft or a reply survives a switch.
+  await onOwnPage(
+    "on a phone the Layout switch shows one pane at a time, across the whole width",
+    "/t/t-001?scenario=demo",
+    { viewport: { width: 390, height: 844 } },
+    async (own) => {
+      await own.locator('[role="tabpanel"]:not([inert]) [aria-label="Compose canvas"]').waitFor();
+      const shares = () =>
+        own.evaluate(() => {
+          const width = document.documentElement.clientWidth;
+          const onTab = document.querySelector('[role="tabpanel"]:not([inert])');
+          const share = (el) => {
+            if (el === null || el.closest("[inert]") !== null) return 0;
+            const rect = el.getBoundingClientRect();
+            const seen = Math.min(rect.right, width) - Math.max(rect.left, 0);
+            return Math.round((Math.max(seen, 0) / width) * 100);
+          };
+          return {
+            thread: share(onTab.querySelector(".thread-panel")),
+            browser: share(onTab.querySelector('[aria-label="Browser"]')),
+            canvas: share(onTab.querySelector('[aria-label="Compose canvas"]')),
+          };
+        });
+      const layout = own.getByRole("group", { name: "Layout" });
+      const seen = {};
+      for (const pane of ["Canvas", "Thread", "Browser"]) {
+        await layout.getByRole("button", { name: pane }).click();
+        await own.waitForTimeout(400);
+        seen[pane] = await shares();
+      }
+      await own.screenshot({ path: path.join(OUT, "phone-browser.png") });
+      return {
+        ok:
+          paneAlone(seen.Canvas, "canvas") &&
+          paneAlone(seen.Thread, "thread") &&
+          paneAlone(seen.Browser, "browser"),
+        detail: JSON.stringify(seen),
       };
     },
   );
