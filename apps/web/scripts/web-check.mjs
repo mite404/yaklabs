@@ -924,6 +924,34 @@ try {
       };
     },
   );
+
+  await onOwnPage(
+    "the data marker is a button whose accessible description is its hint",
+    "/t/t-005?scenario=demo",
+    {},
+    async (own) => {
+      await tabsOf(own).first().waitFor({ timeout: 15_000 });
+      const cdp = await own.context().newCDPSession(own);
+      const { root } = await cdp.send("DOM.getDocument");
+      const { nodeId } = await cdp.send("DOM.querySelector", {
+        nodeId: root.nodeId,
+        selector: ':has(> [data-slot="data-marker"])',
+      });
+      const [node] = (await cdp.send("Accessibility.getPartialAXTree", { nodeId })).nodes;
+      const read = {
+        role: node.role?.value,
+        name: node.name?.value,
+        description: node.description?.value ?? "",
+      };
+      return {
+        ok:
+          read.role === "button" &&
+          read.name === "Mock: demo" &&
+          read.description.includes("Nothing here is saved"),
+        detail: JSON.stringify(read),
+      };
+    },
+  );
 } catch (error) {
   record("run", false, String(error));
   await shot("failure");
