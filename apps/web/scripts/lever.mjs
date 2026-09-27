@@ -73,7 +73,11 @@ export async function luminance(page, clip) {
 
 /** Runs each check (or those named by --only), prints PASS or FAIL, writes results.json. */
 export async function run(checks) {
-  const browser = await chromium.launch();
+  // Partial raster redraws only the part of a tile that changed, so an anti-aliased edge that
+  // straddles an earlier change keeps a trace of the page's loading order: two loads with the
+  // same paint commands then differ by a few levels at a rounded corner. Whole-tile raster makes
+  // a screenshot a function of the final page alone, which is what P7 compares.
+  const browser = await chromium.launch({ args: ["--disable-partial-raster"] });
   const results = [];
   for (const [id, check] of Object.entries(checks)) {
     if (ONLY.length > 0 && !ONLY.includes(id)) continue;
