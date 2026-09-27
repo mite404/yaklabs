@@ -7,7 +7,8 @@ import { LayoutSwitch } from "./layout-switch";
 import { useShell } from "./model";
 import { SIDEBAR_ID } from "./sidebar";
 import { TabStrip } from "./tab-strip";
-import { activeProjectName, ThreadMenu } from "./thread-menu";
+import { threadActions } from "./state";
+import { ThreadMenu } from "./thread-menu";
 
 // Decorative, as a desktop window's: they do nothing, and a screen reader never meets them. On
 // a phone the window is full-bleed, not a window, so they go; on the green bar they need no ring.
@@ -68,7 +69,7 @@ export function TitleBar({ theme, chrome }: Looks) {
         data-slot="project-name"
         className="min-w-0 truncate px-1 text-sm font-medium text-ink md:hidden"
       >
-        {activeProjectName(shell)}
+        {shell === null ? null : threadActions(shell.workspace, shell.active).name}
       </span>
       <TabStrip shell={shell} starting={starting} />
       <div className="flex shrink-0 items-center gap-2 max-md:contents">

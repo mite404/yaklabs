@@ -21,6 +21,7 @@ import {
   setPane,
   setSplit,
   stepBrowser,
+  threadActions,
   unreadCount,
   unsaved,
   viewOf,
@@ -252,5 +253,28 @@ describe("resume", () => {
   });
   it("finds nothing with no tabs open", () => {
     expect(resume({ ...OPEN, tabs: [] }, WS, null)).toBeNull();
+  });
+});
+
+describe("threadActions", () => {
+  it("names the project of the main on screen, and closes that main", () => {
+    expect(threadActions(WS, { main: PROFIT, focus: null })).toEqual({
+      name: "Demo store",
+      projectId: STORE,
+      closes: PROFIT,
+    });
+  });
+  it("names the main's project while a child of it is in focus", () => {
+    expect(threadActions(WS, { main: PROFIT, focus: SATURDAY }).name).toBe("Demo store");
+  });
+  it("acts on nothing with nothing on screen", () => {
+    expect(threadActions(WS, null)).toEqual({ name: null, projectId: undefined, closes: null });
+  });
+  it("names no project for a thread the workspace lacks, but still closes its tab", () => {
+    expect(threadActions(WS, { main: id("gone"), focus: null })).toEqual({
+      name: null,
+      projectId: undefined,
+      closes: id("gone"),
+    });
   });
 });

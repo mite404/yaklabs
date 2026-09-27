@@ -1,4 +1,3 @@
-import type { ProjectId, ThreadId, Workspace } from "@yaklabs/runtime";
 import { Button } from "@yaklabs/ui/components/button";
 import {
   DropdownMenu,
@@ -11,57 +10,47 @@ import {
 } from "@yaklabs/ui/components/dropdown-menu";
 import { Ellipsis } from "lucide-react";
 import type { Shell } from "./model";
+import { threadActions } from "./state";
 
-// The project a main thread lives in, or null when the thread is not a main in the workspace.
-function projectOf(ws: Workspace, main: ThreadId): { id: ProjectId; name: string } | null {
-  const thread = ws.threads.find((each) => each.id === main); // → ThreadSummary | undefined
-  if (thread?.place.kind !== "main") return null;
-  const { projectId } = thread.place;
-  return ws.projects.find((each) => each.id === projectId) ?? null; // → Project | null
+// The "⋯" itself, which only a phone shows.
+function MoreTrigger({ disabled }: { disabled: boolean }) {
+  return (
+    <DropdownMenuTrigger
+      disabled={disabled}
+      render={
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label="Thread and project actions"
+          className="rounded-[var(--radius)] text-soft-ink hover:text-ink md:hidden"
+        />
+      }
+    >
+      <Ellipsis aria-hidden="true" />
+    </DropdownMenuTrigger>
+  );
 }
 
-/** The name of the project the thread on screen belongs to, or null with nothing on screen. */
-export function activeProjectName(shell: Shell | null): string | null {
-  if (shell === null || shell.active === null) return null;
-  return projectOf(shell.workspace, shell.active.main)?.name ?? null;
-}
-
-/**
- * The phone bar's "⋯": what can be done to the thread on screen and its project, which on a
- * desktop live in the tab strip and the sidebar (ADR-116).
- */
-export function ThreadMenu({ shell }: { shell: Shell | null }) {
-  const active = shell?.active?.main ?? null;
-  const project = shell === null || active === null ? null : projectOf(shell.workspace, active);
+// The menu once the shell is ready: the thread on screen and its project.
+function MoreMenu({ shell }: { shell: Shell }) {
+  const actions = threadActions(shell.workspace, shell.active);
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger
-        disabled={shell === null}
-        render={
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label="Thread and project actions"
-            className="rounded-[var(--radius)] text-soft-ink hover:text-ink md:hidden"
-          />
-        }
-      >
-        <Ellipsis aria-hidden="true" />
-      </DropdownMenuTrigger>
+      <MoreTrigger disabled={false} />
       <DropdownMenuContent align="end" className="w-56">
         <DropdownMenuGroup>
-          <DropdownMenuLabel>{project?.name ?? "Threads"}</DropdownMenuLabel>
+          <DropdownMenuLabel>{actions.name ?? "Threads"}</DropdownMenuLabel>
           <DropdownMenuItem
             onClick={() => {
-              shell?.newThread(project?.id);
+              shell.newThread(actions.projectId);
             }}
           >
             New thread
           </DropdownMenuItem>
           <DropdownMenuItem
-            disabled={active === null}
+            disabled={actions.closes === null}
             onClick={() => {
-              if (active !== null) shell?.close(active);
+              if (actions.closes !== null) shell.close(actions.closes);
             }}
           >
             Close this thread
@@ -70,7 +59,7 @@ export function ThreadMenu({ shell }: { shell: Shell | null }) {
         <DropdownMenuSeparator />
         <DropdownMenuItem
           onClick={() => {
-            shell?.newProject();
+            shell.newProject();
           }}
         >
           New project
@@ -78,4 +67,19 @@ export function ThreadMenu({ shell }: { shell: Shell | null }) {
       </DropdownMenuContent>
     </DropdownMenu>
   );
+}
+
+/**
+ * The phone bar's "⋯": what can be done to the thread on screen and its project, which on a
+ * desktop live in the tab strip and the sidebar (ADR-116).
+ */
+export function ThreadMenu({ shell }: { shell: Shell | null }) {
+  if (shell === null) {
+    return (
+      <DropdownMenu>
+        <MoreTrigger disabled />
+      </DropdownMenu>
+    );
+  }
+  return <MoreMenu shell={shell} />;
 }
