@@ -212,6 +212,44 @@ export const CardCarryCancels: Story = {
   },
 };
 
+// What the thread's styles decide for how an element looks, all but the dimming of the card
+// left behind.
+function looks(element: Element): string {
+  const style = getComputedStyle(element);
+  return [
+    style.fontFamily,
+    style.fontSize,
+    style.lineHeight,
+    style.color,
+    style.backgroundColor,
+    style.margin,
+    style.transform,
+  ].join(" / ");
+}
+
+/**
+ * The card that rides the pointer is the card as the thread shows it: the same type, spacing,
+ * colours and height, though it is drawn outside the thread, and it holds still.
+ */
+export const CardCarryPicture: Story = {
+  args: { thread: threads.profit },
+  render: withCarryTarget,
+  play: async ({ canvasElement }) => {
+    const { handle, card, start } = carryScene(canvasElement);
+    await Promise.all(card.getAnimations({ subtree: true }).map(async (played) => played.finished));
+    handle.dispatchEvent(pointer("pointerdown", start.x, start.y, 1));
+    handle.dispatchEvent(pointer("pointermove", start.x + 20, start.y + 20, 1));
+    const picture = document.querySelector(".carry-ghost .card");
+    if (!picture) throw new Error("nothing rides the pointer");
+
+    await expect([picture, ...picture.querySelectorAll("*")].map(looks)).toEqual(
+      [card, ...card.querySelectorAll("*")].map(looks),
+    );
+    await expect(picture.getBoundingClientRect().height).toBe(card.getBoundingClientRect().height);
+    handle.dispatchEvent(pointer("pointerup", start.x + 20, start.y + 20));
+  },
+};
+
 /** Fallbacks and catalog limits must stay honest at thread size too. */
 export const Fallbacks: Story = { args: { thread: threads.fallbacks } };
 
