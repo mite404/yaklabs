@@ -69,6 +69,25 @@ async function chooseTheme(name) {
   await page.keyboard.press("Escape");
 }
 
+// A page of its own on a mock scenario (ADR-096), once `ready` is on screen in the tab shown;
+// its console errors count with the rest.
+async function openScenario(address, ready) {
+  const view = await browser.newPage({
+    viewport: { width: 1440, height: 900 },
+    reducedMotion: "reduce",
+  });
+  view.on("console", (message) => {
+    if (message.type() === "error") errors.push(message.text());
+  });
+  view.on("pageerror", (error) => errors.push(String(error)));
+  await view.goto(`${BASE}${address}`, { waitUntil: "load" });
+  await view
+    .locator(`[role="tabpanel"]:not([inert]) ${ready}`)
+    .first()
+    .waitFor({ timeout: 15_000 });
+  return view;
+}
+
 try {
   await page.goto(`${BASE}/`, { waitUntil: "load" });
   const title = page.getByRole("heading", { name: "Last week's profit by day" });
@@ -632,6 +651,37 @@ try {
     `${spoiled.length} file spoiled; ${reason.replaceAll(/\s+/g, " ").slice(0, 140)}`,
   );
   await device.close();
+
+  // A lane title longer than its bar ends in an ellipsis, not a letter cut in half: the box
+  // that holds the text is the one that clips it, since only a block draws the ellipsis.
+  const long = await openScenario("/t/t-013?scenario=long", "article .thread-title");
+  const laneTitles = await long
+    .locator('[role="tabpanel"]:not([inert]) article .thread-title')
+    .evaluateAll((els) =>
+      els.map((el) => {
+        const bar = el.closest(".thread-header").getBoundingClientRect();
+        return {
+          inBar: el.getBoundingClientRect().right <= bar.right,
+          cut: el.scrollWidth > el.clientWidth,
+          ellipsis: getComputedStyle(el).textOverflow === "ellipsis",
+        };
+      }),
+    );
+  await long
+    .locator('[role="tabpanel"]:not([inert]) article .thread-header')
+    .first()
+    .screenshot({ path: path.join(OUT, "lane-title-long.png") });
+  await long.close();
+  const inBar = laneTitles.filter((each) => each.inBar);
+  const cutTitles = laneTitles.filter((each) => each.cut);
+  const withEllipsis = cutTitles.filter((each) => each.ellipsis);
+  record(
+    "a lane title too long for its bar stays in the bar and ends in an ellipsis",
+    cutTitles.length > 0 &&
+      inBar.length === laneTitles.length &&
+      withEllipsis.length === cutTitles.length,
+    `${laneTitles.length} titles, ${inBar.length} in their bar, ${cutTitles.length} cut, ${withEllipsis.length} with an ellipsis`,
+  );
 } catch (error) {
   record("run", false, String(error));
   await shot("failure");

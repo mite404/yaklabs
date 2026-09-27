@@ -13,6 +13,20 @@
   }
 }
 
+/* A lane's title clips with an ellipsis where it outgrows its bar (ADR-097). The rename button
+   holds the text, and the heading cannot put an ellipsis inside a button, which lays out as one
+   unbreakable box, so the button clips as a block of its own, held to the heading's width
+   since a button shrinks to its text even as a block. Outside every layer on purpose: the
+   catalog's thread.css resets the button with `all: unset` outside every layer too, which no
+   layered rule can outrank. */
+.lane .thread-header .thread-title {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
 /* The window's decorative traffic lights (ADR-094): a desktop window's own colours, the one
    place the app draws something that is not Kay's; the same in either theme, as the OS's are. */
 :root {
@@ -235,7 +249,7 @@
     opacity: 0;
   }
   /* The title hugs its text so the whole thing shows at rest; it only clips with an ellipsis
-     once it outgrows the bar itself. */
+     once it outgrows the bar itself (the rename button's own clip is at the top of this file). */
   .lane .thread-header h2 {
     width: fit-content;
     max-width: 100%;
