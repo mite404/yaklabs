@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, type RefObject } from "react";
+import { useLayoutEffect, useRef, type RefObject } from "react";
 import type { SharedCard } from "./share";
 
 /** What a carry holds: a card lifted out of a thread, or the text of a highlight. */
@@ -392,29 +392,45 @@ export function acceptCarry(element: Element, target: CarryTarget): () => void {
   };
 }
 
+// A target that hands every call to whichever target `latest` holds when the call comes.
+function forwardTo(latest: RefObject<CarryTarget>): CarryTarget {
+  return {
+    over: (carried, at) => latest.current.over(carried, at),
+    leave: () => {
+      latest.current.leave();
+    },
+    drop: (carried, at) => {
+      latest.current.drop(carried, at);
+    },
+  };
+}
+
 /**
- * `acceptCarry` for the element in `ref` while it is mounted. The latest `target` answers, so
- * it may be a new object on every render.
+ * `acceptCarry` for the element in `ref` while it is mounted, including one that mounts after
+ * the component or replaces the first. The latest `target` answers, so it may be a new object
+ * on every render.
  */
 export function useCarryTarget(ref: RefObject<HTMLElement | null>, target: CarryTarget): void {
   const latest = useRef(target);
+  // The element registered now and the function that stops it.
+  const registered = useRef<{ element: HTMLElement; stop: () => void } | null>(null);
+  // A ref's element can change on any commit without the ref changing, so every commit looks.
   useLayoutEffect(() => {
     latest.current = target;
-  });
-  useEffect(() => {
     const element = ref.current;
-    return element
-      ? acceptCarry(element, {
-          over: (carried, at) => latest.current.over(carried, at),
-          leave: () => {
-            latest.current.leave();
-          },
-          drop: (carried, at) => {
-            latest.current.drop(carried, at);
-          },
-        })
-      : undefined;
-  }, [ref]);
+    if (registered.current?.element === element) return;
+    registered.current?.stop();
+    registered.current = element
+      ? { element, stop: acceptCarry(element, forwardTo(latest)) }
+      : null;
+  });
+  useLayoutEffect(
+    () => () => {
+      registered.current?.stop();
+      registered.current = null;
+    },
+    [],
+  );
 }
 
 /**
