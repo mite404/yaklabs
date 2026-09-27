@@ -172,6 +172,10 @@ export const CardCarry: Story = {
     if (!ghost) throw new Error("nothing rides the pointer");
     await expect(getComputedStyle(ghost).opacity).toBe("0.85");
     await expect(getComputedStyle(ghost).pointerEvents).toBe("none");
+    const field = within(canvasElement).getByRole("textbox", { name: "Message" });
+    field.focus();
+    field.blur();
+    await expect(html).toHaveAttribute("data-carrying", "card");
 
     target.dispatchEvent(pointer("pointerup", drop.x, drop.y));
     await expect(html).not.toHaveAttribute("data-carrying");
