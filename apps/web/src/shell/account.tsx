@@ -18,6 +18,9 @@ import { env } from "../env";
 import type { ChromeChoice, ChromeStyle } from "../chrome";
 import type { ThemeChoice, ThemePreference } from "../theme";
 
+// What the account menu lets the visitor change: the theme and the title bar's look.
+export type Looks = { theme: ThemeChoice; chrome: ChromeChoice };
+
 const THEMES: { value: ThemePreference; label: string }[] = [
   { value: "light", label: "Light" },
   { value: "dark", label: "Dark" },
@@ -102,7 +105,7 @@ function AccountMenu({ face, children }: { face: ReactNode; children: ReactNode 
 }
 
 // Signed in with WorkOS (ADR-084): the picture or initials, the email, and the way out.
-function WorkOsAccount({ theme, chrome }: { theme: ThemeChoice; chrome: ChromeChoice }) {
+function WorkOsAccount({ theme, chrome }: Looks) {
   const { user, signOut } = useAuth();
   if (user === null) return null;
   const face = (
@@ -136,7 +139,7 @@ function WorkOsAccount({ theme, chrome }: { theme: ThemeChoice; chrome: ChromeCh
 
 // A build without sign-in: Kay's face, the one person who is always there (ADR-114), and a
 // menu that says sign-in is off. A signed-in account keeps its own face.
-function LocalAccount({ theme, chrome }: { theme: ThemeChoice; chrome: ChromeChoice }) {
+function LocalAccount({ theme, chrome }: Looks) {
   const face = (
     <>
       <AvatarImage src="/kay/kay-face.webp" alt="" />

@@ -1,8 +1,6 @@
 import { SidebarTrigger, useSidebar } from "@yaklabs/ui/components/sidebar";
 import { useRuntimeState } from "../runtime";
-import type { ChromeChoice } from "../chrome";
-import type { ThemeChoice } from "../theme";
-import { Account } from "./account";
+import { Account, type Looks } from "./account";
 import { Bell } from "./bell";
 import { DataMarker } from "./data-marker";
 import { LayoutSwitch } from "./layout-switch";
@@ -54,7 +52,7 @@ function SidebarToggle() {
  * ADR-115). On a phone the tabs take a row of their own below, so neither they nor the controls
  * are squeezed off the screen.
  */
-export function TitleBar({ theme, chrome }: { theme: ThemeChoice; chrome: ChromeChoice }) {
+export function TitleBar({ theme, chrome }: Looks) {
   const shell = useShell();
   const starting = useRuntimeState().kind === "starting";
   return (
