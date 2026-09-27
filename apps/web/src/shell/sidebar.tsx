@@ -5,9 +5,10 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from "@yaklabs/ui/components/sidebar";
 import { ArrowUpRight, BookOpen, FlaskConical } from "lucide-react";
-import type { ReactElement, ReactNode } from "react";
+import { useEffect, useRef, type ReactElement, type ReactNode } from "react";
 import { Link, useLocation } from "react-router";
 import { usePaths } from "../runtime";
 import { ProjectTree } from "./project-tree";
@@ -54,6 +55,19 @@ function Place({
   );
 }
 
+// On a phone the sidebar is a modal sheet over the page, so every arrival somewhere new (by a
+// row, a place or a "+") closes it: what was chosen is what shows.
+function useSheetClosesOnArrival(): void {
+  const { key } = useLocation();
+  const { setOpenMobile } = useSidebar();
+  const shownAt = useRef(key);
+  useEffect(() => {
+    if (shownAt.current === key) return;
+    shownAt.current = key;
+    setOpenMobile(false);
+  }, [key, setOpenMobile]);
+}
+
 /** The id of the sidebar's navigation landmark, which the title bar's toggle controls. */
 export const SIDEBAR_ID = "sidebar";
 
@@ -65,6 +79,7 @@ export const SIDEBAR_ID = "sidebar";
 export function AppSidebar() {
   const { hrefTo } = usePaths();
   const { pathname } = useLocation();
+  useSheetClosesOnArrival();
   return (
     <Sidebar
       collapsible="icon"

@@ -784,6 +784,21 @@ try {
       };
     },
   );
+
+  await onOwnPage(
+    "on a phone, choosing a thread in the sidebar sheet closes the sheet",
+    "/t/t-005?scenario=demo",
+    { viewport: { width: 390, height: 844 } },
+    async (own) => {
+      await tabsOf(own).first().waitFor({ timeout: 15_000 });
+      await own.getByRole("button", { name: "Toggle sidebar" }).click();
+      await own.getByRole("dialog").getByRole("link", { name: "Last week's sales" }).click();
+      await own.waitForURL(/\/t\/t-001/);
+      await own.waitForTimeout(600);
+      const sheets = await own.getByRole("dialog").count();
+      return { ok: sheets === 0, detail: `${sheets} sheet open after choosing a thread` };
+    },
+  );
 } catch (error) {
   record("run", false, String(error));
   await shot("failure");
