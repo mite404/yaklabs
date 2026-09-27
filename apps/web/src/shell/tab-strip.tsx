@@ -14,19 +14,24 @@ function tabId(main: ThreadId): string {
 }
 
 // One open thread: its layout's glyph and title, and a close beside it (APG: Delete closes a
-// focused tab, and a middle click closes any).
+// focused tab, and a middle click closes any). On the green bar a tab is clear at rest, fills on
+// hover, and the active one is the cream pill (ADR-105).
 function Tab({ thread, shell }: { thread: ThreadSummary; shell: Shell }) {
   const { Icon } = LAYOUTS[viewOf(shell.doc, thread.id).pane];
+  const active = shell.active?.main === thread.id;
   const close = () => {
     shell.close(thread.id);
   };
   return (
-    <div role="presentation" className="group/tab relative flex w-[220px] min-w-28 shrink">
+    <div
+      role="presentation"
+      className={`group/tab relative flex w-[220px] min-w-28 shrink ${active ? "chrome-pill" : ""}`}
+    >
       <TabsTrigger
         value={thread.id}
         id={tabId(thread.id)}
         aria-controls={panelId(thread.id)}
-        className="tab h-[30px] w-full min-w-0 flex-none justify-start gap-2 rounded-[var(--radius)] border-hairline/0 bg-paper-deep px-2.5 text-xs font-normal group-hover/tab:pr-7 data-active:pr-7 text-soft-ink hover:text-ink data-active:border-hairline data-active:bg-[var(--control-bg)] data-active:text-ink dark:text-soft-ink dark:data-active:border-hairline dark:data-active:bg-[var(--control-bg)]"
+        className="tab h-[30px] w-full min-w-0 flex-none justify-start gap-2 rounded-[var(--radius)] bg-transparent px-2.5 text-xs font-normal text-soft-ink group-hover/tab:pr-7 hover:bg-paper-deep hover:text-ink data-active:bg-[var(--chrome-pill)] data-active:pr-7 data-active:text-ink dark:text-soft-ink dark:hover:text-ink dark:data-active:border-transparent dark:data-active:bg-[var(--chrome-pill)] dark:data-active:text-ink"
         onAuxClick={(event) => {
           if (event.button === 1) close();
         }}

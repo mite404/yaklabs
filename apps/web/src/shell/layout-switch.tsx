@@ -29,7 +29,7 @@ export function LayoutSwitch({ shell }: { shell: Shell | null }) {
                 <ToggleGroupItem
                   value={each}
                   aria-label={label}
-                  className="size-7 min-w-7 rounded-[3px] px-0 text-soft-ink hover:text-ink aria-pressed:bg-paper-deep aria-pressed:text-ink"
+                  className="size-7 min-w-7 rounded-[3px] px-0 text-soft-ink hover:text-ink aria-pressed:bg-[var(--chrome-pill)] aria-pressed:text-[var(--on-chrome-pill)]"
                 />
               }
             >

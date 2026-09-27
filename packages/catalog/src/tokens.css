@@ -100,6 +100,22 @@
   --awaiting-label-bg: var(--yak-orange);
   --awaiting-label-ink: var(--yak-brown-ink);
 
+  /* The window chrome (ADR-105): the title bar is a deep green in either theme, as a desktop
+     window's frame is, and everything on it is cream. Ratios are against --chrome. */
+  --chrome: #3b423c; /* Ethan's mock, sampled (R9); confirm the hex (Q3) */
+  --on-chrome: var(--yak-cream); /* 8.98:1 */
+  --on-chrome-soft: color-mix(in srgb, var(--yak-cream) 72%, var(--chrome)); /* 5.56:1 */
+  /* hover fill: 1.25:1 against the bar, so a skeleton shows; cream on it 7.21:1 */
+  --chrome-hover: color-mix(in srgb, var(--yak-cream) 8%, var(--chrome));
+  --chrome-line: color-mix(in srgb, var(--yak-cream) 18%, transparent); /* lines only */
+  /* "Selected" on the bar, the active tab and the pressed layout: a cream pill, 8.98:1
+     against the bar in either theme, with the night green on it (16.1:1). */
+  --chrome-pill: var(--yak-cream);
+  --on-chrome-pill: var(--yak-night); /* 16.1:1 */
+  --on-chrome-pill-soft: color-mix(in srgb, var(--yak-night) 72%, var(--yak-cream)); /* 6.93:1 */
+  /* the close button's hover on the pill; soft ink on it 5.89:1 */
+  --chrome-pill-hover: color-mix(in srgb, var(--yak-night) 8%, var(--yak-cream));
+
   --radius-card: 14px; /* the catalog card and the thread panel; shadcn owns --radius (ADR-082) */
   --space: 24px;
 }
@@ -281,6 +297,44 @@ button:hover {
   background: var(--attention-bg);
   color: var(--ink);
 }
+/* The window chrome (ADR-105): the title bar redefines the roles, as the attention surface
+   does, so every primitive on it comes out cream on green with no colours of its own. shadcn's
+   roles (packages/ui globals.css) resolve on the root, so the ones the bar's primitives read are
+   restated here. Menus and tooltips open in portals outside the bar and keep the page's roles. */
+.chrome-surface {
+  --ink: var(--on-chrome);
+  --soft-ink: var(--on-chrome-soft);
+  --paper-deep: var(--chrome-hover);
+  --hairline: var(--chrome-line);
+  --rule: var(--on-chrome-soft);
+  --focus: var(--on-chrome); /* 8.98:1; the page's grey ring would be 2.98:1 here */
+  --on-ink: var(--on-chrome-pill);
+  --foreground: var(--ink);
+  --muted: var(--paper-deep);
+  --muted-foreground: var(--soft-ink);
+  --accent: var(--paper-deep);
+  --accent-foreground: var(--ink);
+  --primary: var(--ink);
+  --primary-foreground: var(--on-ink);
+  --border: var(--hairline);
+  --input: var(--rule);
+  --ring: var(--focus);
+  background: var(--chrome);
+  color: var(--ink);
+}
+/* The pill: a piece of cream on the bar, with the night inks back on it. The ring is not
+   remapped, since it draws outside the pill, on the bar. */
+.chrome-surface .chrome-pill {
+  --ink: var(--on-chrome-pill);
+  --soft-ink: var(--on-chrome-pill-soft);
+  --paper-deep: var(--chrome-pill-hover);
+  --foreground: var(--ink);
+  --muted: var(--paper-deep);
+  --muted-foreground: var(--soft-ink);
+  --accent: var(--paper-deep);
+  --accent-foreground: var(--ink);
+}
+
 /* A tile on the attention surface: its own fill and text, so choices stand apart by colour. */
 .attention-surface .tile {
   --ink: var(--tile-ink);

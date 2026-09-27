@@ -8,7 +8,8 @@ import { LayoutSwitch } from "./layout-switch";
 import { useShell } from "./model";
 import { TabStrip } from "./tab-strip";
 
-// Decorative, as a desktop window's: they do nothing, and a screen reader never meets them.
+// Decorative, as a desktop window's: they do nothing, and a screen reader never meets them. On
+// the green bar they need no ring to stand out.
 const LIGHTS = ["close", "minimise", "zoom"] as const;
 
 function TrafficLights() {
@@ -17,7 +18,7 @@ function TrafficLights() {
       {LIGHTS.map((light) => (
         <span
           key={light}
-          className="size-3 rounded-full border border-hairline"
+          className="size-3 rounded-full"
           style={{ background: `var(--traffic-${light})` }}
         />
       ))}
@@ -36,7 +37,7 @@ export function TitleBar({ theme }: { theme: ThemeChoice }) {
   return (
     <header
       data-slot="title-bar"
-      className="flex h-11 shrink-0 items-center gap-2 bg-paper pr-3 select-none"
+      className="chrome-surface flex h-11 shrink-0 items-center gap-2 pr-3 select-none"
     >
       <TrafficLights />
       <SidebarTrigger
