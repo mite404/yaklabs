@@ -78,6 +78,30 @@ afterEach(() => {
   document.body.replaceChildren();
 });
 
+describe("a press on a handle inside another handle", () => {
+  it("carries the inner one and still reaches the page", () => {
+    const outer = handle("outer", 20, 20);
+    const inner = handle("inner", 0, 0);
+    Object.assign(inner.style, { position: "absolute", left: "10px", top: "10px", width: "40px" });
+    outer.append(inner);
+    const pressesHeard: EventTarget[] = [];
+    const hear = (event: Event) => {
+      if (event.target) pressesHeard.push(event.target);
+    };
+    document.addEventListener("pointerdown", hear);
+
+    const start = middleOf(inner);
+    inner.dispatchEvent(pointer("pointerdown", start.x, start.y, 1));
+    inner.dispatchEvent(pointer("pointermove", start.x + 20, start.y, 1));
+    expect(ghosts()).toEqual(["inner"]);
+    expect(inner).toHaveAttribute("data-lifted");
+    expect(outer).not.toHaveAttribute("data-lifted");
+    inner.dispatchEvent(pointer("pointerup", start.x + 20, start.y));
+    document.removeEventListener("pointerdown", hear);
+    expect(pressesHeard).toEqual([inner]);
+  });
+});
+
 describe("a carry whose target throws", () => {
   it("still ends, and the next carry starts clean", () => {
     const first = handle("first", 20, 20);

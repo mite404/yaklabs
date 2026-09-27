@@ -298,6 +298,50 @@ export const DictationLiveMicrophone: Story = {
  *  the agent's sentence update instantly, and the choice rides along with the next message. */
 export const InteractiveProfit: Story = { args: { thread: threads.profit } };
 
+function nextFrame(): Promise<number> {
+  return new Promise((resolve) => requestAnimationFrame(resolve));
+}
+
+// The thread lands on its latest turn as it mounts and stays pinned there as its fonts load, and
+// any scroll closes an open menu (Menu), so a menu opened before those scrolls arrive would close
+// by itself: wait for the fonts, then for frames with no scroll in them.
+async function scrollsSettled(): Promise<void> {
+  await document.fonts.ready;
+  let scrolled = true;
+  const note = () => {
+    scrolled = true;
+  };
+  window.addEventListener("scroll", note, true);
+  while (scrolled) {
+    scrolled = false;
+    await nextFrame();
+    await nextFrame();
+  }
+  window.removeEventListener("scroll", note, true);
+}
+
+/**
+ * A press on a card's header closes its open share menu, as a press anywhere else does: the
+ * header claims the press for a carry without hiding it from the page.
+ */
+export const ShareMenuClosesOnHeaderPress: Story = {
+  args: { thread: threads.profit },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const [share] = canvas.getAllByRole("button", { name: "Share this card" });
+    const header = share?.closest("header");
+    if (!share || !header) throw new Error("no card to share");
+    await scrollsSettled();
+    await userEvent.click(share);
+    const menu = canvas.getByRole("menu", { name: "Share this card" });
+    await waitFor(() => expect(menu).toBeVisible());
+
+    await userEvent.click(within(header).getByRole("heading"));
+    await expect(canvas.queryByRole("menu")).toBeNull();
+    await expect(document.documentElement).not.toHaveAttribute("data-carrying");
+  },
+};
+
 export const InteractiveProfitNarrow: Story = {
   args: { thread: threads.profit, width: 420 },
 };
