@@ -241,6 +241,7 @@ export const shellChecks = {
     await titleBar(page).screenshot({ path: shotPath("P9-title-bar") });
     return {
       ok:
+        alone === 100 &&
         browserShown &&
         canvasBack &&
         draft === "draft kept" &&
@@ -248,8 +249,7 @@ export const shellChecks = {
         afterReload.tabs === 2 &&
         afterReload.active.includes("New thread") &&
         afterReload.browser &&
-        canvasAfter &&
-        alone === 100,
+        canvasAfter,
       detail: `browser ${browserShown}; back to canvas ${canvasBack} with draft ${JSON.stringify(draft)}; browser again ${browserBack}; after reload ${JSON.stringify(afterReload)}, canvas ${canvasAfter}; the thread alone fills ${alone}% of its tab`,
     };
   },
