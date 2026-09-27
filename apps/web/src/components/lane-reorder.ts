@@ -127,13 +127,17 @@ function liftedOf(drag: Drag | null): [Lift | null, Move | null] {
   return drag?.move ? [drag.lift, drag.move] : [null, null];
 }
 
-// What a press on a lane measured, or nothing when it was not on a grip. A press something
-// nearer already claimed is theirs: a card's header inside a thread lane arms a carry, which
-// claims its press (preventDefault) rather than stopping it, and the lane must not lift too.
+// Whether a press takes hold of its lane: the primary button on a grip, unclaimed. A press
+// something nearer already claimed is theirs: a card's header inside a thread lane arms a
+// carry, which claims its press (preventDefault) rather than stopping it.
+function takesLane(event: PointerEvent<HTMLElement>): boolean {
+  return event.button === 0 && !event.isDefaultPrevented() && isGrip(event.target);
+}
+
+// What a press on a lane measured, or nothing when it does not take hold of the lane.
 function liftAt(event: PointerEvent<HTMLElement>, id: LaneId, index: number): Lift | null {
   const row = event.currentTarget.closest("section");
-  if (event.button !== 0 || event.isDefaultPrevented() || !row || !isGrip(event.target))
-    return null;
+  if (row === null || !takesLane(event)) return null;
   const lane = event.currentTarget;
   return {
     id,

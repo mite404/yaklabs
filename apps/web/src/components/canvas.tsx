@@ -13,7 +13,7 @@ import {
   type RefObject,
   type WheelEvent,
 } from "react";
-import { useLanding } from "./canvas-carry";
+import { useLanding, type Landing } from "./canvas-carry";
 import { LaneSeparator } from "./lane-separator";
 import { displacement, useReorder, type LaneHandlers } from "./lane-reorder";
 
@@ -139,6 +139,20 @@ function OpenSpace({ lit, onBlank }: { lit: boolean; onBlank: () => void }) {
   );
 }
 
+// The full-height ink line in the gap a carry would land in; none at the end, where the open
+// space lights up instead.
+function DropMarker({ landing }: { landing: Landing | null }) {
+  if (landing === null || landing.marker === null) return null;
+  return (
+    <div
+      data-drop-marker=""
+      aria-hidden="true"
+      className="pointer-events-none absolute inset-y-4 w-0.5 -translate-x-1/2 rounded-full bg-ink"
+      style={{ left: landing.marker }}
+    />
+  );
+}
+
 // Whether a wheel landed on a lane, which scrolls itself, rather than on the ground.
 function onLane(event: WheelEvent<HTMLElement>): boolean {
   return event.nativeEvent
@@ -190,32 +204,42 @@ function LaneRow({ lanes, actions }: { lanes: LaneView[]; actions: LaneActions }
   ));
 }
 
-// Brings the focused lane into view and flashes it once each time the focus arrives on it, as
-// soon as the lane is on the canvas.
+// A lane on the canvas by its id, or null while it is not there.
+function laneIn(row: HTMLElement | null, id: LaneId): HTMLElement | null {
+  const lane = row?.querySelector(`[data-lane="${CSS.escape(id)}"]`);
+  return lane instanceof HTMLElement ? lane : null;
+}
+
+// Brings a lane into view and flashes it once.
+function flash(lane: HTMLElement): void {
+  const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+  lane.scrollIntoView({ block: "nearest", inline: "center", behavior: still ? "auto" : "smooth" });
+  lane.dataset.flash = "";
+  const settle = () => {
+    delete lane.dataset.flash;
+  };
+  lane.addEventListener("animationend", settle, { once: true });
+}
+
+// Flashes the focused lane each time the focus arrives on it, as soon as the lane is on the
+// canvas: a lane that arrives after the focus did (reopened for it) flashes when it lands.
 function useFocusedLane(
   row: RefObject<HTMLElement | null>,
   focus: LaneId | null,
-  present: boolean,
+  lanes: LaneView[],
 ) {
   const shown = useRef<LaneId | null>(null);
+  const target = lanes.some((lane) => lane.id === focus) ? focus : null;
   useEffect(() => {
-    if (focus === null) shown.current = null;
-    if (focus === null || !present || shown.current === focus) return;
-    const lane = row.current?.querySelector(`[data-lane="${CSS.escape(focus)}"]`);
-    if (!(lane instanceof HTMLElement)) return;
-    shown.current = focus;
-    const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
-    lane.scrollIntoView({
-      block: "nearest",
-      inline: "center",
-      behavior: still ? "auto" : "smooth",
-    });
-    lane.dataset.flash = "";
-    const settle = () => {
-      delete lane.dataset.flash;
-    };
-    lane.addEventListener("animationend", settle, { once: true });
-  }, [row, focus, present]);
+    if (target === null) {
+      shown.current = null;
+      return;
+    }
+    const lane = shown.current === target ? null : laneIn(row.current, target);
+    if (lane === null) return;
+    shown.current = target;
+    flash(lane);
+  }, [row, target]);
 }
 
 /**
@@ -243,11 +267,7 @@ export function Canvas({
   const row = useRef<HTMLElement>(null);
   const pan = usePan();
   const landing = useLanding(row, onCarry);
-  useFocusedLane(
-    row,
-    focus,
-    lanes.some((lane) => lane.id === focus),
-  );
+  useFocusedLane(row, focus, lanes);
   return (
     // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- the ground pans by pointer and wheel; the keyboard reaches every lane and the Create blank thread button
     <section
@@ -262,15 +282,8 @@ export function Canvas({
       onPointerCancel={pan.onPointerUp}
     >
       <LaneRow lanes={lanes} actions={actions} />
-      {landing !== null && landing.marker !== null && (
-        <div
-          data-drop-marker=""
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-y-4 w-0.5 -translate-x-1/2 rounded-full bg-ink"
-          style={{ left: landing.marker }}
-        />
-      )}
-      <OpenSpace lit={landing !== null && landing.marker === null} onBlank={onBlank} />
+      <DropMarker landing={landing} />
+      <OpenSpace lit={landing?.marker === null} onBlank={onBlank} />
       {/* The ground goes on for a pane past the open space: the canvas has no right edge. */}
       {lanes.length > 0 && <div data-ground="" aria-hidden="true" className="w-full shrink-0" />}
     </section>

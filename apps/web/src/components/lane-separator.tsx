@@ -3,9 +3,15 @@ import { trackHintLine } from "./divider";
 
 // A lane never gets narrower than this, so the thread inside keeps a readable measure.
 const LANE_MIN_PX = 320;
-// How far one arrow key moves a separator; with Shift, how many slots it moves the lane.
-const KEY_STEPS: Partial<Record<string, number>> = { ArrowLeft: -24, ArrowRight: 24 };
-const KEY_MOVES: Partial<Record<string, number>> = { ArrowLeft: -1, ArrowRight: 1 };
+// What an arrow does on a separator: resize the lane before it by some px, or, with Shift,
+// move that lane some slots.
+type KeyAction = { kind: "resize"; by: number } | { kind: "move"; step: number };
+const KEYS: Partial<Record<string, KeyAction>> = {
+  ArrowLeft: { kind: "resize", by: -24 },
+  ArrowRight: { kind: "resize", by: 24 },
+  "Shift+ArrowLeft": { kind: "move", step: -1 },
+  "Shift+ArrowRight": { kind: "move", step: 1 },
+};
 
 // The lane a separator resizes is the one before it in the row.
 function laneBefore(separator: HTMLElement): HTMLElement | undefined {
@@ -51,18 +57,23 @@ function useGapDrag(onResize: (px: number, kept: boolean) => void) {
   };
 }
 
+// The key as KEYS names it: "ArrowLeft", or "Shift+ArrowLeft" with Shift held.
+function keyName(event: KeyboardEvent<HTMLDivElement>): string {
+  return event.shiftKey ? `Shift+${event.key}` : event.key;
+}
+
 // Arrows resize the lane before the gap, kept at once; with Shift they move it a slot instead.
 function keyOn(
   event: KeyboardEvent<HTMLDivElement>,
   onResize: (px: number, kept: boolean) => void,
   onMove: (step: number) => void,
 ): void {
+  const action = KEYS[keyName(event)];
   const lane = laneBefore(event.currentTarget);
-  const step = (event.shiftKey ? KEY_MOVES : KEY_STEPS)[event.key];
-  if (!lane || step === undefined) return;
+  if (action === undefined || lane === undefined) return;
   event.preventDefault();
-  if (event.shiftKey) onMove(step);
-  else onResize(clampWidth(lane.getBoundingClientRect().width + step), true);
+  if (action.kind === "move") onMove(action.step);
+  else onResize(clampWidth(lane.getBoundingClientRect().width + action.by), true);
 }
 
 /**
