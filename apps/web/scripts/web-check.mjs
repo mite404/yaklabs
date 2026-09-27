@@ -952,6 +952,23 @@ try {
       };
     },
   );
+
+  await onOwnPage(
+    "a thread page and /lab each have exactly one main landmark",
+    "/t/t-005?scenario=demo",
+    {},
+    async (own) => {
+      await tabsOf(own).first().waitFor({ timeout: 15_000 });
+      const onThread = await own.getByRole("main").count();
+      await own.goto(`${BASE}/lab?scenario=demo`, { waitUntil: "load" });
+      await own.getByText("Useful answers.").waitFor({ timeout: 10_000 });
+      const onLab = await own.getByRole("main").count();
+      return {
+        ok: onThread === 1 && onLab === 1,
+        detail: `${onThread} on a thread, ${onLab} on /lab`,
+      };
+    },
+  );
 } catch (error) {
   record("run", false, String(error));
   await shot("failure");
