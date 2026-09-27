@@ -340,9 +340,10 @@ button:hover {
   background: var(--chrome);
   color: var(--ink);
 }
-/* The pill: a piece of cream on the bar, with the night inks back on it. The ring is not
-   remapped, since it draws outside the pill, on the bar. */
+/* The pill: a piece of cream on the bar, with the night inks back on it, the focus ring too,
+   since a tab draws its ring inside itself. */
 .chrome-surface .chrome-pill {
+  --focus: var(--on-chrome-pill); /* 16.1:1 on the pill */
   --ink: var(--on-chrome-pill);
   --soft-ink: var(--on-chrome-pill-soft);
   --paper-deep: var(--chrome-pill-hover);
