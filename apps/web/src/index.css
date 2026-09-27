@@ -116,6 +116,12 @@
     background-color: var(--bg);
     background-image: radial-gradient(var(--hairline) 1px, transparent 1px);
     background-size: 18px 18px;
+    /* The canvas fills the window's bottom right corner, which the window rounds at 12px
+       inside its 1px border from md up (window.tsx), so the canvas rounds that corner the same
+       way, and a carry's ring below follows the curve rather than being cut off by it. */
+    @variant md {
+      border-bottom-right-radius: calc(12px - 1px);
+    }
   }
   /* The row's scrollbar stays in view, thin, in the site's rule colour: the ground runs on past
      the last lane, and the bar is how the eye knows. */

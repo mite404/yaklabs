@@ -866,6 +866,58 @@ try {
     afterStart === "Message in New thread",
     afterStart,
   );
+
+  // A carry over the canvas rings it in olive all the way round. The canvas fills the window's
+  // rounded corner at the bottom right, so the ring has to follow that curve or be cut off by
+  // it: some pixel on the corner's diagonal is the ring's olive, as the straight edge is.
+  const ringed = await openScenario("/t/t-001?scenario=demo", "article .thread-panel");
+  const ringTab = ringed.locator('[role="tabpanel"]:not([inert])');
+  const cardBar = await ringTab
+    .locator(".thread-panel")
+    .first()
+    .locator(".card-heading")
+    .last()
+    .boundingBox();
+  const ringCanvas = await ringTab.getByRole("region", { name: "Compose canvas" }).boundingBox();
+  await ringed.mouse.move(cardBar.x + 20, cardBar.y + cardBar.height / 2);
+  await ringed.mouse.down();
+  await ringed.mouse.move(cardBar.x + 40, cardBar.y + cardBar.height / 2 + 5, { steps: 5 });
+  await ringed.mouse.move(ringCanvas.x + 120, ringCanvas.y + 200, { steps: 15 });
+  await ringed.waitForTimeout(300);
+  const frame = await ringed.locator('[data-slot="window"]').first().boundingBox();
+  const cornerClip = { x: frame.x + frame.width - 16, y: frame.y + frame.height - 16 };
+  const corner = await ringed.screenshot({ clip: { ...cornerClip, width: 16, height: 16 } });
+  await ringed.screenshot({
+    path: path.join(OUT, "canvas-ring-corner.png"),
+    clip: { x: cornerClip.x - 24, y: cornerClip.y - 24, width: 40, height: 40 },
+  });
+  // How far each pixel on the diagonal, and one on the bottom edge, is from the olive.
+  const fromOlive = await ringed.evaluate(async (b64) => {
+    const bitmap = await createImageBitmap(
+      await (await fetch(`data:image/png;base64,${b64}`)).blob(),
+    );
+    const context = new OffscreenCanvas(bitmap.width, bitmap.height).getContext("2d");
+    context.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--olive");
+    context.fillRect(0, 0, 1, 1);
+    const olive = context.getImageData(0, 0, 1, 1).data;
+    context.drawImage(bitmap, 0, 0);
+    const distance = (x, y) => {
+      const pixel = context.getImageData(x, y, 1, 1).data;
+      return Math.max(...[0, 1, 2].map((i) => Math.abs(pixel[i] - olive[i])));
+    };
+    return {
+      diagonal: Array.from({ length: bitmap.width }, (_, i) => distance(i, i)),
+      edge: distance(0, bitmap.height - 2),
+    };
+  }, corner.toString("base64"));
+  await ringed.keyboard.press("Escape");
+  await ringed.mouse.up();
+  await ringed.close();
+  record(
+    "a carry's ring over the canvas follows the window's rounded corner",
+    fromOlive.edge <= 8 && Math.min(...fromOlive.diagonal) <= 40,
+    `edge ${fromOlive.edge} from the olive; the corner's diagonal ${fromOlive.diagonal.join(" ")}`,
+  );
 } catch (error) {
   record("run", false, String(error));
   await shot("failure");
