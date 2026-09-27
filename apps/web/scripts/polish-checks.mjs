@@ -92,6 +92,9 @@ export async function toEmpty(page) {
   if (await link.isVisible()) await link.click();
   else await page.goto(`${BASE}/t/t-004${new URL(page.url()).search}`);
   await page.locator('[role="tabpanel"][aria-label="Refund audit"]:not([inert])').waitFor();
+  // Below 768px the group sits behind the bar's Layout button (ADR-116).
+  const trigger = titleBar(page).getByRole("button", { name: "Layout", exact: true });
+  if ((await trigger.isVisible()) === true) await trigger.click();
   await layoutButton(page, "Canvas").click();
   await canvasIn(page).waitFor();
   await page.mouse.move(0, 0);
