@@ -1064,7 +1064,7 @@ screenshots.
 
 ## ADR-094 - The web app draws itself as a desktop window with a tabbed title bar
 
-2026-09-27 - Proposed (Ethan's brief; the design is being settled).
+2026-09-27 - Accepted (Ethan's brief; built and proven by the workspace lever's P9 to P11).
 Following Kay's desktop app without changing our look, the app is a window inside the viewport with
 decorative traffic lights and one title bar across its full width: the sidebar toggle at the far
 left, tabs in the middle, and at the far right the notifications bell and then the account avatar,
@@ -1082,7 +1082,7 @@ rule ADR-051 set for colours: brand assets come from what the brand declares, ne
 
 ## ADR-096 - Mock scenarios never touch device data, and the app says which is which
 
-2026-09-27 - Proposed (Ethan's brief; the design is being settled).
+2026-09-27 - Accepted (Ethan's brief; P7 loads every scenario twice and compares bytes).
 Deterministic scenarios for long content, loading, failure and empty states run on a store built in
 memory from fixed fixtures and never open the device's database, so a demo can never overwrite or
 read real conversations.
@@ -1172,3 +1172,35 @@ of 90 loads across six thread stories rested short. The rule is a pure step with
 The scripted agent stayed silent on a message with no card choice and no file, which in a demo
 reads as a broken thread. It now answers a plain message with one scripted line that says it is
 the lab's stand-in.
+
+## ADR-105 - An open tab stays mounted until it closes
+
+2026-09-27 - Accepted; extends ADR-094.
+A tab is an open main thread, and the address `/t/:threadId` picks which one is on screen. Every
+tab visited stays mounted, stacked in one grid cell: a hidden one is `inert` and skips rendering
+through `content-visibility: hidden`, which keeps its scroll, draft and running reply where
+`display: none` would drop the scroll. Only closing a tab unmounts it.
+
+## ADR-106 - The pane beside the thread keeps fixed limits
+
+2026-09-27 - Accepted.
+The panel library applies a panel's new size limits one render late, so a pane made collapsible
+in the render that collapses it refused to close, and the Thread layout left a fifth of the tab
+blank (measured 932 and 233 px). The side pane is now always collapsible with fixed limits. A drag
+that reaches the far edge closes it only until release, when the saved layout comes back, so the
+layout switch stays the one control that decides what sits beside the thread.
+
+## ADR-107 - Screenshot levers run Chromium without partial raster
+
+2026-09-27 - Accepted.
+With partial raster on, Chromium redrew only part of a tile, so two loads of the same page
+differed by 1 to 4 colour levels at a few rounded corners, depending on load order. The app was
+the same both times, so the check was wrong. The levers launch with `--disable-partial-raster`, and
+the byte-exact comparison of two loads stays strict (24 of 24 loads identical).
+
+## ADR-108 - A press already claimed never lifts its lane
+
+2026-09-27 - Accepted; follows ADR-102.
+A carry claims its press with `preventDefault`, not `stopPropagation`, so the press still bubbles
+to the lane around it. A lane's reorder therefore takes only a press nobody claimed, or a card
+header inside a thread lane would lift the card and its lane together.
