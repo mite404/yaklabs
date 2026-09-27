@@ -209,7 +209,7 @@ describe("the agent loop pushes the state before it answers a write", () => {
       target: { kind: "thread", id: profit },
       name: "Margins",
     });
-    await run({ kind: "arrange", requestId: "r3", mainId: profit, lanes: [] });
+    await run({ kind: "arrange", requestId: "r3", mainId: profit, lanes: [], base: [] });
     await run({ kind: "saveShell", requestId: "r4", shell: { version: 1 } });
     expect(beats(notices)).toEqual([
       "opening",
@@ -232,7 +232,7 @@ describe("the agent loop pushes a state only when the workspace changes", () => 
     await run(init);
     await run(child("r1"));
     const lanes = [threadLane(threadIdSchema.parse("t-001"))];
-    await run({ kind: "arrange", requestId: "r2", mainId: profit, lanes });
+    await run({ kind: "arrange", requestId: "r2", mainId: profit, lanes, base: [] });
     expect(beats(notices).slice(-2)).toEqual(["created", "done"]);
     expect(states(notices)).toHaveLength(2);
   });
@@ -241,7 +241,7 @@ describe("the agent loop pushes a state only when the workspace changes", () => 
     const { notices, run } = await startLoop();
     await run(init);
     const lanes = [threadLane(threadIdSchema.parse("stranger"))];
-    await run({ kind: "arrange", requestId: "r1", mainId: profit, lanes });
+    await run({ kind: "arrange", requestId: "r1", mainId: profit, lanes, base: [] });
     expect(beats(notices)).toEqual(["opening", "state", "failed"]);
   });
 });

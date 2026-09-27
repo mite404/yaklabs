@@ -14,7 +14,15 @@ import {
 } from "./protocol";
 import { createInbox } from "./inbox";
 import { untilAborted } from "./untilAborted";
-import type { Lane, ShellState, ThreadId, Workspace } from "./workspace";
+import {
+  lanesOf,
+  mergeLanes,
+  type Lane,
+  type LaneId,
+  type ShellState,
+  type ThreadId,
+  type Workspace,
+} from "./workspace";
 
 /** How the page reaches the signed-in user's token, e.g. AuthKit's `getAccessToken` (ADR-084). */
 export type Session = { getAccessToken(): Promise<string> };
@@ -47,7 +55,11 @@ export type Runtime = {
   create(item: NewItem): Promise<string>;
   /** Renames in `state()` at once, then in the worker; a refusal rolls it back and throws. */
   rename(target: RenameTarget, name: string): Promise<void>;
-  /** Sets a main thread's lanes in `state()` at once, then in the worker, like `rename`. */
+  /**
+   * Sets a main thread's lanes in `state()` at once, then in the worker, like `rename`. A lane
+   * `state()` did not show yet (a child whose create is still in flight) stays beside its
+   * neighbour rather than being dropped.
+   */
   arrange(mainId: ThreadId, lanes: Lane[]): Promise<void>;
   /** Keeps the page's shell whole, in `state()` at once, then in the worker, like `rename`. */
   saveShell(shell: ShellState): Promise<void>;
@@ -91,8 +103,17 @@ function renamed(target: RenameTarget, name: string): Edit {
       });
 }
 
-function arranged(mainId: ThreadId, lanes: Lane[]): Edit {
-  return (ws) => ({ ...ws, lanes: { ...ws.lanes, [mainId]: lanes } });
+// The page's lanes over whatever the canvas holds by then, merged as the worker will merge them.
+function arranged(mainId: ThreadId, lanes: Lane[], base: LaneId[]): Edit {
+  return (ws) => ({
+    ...ws,
+    lanes: { ...ws.lanes, [mainId]: mergeLanes(lanesOf(ws, mainId), base, lanes) },
+  });
+}
+
+// The lane ids the page sees on a main now: what its `arrange` was edited from.
+function baseOf(state: RuntimeState, mainId: ThreadId): LaneId[] {
+  return state.kind === "ready" ? lanesOf(state.workspace, mainId).map((lane) => lane.id) : [];
 }
 
 function withShell(shell: ShellState): Edit {
@@ -288,8 +309,9 @@ export function startRuntime(config: RuntimeConfig): Runtime {
       await ask(handle, post, command, renamed(target, name));
     },
     arrange: async (mainId, lanes) => {
-      const command: Command = { kind: "arrange", requestId: newId(), mainId, lanes };
-      await ask(handle, post, command, arranged(mainId, lanes));
+      const base = baseOf(handle.shown, mainId);
+      const command: Command = { kind: "arrange", requestId: newId(), mainId, lanes, base };
+      await ask(handle, post, command, arranged(mainId, lanes, base));
     },
     saveShell: async (shell) => {
       const command: Command = { kind: "saveShell", requestId: newId(), shell };

@@ -186,6 +186,30 @@ export function reopenLane(lanes: Lane[], threadId: ThreadId): Lane[] {
   return lanes.some((lane) => lane.id === id) ? lanes : [...lanes, threadLane(threadId)];
 }
 
+// Where a lane from `current` goes in `merged`: after the nearest lane left of it that `merged`
+// holds, else before the nearest such lane right of it, else at the end.
+function anchorIndex(merged: Lane[], current: Lane[], index: number): number {
+  const positions = current.map((lane) => merged.findIndex((each) => each.id === lane.id));
+  const left = positions.slice(0, index).findLast((at) => at >= 0);
+  if (left !== undefined) return left + 1;
+  return positions.slice(index + 1).find((at) => at >= 0) ?? merged.length;
+}
+
+/**
+ * The page's `lanes` for a main, merged with the canvas as it is now: a lane in `current` the
+ * page never saw (its id in neither `base` nor `lanes`, say a child created meanwhile) stays,
+ * beside the neighbour it has now; a lane in `base` that `lanes` left out stays closed.
+ * @param base The lane ids the page's `lanes` were edited from.
+ */
+export function mergeLanes(current: Lane[], base: LaneId[], lanes: Lane[]): Lane[] {
+  const seen = new Set<string>([...base, ...lanes.map((lane) => lane.id)]);
+  return current.reduce(
+    (merged, lane, index) =>
+      seen.has(lane.id) ? merged : insertLane(merged, anchorIndex(merged, current, index), lane),
+    lanes,
+  );
+}
+
 /** The lane `id` at `width` px; null puts it back to the default column. */
 export function resizeLane(lanes: Lane[], id: LaneId, width: number | null): Lane[] {
   return lanes.map((lane) => (lane.id === id ? { ...lane, width } : lane));

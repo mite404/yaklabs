@@ -14,7 +14,7 @@ import {
   type Source,
 } from "./protocol";
 import type { Store } from "./store";
-import type { ThreadId } from "./workspace";
+import { lanesOf, mergeLanes, type ThreadId } from "./workspace";
 
 /** A deterministic stall or failure: `hold` never answers, `fail` answers with its reason. */
 export type Fault = "hold" | { fail: string };
@@ -228,7 +228,8 @@ function handleRequest(loop: Loop, command: Exclude<Command, { kind: "init" }>):
       });
     case "arrange":
       return write(loop, ({ store }) => {
-        store.arrange(command.mainId, command.lanes);
+        const { mainId, lanes, base } = command;
+        store.arrange(mainId, mergeLanes(lanesOf(store.workspace(), mainId), base, lanes));
         return { kind: "done", requestId: command.requestId };
       });
     case "saveShell":

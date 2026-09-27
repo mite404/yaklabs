@@ -3,6 +3,7 @@ import type { CardAttachment } from "@yaklabs/catalog/interactive";
 import type { ThreadMessage } from "@yaklabs/catalog/thread";
 import { z } from "zod";
 import {
+  laneIdSchema,
   laneSchema,
   projectIdSchema,
   shellStateSchema,
@@ -127,11 +128,13 @@ export const commandSchema = z.discriminatedUnion("kind", [
     target: renameTargetSchema,
     name: nameSchema,
   }),
+  // `base` is the lane ids `lanes` was edited from, so a lane added since is kept, not dropped.
   z.object({
     kind: z.literal("arrange"),
     requestId: idSchema,
     mainId: threadIdSchema,
     lanes: z.array(laneSchema),
+    base: z.array(laneIdSchema),
   }),
   z.object({ kind: z.literal("saveShell"), requestId: idSchema, shell: shellStateSchema }),
   z.object({
