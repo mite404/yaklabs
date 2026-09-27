@@ -174,6 +174,42 @@
 .card[data-lifted] {
   opacity: 0.35;
 }
+
+/* A carry (carry.ts): from the lift to the end the closed hand holds over everything, as the
+   browser's own drag cursor does, whatever cursor an element under it asks for. */
+html[data-carrying],
+html[data-carrying] * {
+  cursor: grabbing !important;
+}
+/* The picture that rides the pointer: a clone of what was lifted, or a quote chip for text.
+   It is never hit by the pointer, so the target under it is what the carry finds. */
+.carry-ghost {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 100;
+  opacity: 0.85;
+  pointer-events: none;
+  will-change: transform;
+}
+.carry-ghost > * {
+  width: var(--carry-width, auto);
+  margin: 0;
+  box-shadow: 0 18px 48px var(--shadow-strong);
+}
+/* A highlight in flight: one line of it, cut short with an ellipsis. */
+.carry-quote {
+  max-width: 320px;
+  overflow: hidden;
+  padding: 3px 9px;
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  background: var(--paper-deep);
+  color: var(--ink);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .card-heading {
   align-items: flex-start;
   border-bottom: 1px solid var(--hairline);

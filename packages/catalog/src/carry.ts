@@ -1,3 +1,4 @@
+import { useEffect, useLayoutEffect, useRef, type RefObject } from "react";
 import type { SharedCard } from "./share";
 
 /** What a carry holds: a card lifted out of a thread, or the text of a highlight. */
@@ -54,13 +55,52 @@ export type CarryEffect =
   | { kind: "drop"; target: CarryTarget; carried: Carried; at: CarryPoint }
   | { kind: "end"; lifted: boolean };
 
+/**
+ * The press that arms a carry: a DOM `PointerEvent` or React's, whose `stopPropagation` also
+ * keeps the press from React handlers further out.
+ */
+export type CarryPress = Pick<
+  PointerEvent,
+  "pointerId" | "button" | "clientX" | "clientY" | "target" | "preventDefault" | "stopPropagation"
+>;
+
+/** Where a carry comes from and what rides the pointer while it is carried. */
+export type CarrySource = {
+  carried: Carried;
+  /** The element that dims while it is carried; its clone rides the pointer unless `picture` builds one. */
+  lift?: HTMLElement;
+  /** Builds what rides the pointer, such as a quote chip for text. */
+  picture?: () => HTMLElement;
+};
+
 type Armed = Extract<CarryState, { phase: "armed" }>;
 type Carrying = Extract<CarryState, { phase: "carrying" }>;
+
+// The picture on screen and how far its corner sits from the pointer.
+type Ghost = { element: HTMLElement; offset: CarryPoint };
+
+// One press in the page: the element it landed on holds the pointer once it lifts, and the
+// ghost exists from the lift to the end.
+type Press = {
+  pointerId: number;
+  source: CarrySource;
+  from: CarryPoint;
+  captor: Element | null;
+  listening: AbortController;
+  ghost: Ghost | null;
+};
 
 /** How far a press travels before it lifts; anything shorter is a click. */
 export const LIFT_PX = 6;
 
+// A picture of its own, such as a quote chip, hangs this far below and right of the pointer.
+const PICTURE_OFFSET_PX = 12;
+
 const IDLE: CarryState = { phase: "idle" };
+
+// The page's one carry and the elements that accept one.
+let carry: CarryState = IDLE;
+const targets = new Map<Element, CarryTarget>();
 
 function travelled(from: CarryPoint, to: CarryPoint): number {
   return Math.hypot(to.x - from.x, to.y - from.y);
@@ -157,4 +197,239 @@ export function stepCarry(state: CarryState, input: CarryInput): [CarryState, Ca
       : [state, []];
   if ("pointerId" in input && input.pointerId !== state.pointerId) return [state, []];
   return state.phase === "armed" ? stepArmed(state, input) : stepCarrying(state, input);
+}
+
+function pointOf(event: Pick<PointerEvent, "clientX" | "clientY">): CarryPoint {
+  return { x: event.clientX, y: event.clientY };
+}
+
+// The registered target at a point: the element there or its nearest registered ancestor.
+// The ghost has `pointer-events: none`, so it is never the element there.
+function targetAt(at: CarryPoint): CarryTarget | null {
+  for (let node = document.elementFromPoint(at.x, at.y); node; node = node.parentElement) {
+    const target = targets.get(node);
+    if (target) return target;
+  }
+  return null;
+}
+
+// The name and content width of the size container nearest `element`, so a clone laid out
+// away from home still matches the container queries it matched at home.
+function containerOf(element: Element): { name: string; width: number } | null {
+  for (let node = element.parentElement; node; node = node.parentElement) {
+    const style = getComputedStyle(node);
+    if (style.containerType === "normal") continue;
+    const padding = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
+    return { name: style.containerName, width: node.clientWidth - padding };
+  }
+  return null;
+}
+
+function frame(picture: Node, offset: CarryPoint): Ghost {
+  const element = document.createElement("div");
+  element.className = "carry-ghost";
+  element.setAttribute("aria-hidden", "true");
+  element.inert = true;
+  element.append(picture);
+  return { element, offset };
+}
+
+// The picture that rides the pointer, placed where it starts: a picture of its own hangs off
+// the pointer; a clone of the lifted element sits exactly over it, at its size.
+function ghostOf({ lift, picture }: CarrySource, from: CarryPoint): Ghost | null {
+  if (picture) return frame(picture(), { x: PICTURE_OFFSET_PX, y: PICTURE_OFFSET_PX });
+  if (!lift) return null;
+  const box = lift.getBoundingClientRect();
+  const ghost = frame(lift.cloneNode(true), { x: box.left - from.x, y: box.top - from.y });
+  const { style } = ghost.element;
+  style.setProperty("--carry-width", `${box.width}px`);
+  const container = containerOf(lift);
+  if (container) {
+    style.containerType = "inline-size";
+    style.containerName = container.name;
+    style.width = `${container.width}px`;
+  }
+  return ghost;
+}
+
+// A lifted press ends without a click, as a native drag does, so nothing under the release
+// reads it as one. The next press disarms this, for a carry that ended before its release.
+function swallowStrayClick(): void {
+  const swallow = (event: Event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    disarm();
+  };
+  const disarm = () => {
+    window.removeEventListener("click", swallow, true);
+    window.removeEventListener("pointerdown", disarm, true);
+  };
+  window.addEventListener("click", swallow, true);
+  window.addEventListener("pointerdown", disarm, true);
+}
+
+function putUp(press: Press): void {
+  const { source, captor, pointerId } = press;
+  press.ghost = ghostOf(source, press.from);
+  if (press.ghost) document.body.append(press.ghost.element);
+  if (source.lift) source.lift.dataset.lifted = "";
+  document.documentElement.dataset.carrying = source.carried.kind;
+  captor?.setPointerCapture(pointerId);
+}
+
+function takeDown(press: Press, lifted: boolean): void {
+  const { source, captor, pointerId } = press;
+  press.listening.abort();
+  press.ghost?.element.remove();
+  if (source.lift) delete source.lift.dataset.lifted;
+  delete document.documentElement.dataset.carrying;
+  if (captor !== null && captor.hasPointerCapture(pointerId))
+    captor.releasePointerCapture(pointerId);
+  if (lifted) swallowStrayClick();
+}
+
+function follow({ ghost }: Press, at: CarryPoint): void {
+  if (!ghost) return;
+  const [x, y] = [at.x + ghost.offset.x, at.y + ghost.offset.y];
+  ghost.element.style.transform = `translate(${x}px, ${y}px)`;
+}
+
+function perform(press: Press, effect: CarryEffect): void {
+  switch (effect.kind) {
+    case "lift":
+      putUp(press);
+      break;
+    case "follow":
+      follow(press, effect.at);
+      break;
+    case "over": {
+      const accepted = effect.target.over(effect.carried, effect.at);
+      dispatch(press, { kind: "answer", target: effect.target, accepted });
+      break;
+    }
+    case "leave":
+      effect.target.leave();
+      break;
+    case "drop":
+      effect.target.drop(effect.carried, effect.at);
+      break;
+    case "end":
+      takeDown(press, effect.lifted);
+      break;
+  }
+}
+
+function dispatch(press: Press, input: CarryInput): void {
+  const [next, effects] = stepCarry(carry, input);
+  carry = next;
+  for (const effect of effects) perform(press, effect);
+}
+
+// The page-wide listeners for one press, on the window's capture phase so nothing inside the
+// page can hide the end of a carry from it. They go when the press ends.
+function listen(press: Press): void {
+  const options = { capture: true, signal: press.listening.signal };
+  const cancel = (event: PointerEvent) => {
+    dispatch(press, { kind: "pointercancel", pointerId: event.pointerId });
+  };
+  window.addEventListener(
+    "pointermove",
+    (event) => {
+      const at = pointOf(event);
+      dispatch(press, { kind: "move", pointerId: event.pointerId, at, target: targetAt(at) });
+    },
+    options,
+  );
+  window.addEventListener(
+    "pointerup",
+    (event) => {
+      dispatch(press, { kind: "release", pointerId: event.pointerId, at: pointOf(event) });
+    },
+    options,
+  );
+  window.addEventListener("pointercancel", cancel, options);
+  window.addEventListener("lostpointercapture", cancel, options);
+  window.addEventListener(
+    "keydown",
+    (event) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      event.stopPropagation();
+      dispatch(press, { kind: "cancel" });
+    },
+    options,
+  );
+  window.addEventListener(
+    "blur",
+    () => {
+      dispatch(press, { kind: "cancel" });
+    },
+    options,
+  );
+}
+
+/**
+ * Lets `element` and everything inside it take a carry, unless something nearer registers too.
+ * Returns the function that stops it.
+ */
+export function acceptCarry(element: Element, target: CarryTarget): () => void {
+  targets.set(element, target);
+  return () => {
+    if (targets.get(element) === target) targets.delete(element);
+  };
+}
+
+/**
+ * `acceptCarry` for the element in `ref` while it is mounted. The latest `target` answers, so
+ * it may be a new object on every render.
+ */
+export function useCarryTarget(ref: RefObject<HTMLElement | null>, target: CarryTarget): void {
+  const latest = useRef(target);
+  useLayoutEffect(() => {
+    latest.current = target;
+  });
+  useEffect(() => {
+    const element = ref.current;
+    return element
+      ? acceptCarry(element, {
+          over: (carried, at) => latest.current.over(carried, at),
+          leave: () => {
+            latest.current.leave();
+          },
+          drop: (carried, at) => {
+            latest.current.drop(carried, at);
+          },
+        })
+      : undefined;
+  }, [ref]);
+}
+
+/**
+ * Arms a carry from a primary-button press: past `LIFT_PX` it lifts, and the release drops it
+ * on the target under the pointer. The press is claimed, so the browser starts no drag or
+ * selection of its own and no handle further out arms too. A press while another carry is
+ * under way is left alone.
+ */
+export function armCarry(down: CarryPress, source: CarrySource): void {
+  if (down.button !== 0) return;
+  const from = pointOf(down);
+  const input: CarryInput = {
+    kind: "press",
+    pointerId: down.pointerId,
+    at: from,
+    carried: source.carried,
+  };
+  const [next] = stepCarry(carry, input);
+  if (next === carry) return;
+  down.preventDefault();
+  down.stopPropagation();
+  carry = next;
+  listen({
+    pointerId: down.pointerId,
+    source,
+    from,
+    captor: down.target instanceof Element ? down.target : null,
+    listening: new AbortController(),
+    ghost: null,
+  });
 }
