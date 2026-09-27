@@ -211,7 +211,10 @@ function useFocusedLane(
       behavior: still ? "auto" : "smooth",
     });
     lane.dataset.flash = "";
-    lane.addEventListener("animationend", () => delete lane.dataset.flash, { once: true });
+    const settle = () => {
+      delete lane.dataset.flash;
+    };
+    lane.addEventListener("animationend", settle, { once: true });
   }, [row, focus, present]);
 }
 
