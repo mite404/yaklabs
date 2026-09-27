@@ -21,6 +21,18 @@
   --traffic-zoom: #28c840;
 }
 
+/* The tab strip's fade (tab-strip.tsx): registered so the scroll can animate the lengths. */
+@property --fade-start {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+@property --fade-end {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+
 @layer components {
   /* shadcn draws its controls with utilities on top of Tailwind's preflight, and the catalog
      styles bare elements over that preflight (tokens.css): a button gets a paper fill, a
@@ -46,6 +58,37 @@
      at its content, which a pane beside an open sidebar at 1024px is narrower than. */
   .thread-panel {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* An edge of the tab strip with tabs past it fades out, so the tab the edge cuts reads as
+     one more to scroll to rather than a clipped label. The fade follows the scroll; a strip
+     whose tabs fit has no scroll timeline, so the animation is idle and nothing fades. */
+  .tab-scroller {
+    scroll-padding-inline: 32px;
+    mask-image: linear-gradient(
+      to right,
+      transparent,
+      #000 var(--fade-start),
+      #000 calc(100% - var(--fade-end)),
+      transparent
+    );
+    animation: tab-fade linear both;
+    animation-timeline: scroll(self inline);
+  }
+  @keyframes tab-fade {
+    from {
+      --fade-start: 0px;
+      --fade-end: 32px;
+    }
+    10%,
+    90% {
+      --fade-start: 32px;
+      --fade-end: 32px;
+    }
+    to {
+      --fade-start: 32px;
+      --fade-end: 0px;
+    }
   }
 
   /* A tab, or a pane inside one, that is kept but not shown (the deck): it skips rendering and
