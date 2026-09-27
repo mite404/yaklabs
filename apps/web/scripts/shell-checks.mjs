@@ -28,7 +28,7 @@ const NARROW = [390, 520, 767];
 const LEGIBLE_PX = 64;
 
 // Runs in the page: the bar's controls left to right, whether any two overlap or leave the bar,
-// and how much of the active tab and its title the tab list shows.
+// and how much of the active tab and its title the tabs' scroller shows.
 function barLayout() {
   const bar = document.querySelector('header[data-slot="title-bar"]');
   const edge = bar.getBoundingClientRect();
@@ -36,14 +36,14 @@ function barLayout() {
     [...bar.querySelectorAll(selector)].find((el) => el.getClientRects().length > 0);
   const controls = [
     ["toggle", drawn('[aria-label="Toggle sidebar"]')],
-    ["tabs", drawn('[role="tablist"]')],
+    ["tabs", drawn(".tab-scroller")],
     ["new", drawn('[aria-label="New thread"]')],
-    ["marker", drawn('[data-slot="data-marker"]')?.closest("[tabindex]")],
+    ["marker", drawn('[data-slot="data-marker"]')?.closest("button")],
     ["layout", drawn('button[aria-label="Layout"], [role="group"][aria-label="Layout"]')],
     ["bell", drawn('[aria-label^="Notifications"]')],
     ["account", drawn('[aria-label="Account"]')],
   ]
-    .filter(([, el]) => el !== undefined)
+    .filter(([, el]) => el !== undefined && el !== null)
     .map(([name, el]) => [name, el.getBoundingClientRect()]);
   const overlaps = controls
     .slice(1)
@@ -52,7 +52,7 @@ function barLayout() {
   const outside = controls
     .filter(([, box]) => box.x < edge.x - 0.5 || box.right > edge.right + 0.5)
     .map(([name]) => name);
-  const list = bar.querySelector('[role="tablist"]').getBoundingClientRect();
+  const list = bar.querySelector(".tab-scroller").getBoundingClientRect();
   const tab = bar.querySelector('[role="tab"][aria-selected="true"]').getBoundingClientRect();
   const title = bar.querySelector('[role="tab"][aria-selected="true"] .truncate');
   const shown = title.getBoundingClientRect();

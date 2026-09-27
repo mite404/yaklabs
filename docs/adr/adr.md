@@ -1236,7 +1236,9 @@ skeleton tab still shows), and focus is the site's own 2px ring in cream, restor
 green on it (8.98:1 against the bar, 16.1:1 for its text). The pill is the same in both themes:
 the page's own paper would have been 1.63:1 against the bar in dark mode.
 The avatar's ring keeps a blend in both themes, since dropping it switched every glyph on the page
-from greyscale to subpixel smoothing in Chromium.
+from greyscale to subpixel smoothing in Chromium. An avatar with no picture shows its initials in
+the full cream (7.21:1 on its fill), not the soft ink (4.47:1), and shadcn's half-strength ghost
+hover in dark mode is set back to the full fill, so the bar is the same picture hovered too.
 
 ## ADR-111 - The window sits on a desk of its own, 16px in
 
@@ -1296,9 +1298,14 @@ luminance 0.10, since the lossy encode lifted some pixels past the clamp it was 
 first). On it the soft ink is cream at 85% (4.87:1 on the brightest pixel); cream at 72% would
 fall below 4.5:1 there. `painting.json` records the decoded mean and maximum, and the token test
 reads it.
-The solid bar is the default. `?chrome=painting` or `?chrome=solid` picks one once: it is kept in
-localStorage and taken out of the address, since the app's own links keep only the scenario and a
-leftover parameter would undo a later choice. The Account menu has a Title bar choice beside
+Its hover and skeleton fill is a night wash (1.37:1 over the painting's mean) rather than the flat
+bar's cream fill, which vanished on a painting of the same green (1.03:1); a wash only darkens, so
+the inks on it only gain.
+The solid bar is the default. `?chrome=painting` or `?chrome=solid` picks one once: a boot script
+takes it out of the address before the router starts, as the theme's does, since the app's own
+links keep only the scenario and a leftover parameter would undo a later choice. The choice is kept
+in localStorage and held for the visit in memory too, so a refused storage still keeps it. The
+Account menu has a Title bar choice beside
 Theme, so Ethan can switch while he decides.
 
 ## ADR-116 - Below 768px the title bar drops the window's dress and keeps the thread
@@ -1314,4 +1321,40 @@ group, so its names do not change. The active tab's floor becomes the strip's wi
 so the thread on screen shows whole, and the other tabs scroll.
 Measured on four prototypes at 390px: keeping the Layout group inline left 17px to 37px of the
 active title however tight the rest was; a trigger leaves the whole tab and 82px of title.
+It replaces a two-row bar built alongside it, which showed every tab but stood 80px tall and
+broke the bar's 44px: Ethan chose the one row, since on a phone the height is the thread's.
 From 768px up nothing changes, and P13 in the workspace lever holds 390, 520 and 767 to it.
+
+## ADR-117 - A lane's gap reports the lane's width, and a lane is 320 to 1800px wide
+
+2026-09-27 - Accepted; amends ADR-089.
+The gap after a lane takes the focus and resizes by arrow key, so ARIA requires it to carry a
+value, and axe failed every gap for lacking one. It now reports the lane's width in pixels, read
+aloud as "480 pixels wide", within a range that a drag and the arrow keys both keep to: 320px, as
+before, up to 1800px, which fills the widest canvas a 2560px screen lays out. A default column in
+a pane too narrow for 320px widens the range to hold its width rather than report a value outside
+it.
+
+## ADR-118 - One tab at a time opens the device's threads, and a failed open cannot delete them
+
+2026-09-27 - Accepted for the guard against the delete; the held second tab is Proposed until Ethan
+decides whether a blocked second tab is the experience he wants. Extends ADR-081 and ADR-100.
+sqlite-wasm's `opfs-sahpool` installer answers any failure by deleting the pool's directory,
+every database in it included (`removeVfs`, recursive). A second tab always failed, since the
+first holds the pool's access handles, so it tried that delete on every open, and only the first
+tab's handles stopped it; a first tab letting go in the gap lost every thread (3 of 15 trials in
+the review's harness, and every time in a browser test that lets go at that moment).
+Two guards now close it. The worker takes the Web Lock `yaklabs-database` before it opens the
+database and keeps it for its life, so a second tab never touches the pool: it says "Your threads
+are open in another tab" and opens them once the first tab closes. It no longer falls back to
+memory, where a fresh starter labelled "Not saved" stood over the real threads; memory stays for
+a browser that refuses the file system or has no Web Locks. And the store holds a file in a
+subdirectory of the pool's own, where the pool never looks, for as long as its worker lives:
+Chromium refuses a recursive delete while any file under it is open, and refuses it whole, so
+the installer's clean-up cannot delete the pool whatever made the open fail and whoever lets go.
+Measured before choosing: 0 of 60 ended lock holders left a handle busy for the next holder, 0 of
+45 reloads heard the held notice, and a holder that ignores the lock (an older build) lost
+nothing in 15 trials, against 3 before. The guard leans on the library's `.opaque` directory,
+whose name the library itself says never changes; the browser test fails if it stops guarding.
+Reloading the tab that has the threads while another waits hands them to the waiting tab, and
+the reloaded tab then waits in turn and says so; nothing is lost.

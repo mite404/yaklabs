@@ -92,7 +92,12 @@ function SidePanes({ shell, thread, view, focus }: Beside) {
         <BrowserPane shell={shell} main={thread.id} browser={view.browser} />
       </Retain>
       <Retain shown={view.pane === "canvas"}>
-        <MainCanvas main={thread.id} workspace={shell.workspace} focus={focus} />
+        <MainCanvas
+          main={thread.id}
+          workspace={shell.workspace}
+          focus={focus}
+          visit={shell.visitKey}
+        />
       </Retain>
     </>
   );

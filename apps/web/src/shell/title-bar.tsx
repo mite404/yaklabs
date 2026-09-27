@@ -1,16 +1,15 @@
-import { SidebarTrigger } from "@yaklabs/ui/components/sidebar";
+import { SidebarTrigger, useSidebar } from "@yaklabs/ui/components/sidebar";
 import { useRuntimeState } from "../runtime";
-import type { ChromeChoice } from "../chrome";
-import type { ThemeChoice } from "../theme";
-import { Account } from "./account";
+import { Account, type Looks } from "./account";
 import { Bell } from "./bell";
 import { DataMarker } from "./data-marker";
 import { LayoutSwitch } from "./layout-switch";
 import { useShell } from "./model";
+import { SIDEBAR_ID } from "./sidebar";
 import { TabStrip } from "./tab-strip";
 
 // Decorative, as a desktop window's: they do nothing, and a screen reader never meets them. On
-// the green bar they need no ring to stand out.
+// a phone the window is full-bleed, not a window, so they go; on the green bar they need no ring.
 const LIGHTS = ["close", "minimise", "zoom"] as const;
 
 function TrafficLights() {
@@ -31,13 +30,28 @@ function TrafficLights() {
   );
 }
 
+// The sidebar's toggle is a disclosure: it says whether the sidebar is open (on a phone, its
+// sheet) and names the landmark it shows and hides. Open, it looks as it does closed; the ghost
+// button's expanded fill is for a menu's trigger while its menu is up.
+function SidebarToggle() {
+  const { open, openMobile, isMobile } = useSidebar();
+  return (
+    <SidebarTrigger
+      aria-label="Toggle sidebar"
+      aria-expanded={isMobile ? openMobile : open}
+      aria-controls={SIDEBAR_ID}
+      className="shrink-0 rounded-[var(--radius)] text-soft-ink hover:text-ink aria-expanded:bg-transparent aria-expanded:text-soft-ink aria-expanded:hover:bg-muted aria-expanded:hover:text-ink dark:aria-expanded:hover:bg-muted/50"
+    />
+  );
+}
+
 /**
  * The window's one title bar, across its whole width: decorative traffic lights, the sidebar
  * toggle and the open threads at the left; at the right where the data lives, the layout, the
  * bell, and the account in the corner (ADR-094). It is green chrome, flat or painted (ADR-110,
- * ADR-115).
+ * ADR-115). On a phone it stays one 44px row and gives the room to the tab on screen (ADR-116).
  */
-export function TitleBar({ theme, chrome }: { theme: ThemeChoice; chrome: ChromeChoice }) {
+export function TitleBar({ theme, chrome }: Looks) {
   const shell = useShell();
   const starting = useRuntimeState().kind === "starting";
   return (
@@ -47,10 +61,7 @@ export function TitleBar({ theme, chrome }: { theme: ThemeChoice; chrome: Chrome
       className="chrome-surface flex h-11 shrink-0 items-center gap-2 pr-3 select-none max-md:gap-1 max-md:pl-2"
     >
       <TrafficLights />
-      <SidebarTrigger
-        aria-label="Toggle sidebar"
-        className="shrink-0 rounded-[var(--radius)] text-soft-ink hover:text-ink"
-      />
+      <SidebarToggle />
       <TabStrip shell={shell} starting={starting} />
       <div className="flex shrink-0 items-center gap-2 max-md:gap-1">
         <DataMarker />

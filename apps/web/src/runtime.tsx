@@ -18,14 +18,7 @@ import {
 import { useLocation } from "react-router";
 import { toast } from "sonner";
 import { env } from "./env";
-import {
-  keepScenario,
-  legacyFrom,
-  scenarioQuery,
-  unknownScenario,
-  wantedFrom,
-  type Wanted,
-} from "./source";
+import { keepScenario, legacyFrom, unknownScenario, wantedFrom, type Wanted } from "./source";
 
 // The runtime the page started, what the address asked it to open, and how to start it again.
 type Door = { runtime: Runtime | null; wanted: Wanted; restart: (() => void) | null };
@@ -102,6 +95,22 @@ function stateBefore(wanted: Wanted): RuntimeState {
   }
 }
 
+// The data an address asks for as one string, so two addresses that differ only in another
+// query parameter compare equal.
+function dataOf(wanted: Wanted): string {
+  return wanted.kind === "device" ? "device" : `${wanted.kind}:${wanted.name}`;
+}
+
+// What the address asks the runtime to open, kept as the same object for as long as it asks
+// for the same data: a link keeps only ?scenario=, and a new object would restart the worker.
+function useWanted(): Wanted {
+  const asked = wantedFrom(useLocation().search); // → Wanted, a new object on every render
+  const [wanted, setWanted] = useState(asked);
+  if (dataOf(asked) === dataOf(wanted)) return wanted;
+  setWanted(asked);
+  return asked;
+}
+
 function useDoor(): Door {
   const door = useContext(DoorContext);
   if (door === null) throw new Error("The runtime hooks need <RuntimeProvider> above them");
@@ -146,10 +155,7 @@ function RuntimeHost({
  * restart is a new runtime and a new page beneath it, so nothing keeps the failed one's state.
  */
 export function RuntimeProvider({ children }: { children: ReactNode }) {
-  // Keyed on the scenario alone: a redirect that drops another parameter, such as ?chrome=,
-  // must not start the worker again.
-  const query = scenarioQuery(useLocation().search); // → "?scenario=demo" | ""
-  const wanted = useMemo(() => wantedFrom(query), [query]); // → Wanted
+  const wanted = useWanted();
   const [attempt, setAttempt] = useState(0);
   const restart = useCallback(() => {
     setAttempt((n) => n + 1);

@@ -93,8 +93,9 @@ turn a dropped highlight into a child's title and opening draft.
 
 `startRuntime` returns one observable state and the verbs that change it.
 
-- `state()` is `starting` (with the source once the worker's `opening` arrives), `ready`, or
-  `broken` for good. It is the same object until something changes.
+- `state()` is `starting` (with the source once the worker's `opening` arrives), `held` while
+  another tab has the device's database, `ready`, or `broken` for good. It is the same object
+  until something changes.
 - `create` resolves to the new id once `state()` already lists it, because the worker pushes the
   state before it answers.
 - `rename`, `arrange` and `saveShell` show in `state()` at once. The edit drops when its answer
@@ -129,19 +130,21 @@ own types, so a field the catalog adds as required, or retypes, fails to compile
   names no request.
 - `opening { source }` goes out before a scenario opens, so a scenario that fails to load still
   names itself. On the device it goes out once the store has opened and its storage is known.
+- `held` goes out on the device when another tab has the database; `opening` follows once that
+  tab lets go.
 - `state { source, workspace, replying }` is pushed after `init` and after every write, a reply's
   start and end included, and skipped when its serialized form equals the last one pushed.
 - One `Map<requestId, sink>` in the page routes every answer.
 
 ## The worker's contract
 
-- `init` on the device opens `yaklabs` in OPFS, migrating it with the v1 canvas keys the page
-  sent. Only a refused file system (`StorageUnavailableError`) falls back to memory, with a
-  `console.warn`. A file that opened but cannot be read or migrated (say, a version newer than
-  this build) is closed and breaks the start with its reason, so the page offers Try again
-  rather than a fresh starter over threads that are hidden but intact. An empty device store
-  gets the Demo store project and its `profit` thread from the catalog's seed. A second `init`
-  does nothing.
+- `init` on the device waits for the database's lock, then opens `yaklabs` in OPFS, migrating it
+  with the v1 canvas keys the page sent. Only a refused file system (`StorageUnavailableError`)
+  falls back to memory, with a `console.warn`. A file that opened but cannot be read or migrated
+  (say, a version newer than this build) is closed and breaks the start with its reason, so the
+  page offers Try again rather than a fresh starter over threads that are hidden but intact. An
+  empty device store gets the Demo store project and its `profit` thread from the catalog's
+  seed. A second `init` does nothing.
 - `send` saves the user's turn first, so a failed reply never loses what the user sent, and spends
   the thread's draft. A `message` becomes a user turn with its `attachments` and its `files` as
   `{ id, label }`, an `answer` becomes a user turn with its text, and `question-rejected` adds no
@@ -163,9 +166,14 @@ line per file, so the model sees what the user set on an interactive card (ADR-0
 agent turn carries each card it showed as compact JSON in a fenced block. When a thread outgrows
 the gateway's 200 turns, the oldest go first, and the request always starts with a user turn.
 
-Only one worker at a time can hold a database's OPFS pool. While one holds it, a second worker (a
-second tab, say) falls back to memory, and its source says so. The page clears the v1 canvas keys
-only after a `state` from `{ device, opfs }`, so a memory fallback never loses them.
+Only one worker at a time can hold a database's OPFS pool, and sqlite-wasm answers a failed
+install by deleting the whole pool (ADR-118). So a device worker first takes the Web Lock
+`yaklabs-database` and keeps it for its life: a second worker (a second tab, say) posts `held` and
+waits in line, then opens the same file once the first lets go. The store also holds a file inside
+the pool's own directory for as long as its worker lives, so the installer's clean-up can never
+delete the pool. Only a browser that refuses the file system, or has no Web Locks, falls back to
+memory. The page clears the v1 canvas keys only after a `state` from `{ device, opfs }`, so a
+memory fallback never loses them.
 
 ## The store
 

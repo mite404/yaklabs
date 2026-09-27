@@ -49,14 +49,6 @@ export function keepScenario(path: string, wanted: Wanted): string {
   return `${path}?${new URLSearchParams({ [PARAM]: wanted.name }).toString()}`;
 }
 
-/**
- * The part of a query that decides what the page opens: `?scenario=<name>`, or nothing for the
- * device. Two addresses with the same scenario give the same string, whatever else they carry.
- */
-export function scenarioQuery(search: string): string {
-  return keepScenario("", wantedFrom(search));
-}
-
 /** Why an unknown scenario opens nothing, naming the ones that exist. */
 export function unknownScenario(name: string): string {
   return `There is no scenario called "${name}". The scenarios are ${scenarioNames.join(", ")}.`;

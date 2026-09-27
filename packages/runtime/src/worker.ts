@@ -1,7 +1,7 @@
 /// <reference lib="webworker" />
 import { createAgentLoop, type Opened } from "./agentLoop";
 import { liveMint } from "./mint";
-import type { LegacyCanvas, RuntimeData, ScenarioName, Source } from "./protocol";
+import type { LegacyCanvas, Notice, RuntimeData, ScenarioName, Source } from "./protocol";
 import { openSqliteStore, StorageUnavailableError } from "./sqliteStore";
 import { ensureStarter, type Store } from "./store";
 
@@ -10,6 +10,37 @@ declare const self: DedicatedWorkerGlobalScope;
 
 // The one database the app keeps its threads in (ADR-081).
 const DATABASE = "yaklabs";
+// What every tab on the device queues on before it opens that database: sqlite-wasm's pool
+// takes one worker at a time, and deletes itself when a second fails to take it (ADR-118).
+const LOCK = "yaklabs-database";
+
+// Never settles, so a lock whose callback returns it is held until the worker ends.
+const forever = new Promise<never>(() => {});
+
+function post(notice: Notice): void {
+  // oxlint-disable-next-line unicorn/require-post-message-target-origin -- workers have none
+  self.postMessage(notice);
+}
+
+// Takes the lock for the rest of this worker's life once it is granted; resolves false instead
+// when `ifAvailable` was asked and another worker has it.
+function takeLock(options: LockOptions): Promise<boolean> {
+  return new Promise((resolve) => {
+    void navigator.locks.request(LOCK, options, (lock) => {
+      resolve(lock !== null);
+      return lock === null ? undefined : forever;
+    });
+  });
+}
+
+// Holds the database for this worker, first waiting as long as another tab has it, which the
+// page hears as `held`. A browser without locks has no private file system to share either.
+async function holdDatabase(): Promise<void> {
+  if (!("locks" in navigator)) throw new StorageUnavailableError("This browser has no Web Locks");
+  if (await takeLock({ ifAvailable: true })) return;
+  post({ kind: "held" });
+  await takeLock({});
+}
 
 // SQLite in the private file system when the browser allows it; memory otherwise, which the
 // page learns from the source. Only the file on disk may migrate the v1 canvas keys: a memory
@@ -20,6 +51,7 @@ async function openDeviceStore(
   legacy: LegacyCanvas | undefined,
 ): Promise<{ store: Store; source: Source }> {
   try {
+    await holdDatabase();
     const store = await openSqliteStore({ kind: "opfs", name: DATABASE }, legacy);
     return { store, source: { kind: "device", storage: "opfs" } };
   } catch (error) {
@@ -48,13 +80,7 @@ function open(data: RuntimeData): Promise<Opened> {
   return data.kind === "device" ? openDevice(data.legacy) : openScenario(data.name);
 }
 
-const handle = createAgentLoop({
-  post: (notice) => {
-    // oxlint-disable-next-line unicorn/require-post-message-target-origin -- workers have none
-    self.postMessage(notice);
-  },
-  open,
-});
+const handle = createAgentLoop({ post, open });
 
 self.addEventListener("message", (event) => {
   void handle(event.data);

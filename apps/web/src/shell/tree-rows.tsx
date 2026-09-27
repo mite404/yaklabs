@@ -2,7 +2,7 @@ import type { ThreadSummary } from "@yaklabs/runtime";
 import { SidebarMenuAction, SidebarMenuButton } from "@yaklabs/ui/components/sidebar";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@yaklabs/ui/components/tooltip";
 import { ChevronDown, ChevronRight, ChevronUp } from "lucide-react";
-import { useState, type PointerEvent, type ReactElement } from "react";
+import { useState, type ReactElement } from "react";
 import { Link } from "react-router";
 import { usePaths } from "../runtime";
 
@@ -20,23 +20,25 @@ const THREAD_ROW = `${ROW} pl-6`;
 const NO_ACTION = "group-has-data-[sidebar=menu-action]/menu-item:pr-2";
 
 // Whether the row's label is cut short, so its tooltip has something to add.
-function isCut(event: PointerEvent<HTMLElement>): boolean {
-  const label = event.currentTarget.querySelector("[data-label]");
+function isCut(row: Element | undefined): boolean {
+  const label = row?.querySelector("[data-label]") ?? null;
   return label !== null && label.scrollWidth > label.clientWidth;
 }
 
 // A row whose label may be cut short: the whole name shows beside it, and only when it is cut.
+// The cut is measured as the tooltip asks to open, so the first hover and a keyboard focus
+// count as much as a second hover.
 function Named({ name, row }: { name: string; row: ReactElement }) {
-  const [cut, setCut] = useState(false);
+  const [open, setOpen] = useState(false);
   return (
-    <Tooltip disabled={!cut}>
-      <TooltipTrigger
-        render={row}
-        onPointerEnter={(event) => {
-          setCut(isCut(event));
-        }}
-      />
-      <TooltipContent side="right" className="max-w-80">
+    <Tooltip
+      open={open}
+      onOpenChange={(next, { trigger }) => {
+        setOpen(next && isCut(trigger));
+      }}
+    >
+      <TooltipTrigger render={row} />
+      <TooltipContent side="right" className="max-w-80 wrap-anywhere">
         {name}
       </TooltipContent>
     </Tooltip>

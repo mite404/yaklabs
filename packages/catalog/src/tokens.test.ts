@@ -1,9 +1,12 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
-// The window chrome's tokens (ADR-110 to ADR-115), each ratio as tokens.css writes it beside
-// the token: [foreground, background, ratio written, the floor it must clear].
+// The window chrome's tokens (ADR-110 to ADR-115): [foreground, background, the ratio tokens.css
+// writes beside them, the floor it must clear]. Each ratio is recomputed from the token values
+// and must also appear, as written, in tokens.css, so a comment that drifts fails too.
 type Pair = [string, string, number, number];
+// A translucent fill as it lands on a ground: [fill, ground, ratio written, floor].
+type Wash = [string, string, number, number];
 
 const CSS = readFileSync(new URL("tokens.css", import.meta.url), "utf8");
 // What paint-chrome.mjs measured on the painting it shipped, decoded from the file itself.
@@ -34,6 +37,15 @@ const DARK: Pair[] = [
   ["--desk", "--chrome", 1.69, 1.5],
   ["--trim", "--paper", 5.79, 3],
 ];
+const WASHES: Wash[] = [
+  ["--chrome-line", "--chrome", 1.63, 1],
+  ["--chrome-painting-hover", "--chrome-painting", 1.37, 1.2],
+];
+// The inks on the painted bar's hover fill, which only darkens the painting.
+const ON_WASH: Pair[] = [
+  ["--on-chrome", "--chrome-painting-hover", 10.12, 4.5],
+  ["--on-chrome-painting-soft", "--chrome-painting-hover", 7.91, 4.5],
+];
 // The splash's line, the ink at a share over nothing, as it lands on the canvas field (--bg).
 const SPLASH = { light: 1.26, dark: 1.36 };
 // No pixel of the decoded painting may be brighter than this (paint-chrome.mjs).
@@ -60,23 +72,29 @@ const hex = (value: string): Rgb => {
 
 // A token's colour in a theme: a hex, a var() of another token, or a color-mix() in srgb of
 // two of those; the dark block overrides the root one, as the cascade does.
-function colour(name: string, theme: Map<string, string>[]): Rgb {
+function colour(name: string, theme: Map<string, string>[], ground?: Rgb): Rgb {
   let value: string | undefined;
   for (const each of theme) value = each.get(name) ?? value;
   if (value === undefined) throw new Error(`${name} is not declared`);
-  return resolve(value, theme);
+  return resolve(value, theme, ground);
 }
 
-function resolve(value: string, theme: Map<string, string>[]): Rgb {
+// `transparent` is what the colour lands on, a `ground` a translucent token is given.
+function resolve(value: string, theme: Map<string, string>[], ground?: Rgb): Rgb {
   if (value.startsWith("#")) return hex(value);
-  const reference = /^var\((--[\w-]+)\)$/.exec(value);
-  if (reference?.[1] !== undefined) return colour(reference[1], theme);
-  const mix = /^color-mix\(in srgb, (.+) (\d+)%, (.+)\)$/.exec(value);
-  if (mix?.[1] === undefined || mix[2] === undefined || mix[3] === undefined)
-    throw new Error(`cannot resolve ${value}`);
-  const [a, b] = [resolve(mix[1], theme), resolve(mix[3], theme)];
-  const share = Number(mix[2]) / 100;
-  const blend = (i: 0 | 1 | 2) => a[i] * share + b[i] * (1 - share);
+  if (value === "transparent" && ground !== undefined) return ground;
+  const reference = /^var\((--[\w-]+)\)$/.exec(value)?.[1];
+  return reference === undefined ? mixOf(value, theme, ground) : colour(reference, theme, ground);
+}
+
+// `color-mix(in srgb, A n%, B)`: A at n% over B.
+function mixOf(value: string, theme: Map<string, string>[], ground?: Rgb): Rgb {
+  const [, first = "", share = "", second = ""] =
+    /^color-mix\(in srgb, (.+) (\d+)%, (.+)\)$/.exec(value) ?? [];
+  if (first === "") throw new Error(`cannot resolve ${value}`);
+  const [a, b] = [resolve(first, theme, ground), resolve(second, theme, ground)];
+  const k = Number(share) / 100;
+  const blend = (i: 0 | 1 | 2) => a[i] * k + b[i] * (1 - k);
   return [blend(0), blend(1), blend(2)];
 }
 
@@ -92,12 +110,21 @@ const contrast = (a: number, b: number): number =>
 const ROOT = block(":root");
 const THEMES = { light: [ROOT], dark: [ROOT, block(':root[data-theme="dark"]')] };
 
-// Each pair that misses its floor or no longer matches the ratio written beside the token.
-function misses(pairs: Pair[], theme: Map<string, string>[]): string[] {
+// A ratio as tokens.css writes it: "8.98:1", "16.1:1", "6.3:1".
+const writtenInCss = (ratio: number): boolean =>
+  [ratio.toFixed(2), ratio.toFixed(1), String(ratio)].some((text) => CSS.includes(`${text}:1`));
+
+// Each pair that misses its floor, no longer matches its written ratio, or whose written ratio
+// tokens.css no longer carries. A `ground` is where a translucent token lands.
+function misses(pairs: Pair[], theme: Map<string, string>[], ground?: string): string[] {
+  const under = ground === undefined ? undefined : colour(ground, theme);
   return pairs.flatMap(([fg, bg, written, floor]) => {
-    const ratio = contrast(luminance(colour(fg, theme)), luminance(colour(bg, theme)));
+    const ratio = contrast(
+      luminance(colour(fg, theme, under)),
+      luminance(colour(bg, theme, under)),
+    );
     const rounded = Math.round(ratio * 100) / 100;
-    const off = ratio < floor || Math.abs(rounded - written) > 0.05;
+    const off = ratio < floor || Math.abs(rounded - written) > 0.05 || !writtenInCss(written);
     return off ? [`${fg} on ${bg}: ${rounded}, written ${written}, floor ${floor}`] : [];
   });
 }
@@ -109,6 +136,14 @@ describe("the window chrome's tokens", () => {
 
   it("set the window apart from its desk, and the trim apart from the body", () => {
     expect([...misses(LIGHT, THEMES.light), ...misses(DARK, THEMES.dark)]).toEqual([]);
+  });
+
+  it("lay their translucent fills over the bar where they show, and the inks on them", () => {
+    const washes = WASHES.flatMap(([fill, ground, written, floor]) =>
+      misses([[fill, ground, written, floor]], THEMES.light, ground),
+    );
+    const inks = misses(ON_WASH, THEMES.light, "--chrome-painting");
+    expect([...washes, ...inks]).toEqual([]);
   });
 
   it("keep the painted bar's inks readable on its brightest pixel, as the file holds it", () => {

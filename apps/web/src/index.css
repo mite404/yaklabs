@@ -20,11 +20,29 @@
   outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
+/* shadcn's ghost button hovers at half strength in dark mode (dark:hover:bg-muted/50). The bar
+   is the same in either theme (ADR-110), so its hover is the full fill there too. */
+:root[data-theme="dark"] .chrome-surface .dark\:hover\:bg-muted\/50:hover {
+  background-color: var(--muted);
+}
 /* A tab draws its ring inside itself: the tab strip scrolls, and a scroller clips whatever lies
    past its edge. On the active tab's pill the ring is the pill's own night ink (16.1:1). */
 .chrome-surface .tab:focus-visible {
   outline-offset: -2px;
   box-shadow: none; /* shadcn's half-strength ring outside the tab, which the strip clipped */
+}
+/* A lane's title clips with an ellipsis where it outgrows its bar (ADR-097). The rename button
+   holds the text, and the heading cannot put an ellipsis inside a button, which lays out as one
+   unbreakable box, so the button clips as a block of its own, held to the heading's width
+   since a button shrinks to its text even as a block. Outside every layer on purpose: the
+   catalog's thread.css resets the button with `all: unset` outside every layer too, which no
+   layered rule can outrank. */
+.lane .thread-header .thread-title {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
 }
 
 /* The window's decorative traffic lights (ADR-094): a desktop window's own colours, the one
@@ -144,6 +162,7 @@
      is a step brighter than the flat bar's, since the painting is lighter than the flat green. */
   .chrome-surface[data-chrome="painting"] {
     --soft-ink: var(--on-chrome-painting-soft);
+    --paper-deep: var(--chrome-painting-hover);
     background:
       linear-gradient(
         to right,
@@ -202,6 +221,12 @@
     background-color: var(--bg);
     background-image: radial-gradient(var(--hairline) 1px, transparent 1px);
     background-size: 18px 18px;
+    /* The canvas fills the window's bottom right corner, which the window rounds at 12px
+       inside its 1px border from md up (window.tsx), so the canvas rounds that corner the same
+       way, and a carry's ring below follows the curve rather than being cut off by it. */
+    @variant md {
+      border-bottom-right-radius: calc(12px - 1px);
+    }
   }
   /* The row's scrollbar stays in view, thin, in the site's rule colour: the ground runs on past
      the last lane, and the bar is how the eye knows. */
@@ -335,7 +360,7 @@
     opacity: 0;
   }
   /* The title hugs its text so the whole thing shows at rest; it only clips with an ellipsis
-     once it outgrows the bar itself. */
+     once it outgrows the bar itself (the rename button's own clip is at the top of this file). */
   .lane .thread-header h2 {
     width: fit-content;
     max-width: 100%;

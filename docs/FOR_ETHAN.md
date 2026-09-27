@@ -669,14 +669,52 @@ The first entries are ideas from before any code existed; the rest are parts of 
   all four stories, and 0 of 360 loads rest short (ADR-109). Lesson: a scroll event does not say
   who scrolled, and it arrives late. Decide at the moment you know what changed, which here is the
   resize. It is "The 20px that was really 16", two levels deeper.
+- **The tab that was never saved.** Open a thread from the sidebar, switch to another tab, and the
+  new tab was gone, with its draft. The page drew the tab from the address, so it looked open,
+  but the save step compared the change against a copy that already held the visit, saw no
+  difference, and never wrote it. Every check that opened a tab happened to run another verb
+  first, which saved the tab by accident, so the levers never saw it. An independent review with
+  four lenses did, and three of the four reported it. Fix: a change is weighed against the
+  document the worker holds, never against the one the screen shows. Lesson: when the screen and
+  the store can disagree, test what the store kept, not what the screen drew. A continuity report
+  that only reads the monitor misses the take that was never recorded.
+- **The second tab that could delete the first.** The database library answers a failed start by
+  deleting its whole folder, every saved thread in it. A second browser tab always failed to
+  start, because the first held the files, and only those open files stopped the delete. If the
+  first tab let go at the wrong moment, everything went. Fix, twice over: every tab queues on a
+  browser lock before it touches the database, so a second tab waits and says "Your threads are
+  open in another tab"; and the worker keeps a file of its own open inside the library's folder,
+  so the delete is refused whatever happens (ADR-118). Lesson: read what a library does when it
+  fails, not only when it works. The stunt looked safe until someone read the insurance terms.
+- **Two agents, one stash.** Two fixers worked in separate folders of the same repository. One
+  set a change aside with `git stash` to show a test failing first; the stash list is shared by
+  every folder, so the other fixer's `stash pop` picked it up and landed it in the wrong place. The
+  stray edit matched a commit that already existed, so nothing was lost, and the briefs now forbid
+  `git stash`. Lesson: separate rooms are not separate if they share one shelf.
+- **Green here, red in CI.** A fix read the thread's id through types React Router generates. My
+  machine had them from an earlier typecheck; CI lints before it generates them, so there the id
+  was an error type and lint failed twice. Fix: read the id with `useParams`, which needs no
+  generated file, and lint the way CI does, with the generated folder moved aside. Lesson: a local
+  run proves the local machine. Match the order of the real pipeline, like grading a shot on the
+  monitor the client will watch.
 
 - **The runtime that restarted for a parameter it never reads.** With `?chrome=painting` in the
   address, the tabs and the marker blinked out a moment after load. The runtime was keyed on the
   whole query string, and the first redirect keeps only `?scenario=`, so it saw a "new" address
   and started the worker again. It had always done this for any extra parameter, a tracking tag
-  included; nothing had carried one until now. Fix: key it on the scenario alone,
-  `scenarioQuery()`, with a table test. Lesson: key a memo on what it actually depends on, not on
-  the envelope that happens to carry it.
+  included; nothing had carried one until now. Fix: key it on the scenario alone, with a table
+  test. The base then landed the same fix on its own (`useWanted()`), so the merge took theirs
+  and dropped ours: two crews had found one bug, and the set only needs one repair. Lesson: key a
+  memo on what it actually depends on, not on the envelope that happens to carry it.
+- **The 44px rule that met a phone.** The polish promised the bar stays 44px tall at every
+  width. Then the base gave phones a second row for the tabs, and the check failed at 80px with
+  no polish change at all. The promise was really "the polish does not change the bar's height",
+  so the check now records the base's height at each width in the baseline and compares against
+  it, and still demands 44px from 768px up. Lesson: write a check against the intent, not
+  against the number that happened to express it on the day.
+  The last act: the phone bar had been fixed twice in parallel, as that second row and as the
+  one 44px row of ADR-116. Ethan chose the one row, so A2 asks for 44px at every width again,
+  and the web check's phone test now scrolls to each tab before it taps it.
 - **The avatar that decided how every letter was drawn.** Making the avatar's ring blend the same
   in both themes (`mix-blend-mode: normal`) changed 35,000 pixels in a panel it is nowhere near.
   Every glyph in the app had switched from greyscale to coloured subpixel smoothing. Chromium only
@@ -706,6 +744,17 @@ The first entries are ideas from before any code existed; the rest are parts of 
   which is cream, so the cream bell read 1:1; the badge's round corners gave its "2" the bar as a
   background. The lever now takes one picture with every glyph and icon removed and measures each
   ink only over the pixels its own glyphs cover, less anything drawn on top of it.
+- **The address changed behind the router's back.** `?chrome=` was taken out of the address with
+  `history.replaceState` while the page rendered, but React Router kept its own copy of the old
+  address. Clicking the thread already open then looked like a new address to it, so it pushed a
+  second history entry, and Back went nowhere. A boot script now cleans the address before the
+  router starts, the way the theme's boot script sets the theme before React. Lesson: a router
+  owns the address; change it through the router, or before the router exists.
+- **The probe that measured nothing and passed.** A new check for an avatar's initials read
+  `Infinity`: it collected the inks inside the element, never the element's own text, found none,
+  and the minimum of nothing is infinite, which clears every floor. The lever now counts an empty
+  ink list as a failure, and the probe was shown to fail at 4.47:1 with the fix removed. Lesson: a
+  check needs a way to say "I saw nothing", or nothing reads as a pass.
 - **The focus ring the tab strip cut off.** The bar's new 2px ring sat 2px outside each control.
   On a tab that put it outside the tab strip, which scrolls, and a scroller clips whatever lies
   past its edge, so a focused tab showed almost no ring: the exact failure the rule was written

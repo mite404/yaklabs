@@ -1,7 +1,8 @@
-import { SidebarInset, SidebarProvider } from "@yaklabs/ui/components/sidebar";
+import { SidebarProvider } from "@yaklabs/ui/components/sidebar";
 import { cssVars } from "@yaklabs/ui/lib/utils";
 import { useState, type ReactNode } from "react";
 import { useChrome } from "../chrome";
+import { useMatch } from "react-router";
 import type { ThemeChoice } from "../theme";
 import { AppSidebar } from "./sidebar";
 import { TitleBar } from "./title-bar";
@@ -29,6 +30,23 @@ function rememberSidebar(open: boolean): void {
   } catch {
     // The choice holds for this visit.
   }
+}
+
+// The workspace beside the sidebar, inset like Kay's content pane, with the deck and the route
+// in one grid cell. It is the page's main landmark, except on /lab, whose workbench brings its
+// own main: two, one inside the other, leave no single main to skip to. It is a div on every
+// route, since swapping the element would remount the deck and lose every open tab.
+function Workspace({ children }: { children: ReactNode }) {
+  const onLab = useMatch("/lab") !== null;
+  return (
+    <div
+      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- a main element cannot drop its role on /lab
+      role={onLab ? undefined : "main"}
+      className="relative grid min-h-0 w-full min-w-0 flex-1 overflow-hidden bg-background *:[grid-area:1/1] md:rounded-tl-[10px] md:border-t md:border-l md:border-hairline"
+    >
+      {children}
+    </div>
+  );
 }
 
 /**
@@ -59,9 +77,7 @@ export function Window({ theme, children }: { theme: ThemeChoice; children: Reac
           <TitleBar theme={theme} chrome={chrome} />
           <div data-slot="window-body" className="window-trim relative flex min-h-0 flex-1">
             <AppSidebar />
-            <SidebarInset className="m-0 grid min-h-0 max-w-none min-w-0 overflow-hidden bg-background p-0 *:[grid-area:1/1] md:rounded-tl-[10px] md:border-t md:border-l md:border-hairline">
-              {children}
-            </SidebarInset>
+            <Workspace>{children}</Workspace>
           </div>
         </SidebarProvider>
       </div>

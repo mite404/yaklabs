@@ -1,12 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  keepScenario,
-  legacyFrom,
-  markerFor,
-  scenarioQuery,
-  unknownScenario,
-  wantedFrom,
-} from "./source";
+import { keepScenario, legacyFrom, markerFor, unknownScenario, wantedFrom } from "./source";
 
 describe("wantedFrom", () => {
   it("opens the device when the address names no scenario", () => {
@@ -33,15 +26,6 @@ describe("keepScenario", () => {
   it("round-trips through wantedFrom", () => {
     const wanted = wantedFrom("?scenario=thread-fails");
     expect(wantedFrom(new URL(keepScenario("/", wanted), "http://x").search)).toEqual(wanted);
-  });
-});
-
-describe("scenarioQuery", () => {
-  it("keeps only the scenario, so another parameter never changes what the page opens", () => {
-    expect(scenarioQuery("?scenario=demo&chrome=painting")).toBe("?scenario=demo");
-    expect(scenarioQuery("?chrome=painting&scenario=demo")).toBe(scenarioQuery("?scenario=demo"));
-    expect(scenarioQuery("?chrome=painting")).toBe("");
-    expect(scenarioQuery("?scenario=nope&x=1")).toBe("?scenario=nope");
   });
 });
 

@@ -91,28 +91,35 @@ function land(runtime: Runtime, main: ThreadId, carried: Carried, at: number): v
  * A main thread's compose canvas (ADR-089, ADR-092), drawn from the snapshot: its lanes, left
  * to right, each thread lane loading its own turns. Close, reorder, widths and a card dropped
  * between lanes all set the lanes through `arrange`; a highlight or Create blank thread makes
- * a child with its lane in place. A focused child whose lane was closed gets it back.
+ * a child with its lane in place. Each visit to a child's address brings its lane into view and
+ * flashes it, and gives the lane back first if it was closed.
  */
 export function MainCanvas({
   main,
   workspace,
   focus,
+  visit,
 }: {
   main: ThreadId;
   workspace: Workspace;
   focus: ThreadId | null;
+  visit: string;
 }) {
   const runtime = useRuntime();
   const lanes = lanesOf(workspace, main);
   const threads = new Map(workspace.threads.map((thread) => [thread.id, thread] as const));
+  // Each visit to a child's address opens its lane, a second click on a row the address already
+  // names included: that click changes the visit and nothing else.
   useEffect(() => {
     if (focus !== null) arrangeFrom(runtime, main, (current) => reopenLane(current, focus));
-  }, [runtime, main, focus]);
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies -- `visit` is what runs it again
+  }, [runtime, main, focus, visit]);
   const focused = lanes.find((lane) => lane.kind === "thread" && lane.threadId === focus);
   return (
     <Canvas
       lanes={lanes.flatMap((lane) => laneView(lane, threads))}
       focus={focused?.id ?? null}
+      visit={visit}
       actions={{
         onClose: (id) => {
           arrangeFrom(runtime, main, (current) => closeLane(current, id));
