@@ -1,3 +1,4 @@
+import type { LaneId } from "@yaklabs/runtime";
 import { Button } from "@yaklabs/ui/components/button";
 import { X } from "lucide-react";
 import {
@@ -6,25 +7,16 @@ import {
   useRef,
   useState,
   type CSSProperties,
-  type DragEvent,
   type KeyboardEvent,
   type PointerEvent,
   type ReactNode,
   type WheelEvent,
 } from "react";
-import {
-  accepts,
-  landingIndex,
-  readDrop,
-  shiftFor,
-  slotLeft,
-  type Drop,
-  type Slot,
-} from "../canvas";
+import { landingIndex, shiftFor, slotLeft, type Slot } from "../canvas";
 import { trackHintLine } from "./divider";
 
-/** One lane on the canvas: what it is called and what it shows. */
-export type LaneView = { id: string; title: string; node: ReactNode };
+/** One lane on the canvas: its name, the width it was left at (null: the default), its content. */
+export type LaneView = { id: LaneId; title: string; width: number | null; node: ReactNode };
 
 // A lane is a fixed column so the thread inside keeps one measure: this wide until its
 // separator is dragged, and never narrower than this.
@@ -40,13 +32,13 @@ const KEY_MOVES: Partial<Record<string, number>> = { ArrowLeft: -1, ArrowRight: 
 
 // A lane on its way somewhere (ADR-089): which, from which slot, the slot it would land in,
 // and how far the pointer has carried it.
-type Move = { id: string; from: number; to: number; dx: number; dy: number };
+type Move = { id: LaneId; from: number; to: number; dx: number; dy: number };
 
 // What a drag measured as it began, so the lift itself never moves the targets: every lane's
 // slot along the row, the pointer's place, and the lane's box on screen. The lane itself is
 // kept for the copy that floats under the pointer.
 type Lift = {
-  id: string;
+  id: LaneId;
   from: number;
   x: number;
   y: number;
@@ -173,7 +165,7 @@ function liftedOf(drag: Drag | null): [Lift | null, Move | null] {
 }
 
 // What a press on a lane measured, or nothing when it was not on a grip.
-function liftAt(event: PointerEvent<HTMLElement>, id: string, index: number): Lift | null {
+function liftAt(event: PointerEvent<HTMLElement>, id: LaneId, index: number): Lift | null {
   const row = event.currentTarget.closest("section");
   if (event.button !== 0 || !row || !isGrip(event.target)) return null;
   const lane = event.currentTarget;
@@ -191,15 +183,15 @@ function liftAt(event: PointerEvent<HTMLElement>, id: string, index: number): Li
 // Reordering by a lane's grip: past a small dead zone the lane lifts, a copy of it rides the
 // pointer, the lane itself waits dimmed in the slot it would take and the lanes it passes step
 // aside. Arrow keys on the grip move the lane one slot either way.
-function useReorder(onMove: (id: string, to: number) => void): {
+function useReorder(onMove: (id: LaneId, to: number) => void): {
   drag: Drag | null;
-  laneFor: (id: string, index: number) => LaneHandlers;
+  laneFor: (id: LaneId, index: number) => LaneHandlers;
 } {
   const [drag, setDrag] = useState<Drag | null>(null);
   const [lift, move] = liftedOf(drag);
   useFloatingCopy(lift, move);
 
-  const laneFor = (id: string, index: number): LaneHandlers => ({
+  const laneFor = (id: LaneId, index: number): LaneHandlers => ({
     onPointerDown: (event) => {
       const pressed = liftAt(event, id, index);
       if (!pressed) return;
@@ -268,6 +260,7 @@ function displacement(drag: Drag | null, index: number): string {
 
 // The gap after a lane, which drags the lane's right edge (ADR-089). The hint line shows while
 // the pointer is on it; pointer capture keeps the drag alive once the pointer outruns the gap.
+// The width follows the pointer and is kept when it lets go; an arrow key keeps its step at once.
 function LaneSeparator({
   title,
   style,
@@ -276,30 +269,35 @@ function LaneSeparator({
 }: {
   title: string;
   style: CSSProperties;
-  onResize: (px: number) => void;
+  onResize: (px: number, kept: boolean) => void;
   onMove: (step: number) => void;
 }) {
   const [dragging, setDragging] = useState(false);
-  // Where the drag began: the pointer's x and the lane's width at that moment.
-  const origin = useRef<{ x: number; width: number } | null>(null);
+  // Where the drag began (the pointer's x and the lane's width then) and the width reached since.
+  const origin = useRef<{ x: number; width: number; reached: number } | null>(null);
 
   function down(event: PointerEvent<HTMLDivElement>) {
     const lane = laneBefore(event.currentTarget);
     if (event.button !== 0 || !lane) return;
     event.preventDefault();
-    origin.current = { x: event.clientX, width: lane.getBoundingClientRect().width };
+    const width = lane.getBoundingClientRect().width;
+    origin.current = { x: event.clientX, width, reached: width };
     event.currentTarget.setPointerCapture(event.pointerId);
     setDragging(true);
   }
   function moveBy(event: PointerEvent<HTMLDivElement>) {
     trackHintLine(event);
     if (origin.current) {
-      onResize(clampWidth(origin.current.width + event.clientX - origin.current.x));
+      const px = clampWidth(origin.current.width + event.clientX - origin.current.x);
+      origin.current.reached = px;
+      onResize(px, false);
     }
   }
   function up() {
+    const drag = origin.current;
     origin.current = null;
     setDragging(false);
+    if (drag && drag.reached !== drag.width) onResize(drag.reached, true);
   }
   // Arrows resize the lane before the gap; with Shift they move it a slot instead.
   function resizeByKey(event: KeyboardEvent<HTMLDivElement>) {
@@ -307,7 +305,7 @@ function LaneSeparator({
     const step = KEY_STEPS[event.key];
     if (!lane || step === undefined) return;
     event.preventDefault();
-    onResize(clampWidth(lane.getBoundingClientRect().width + step));
+    onResize(clampWidth(lane.getBoundingClientRect().width + step), true);
   }
   function moveByKey(event: KeyboardEvent<HTMLDivElement>) {
     const step = KEY_MOVES[event.key];
@@ -366,11 +364,11 @@ function Lane({
   onClose,
 }: {
   lane: LaneView;
-  width: number | undefined;
+  width: number | null;
   lifted: boolean;
   style: CSSProperties;
   handlers: LaneHandlers;
-  onClose: (id: string) => void;
+  onClose: (id: LaneId) => void;
 }) {
   return (
     // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- the pointer takes hold of the lane by its title bar; the keyboard moves it from the gap after it
@@ -397,13 +395,11 @@ function Lane({
 // The open space at the end of the row: the whole canvas when it is empty, a slimmer
 // column once lanes exist, so there is always somewhere to drop the next thing. The button is
 // the catalog's own, the one a card's "Show my work" uses.
-function OpenSpace({ over, onBlank }: { over: boolean; onBlank: () => void }) {
+function OpenSpace({ onBlank }: { onBlank: () => void }) {
   return (
     <div
       data-ground=""
-      className={`flex h-full min-w-[320px] flex-1 flex-col items-center justify-center gap-4 rounded-[var(--radius-card)] border border-dashed p-6 text-center transition-colors ${
-        over ? "border-olive bg-paper-deep/60" : "border-hairline"
-      }`}
+      className="flex h-full min-w-[320px] flex-1 flex-col items-center justify-center gap-4 rounded-[var(--radius-card)] border border-dashed border-hairline p-6 text-center"
     >
       <p className="font-serif text-xl text-ink">
         Drag a text selection or card
@@ -430,67 +426,35 @@ function panRow(event: WheelEvent<HTMLElement>) {
   event.currentTarget.scrollLeft += event.deltaY;
 }
 
-// The canvas as a drop target: whether a drag it takes is over it, and the handlers that say so.
-function useDropTarget(onDrop: (drop: Drop) => void): {
-  over: boolean;
-  onDragOver: (event: DragEvent<HTMLElement>) => void;
-  onDragLeave: () => void;
-  onDrop: (event: DragEvent<HTMLElement>) => void;
-} {
-  const [over, setOver] = useState(false);
-  return {
-    over,
-    onDragOver: (event) => {
-      if (!accepts(event.dataTransfer)) return;
-      event.preventDefault();
-      event.dataTransfer.dropEffect = "copy";
-      setOver(true);
-    },
-    onDragLeave: () => {
-      setOver(false);
-    },
-    onDrop: (event) => {
-      event.preventDefault();
-      setOver(false);
-      const dropped = readDrop(event.dataTransfer); // → Drop | undefined
-      if (dropped) onDrop(dropped);
-    },
-  };
-}
-
 /**
  * The compose canvas (ADR-089): a row of lanes that grows to the right, with open space at
- * the end that takes the next drop. A highlight from a thread starts a new thread there; a
- * card dragged by its header opens large. The gap after each lane drags the lane's width, a
- * lane's title bar drags it to another place in the row, and the ground drags to pan.
+ * the end for the next thing. The gap after each lane drags the lane's width, a lane's title
+ * bar drags it to another place in the row, and the ground drags to pan. The canvas keeps no
+ * lanes of its own: it reports each change, and the caller's lanes come back changed.
  */
 export function Canvas({
   lanes,
-  onDrop,
   onClose,
   onMove,
+  onResize,
   onBlank,
 }: {
   lanes: LaneView[];
-  onDrop: (drop: Drop) => void;
-  onClose: (id: string) => void;
-  onMove: (id: string, to: number) => void;
+  onClose: (id: LaneId) => void;
+  onMove: (id: LaneId, to: number) => void;
+  onResize: (id: LaneId, px: number) => void;
   onBlank: () => void;
 }) {
-  const target = useDropTarget(onDrop);
   const reorder = useReorder(onMove);
   const pan = usePan();
-  // Widths set by dragging, by lane id; a lane not listed is still at its default width.
-  const [widths, setWidths] = useState<Record<string, number>>({});
+  // The width of the lane whose gap is being dragged, until the drag lets go and it is kept.
+  const [resizing, setResizing] = useState<{ id: LaneId; px: number } | null>(null);
 
   return (
-    // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- a drop target has no interactive role; the keyboard path is the Create blank thread button
+    // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- the ground pans by pointer and wheel; the keyboard reaches every lane and the Create blank thread button
     <section
       aria-label="Compose canvas"
       className="canvas flex h-full overflow-x-auto p-4"
-      onDragOver={target.onDragOver}
-      onDragLeave={target.onDragLeave}
-      onDrop={target.onDrop}
       onWheel={panRow}
       onPointerDown={pan.onPointerDown}
       onPointerMove={pan.onPointerMove}
@@ -501,7 +465,7 @@ export function Canvas({
         <Fragment key={lane.id}>
           <Lane
             lane={lane}
-            width={widths[lane.id]}
+            width={resizing?.id === lane.id ? resizing.px : lane.width}
             lifted={reorder.drag?.move?.id === lane.id}
             style={{ transform: displacement(reorder.drag, index) }}
             handlers={reorder.laneFor(lane.id, index)}
@@ -510,8 +474,9 @@ export function Canvas({
           <LaneSeparator
             title={lane.title}
             style={{ transform: displacement(reorder.drag, index) }}
-            onResize={(px) => {
-              setWidths((current) => ({ ...current, [lane.id]: px }));
+            onResize={(px, kept) => {
+              setResizing(kept ? null : { id: lane.id, px });
+              if (kept) onResize(lane.id, px);
             }}
             onMove={(step) => {
               onMove(lane.id, index + step);
@@ -519,7 +484,7 @@ export function Canvas({
           />
         </Fragment>
       ))}
-      <OpenSpace over={target.over} onBlank={onBlank} />
+      <OpenSpace onBlank={onBlank} />
       {/* The ground goes on for a pane past the open space: the canvas has no right edge. */}
       {lanes.length > 0 && <div data-ground="" aria-hidden="true" className="w-full shrink-0" />}
     </section>
