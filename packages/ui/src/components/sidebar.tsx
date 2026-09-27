@@ -138,6 +138,7 @@ function SidebarProvider({
             ...style,
           } as React.CSSProperties
         }
+        data-mobile-open={isMobile && openMobile ? "" : undefined}
         className={cn(
           "group/sidebar-wrapper flex min-h-svh w-full has-data-[variant=inset]:bg-sidebar",
           className,
@@ -150,11 +151,84 @@ function SidebarProvider({
   );
 }
 
+// Moves focus into the push drawer as it opens and back to where it was as it closes, and lets
+// Escape close it, as the sheet's dialog does for itself.
+function usePushFocus(
+  panel: React.RefObject<HTMLDialogElement | null>,
+  open: boolean,
+  close: () => void,
+) {
+  React.useEffect(() => {
+    const before = document.activeElement;
+    const onKey = (event: KeyboardEvent) => {
+      if (open && event.key === "Escape") close();
+    };
+    if (open) panel.current?.focus();
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      if (open && before instanceof HTMLElement) before.focus();
+    };
+  }, [panel, open, close]);
+}
+
+// A phone's drawer that pushes the page aside instead of covering it (Amp's pattern): it sits
+// just off the wrapper's left edge, and the app slides the wrapper right by
+// --sidebar-width-mobile while it is open, so the page's own edge stays in view. Fixed inside a
+// transformed wrapper, it is placed against the wrapper, and so moves with it.
+function SidebarPush({
+  side,
+  dir,
+  children,
+}: {
+  side: "left" | "right";
+  dir?: string;
+  children: React.ReactNode;
+}) {
+  const { openMobile, setOpenMobile } = useSidebar();
+  const panel = React.useRef<HTMLDialogElement>(null);
+  const close = React.useCallback(() => {
+    setOpenMobile(false);
+  }, [setOpenMobile]);
+  usePushFocus(panel, openMobile, close);
+  return (
+    <>
+      {/* Always open and in the DOM, so it can slide; closed, it is invisible and inert. */}
+      <dialog
+        ref={panel}
+        open
+        aria-modal="true"
+        aria-label="Sidebar"
+        tabIndex={-1}
+        dir={dir}
+        inert={!openMobile}
+        data-sidebar="sidebar"
+        data-slot="sidebar"
+        data-mobile="true"
+        data-side={side}
+        data-state={openMobile ? "open" : "closed"}
+        className="fixed inset-y-0 right-full left-auto z-20 m-0 flex h-auto max-h-none w-(--sidebar-width-mobile) max-w-none flex-col border-0 bg-sidebar p-0 text-sidebar-foreground outline-none data-[state=closed]:invisible"
+      >
+        {children}
+      </dialog>
+      {openMobile && (
+        <div
+          aria-hidden="true"
+          data-slot="sidebar-push-scrim"
+          className="fixed inset-0 z-20"
+          onClick={close}
+        />
+      )}
+    </>
+  );
+}
+
 // oxlint-disable-next-line max-lines-per-function -- branches over collapsible=none, mobile sheet and desktop rail; each branch is a distinct render, not extra logic
 function Sidebar({
   side = "left",
   variant = "sidebar",
   collapsible = "offcanvas",
+  mobile = "sheet",
   className,
   children,
   dir,
@@ -163,6 +237,8 @@ function Sidebar({
   side?: "left" | "right";
   variant?: "sidebar" | "floating" | "inset";
   collapsible?: "offcanvas" | "icon" | "none";
+  /** On a phone: a sheet over the page, or a drawer that pushes the page aside. */
+  mobile?: "sheet" | "push";
 }) {
   const { isMobile, state, openMobile, setOpenMobile } = useSidebar();
 
@@ -178,6 +254,14 @@ function Sidebar({
       >
         {children}
       </div>
+    );
+  }
+
+  if (isMobile && mobile === "push") {
+    return (
+      <SidebarPush side={side} dir={dir}>
+        {children}
+      </SidebarPush>
     );
   }
 
