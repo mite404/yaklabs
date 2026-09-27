@@ -14,6 +14,7 @@ import {
 import { useLanding, type Landing } from "./canvas-carry";
 import { panRow, usePan } from "./canvas-pan";
 import { LaneSeparator } from "./lane-separator";
+import { Kay, SplashDrawing } from "./splash";
 import { displacement, useReorder, type LaneHandlers } from "./lane-reorder";
 
 /** One lane on the canvas: its name, the width it was left at (null: the default), its content. */
@@ -77,34 +78,6 @@ function Lane({
         {lane.node}
       </div>
     </article>
-  );
-}
-
-// The splash on an empty canvas (ADR-113): a line drawing behind the words, and Kay at the
-// bottom right, over them. Both are pictures only: hidden from the tree, and a press or a carried
-// card goes through them to the ground. Bottom to top: the dotted field, the carry's lit fill
-// (the open space's ::before), the drawing, the words and the button, Kay.
-function SplashDrawing() {
-  return (
-    <div data-slot="canvas-splash" aria-hidden="true" className="splash pointer-events-none">
-      <div data-slot="splash-drawing" className="splash-drawing absolute inset-6" />
-    </div>
-  );
-}
-
-// Kay stays away from an open space under 480px, a content box under 430px, where he would
-// crowd the words.
-function Kay() {
-  return (
-    <img
-      data-slot="kay-mascot"
-      src="/kay/kay.webp"
-      alt=""
-      aria-hidden="true"
-      width={96}
-      height={110}
-      className="splash-in pointer-events-none absolute right-6 bottom-6 hidden w-24 @min-[430px]:block"
-    />
   );
 }
 
