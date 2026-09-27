@@ -61,6 +61,7 @@ describe("markerFor", () => {
   });
   it("names a scenario as a mock, whatever agent the build has", () => {
     expect(markerFor({ kind: "scenario", name: "long" }, gateway)?.label).toBe("Mock: long");
+    expect(markerFor({ kind: "scenario", name: "long" }, gateway)?.short).toBe("Mock");
   });
   it("says whether the device keeps the threads, and when a live model answers", () => {
     expect(markerFor({ kind: "device", storage: "opfs" }, lab)?.label).toBe("On this device");
@@ -68,6 +69,12 @@ describe("markerFor", () => {
     expect(markerFor({ kind: "device", storage: "opfs" }, gateway)?.label).toBe(
       "On this device · Live model",
     );
+  });
+  it("shortens the label to one word for a phone, live overriding storage", () => {
+    expect(markerFor({ kind: "device", storage: "opfs" }, lab)?.short).toBe("On device");
+    expect(markerFor({ kind: "device", storage: "memory" }, lab)?.short).toBe("Not saved");
+    expect(markerFor({ kind: "device", storage: "opfs" }, gateway)?.short).toBe("Live");
+    expect(markerFor({ kind: "device", storage: "memory" }, gateway)?.short).toBe("Live");
   });
 });
 
