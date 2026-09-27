@@ -43,6 +43,40 @@ page.on("response", (response) => {
 });
 const shot = (name) => page.screenshot({ path: path.join(OUT, `${name}.png`), fullPage: false });
 
+// Selects the first `count` characters of the main thread's first agent turn, scrolled into
+// view as a person would: a highlight a press can then carry. Returns where to press and what
+// was selected.
+function highlight(count) {
+  return page.evaluate((length) => {
+    const paragraph = document.querySelector('[role="tabpanel"]:not([inert]) .turn-agent p');
+    paragraph.scrollIntoView({ block: "center" });
+    const range = document.createRange();
+    range.setStart(paragraph.firstChild, 0);
+    range.setEnd(paragraph.firstChild, length);
+    getSelection().removeAllRanges();
+    getSelection().addRange(range);
+    const box = range.getClientRects()[0];
+    return { x: box.left + 12, y: box.top + box.height / 2, text: range.toString() };
+  }, count);
+}
+
+// Presses at `from`, lifts past the carry's dead zone and lets go at `to` (ADR-091).
+async function carryTo(from, to) {
+  await page.mouse.move(from.x, from.y);
+  await page.mouse.down();
+  await page.mouse.move(from.x + 12, from.y + 8, { steps: 3 });
+  await page.mouse.move(to.x, to.y, { steps: 8 });
+  await page.waitForTimeout(150);
+  await page.mouse.up();
+}
+
+// The theme lives in the account menu, in the title bar's corner.
+async function chooseTheme(name) {
+  await page.getByRole("button", { name: "Account" }).click();
+  await page.getByRole("menuitemradio", { name }).click();
+  await page.keyboard.press("Escape");
+}
+
 try {
   await page.goto(`${BASE}/`, { waitUntil: "load" });
   const title = page.getByRole("heading", { name: "Last week's profit by day" });
@@ -104,12 +138,11 @@ try {
       turns.some((t) => t.includes("Answering about Net profit")),
     `${turns.length} turns after reload`,
   );
+  const marker = (await page.locator('[data-slot="data-marker"]').innerText()).trim();
   record(
-    "no memory-only warning",
-    !(await page
-      .getByText("cannot keep conversations")
-      .isVisible()
-      .catch(() => false)),
+    "the marker says the threads are kept on this device, not in memory",
+    marker === "On this device",
+    marker,
   );
 
   // The look is measured, not the attribute: the page, the paper and the ink must all move.
@@ -123,8 +156,7 @@ try {
       };
     });
   const light = await surface();
-  await page.getByRole("button", { name: "Toggle theme" }).click();
-  await page.getByRole("menuitem", { name: "Dark" }).click();
+  await chooseTheme("Dark");
   await page.waitForFunction(() => document.documentElement.dataset.theme === "dark");
   await page.waitForTimeout(300);
   await shot("thread-dark");
@@ -134,39 +166,35 @@ try {
     light.page !== dark.page && light.paper !== dark.paper && light.ink !== dark.ink,
     `paper ${light.paper} → ${dark.paper}`,
   );
-  await page.getByRole("button", { name: "Toggle theme" }).click();
-  await page.getByRole("menuitem", { name: "Light" }).click();
+  await chooseTheme("Light");
   await page.waitForFunction(() => document.documentElement.dataset.theme === "light");
 
-  const rail = page.getByRole("navigation", { name: "Main" });
+  const rail = page.locator('[data-slot="sidebar"]');
   record(
-    "the rail shows Thread and Lab",
-    (await rail.getByRole("link", { name: "Thread" }).isVisible()) &&
+    "the sidebar shows Kay, Documentation and Lab",
+    (await rail.getByRole("link", { name: "Kay", exact: true }).isVisible()) &&
+      (await rail.getByRole("link", { name: "Documentation" }).isVisible()) &&
       (await rail.getByRole("link", { name: "Lab" }).isVisible()),
   );
 
-  const canvas = page.getByRole("region", { name: "Compose canvas" });
+  const canvas = page
+    .locator('[role="tabpanel"]:not([inert])')
+    .getByRole("region", { name: "Compose canvas" });
   record(
     "the canvas opens empty and invites a drop",
     await canvas.getByText("Drag a text selection or card").isVisible(),
   );
 
-  // A highlight dragged out of the thread arrives as plain text on the drop.
-  await page.evaluate(() => {
-    const target = document.querySelector('[aria-label="Compose canvas"]');
-    const data = new DataTransfer();
-    data.setData("text/plain", "Saturday leads at every level");
-    for (const type of ["dragover", "drop"])
-      target.dispatchEvent(
-        new DragEvent(type, { bubbles: true, cancelable: true, dataTransfer: data }),
-      );
-  });
+  // A highlight carried out of the thread starts a thread where it lands.
+  const picked = await highlight(18);
+  const empty = await canvas.getByText("Drag a text selection or card").boundingBox();
+  await carryTo(picked, { x: empty.x + empty.width / 2, y: empty.y - 40 });
   const lane = canvas.locator("article").first();
   await lane.locator(".thread-panel").waitFor({ timeout: 10_000 });
   const laneDraft = await lane.locator("textarea").inputValue();
   record(
     "a dropped highlight starts a thread lane with the quote as its draft",
-    laneDraft.startsWith("> Saturday leads at every level"),
+    laneDraft.startsWith(`> ${picked.text}`),
     laneDraft.split("\n")[0],
   );
 
@@ -308,15 +336,10 @@ try {
   // A third lane, then the first one taken by its title bar and carried to the end of the
   // row: a copy of it floats under the pointer, the lane itself waits dimmed and slides to the
   // slot it would take, and the drop lands it there.
-  await page.evaluate(() => {
-    const target = document.querySelector('[aria-label="Compose canvas"]');
-    const data = new DataTransfer();
-    data.setData("text/plain", "Sunday holds the margin");
-    for (const type of ["dragover", "drop"])
-      target.dispatchEvent(
-        new DragEvent(type, { bubbles: true, cancelable: true, dataTransfer: data }),
-      );
-  });
+  await openSpace.scrollIntoViewIfNeeded();
+  const third = await highlight(20);
+  const end = await openSpace.boundingBox();
+  await carryTo(third, { x: end.x + end.width / 2, y: end.y - 40 });
   await canvas.locator("article").nth(2).locator(".thread-panel").waitFor({ timeout: 10_000 });
   const labelsBefore = await canvas
     .locator("article")
@@ -436,12 +459,13 @@ try {
     .locator("article")
     .evaluateAll((els) => els.map((el) => el.getAttribute("aria-label")));
   record(
-    "thread lanes survive a reload in the order they were left, and card lanes do not",
-    labelsReloaded.join("|") === [labelsBefore[2], labelsBefore[0]].join("|"),
+    "lanes survive a reload in the order they were left, card lanes too",
+    labelsReloaded.join("|") === labelsAfter.join("|"),
     labelsReloaded.map((label) => label.slice(0, 12)).join(" → "),
   );
   // A lane's title, and the main thread's, rename in place and keep the new name.
-  await canvas.locator("article").first().locator(".thread-title").click();
+  const threadLane = canvas.locator("article").filter({ has: page.locator(".thread-title") });
+  await threadLane.first().locator(".thread-title").click();
   await page.keyboard.press("ControlOrMeta+a");
   await page.keyboard.type("Weekend margins");
   await page.keyboard.press("Enter");
@@ -454,7 +478,7 @@ try {
   await page.reload({ waitUntil: "load" });
   await canvas.locator("article .thread-panel").first().waitFor({ timeout: 15_000 });
   await page.waitForTimeout(500);
-  const laneTitle = await canvas.locator("article").first().locator(".thread-header").innerText();
+  const laneTitle = await threadLane.first().locator(".thread-header").innerText();
   const mainTitle = await mainPanel.locator(".thread-header").innerText();
   record(
     "a lane's title and the main thread's rename in place and survive a reload",
@@ -462,6 +486,7 @@ try {
     `${laneTitle} / ${mainTitle}`,
   );
 
+  const open = await canvas.locator("article").count();
   await canvas
     .getByRole("button", { name: /^Close / })
     .first()
@@ -469,11 +494,13 @@ try {
   await page.reload({ waitUntil: "load" });
   await canvas.locator("article .thread-panel").first().waitFor({ timeout: 15_000 });
   await page.waitForTimeout(500);
-  const closedOnce = (await canvas.locator("article").count()) === 1;
-  await canvas
-    .getByRole("button", { name: /^Close / })
-    .first()
-    .click();
+  const closedOnce = (await canvas.locator("article").count()) === open - 1;
+  for (let left = open - 1; left > 0; left--) {
+    await canvas
+      .getByRole("button", { name: /^Close / })
+      .first()
+      .click();
+  }
   await page.reload({ waitUntil: "load" });
   await canvas.getByText("Drag a text selection or card").waitFor({ timeout: 15_000 });
   record(
@@ -485,13 +512,11 @@ try {
   await page.getByText("Useful answers.").waitFor({ timeout: 10_000 });
   await shot("lab");
   record("lab route renders the workbench", true);
-  await page.getByRole("button", { name: "Toggle theme" }).click();
-  await page.getByRole("menuitem", { name: "Dark" }).click();
+  await chooseTheme("Dark");
   await page.waitForFunction(() => document.documentElement.dataset.theme === "dark");
   await page.waitForTimeout(300);
   await shot("lab-dark");
-  await page.getByRole("button", { name: "Toggle theme" }).click();
-  await page.getByRole("menuitem", { name: "Light" }).click();
+  await chooseTheme("Light");
 
   // The dev server serves the catalog's own modules, so the fragment comes from the real encoder.
   const fragment = await page.evaluate(async (root) => {
