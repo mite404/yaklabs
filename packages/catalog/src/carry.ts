@@ -329,8 +329,9 @@ function dispatch(press: Press, input: CarryInput): void {
 // page can hide the end of a carry from it. They go when the press ends.
 function listen(press: Press): void {
   const options = { capture: true, signal: press.listening.signal };
-  const cancel = (event: PointerEvent) => {
-    dispatch(press, { kind: "pointercancel", pointerId: event.pointerId });
+  const cancel = (event: Event) => {
+    if (event instanceof PointerEvent)
+      dispatch(press, { kind: "pointercancel", pointerId: event.pointerId });
   };
   window.addEventListener(
     "pointermove",
@@ -348,7 +349,7 @@ function listen(press: Press): void {
     options,
   );
   window.addEventListener("pointercancel", cancel, options);
-  window.addEventListener("lostpointercapture", cancel, options);
+  press.captor?.addEventListener("lostpointercapture", cancel, options);
   window.addEventListener(
     "keydown",
     (event) => {
@@ -359,12 +360,13 @@ function listen(press: Press): void {
     },
     options,
   );
+  // The window's own blur only: in the capture phase every element's blur would pass here too.
   window.addEventListener(
     "blur",
     () => {
       dispatch(press, { kind: "cancel" });
     },
-    options,
+    { signal: press.listening.signal },
   );
 }
 
