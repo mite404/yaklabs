@@ -1,25 +1,22 @@
 import sqlite3InitModule, {
   type BindingSpec,
   type Database,
-  type SqlValue,
   type Sqlite3Static,
 } from "@sqlite.org/sqlite-wasm";
 import type { ThreadMessage } from "@yaklabs/catalog/thread";
-import { z } from "zod";
 import type { Transcript } from "./conversation";
-import { threadMessageSchema, type LegacyCanvas, type RenameTarget } from "./protocol";
+import type { LegacyCanvas, RenameTarget } from "./protocol";
 import { migrate, writeLanes } from "./schema";
 import { matchQuery, newestFirst } from "./search";
+import { readTranscript, readWorkspace } from "./sqliteRead";
 import type { NewThread, Store } from "./store";
 import {
   insertLane,
   lanesOf,
   threadLane,
-  workspaceSchema,
   type Lane,
   type ThreadId,
   type ThreadSummary,
-  type Workspace,
 } from "./workspace";
 
 /**
@@ -36,23 +33,7 @@ export class StorageUnavailableError extends Error {}
 
 // Names become an OPFS directory and a file, so they stay plain.
 const NAME = /^[a-z0-9][a-z0-9-]{0,39}$/;
-// The sidebar shows one line of the latest message, cut at a word-ish length.
-const PREVIEW_LENGTH = 80;
 
-const PROJECTS = "select id, name, created_at as createdAt from projects order by created_at, id";
-// Every thread, oldest first, with the text of its latest message for the preview.
-const THREADS = `
-  select c.id, c.title, c.project_id, c.parent_id, c.created_at, c.updated_at, c.draft,
-    coalesce((select m.text from messages m where m.conversation_id = c.id
-              order by m.seq desc limit 1), '') as last_text
-  from conversations c order by c.created_at, c.id
-`;
-const LANES = `
-  select main_id, id, thread_id, card_json, title, width from lanes order by main_id, seq
-`;
-const NOTIFICATIONS = `
-  select id, thread_id as threadId, text, at from notifications order by at desc, id
-`;
 const MATCHING = `
   select distinct m.conversation_id from messages_fts f join messages m on m.rowid = f.rowid
   where messages_fts match ?
@@ -73,34 +54,6 @@ const SAVE_SHELL = `
   insert into shell (id, json) values (1, ?) on conflict (id) do update set json = excluded.json
 `;
 
-// What SQLite hands back, checked before it becomes a domain type.
-const threadRowSchema = z.object({
-  id: z.string(),
-  title: z.string(),
-  project_id: z.string().nullable(),
-  parent_id: z.string().nullable(),
-  created_at: z.string(),
-  updated_at: z.string(),
-  draft: z.string(),
-  last_text: z.string(),
-});
-const laneRowSchema = z.object({
-  main_id: z.string(),
-  id: z.string(),
-  thread_id: z.string().nullable(),
-  card_json: z.string().nullable(),
-  title: z.string().nullable(),
-  width: z.number().nullable(),
-});
-const transcriptRowSchema = z.object({ updated_at: z.string(), draft: z.string() });
-const messageRowSchema = z.object({
-  role: z.string(),
-  text: z.string(),
-  time: z.string(),
-  extra_json: z.string(),
-});
-const extraSchema = z.record(z.string(), z.unknown());
-
 // The wasm module loads once per worker; later stores reuse it and its registered VFS.
 let sqlite3: Promise<Sqlite3Static> | undefined;
 
@@ -108,78 +61,9 @@ function reasonOf(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-// The latest message's text on one line, shortened with an ellipsis when it runs long.
-function toPreview(text: string): string {
-  const line = text.replaceAll(/\s+/g, " ").trim();
-  return line.length <= PREVIEW_LENGTH ? line : `${line.slice(0, PREVIEW_LENGTH - 1).trimEnd()}…`;
-}
-
 function toMessageRow(threadId: ThreadId, seq: number, message: ThreadMessage): BindingSpec {
   const { role, text, time, ...extra } = message;
   return [threadId, seq, role, text, time, JSON.stringify(extra)];
-}
-
-function fromMessageRow(row: Record<string, SqlValue>): ThreadMessage {
-  const { role, text, time, extra_json } = messageRowSchema.parse(row);
-  const extra = extraSchema.parse(JSON.parse(extra_json)); // → Record<string, unknown>
-  return threadMessageSchema.parse({ ...extra, role, text, time });
-}
-
-// A thread row in the workspace's shape; the workspace schema checks it.
-function fromThreadRow(row: Record<string, SqlValue>) {
-  const { project_id, parent_id, created_at, updated_at, last_text, ...rest } =
-    threadRowSchema.parse(row);
-  const place =
-    project_id === null
-      ? { kind: "child", parentId: parent_id }
-      : { kind: "main", projectId: project_id };
-  return {
-    ...rest,
-    place,
-    createdAt: created_at,
-    updatedAt: updated_at,
-    preview: toPreview(last_text),
-  };
-}
-
-// A lane row in the workspace's shape; the workspace schema checks it and its card.
-function fromLaneRow(row: z.infer<typeof laneRowSchema>) {
-  const { id, width, thread_id, card_json, title } = row;
-  if (thread_id !== null) return { id, width, kind: "thread", threadId: thread_id };
-  const card: unknown = JSON.parse(card_json ?? "null");
-  return { id, width, kind: "card", card, title };
-}
-
-function readWorkspace(db: Database): Workspace {
-  const threadRows = db.selectObjects(THREADS).map((row) => fromThreadRow(row));
-  const lanes = new Map<string, unknown[]>(
-    threadRows.filter((row) => row.place.kind === "main").map((row) => [row.id, []]),
-  );
-  for (const row of db.selectObjects(LANES).map((each) => laneRowSchema.parse(each))) {
-    lanes.get(row.main_id)?.push(fromLaneRow(row));
-  }
-  const saved = db.selectValue("select json from shell where id = 1"); // → JSON text, or undefined
-  const shell: unknown = typeof saved === "string" ? JSON.parse(saved) : null;
-  return workspaceSchema.parse({
-    projects: db.selectObjects(PROJECTS),
-    threads: threadRows,
-    lanes: Object.fromEntries(lanes),
-    shell,
-    notifications: db.selectObjects(NOTIFICATIONS),
-  });
-}
-
-function readTranscript(db: Database, id: ThreadId): Transcript | undefined {
-  const row = db.selectObject("select updated_at, draft from conversations where id = ?", [id]);
-  if (row === undefined) return undefined;
-  const { updated_at, draft } = transcriptRowSchema.parse(row);
-  const messages = db
-    .selectObjects(
-      "select role, text, time, extra_json from messages where conversation_id = ? order by seq",
-      [id],
-    )
-    .map((message) => fromMessageRow(message)); // → ThreadMessage[]
-  return { messages, draft, updatedAt: updated_at };
 }
 
 function writeMessages(db: Database, id: ThreadId, messages: ThreadMessage[]): void {
