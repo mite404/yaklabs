@@ -3,7 +3,7 @@ import { Badge } from "@yaklabs/ui/components/badge";
 import { Button } from "@yaklabs/ui/components/button";
 import { Input } from "@yaklabs/ui/components/input";
 import { ArrowLeft, ArrowRight, Globe, RotateCw } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { useId, useState, type ReactNode } from "react";
 import { pageAt, parseAddress, type PageAddress } from "./browser";
 import type { Shell } from "./model";
 import { PageBody, type Go } from "./pages";
@@ -35,14 +35,29 @@ function PaneButton({
   );
 }
 
+// Why the address field refused what was typed: a note hung under the field, which describes
+// it and is announced as it appears.
+function Refusal({ id }: { id: string }) {
+  return (
+    <p
+      id={id}
+      role="alert"
+      className="absolute top-full left-0 z-10 mt-1.5 w-max max-w-full bg-foreground px-3 py-1.5 text-xs text-background"
+    >
+      Not a web address
+    </p>
+  );
+}
+
 // The address field: what was typed until Enter, then whatever the pane shows. A field that
-// cannot be read as an address says so and keeps what was typed.
+// cannot be read as an address keeps what was typed and says why.
 function AddressField({ current, onGo }: { current: PageAddress; onGo: Go }) {
   const [field, setField] = useState<{ over: PageAddress; text: string; refused: boolean }>({
     over: current,
     text: current,
     refused: false,
   });
+  const refusal = useId();
   // A new page, by any route (a link, back, forward), replaces whatever was being typed.
   if (field.over !== current) setField({ over: current, text: current, refused: false });
   return (
@@ -62,6 +77,7 @@ function AddressField({ current, onGo }: { current: PageAddress; onGo: Go }) {
       <Input
         aria-label="Address"
         aria-invalid={field.refused || undefined}
+        aria-describedby={field.refused ? refusal : undefined}
         value={field.text}
         spellCheck={false}
         className="h-7 rounded-[var(--radius)] border-hairline bg-[var(--control-bg)] pr-22 pl-8 text-xs text-ellipsis dark:bg-[var(--control-bg)]"
@@ -75,6 +91,7 @@ function AddressField({ current, onGo }: { current: PageAddress; onGo: Go }) {
       >
         Simulated
       </Badge>
+      {field.refused && <Refusal id={refusal} />}
     </form>
   );
 }

@@ -1022,6 +1022,56 @@ try {
       };
     },
   );
+
+  await onOwnPage(
+    "a refused address says why in text the field is described by and a screen reader hears",
+    "/t/t-005?scenario=demo",
+    {},
+    async (own) => {
+      const bar = own
+        .locator('[role="tabpanel"]:not([inert])')
+        .getByRole("region", { name: "Browser" })
+        .locator("header");
+      const field = bar.getByRole("textbox", { name: "Address" });
+      await field.waitFor({ timeout: 15_000 });
+      await field.fill("two words");
+      await field.press("Enter");
+      const said = () =>
+        field.evaluate((el) => {
+          const notes = (el.getAttribute("aria-describedby") ?? "")
+            .split(" ")
+            .filter((id) => id !== "")
+            .map((id) => document.querySelector(`#${CSS.escape(id)}`))
+            .filter((note) => note !== null);
+          return {
+            invalid: el.getAttribute("aria-invalid"),
+            says: notes.map((note) => note.textContent.trim()).join(" "),
+            seen: notes.some((note) => note.checkVisibility() === true && note.offsetWidth > 0),
+            heard: notes.some((note) => note.closest('[role="alert"], [aria-live]') !== null),
+            kept: el.value,
+          };
+        });
+      const refused = await said();
+      const strip = await bar.boundingBox();
+      await own.screenshot({
+        path: path.join(OUT, "address-refused.png"),
+        clip: { ...strip, height: strip.height + 40 },
+      });
+      await field.press("End");
+      await own.keyboard.type("s");
+      const typing = await said();
+      return {
+        ok:
+          refused.invalid === "true" &&
+          refused.says !== "" &&
+          refused.seen === true &&
+          refused.heard === true &&
+          refused.kept === "two words" &&
+          typing.says === "",
+        detail: `refused ${JSON.stringify(refused)}; typing again ${JSON.stringify(typing)}`,
+      };
+    },
+  );
 } catch (error) {
   record("run", false, String(error));
   await shot("failure");
