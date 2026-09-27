@@ -91,10 +91,7 @@ export function markGrabbableHighlight(thread: HTMLElement): () => void {
     if (event.button !== 0 || thread.dataset.grab !== "ready" || text === undefined) return;
     held = true;
     mark("held");
-    armCarry(event, {
-      carried: { kind: "text", text },
-      picture: () => quoteChip(document, text),
-    });
+    armCarry(event, { carried: { kind: "text", text }, picture: () => quoteChip(document, text) });
   };
   const onClick = (event: MouseEvent) => {
     if (pointInBoxes(highlightBoxes(thread), event.clientX, event.clientY))
@@ -105,21 +102,17 @@ export function markGrabbableHighlight(thread: HTMLElement): () => void {
     last = { ...last, buttons: 0 };
     refresh();
   };
-  thread.addEventListener("pointermove", onMove);
-  thread.addEventListener("pointerdown", onDown);
-  thread.addEventListener("click", onClick);
-  thread.addEventListener("dragstart", refuseDrag);
-  document.addEventListener("pointerup", release);
-  document.addEventListener("pointercancel", release);
-  document.addEventListener("selectionchange", refresh);
+  const listening = new AbortController();
+  const options = { signal: listening.signal };
+  thread.addEventListener("pointermove", onMove, options);
+  thread.addEventListener("pointerdown", onDown, options);
+  thread.addEventListener("click", onClick, options);
+  thread.addEventListener("dragstart", refuseDrag, options);
+  document.addEventListener("pointerup", release, options);
+  document.addEventListener("pointercancel", release, options);
+  document.addEventListener("selectionchange", refresh, options);
   return () => {
-    thread.removeEventListener("pointermove", onMove);
-    thread.removeEventListener("pointerdown", onDown);
-    thread.removeEventListener("click", onClick);
-    thread.removeEventListener("dragstart", refuseDrag);
-    document.removeEventListener("pointerup", release);
-    document.removeEventListener("pointercancel", release);
-    document.removeEventListener("selectionchange", refresh);
+    listening.abort();
     mark();
   };
 }
