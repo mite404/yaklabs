@@ -757,6 +757,58 @@ try {
       back.join("|") === "Close Last week's profit by day",
     `${forward.join(" → ")}; from the end: ${back.join("")}`,
   );
+
+  // A thread that cannot be opened keeps the frame an open one has, in the main pane and in a
+  // lane: the paper, the border and the title bar, with the reason and Try again inside it.
+  // The title bar is what takes hold of a lane, so the failed lane still moves along the row.
+  const fails = await openScenario("/t/t-002?scenario=thread-fails", 'button:text-is("Try again")');
+  const failedTab = fails.locator('[role="tabpanel"]:not([inert])');
+  const frames = await failedTab.evaluate((tab) =>
+    [...tab.querySelectorAll("button")]
+      .filter((button) => button.textContent === "Try again")
+      .map((button) => {
+        const frame = button.closest(".thread-panel");
+        return {
+          place: button.closest("article")?.getAttribute("aria-label") ?? "main",
+          named: frame?.getAttribute("aria-label") ?? null,
+          title: frame?.querySelector(".thread-header h2")?.textContent ?? null,
+          paper: frame !== null && getComputedStyle(frame).backgroundColor !== "rgba(0, 0, 0, 0)",
+        };
+      }),
+  );
+  await failedTab.screenshot({ path: path.join(OUT, "thread-fails-framed.png") });
+  const failedCanvas = failedTab.getByRole("region", { name: "Compose canvas" });
+  const failedLanes = () =>
+    failedCanvas
+      .locator(":scope > article")
+      .evaluateAll((els) => els.map((el) => el.getAttribute("aria-label")));
+  const lanesBefore = await failedLanes();
+  const failedBar = failedCanvas.locator("article .thread-header").last();
+  const bar = (await failedBar.count()) === 0 ? null : await failedBar.boundingBox();
+  if (bar !== null) {
+    await fails.mouse.move(bar.x + bar.width - 16, bar.y + bar.height / 2);
+    await fails.mouse.down();
+    await fails.mouse.move(bar.x + bar.width - 40, bar.y + bar.height / 2, { steps: 4 });
+    await fails.mouse.move(bar.x - 400, bar.y + bar.height / 2, { steps: 12 });
+    await fails.mouse.up();
+    await fails.waitForTimeout(400);
+  }
+  const lanesAfter = await failedLanes();
+  await fails.close();
+  const framed = frames.filter(
+    (frame) =>
+      frame.paper &&
+      frame.named === frame.title &&
+      (frame.place === "main" || frame.place === frame.title),
+  );
+  record(
+    "a thread that cannot be opened keeps its frame and title bar, and its lane still moves",
+    frames.length === 2 &&
+      framed.length === frames.length &&
+      lanesBefore.length === 2 &&
+      lanesAfter.join("|") === lanesBefore.toReversed().join("|"),
+    `${framed.length} of ${frames.length} framed (${frames.map((frame) => `${frame.place}: ${frame.title}`).join("; ")}); lanes ${lanesBefore.join(" | ")} → ${lanesAfter.join(" | ")}`,
+  );
 } catch (error) {
   record("run", false, String(error));
   await shot("failure");
