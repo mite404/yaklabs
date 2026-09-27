@@ -263,8 +263,21 @@ const LIFT_PX = 6;
     "Account".
   - Sidebar: group label "Projects". Project rows are buttons named by the project, with
     `aria-expanded`. Each has a "+" named "New thread in <project>". Thread rows are links named
-    by the title. Child rows carry `data-thread="child"` and show "↳".
+    by the title. Main rows carry `data-thread="main"`; child rows carry `data-thread="child"`
+    and show "↳".
   - Rail links: "Kay", "Documentation", "Lab".
   - Marker: `[data-slot="data-marker"]`.
+  - Window: `[data-slot="window"]` wraps the whole app; `[data-slot="traffic-lights"]` holds
+    the three decorative dots (`aria-hidden`).
+  - Project row chevron: `[data-slot="project-chevron"]` inside the row button, `opacity: 0` at
+    rest while the project is open, visible on hover and whenever the project is folded.
+  - Deck: each tab's workspace is `role="tabpanel"` named by its thread's title; a hidden one
+    carries `inert`, so `[role="tabpanel"]:not([inert])` is the one on screen.
   - Browser: region "Browser", textbox "Address", buttons "Back", "Forward" and "Reload".
   - Canvas: region "Compose canvas", drop marker `[data-drop-marker]`.
+  - States: a failed start or a failed thread shows a button "Try again"; loading rows are
+    shadcn's `[data-sidebar="menu-skeleton"]` with fixed widths.
+- **Defaults.** The sidebar opens expanded on a window at least 1280px wide and remembers the
+  visitor's choice in localStorage `kay.sidebar`. Every link the app builds keeps `?scenario=`,
+  so a mock visit never drifts onto device data. A new main thread opens on `thread`; the starter
+  and migrated `profit` open on `canvas`, as today.
