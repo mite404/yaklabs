@@ -140,16 +140,19 @@ describe("the v2 schema keeps every thread in one place", () => {
     insertThread(db, "child", null, "main");
     expect(() => {
       insertThread(db, "grandchild", null, "child");
-    }).toThrow("A sub-thread cannot have sub-threads");
+    }).toThrow("A sub-thread's parent is a main thread");
     expect(() => {
       db.exec("update conversations set parent_id = null, project_id = 'p' where id = 'child'");
     }).toThrow("A thread never changes place");
   });
 
-  it("refuses a thread that is its own parent", async () => {
+  it.each([
+    ["itself", "selfie"],
+    ["a thread that does not exist", "nowhere"],
+  ])("refuses a sub-thread whose parent is %s", async (_, parent) => {
     const db = await freshDatabase();
     expect(() => {
-      insertThread(db, "selfie", null, "selfie");
+      insertThread(db, "selfie", null, parent);
     }).toThrow("A sub-thread's parent is a main thread");
   });
 });
