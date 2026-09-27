@@ -97,12 +97,16 @@ function WorkOsAccount({ theme }: { theme: ThemeChoice }) {
   );
 }
 
-// A build without sign-in: a neutral face, and a menu that says so.
+// A build without sign-in: Kay's face, the one person who is always there (ADR-109), and a
+// menu that says sign-in is off. A signed-in account keeps its own face.
 function LocalAccount({ theme }: { theme: ThemeChoice }) {
   const face = (
-    <AvatarFallback>
-      <UserRound className="size-3.5" />
-    </AvatarFallback>
+    <>
+      <AvatarImage src="/kay/kay-face.webp" alt="" />
+      <AvatarFallback>
+        <UserRound className="size-3.5" />
+      </AvatarFallback>
+    </>
   );
   return (
     <AccountMenu face={face}>
