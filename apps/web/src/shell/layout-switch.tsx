@@ -18,7 +18,7 @@ export function LayoutSwitch({ shell }: { shell: Shell | null }) {
   return (
     <ToggleGroup
       aria-label="Layout"
-      spacing={0}
+      spacing={0.5}
       value={shown === null ? [] : [shown.pane]}
       disabled={shown === null}
       onValueChange={(values: unknown[]) => {
