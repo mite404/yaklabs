@@ -1245,7 +1245,7 @@ The page behind the window is `--desk`, not the app's own ground, so the window'
 show against it: a warm grey between Ethan's two stone greys in light mode (1.43:1 against the
 paper, 1.54:1 against the bright paper), where the mock's cool grey would be a sampled colour
 (ADR-051); his slate in dark mode (2.75:1 against the paper). A desk darker than the dark paper
-cannot reach 1.3:1, since black itself is 1.23:1.
+cannot reach 1.3:1, since black itself is 1.24:1.
 The margin is 16px from 768px up, as in the mock, instead of 8px, and the contract's frame line
 says so. Below 768px the window is still full-bleed.
 
@@ -1257,7 +1257,7 @@ A 2px `--trim` line runs under the bar, down both sides and along the bottom, fo
 window's bottom corners. It is drawn over the body's edge on a layer of its own, so no box below
 the bar moves and every pixel under it paints as before; drawn in the page's own layer, it had
 made Chromium composite a dark-mode fill a level off.
-Its colour is olive (6.57:1 against the bright paper, 6.36:1 against the night green), not the
+Its colour is olive (6.57:1 against the bright paper, 5.79:1 against the dark paper), not the
 mock's blue, which no token declares and which reads as a keyboard focus ring (ADR-053).
 
 ## ADR-113 - The empty canvas shows a splash
@@ -1268,12 +1268,14 @@ space's bottom right. Both are pictures only: hidden from the accessibility tree
 pan or a carried card goes through them to the ground. The first lane that lands sends them away,
 and they come back with the last lane closed.
 The drawing is a CSS mask filled with `--splash-line`, the ink at 12%, so only its strokes show
-(1.28:1 against the field in light, 1.37:1 in dark) and it themes with the ink. Until the Atlas
+(1.26:1 against the field in light, 1.36:1 in dark) and it themes with the ink. Until the Atlas
 figure's source arrives, the mask is an original drawing, a sphere on a desk stand over
 golden-ratio construction lines.
 Kay is a transparent WebP cut from the mock by `cut-kay.mjs`, a placeholder until Kay's published
 file arrives. He hides where the open space is under 480px, and there is no idle animation; the
 splash fades in over 150ms, and not at all under reduced motion.
+Bottom to top: the dotted field, the carry's lit fill, the drawing, the words and the button, and
+Kay, so a carry tints the ground but never the drawing, and Kay stands in front.
 
 ## ADR-114 - Kay's face is the avatar when the build has no sign-in
 
@@ -1288,9 +1290,13 @@ picture or initials. The button's name stays "Account" and the picture has no al
 Q2 and Q4).
 The painted bar is an oil painting under a moss wash at its ends, over the painting's mean colour,
 so a slow or blocked image still leaves a passing bar. The painting is made in the repo by
-`paint-chrome.mjs` from seeded noise, so it is ours to ship and identical on every run, and every
-pixel is held at luminance 0.10 or below. On it the soft ink is cream at 85% (4.72:1 on the
-brightest pixel); cream at 72% would have been 3.1:1 there.
-The solid bar is the default. `?chrome=painting` or `?chrome=solid` picks one and is kept in
-localStorage, since the app's own links keep only the scenario, and the Account menu has a Title
-bar choice beside Theme, so Ethan can switch while he decides.
+`paint-chrome.mjs` from seeded noise, so it is ours to ship and identical on every run. The script
+decodes the WebP it wrote and lowers its clamp until no pixel of the file is brighter than
+luminance 0.10, since the lossy encode lifted some pixels past the clamp it was given (0.134 at
+first). On it the soft ink is cream at 85% (4.87:1 on the brightest pixel); cream at 72% would
+fall below 4.5:1 there. `painting.json` records the decoded mean and maximum, and the token test
+reads it.
+The solid bar is the default. `?chrome=painting` or `?chrome=solid` picks one once: it is kept in
+localStorage and taken out of the address, since the app's own links keep only the scenario and a
+leftover parameter would undo a later choice. The Account menu has a Title bar choice beside
+Theme, so Ethan can switch while he decides.
