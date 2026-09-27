@@ -20,6 +20,7 @@ const readSchema = z.object({
   ok: z.literal(true),
   result: z.object({ messages: z.array(threadMessageSchema) }),
 });
+const failedSchema = z.object({ ok: z.literal(true), result: z.string() });
 const dumpSchema = z.record(z.string(), z.unknown());
 const migrationSchema = z.object({
   ok: z.literal(true),
@@ -47,6 +48,15 @@ describe("SQLite store in the browser's private file system", () => {
   it("still has it in the next worker, after the first one is gone", async () => {
     const name = freshName("store");
     await inFreshWorker({ kind: "save-then-reopen", name, turn });
+    const reply = await inFreshWorker({ kind: "read", name });
+    expect(readSchema.parse(reply).result.messages).toEqual(kept);
+  });
+
+  it("keeps the file when an open fails and the pool comes free as sqlite-wasm cleans up", async () => {
+    const name = freshName("store");
+    await inFreshWorker({ kind: "save-then-reopen", name, turn });
+    const failed = await inFreshWorker({ kind: "open-while-held", name });
+    expect(failedSchema.parse(failed).result).toContain("private file system is unavailable");
     const reply = await inFreshWorker({ kind: "read", name });
     expect(readSchema.parse(reply).result.messages).toEqual(kept);
   });

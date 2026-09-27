@@ -111,23 +111,13 @@ function ProjectRows({ node, shell, folds }: { node: ProjectNode; shell: Shell; 
   );
 }
 
-// What the tree says while there is no tree: rows on their way, a failed start, or nothing yet.
-function TreeState({ shell }: { shell: Shell | null }) {
+// What the tree says before the workspace arrives: rows on their way, another tab that has
+// them, or a failed start.
+function Unready() {
   const state = useRuntimeState();
   const restart = useRestart();
-  if (shell !== null) {
-    return (
-      <div className="flex flex-col items-start gap-2 px-2 py-1 text-sm">
-        <p className="text-soft-ink">No projects yet</p>
-        <QuietButton
-          onClick={() => {
-            shell.newProject();
-          }}
-        >
-          New project
-        </QuietButton>
-      </div>
-    );
+  if (state.kind === "held") {
+    return <p className="px-2 py-1 text-sm text-soft-ink">Open in another tab.</p>;
   }
   if (state.kind !== "broken") {
     return SKELETON_WIDTHS.map((width) => <SidebarMenuSkeleton key={width} width={width} />);
@@ -136,6 +126,23 @@ function TreeState({ shell }: { shell: Shell | null }) {
     <div className="flex flex-col items-start gap-2 px-2 py-1 text-sm">
       <p className="text-soft-ink">Your threads could not be opened.</p>
       {restart && <QuietButton onClick={restart}>Try again</QuietButton>}
+    </div>
+  );
+}
+
+// What the tree says while there is no tree: why the workspace has not arrived, or nothing yet.
+function TreeState({ shell }: { shell: Shell | null }) {
+  if (shell === null) return <Unready />;
+  return (
+    <div className="flex flex-col items-start gap-2 px-2 py-1 text-sm">
+      <p className="text-soft-ink">No projects yet</p>
+      <QuietButton
+        onClick={() => {
+          shell.newProject();
+        }}
+      >
+        New project
+      </QuietButton>
     </div>
   );
 }

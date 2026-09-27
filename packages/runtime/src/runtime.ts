@@ -29,10 +29,12 @@ export type Session = { getAccessToken(): Promise<string> };
 
 /**
  * What the page sees of the worker. `starting` learns its source from the worker's `opening`,
- * so a start that hangs still says where its data would come from; `broken` is for good.
+ * so a start that hangs still says where its data would come from; `held` waits while another
+ * tab has the device's database (ADR-116); `broken` is for good.
  */
 export type RuntimeState =
   | { kind: "starting"; source: Source | null }
+  | { kind: "held"; source: null }
   | { kind: "ready"; source: Source; workspace: Workspace; replying: ThreadId[] }
   | { kind: "broken"; source: Source | null; reason: string };
 
@@ -140,6 +142,10 @@ function receive(handle: Handle, notice: Notice): void {
     return;
   }
   switch (notice.kind) {
+    case "held":
+      handle.confirmed = { kind: "held", source: null };
+      show(handle);
+      return;
     case "opening":
       handle.confirmed = { kind: "starting", source: notice.source };
       show(handle);

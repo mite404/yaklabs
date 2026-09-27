@@ -62,6 +62,9 @@ async function carryTo(from, to) {
   await page.mouse.up();
 }
 
+// The main threads a tab's sidebar lists, top to bottom.
+const mainTitles = (tab) => tab.locator('[data-thread="main"]').allTextContents();
+
 // The theme lives in the account menu, in the title bar's corner.
 async function chooseTheme(name) {
   await page.getByRole("button", { name: "Account" }).click();
@@ -632,6 +635,47 @@ try {
     `${spoiled.length} file spoiled; ${reason.replaceAll(/\s+/g, " ").slice(0, 140)}`,
   );
   await device.close();
+
+  // A second tab on the same device waits for the first rather than open the pool beside it,
+  // which sqlite-wasm answers by trying to delete the pool; it says why, and opens the same
+  // threads once the first tab closes.
+  const tabs = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  const firstTab = await tabs.newPage();
+  const secondTab = await tabs.newPage();
+  for (const tab of [firstTab, secondTab]) {
+    tab.on("console", (message) => {
+      if (message.type() === "error") errors.push(message.text());
+    });
+  }
+  await firstTab.goto(`${BASE}/`, { waitUntil: "load" });
+  await firstTab.locator(".thread-panel").first().waitFor({ timeout: 20_000 });
+  await firstTab.getByRole("button", { name: "New thread", exact: true }).click();
+  await firstTab.waitForFunction(
+    () => document.querySelectorAll('[data-thread="main"]').length === 2,
+  );
+  const kept = await mainTitles(firstTab);
+  await secondTab.goto(`${BASE}/`, { waitUntil: "load" });
+  const heldNotice = secondTab.getByText("Your threads are open in another tab", { exact: true });
+  const heldShown = await heldNotice
+    .waitFor({ timeout: 10_000 })
+    .then(() => true)
+    .catch(() => false);
+  await secondTab.screenshot({ path: path.join(OUT, "device-held.png") });
+  await firstTab.close();
+  await secondTab
+    .waitForFunction(
+      (count) => document.querySelectorAll('[data-thread="main"]').length === count,
+      kept.length,
+      { timeout: 20_000 },
+    )
+    .catch(() => {});
+  const reopened = await mainTitles(secondTab);
+  record(
+    "a second tab says the threads are open in another tab, and opens them once it closes",
+    heldShown === true && reopened.join("|") === kept.join("|"),
+    `held notice ${heldShown}; ${reopened.join(", ")}`,
+  );
+  await tabs.close();
 } catch (error) {
   record("run", false, String(error));
   await shot("failure");

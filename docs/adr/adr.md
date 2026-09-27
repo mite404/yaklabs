@@ -1219,3 +1219,24 @@ the end moving away.
 Measured in a real browser, a reader's scroll-up during streaming is now kept in all four thread
 stories, and 0 of 360 fresh loads rest short. The cost is that when content above a reader who
 scrolled up grows, it now pushes their view down, where anchoring used to hold it in place.
+
+## ADR-116 - One tab at a time opens the device's threads, and a failed open cannot delete them
+
+2026-09-27 - Accepted; extends ADR-081 and ADR-100.
+sqlite-wasm's `opfs-sahpool` installer answers any failure by deleting the pool's directory,
+every database in it included (`removeVfs`, recursive). A second tab always failed, since the
+first holds the pool's access handles, so it tried that delete on every open, and only the first
+tab's handles stopped it; a first tab letting go in the gap lost every thread (3 of 15 trials in
+the review's harness, and every time in a browser test that lets go at that moment).
+Two guards now close it. The worker takes the Web Lock `yaklabs-database` before it opens the
+database and keeps it for its life, so a second tab never touches the pool: it says "Your threads
+are open in another tab" and opens them once the first tab closes. It no longer falls back to
+memory, where a fresh starter labelled "Not saved" stood over the real threads; memory stays for
+a browser that refuses the file system or has no Web Locks. And the store holds a file in a
+subdirectory of the pool's own, where the pool never looks, for as long as its worker lives:
+Chromium refuses a recursive delete while any file under it is open, and refuses it whole, so
+the installer's clean-up cannot delete the pool whatever made the open fail and whoever lets go.
+Measured before choosing: 0 of 60 ended lock holders left a handle busy for the next holder, 0 of
+45 reloads heard the held notice, and a holder that ignores the lock (an older build) lost
+nothing in 15 trials, against 3 before. The guard leans on the library's `.opaque` directory,
+whose name the library itself says never changes; the browser test fails if it stops guarding.

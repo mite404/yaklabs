@@ -148,10 +148,12 @@ export const commandSchema = z.discriminatedUnion("kind", [
 ]);
 
 /**
- * Everything the worker may tell the page. `state` is pushed after every write, before that
- * write's answer; the other answers name their request; `broken` is what no request caused.
+ * Everything the worker may tell the page. `held` says another tab has the device's database
+ * and this worker waits for it; `state` is pushed after every write, before that write's
+ * answer; the other answers name their request; `broken` is what no request caused.
  */
 export const noticeSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("held") }),
   z.object({ kind: z.literal("opening"), source: sourceSchema }),
   z.object({
     kind: z.literal("state"),

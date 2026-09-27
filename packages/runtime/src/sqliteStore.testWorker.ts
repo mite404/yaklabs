@@ -12,13 +12,15 @@ import { dumpDatabase, v1Legacy, writeV1 } from "./testing";
 declare const self: DedicatedWorkerGlobalScope;
 
 // What the test asks for: add a turn to the starter's thread then reopen in this worker, read
-// what an earlier one saved, migrate Ethan's v1 database on a clean run and through a crash, or
-// set a file's schema version and answer the one it had.
+// what an earlier one saved, migrate Ethan's v1 database on a clean run and through a crash,
+// set a file's schema version and answer the one it had, or open a file while another holder
+// has its pool.
 const requestSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("save-then-reopen"), name: z.string(), turn: threadMessageSchema }),
   z.object({ kind: z.literal("read"), name: z.string() }),
   z.object({ kind: z.literal("migrate-v1"), name: z.string() }),
   z.object({ kind: z.literal("set-version"), name: z.string(), version: z.int().nonnegative() }),
+  z.object({ kind: z.literal("open-while-held"), name: z.string() }),
 ]);
 type Request = z.infer<typeof requestSchema>;
 
@@ -95,6 +97,44 @@ function setVersion(name: string, version: number): Promise<unknown> {
   });
 }
 
+// Every file sqlite-wasm keeps the pool's databases in, held as the tab that has them open holds
+// them.
+async function holdPool(name: string): Promise<FileSystemSyncAccessHandle[]> {
+  const root = await navigator.storage.getDirectory();
+  const vfs = await root.getDirectoryHandle(`.opfs-sahpool-${name}`);
+  const opaque = await vfs.getDirectoryHandle(".opaque");
+  const held: FileSystemSyncAccessHandle[] = [];
+  for await (const entry of opaque.values()) {
+    if (entry instanceof FileSystemFileHandle) held.push(await entry.createSyncAccessHandle());
+  }
+  return held;
+}
+
+// Opens the file while its pool is held, as a second tab meets the first, and lets the pool go
+// the moment sqlite-wasm starts its recursive delete after the failed open, as the first tab
+// closing just then would. Answers why the open failed.
+async function openWhileHeld(name: string): Promise<string> {
+  const held = await holdPool(name);
+  const letGo = () => {
+    for (const handle of held) handle.close();
+  };
+  // oxlint-disable-next-line typescript/unbound-method -- called below with each handle as `this`
+  const { removeEntry } = FileSystemDirectoryHandle.prototype;
+  FileSystemDirectoryHandle.prototype.removeEntry = function (entry, options) {
+    if (options?.recursive === true) letGo();
+    return removeEntry.call(this, entry, options);
+  };
+  try {
+    (await openDatabase({ kind: "opfs", name })).close();
+    return "opened";
+  } catch (error) {
+    return error instanceof Error ? error.message : String(error);
+  } finally {
+    FileSystemDirectoryHandle.prototype.removeEntry = removeEntry;
+    letGo();
+  }
+}
+
 function run(request: Request): Promise<unknown> {
   switch (request.kind) {
     case "read":
@@ -105,6 +145,8 @@ function run(request: Request): Promise<unknown> {
       return migrateV1(request.name);
     case "set-version":
       return setVersion(request.name, request.version);
+    case "open-while-held":
+      return openWhileHeld(request.name);
     default: {
       const unhandled: never = request;
       return unhandled;
