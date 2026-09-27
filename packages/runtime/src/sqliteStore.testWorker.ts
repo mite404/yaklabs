@@ -12,11 +12,13 @@ import { dumpDatabase, v1Legacy, writeV1 } from "./testing";
 declare const self: DedicatedWorkerGlobalScope;
 
 // What the test asks for: add a turn to the starter's thread then reopen in this worker, read
-// what an earlier one saved, or migrate Ethan's v1 database on a clean run and through a crash.
+// what an earlier one saved, migrate Ethan's v1 database on a clean run and through a crash, or
+// set a file's schema version and answer the one it had.
 const requestSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("save-then-reopen"), name: z.string(), turn: threadMessageSchema }),
   z.object({ kind: z.literal("read"), name: z.string() }),
   z.object({ kind: z.literal("migrate-v1"), name: z.string() }),
+  z.object({ kind: z.literal("set-version"), name: z.string(), version: z.int().nonnegative() }),
 ]);
 type Request = z.infer<typeof requestSchema>;
 
@@ -85,6 +87,14 @@ async function migrateV1(name: string) {
   return { v1, once, twice, crash, afterCrash, recovered, brokenKeys, found };
 }
 
+function setVersion(name: string, version: number): Promise<unknown> {
+  return withFile(name, (db) => {
+    const had = db.selectValue("pragma user_version");
+    db.exec(`pragma user_version = ${version}`);
+    return had;
+  });
+}
+
 function run(request: Request): Promise<unknown> {
   switch (request.kind) {
     case "read":
@@ -93,6 +103,8 @@ function run(request: Request): Promise<unknown> {
       return saveThenReopen(request.name, request.turn);
     case "migrate-v1":
       return migrateV1(request.name);
+    case "set-version":
+      return setVersion(request.name, request.version);
     default: {
       const unhandled: never = request;
       return unhandled;
