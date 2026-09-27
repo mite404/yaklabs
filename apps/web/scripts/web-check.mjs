@@ -721,6 +721,42 @@ try {
       gapsResized[0].now === gapsAtRest[0].width + 24,
     `${gapsAtRest.map((gap) => `${gap.now}/${gap.width}`).join(" ")} → ${gapsResized.map((gap) => `${gap.now}/${gap.width}`).join(" ")}`,
   );
+
+  // Closing a lane from the keyboard hands the focus on rather than dropping it to the page:
+  // to the next lane's close, else the one before's, else Create blank thread.
+  const focusAfterClosing = async (which) => {
+    const view = await openScenario("/t/t-001?scenario=demo", "article .thread-panel");
+    const closes = view
+      .locator('[role="tabpanel"]:not([inert])')
+      .getByRole("region", { name: "Compose canvas" })
+      .getByRole("button", { name: /^Close / });
+    const landed = [];
+    for (const pick of which) {
+      // oxlint-disable-next-line no-await-in-loop -- each close changes the row the next one reads
+      await (pick === "first" ? closes.first() : closes.last()).focus();
+      // oxlint-disable-next-line no-await-in-loop -- as above
+      await view.keyboard.press("Enter");
+      // oxlint-disable-next-line no-await-in-loop -- as above
+      await view.waitForTimeout(300);
+      // oxlint-disable-next-line no-await-in-loop -- as above
+      const name = await view.evaluate(() => {
+        const at = document.activeElement;
+        if (at === null || at === document.body) return "the page";
+        return at.getAttribute("aria-label") ?? at.textContent.trim();
+      });
+      landed.push(name);
+    }
+    await view.close();
+    return landed;
+  };
+  const forward = await focusAfterClosing(["first", "first"]);
+  const back = await focusAfterClosing(["last"]);
+  record(
+    "closing a lane from the keyboard moves the focus to the next lane, the one before, or Create blank thread",
+    forward.join("|") === "Close Saturday leads at every level|Create blank thread" &&
+      back.join("|") === "Close Last week's profit by day",
+    `${forward.join(" → ")}; from the end: ${back.join("")}`,
+  );
 } catch (error) {
   record("run", false, String(error));
   await shot("failure");

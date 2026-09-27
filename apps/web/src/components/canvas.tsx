@@ -70,6 +70,7 @@ function LaneStrip({ title, onClose }: { title: string; onClose: () => void }) {
         size="icon-sm"
         className="rounded-[var(--radius)]"
         aria-label={`Close ${title}`}
+        data-lane-close=""
         onClick={onClose}
       >
         <X />
@@ -132,7 +133,7 @@ function OpenSpace({ lit, onBlank }: { lit: boolean; onBlank: () => void }) {
         <br />
         to start a new thread with context
       </p>
-      <button type="button" className="btn btn-sm" onClick={onBlank}>
+      <button type="button" className="btn btn-sm" data-blank="" onClick={onBlank}>
         Create blank thread
       </button>
     </div>
@@ -210,6 +211,21 @@ function laneIn(row: HTMLElement | null, id: LaneId): HTMLElement | null {
   return lane instanceof HTMLElement ? lane : null;
 }
 
+// Before the lane `id` closes, hands on the focus it holds, which would otherwise fall back to
+// the start of the page: to the next lane's close, else the one before's, else Create blank
+// thread.
+function handOnFocus(row: HTMLElement, lanes: LaneView[], id: LaneId): void {
+  const closing = laneIn(row, id);
+  if (closing === null || !closing.contains(document.activeElement)) return;
+  const at = lanes.findIndex((lane) => lane.id === id);
+  const neighbour = lanes.slice(at + 1).at(0) ?? lanes.slice(0, at).at(-1);
+  const target =
+    neighbour === undefined
+      ? row.querySelector("[data-blank]")
+      : laneIn(row, neighbour.id)?.querySelector("[data-lane-close]");
+  if (target instanceof HTMLElement) target.focus();
+}
+
 // Brings a lane into view and flashes it once.
 function flash(lane: HTMLElement): void {
   const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -248,7 +264,8 @@ function useFocusedLane(
  * bar drags it to another place in the row, and the ground drags to pan. The whole row takes a
  * carried card or highlight (ADR-091): while one is over it the pane shows it, and an ink
  * marker stands in the gap it would land in. The canvas keeps no lanes of its own: it reports
- * each change, and the caller's lanes come back changed.
+ * each change, and the caller's lanes come back changed. A lane that closes with the focus in it
+ * hands the focus on to its neighbour.
  */
 export function Canvas({
   lanes,
@@ -268,6 +285,10 @@ export function Canvas({
   const pan = usePan();
   const landing = useLanding(row, onCarry);
   useFocusedLane(row, focus, lanes);
+  const onClose = (id: LaneId) => {
+    if (row.current !== null) handOnFocus(row.current, lanes, id);
+    actions.onClose(id);
+  };
   return (
     // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- the ground pans by pointer and wheel; the keyboard reaches every lane and the Create blank thread button
     <section
@@ -281,7 +302,7 @@ export function Canvas({
       onPointerUp={pan.onPointerUp}
       onPointerCancel={pan.onPointerUp}
     >
-      <LaneRow lanes={lanes} actions={actions} />
+      <LaneRow lanes={lanes} actions={{ ...actions, onClose }} />
       <DropMarker landing={landing} />
       <OpenSpace lit={landing?.marker === null} onBlank={onBlank} />
       {/* The ground goes on for a pane past the open space: the canvas has no right edge. */}
