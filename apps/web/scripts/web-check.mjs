@@ -1618,6 +1618,49 @@ try {
       };
     },
   );
+
+  await onOwnPage(
+    "a thread opened from the Lab never draws over it, and a tab click still shows its tab at once",
+    "/lab?scenario=demo",
+    {},
+    async (own) => {
+      await own.getByText("Useful answers.").waitFor({ timeout: 15_000 });
+      await own.evaluate(() => {
+        window.painted = [];
+        document.addEventListener(
+          "pointerdown",
+          () => {
+            window.pressedAt = window.painted.length;
+          },
+          { capture: true },
+        );
+        requestAnimationFrame(function tick() {
+          window.painted.push({
+            lab: document.body.innerText.includes("Useful answers."),
+            tab:
+              document
+                .querySelector('[role="tabpanel"]:not([inert])')
+                ?.getAttribute("aria-label") ?? null,
+          });
+          requestAnimationFrame(tick);
+        });
+      });
+      const sincePress = () => own.evaluate(() => window.painted.slice(window.pressedAt));
+      await openRow(own, "Refund audit");
+      await own.waitForTimeout(300);
+      const fromLab = await sincePress();
+      await tabsOf(own).filter({ hasText: "Last week's sales" }).click();
+      await own.waitForTimeout(300);
+      const fromTab = await sincePress();
+      const overLab = fromLab.filter((paint) => paint.lab === true && paint.tab !== null).length;
+      const tabAfter = fromTab.findIndex((paint) => paint.tab === "Last week's sales");
+      return {
+        ok:
+          overLab === 0 && fromLab.at(-1)?.tab === "Refund audit" && tabAfter >= 0 && tabAfter <= 1,
+        detail: `${overLab} frames drew the thread over the Lab; the tab clicked showed ${tabAfter} frames after the press`,
+      };
+    },
+  );
 } catch (error) {
   record("run", false, String(error));
   await shot("failure");
