@@ -64,7 +64,7 @@ function AddressField({ current, onGo }: { current: PageAddress; onGo: Go }) {
         aria-invalid={field.refused || undefined}
         value={field.text}
         spellCheck={false}
-        className="h-7 rounded-[var(--radius)] border-hairline bg-[var(--control-bg)] pr-22 pl-8 text-xs text-ellipsis"
+        className="h-7 rounded-[var(--radius)] border-hairline bg-[var(--control-bg)] pr-22 pl-8 text-xs text-ellipsis dark:bg-[var(--control-bg)]"
         onChange={(event) => {
           setField({ over: current, text: event.target.value, refused: false });
         }}

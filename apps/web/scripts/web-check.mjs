@@ -969,6 +969,59 @@ try {
       };
     },
   );
+
+  await onOwnPage(
+    "the browser's Simulated badge clears 4.5:1 on the address field, light and dark",
+    "/t/t-005?scenario=demo",
+    {},
+    async (own) => {
+      const badge = own
+        .locator('[role="tabpanel"]:not([inert])')
+        .getByRole("region", { name: "Browser" })
+        .getByText("Simulated", { exact: true });
+      const ratio = async (colorScheme) => {
+        await own.emulateMedia({ colorScheme });
+        await own.reload({ waitUntil: "load" });
+        await badge.waitFor({ timeout: 15_000 });
+        return badge.evaluate((el) => {
+          // Every fill under the badge's centre, painted bottom up onto one pixel, gives the
+          // colour its text is read against.
+          const rect = el.getBoundingClientRect();
+          const under = document.elementsFromPoint(
+            rect.left + rect.width / 2,
+            rect.top + rect.height / 2,
+          );
+          const pixel = document.createElement("canvas").getContext("2d");
+          const paint = (color) => {
+            pixel.fillStyle = color;
+            pixel.fillRect(0, 0, 1, 1);
+            return [...pixel.getImageData(0, 0, 1, 1).data];
+          };
+          for (const node of [...under.toReversed(), el]) {
+            paint(getComputedStyle(node).backgroundColor);
+          }
+          const ground = paint("transparent");
+          const ink = paint(getComputedStyle(el).color);
+          const [bright, deep] = [ink, ground]
+            .map((rgba) => {
+              const [r, g, b] = rgba.slice(0, 3).map((c) => {
+                const s = c / 255;
+                return s <= 0.04045 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+              });
+              return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+            })
+            .toSorted((a, b) => b - a);
+          return Math.round(((bright + 0.05) / (deep + 0.05)) * 100) / 100;
+        });
+      };
+      const onLight = await ratio("light");
+      const onDark = await ratio("dark");
+      return {
+        ok: onLight >= 4.5 && onDark >= 4.5,
+        detail: `light ${onLight}:1, dark ${onDark}:1`,
+      };
+    },
+  );
 } catch (error) {
   record("run", false, String(error));
   await shot("failure");
