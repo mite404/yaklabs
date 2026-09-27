@@ -324,10 +324,16 @@ function perform(press: Press, effect: CarryEffect): void {
   }
 }
 
+// The end comes last and runs even when an effect before it throws, such as a target's `drop`:
+// the error still reaches the page, but the ghost, the hand and the listeners never outlive it.
 function dispatch(press: Press, input: CarryInput): void {
   const [next, effects] = stepCarry(carry, input);
   carry = next;
-  for (const effect of effects) perform(press, effect);
+  try {
+    for (const effect of effects) if (effect.kind !== "end") perform(press, effect);
+  } finally {
+    for (const effect of effects) if (effect.kind === "end") perform(press, effect);
+  }
 }
 
 // The page-wide listeners for one press, on the window's capture phase so nothing inside the
