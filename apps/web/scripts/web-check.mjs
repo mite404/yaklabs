@@ -1574,6 +1574,50 @@ try {
       };
     },
   );
+
+  await onOwnPage(
+    "a tab closed under the pointer comes back at rest: no close and no cut title once inactive",
+    "/t/t-001?scenario=demo",
+    {},
+    async (own) => {
+      const reopened = "Service desk weekly review";
+      const tab = tabsOf(own).filter({ hasText: reopened });
+      const closer = own.getByRole("button", { name: `Close ${reopened}`, exact: true });
+      await tab.waitFor({ timeout: 15_000 });
+      // Closes the tab under the pointer, leaves the strip straight down so the pointer crosses
+      // no other tab, opens the thread again from the sidebar, then goes back to the first tab
+      // by keyboard, and reads the reopened tab.
+      const cycle = async (close) => {
+        await tab.hover();
+        const at = await close(); // → the box the pointer closed it from
+        await tab.waitFor({ state: "detached" });
+        await own.mouse.move(at.x + at.width / 2, 600, { steps: 4 });
+        await openRow(own, reopened);
+        await tab.focus();
+        await own.keyboard.press("ArrowLeft");
+        await own.keyboard.press("Enter");
+        await own.waitForURL(/\/t\/t-001\?/);
+        const hovered = await tab.evaluate((el) => el.dataset.hovered !== undefined);
+        const shown = await closer.evaluate((el) => getComputedStyle(el).opacity);
+        return `hovered ${hovered}, close ${shown}`;
+      };
+      const byClose = await cycle(async () => {
+        const from = await closer.boundingBox();
+        await closer.click();
+        return from;
+      });
+      const byMiddle = await cycle(async () => {
+        const from = await tab.boundingBox();
+        await tab.click({ button: "middle" });
+        return from;
+      });
+      const rest = "hovered false, close 0";
+      return {
+        ok: byClose === rest && byMiddle === rest,
+        detail: `after its close: ${byClose}; after a middle click: ${byMiddle}`,
+      };
+    },
+  );
 } catch (error) {
   record("run", false, String(error));
   await shot("failure");
