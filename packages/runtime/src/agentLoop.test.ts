@@ -71,7 +71,8 @@ async function startLoop(createAgent: LoopHost["createAgent"] = quickLab) {
     post: (notice) => {
       notices.push(notice);
     },
-    open: () => Promise.resolve({ store, source: { kind: "device", storage: "memory" }, mint }),
+    open: () =>
+      Promise.resolve({ store, source: { kind: "device", storage: "memory" }, mint, faults: {} }),
     createAgent,
   });
   return { notices, store, run };

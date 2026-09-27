@@ -141,6 +141,44 @@ describe("the runtime shows the page's edits at once", () => {
   }, 20_000);
 });
 
+describe("the runtime runs a scenario in the worker", () => {
+  it("loads the demo in memory and says it is a scenario, whatever the device holds", async () => {
+    const runtime = startRuntime({
+      agent: { kind: "lab" },
+      data: { kind: "scenario", name: "demo" },
+    });
+    onTestFinished(() => {
+      runtime.dispose();
+    });
+    const { source, workspace } = await ready(runtime);
+    expect(source).toEqual({ kind: "scenario", name: "demo" });
+    expect(workspace.projects.map((project) => project.name)).toEqual([
+      "Demo store",
+      "Service desk",
+    ]);
+  }, 20_000);
+
+  it("holds a loading start with its source, and never gets ready", async () => {
+    const runtime = startRuntime({
+      agent: { kind: "lab" },
+      data: { kind: "scenario", name: "loading" },
+    });
+    onTestFinished(() => {
+      runtime.dispose();
+    });
+    await vi.waitFor(() => {
+      expect(runtime.state()).toEqual({
+        kind: "starting",
+        source: { kind: "scenario", name: "loading" },
+      });
+    });
+    await new Promise((resolve) => {
+      setTimeout(resolve, 300);
+    });
+    expect(runtime.state().kind).toBe("starting");
+  }, 20_000);
+});
+
 describe("the runtime falls back and breaks down plainly", () => {
   it("falls back to memory in a second worker while the first holds the database", async () => {
     const first = startLab();

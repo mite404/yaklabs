@@ -1,7 +1,7 @@
 /// <reference lib="webworker" />
 import { createAgentLoop, type Opened } from "./agentLoop";
 import { liveMint } from "./mint";
-import type { LegacyCanvas, RuntimeData, Source } from "./protocol";
+import type { LegacyCanvas, RuntimeData, ScenarioName, Source } from "./protocol";
 import { openSqliteStore } from "./sqliteStore";
 import { ensureStarter, type Store } from "./store";
 
@@ -31,11 +31,21 @@ async function openDeviceStore(
   }
 }
 
-async function open(data: RuntimeData): Promise<Opened> {
+async function openDevice(legacy: LegacyCanvas | undefined): Promise<Opened> {
   const mint = liveMint();
-  const { store, source } = await openDeviceStore(data.legacy);
+  const { store, source } = await openDeviceStore(legacy);
   ensureStarter(store, mint.now().toISOString());
-  return { store, source, mint };
+  return { store, source, mint, faults: {} };
+}
+
+// A scenario's fixtures load only when one is asked for, so the device never ships them.
+async function openScenario(name: ScenarioName): Promise<Opened> {
+  const scenarios = await import("./scenarios");
+  return scenarios.openScenario(name);
+}
+
+function open(data: RuntimeData): Promise<Opened> {
+  return data.kind === "device" ? openDevice(data.legacy) : openScenario(data.name);
 }
 
 const handle = createAgentLoop({

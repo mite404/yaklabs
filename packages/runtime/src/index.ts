@@ -1,9 +1,11 @@
+export { scenarioNames } from "./protocol";
 export type {
   AgentSpec,
   LegacyCanvas,
   NewItem,
   RenameTarget,
   RuntimeData,
+  ScenarioName,
   Source,
 } from "./protocol";
 export { startRuntime } from "./runtime";

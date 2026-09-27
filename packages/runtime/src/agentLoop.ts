@@ -16,8 +16,14 @@ import {
 import type { Store } from "./store";
 import type { ThreadId } from "./workspace";
 
-/** What the worker opened for `init`: the store, where it lives, and how it mints. */
-export type Opened = { store: Store; source: Source; mint: Mint };
+/** A deterministic stall or failure: `hold` never answers, `fail` answers with its reason. */
+export type Fault = "hold" | { fail: string };
+
+/** Where a scenario's faults strike: its start, every `open`, every `send`. */
+export type Faults = { start?: Fault; open?: Fault; send?: Fault };
+
+/** What the worker opened for `init`: the store, where it lives, how it mints, what faults. */
+export type Opened = { store: Store; source: Source; mint: Mint; faults: Faults };
 
 // What an agent may need to answer one message.
 type AgentContext = { store: Store; threadId: ThreadId; accessToken?: string };
@@ -46,6 +52,7 @@ type Loop = {
 
 // What a main thread is called until someone names it.
 const NEW_THREAD = "New thread";
+const LAB: AgentSpec = { kind: "lab" };
 
 // The request a malformed command still names, so its failure reaches the right caller.
 const requestIdSchema = z.object({ requestId: z.string().min(1) });
@@ -63,6 +70,13 @@ function reasonOf(error: unknown): string {
 function stampOf(mint: Mint): Stamp {
   const now = mint.now();
   return { at: now.toISOString(), time: mint.turnTime(now) };
+}
+
+// Meets a fault before the work it guards: `hold` never settles, `fail` throws its reason.
+function meet(fault: Fault | undefined): Promise<void> {
+  if (fault === undefined) return Promise.resolve();
+  if (fault === "hold") return new Promise(() => {});
+  return Promise.reject(new Error(fault.fail));
 }
 
 function started(loop: Loop): Promise<Session> {
@@ -130,7 +144,8 @@ async function write(
 }
 
 async function open(loop: Loop, { requestId, threadId }: CommandOf<"open">): Promise<void> {
-  const { store } = await started(loop);
+  const { store, faults } = await started(loop);
+  await meet(faults.open);
   const transcript = store.transcript(threadId); // → Transcript | undefined
   if (transcript === undefined) throw new Error(`No thread ${threadId}`);
   loop.host.post({ kind: "opened", requestId, messages: transcript.messages });
@@ -165,6 +180,7 @@ async function reply(
 async function send(loop: Loop, command: CommandOf<"send">): Promise<void> {
   const { requestId, threadId } = command;
   const session = await started(loop);
+  await meet(session.faults.send);
   const stop = new AbortController();
   loop.replies.set(requestId, { stop, threadId });
   try {
@@ -178,9 +194,11 @@ async function send(loop: Loop, command: CommandOf<"send">): Promise<void> {
 
 async function init(loop: Loop, { agent, data }: CommandOf<"init">): Promise<void> {
   if (loop.session !== undefined) return; // one start per worker
-  loop.session = loop.host.open(data).then((opened) => {
+  loop.session = loop.host.open(data).then(async (opened) => {
     loop.host.post({ kind: "opening", source: opened.source });
-    return { ...opened, agent };
+    await meet(opened.faults.start);
+    // A scenario always answers with the lab stand-in, so a mock never reaches a model.
+    return { ...opened, agent: opened.source.kind === "scenario" ? LAB : agent };
   });
   pushState(loop, await loop.session);
 }

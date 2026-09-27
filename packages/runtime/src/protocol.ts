@@ -73,15 +73,28 @@ export const legacyCanvasSchema = z.object({
   order: z.array(z.string()),
 });
 
+/** The mock scenarios a page may ask for (ADR-096); each loads the same every time. */
+export const scenarioNames = [
+  "demo",
+  "empty",
+  "long",
+  "loading",
+  "failure",
+  "thread-fails",
+] as const;
+const scenarioNameSchema = z.enum(scenarioNames);
+
 // Where the worker's data lives: the device's store, in the private file system or, when the
-// browser refuses it, in memory for this tab.
+// browser refuses it, in memory for this tab; or a scenario, which never touches the device.
 const sourceSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("device"), storage: z.enum(["opfs", "memory"]) }),
+  z.object({ kind: z.literal("scenario"), name: scenarioNameSchema }),
 ]);
 
 // What the page asks the worker to open.
 const runtimeDataSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("device"), legacy: legacyCanvasSchema.optional() }),
+  z.object({ kind: z.literal("scenario"), name: scenarioNameSchema }),
 ]);
 
 // Something new: a project, a main thread in one ("New thread" when untitled), or a child
@@ -163,6 +176,8 @@ export type Notice = z.infer<typeof noticeSchema>;
 export type AgentSpec = z.infer<typeof agentSpecSchema>;
 /** The v1 canvas's hidden lanes and lane order, as the page read them from localStorage. */
 export type LegacyCanvas = z.infer<typeof legacyCanvasSchema>;
+/** A mock scenario's name. */
+export type ScenarioName = z.infer<typeof scenarioNameSchema>;
 /** Where the worker's data lives, so the page can say whether anything is kept. */
 export type Source = z.infer<typeof sourceSchema>;
 /** What the page asks the worker to open at start. */
