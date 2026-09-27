@@ -84,7 +84,6 @@ type Ghost = { element: HTMLElement; offset: CarryPoint };
 type Press = {
   pointerId: number;
   source: CarrySource;
-  from: CarryPoint;
   captor: Element | null;
   listening: AbortController;
   ghost: Ghost | null;
@@ -268,9 +267,9 @@ function swallowStrayClick(): void {
   window.addEventListener("pointerdown", disarm, true);
 }
 
-function putUp(press: Press): void {
+function putUp(press: Press, from: CarryPoint): void {
   const { source, captor, pointerId } = press;
-  press.ghost = ghostOf(source, press.from);
+  press.ghost = ghostOf(source, from);
   if (press.ghost) document.body.append(press.ghost.element);
   if (source.lift) source.lift.dataset.lifted = "";
   document.documentElement.dataset.carrying = source.carried.kind;
@@ -297,7 +296,7 @@ function follow({ ghost }: Press, at: CarryPoint): void {
 function perform(press: Press, effect: CarryEffect): void {
   switch (effect.kind) {
     case "lift":
-      putUp(press);
+      putUp(press, effect.from);
       break;
     case "follow":
       follow(press, effect.at);
@@ -414,22 +413,20 @@ export function useCarryTarget(ref: RefObject<HTMLElement | null>, target: Carry
  */
 export function armCarry(down: CarryPress, source: CarrySource): void {
   if (down.button !== 0) return;
-  const from = pointOf(down);
-  const input: CarryInput = {
+  const { pointerId } = down;
+  const [next] = stepCarry(carry, {
     kind: "press",
-    pointerId: down.pointerId,
-    at: from,
+    pointerId,
+    at: pointOf(down),
     carried: source.carried,
-  };
-  const [next] = stepCarry(carry, input);
+  });
   if (next === carry) return;
   down.preventDefault();
   down.stopPropagation();
   carry = next;
   listen({
-    pointerId: down.pointerId,
+    pointerId,
     source,
-    from,
     captor: down.target instanceof Element ? down.target : null,
     listening: new AbortController(),
     ghost: null,
