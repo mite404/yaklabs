@@ -67,6 +67,17 @@ written contract, a review of the package diffs confirmed twenty findings that w
 the merge, and every lever predicate, P1 to P12, failed on `main` before the work began and passes
 now, beside 419 tests.
 
+Then the shell got its costume. Ethan sent three mocks as style direction: a deep green title bar,
+an oil-painting variant of it, a coloured trim, the window floating inside the browser, a
+line drawing on the empty canvas, and Kay the yak. The structure stayed; only the look moved. The
+bar is green chrome in both themes, with cream on it and a cream pill for whatever is selected
+(ADR-110). The window sits 16px in on a warm desk of its own (ADR-111), framed by an olive trim
+(ADR-112). An empty canvas shows a splash, a sphere on a desk stand drawn as a mask, with Kay at
+the bottom right (ADR-113), and Kay's face is the avatar when nobody is signed in (ADR-114). The
+bar can also be painted, from a painting the repo generates itself (ADR-115). Every one of those is
+Proposed, with its open question listed for Ethan, and a lever of eleven predicates, A to K,
+measures each against a baseline shot on the commit before the polish.
+
 ## 2. Cast & Crew
 
 The first entries are ideas from before any code existed; the rest are parts of the running app.
@@ -129,6 +140,18 @@ The first entries are ideas from before any code existed; the rest are parts of 
   database), with a burned-in timecode (a stopped clock and ids that count up), so every screening
   is frame-identical. The marker in the title bar is the slate that says what you are watching:
   "Mock: demo", "On this device", or a live model (ADR-096, ADR-101).
+
+- **The chrome** (`.chrome-surface` in `packages/catalog/src/tokens.css`) is a lighting gel on the
+  title bar. The actors keep their blocking and their costumes (every shadcn primitive, every
+  accessible name); the gel changes what colour the light is inside that one frame. Ink turns
+  cream, the hover fill turns to cream at 8%, the focus ring turns cream, and the active tab and
+  the pressed layout step into a cream spotlight, the pill (ADR-110). Menus open in portals,
+  outside the gel, so they keep the page's light.
+- **The splash** (`OpenSpace` in `apps/web/src/components/canvas.tsx`) is a title card on an empty
+  stage. It holds until the first actor walks on (a lane lands) and returns when the stage is
+  bare again. Kay stands in the corner like a mascot on a studio lot, and the drawing behind the
+  words is a stencil, a mask the ink shines through, so it re-lights for dark mode on its own
+  (ADR-113).
 
 ## 3. Behind the Scenes
 
@@ -281,6 +304,26 @@ The first entries are ideas from before any code existed; the rest are parts of 
   (ADR-100, ADR-101). The clock is stopped, ids count up and turn times are in UTC, so two loads
   are the same bytes. Loading and failure are data too, `start: "hold"` or `{ fail }`, never a
   timer, so a screenshot of the loading state never catches it halfway.
+
+- **A cream pill, not a paper one, for "selected" on the bar.** The brief suggested the page's own
+  paper for the active tab, so the tab would echo the content below it. In dark mode that paper is
+  1.63:1 against the green, too faint to say "selected", and a pressed layout needs a fill that
+  clears 3:1. Cream clears 8.98:1 in both themes, and it is the light paper anyway, so light mode
+  looks exactly as suggested. The bar is now one picture in either theme, which a lever checks
+  byte for byte (ADR-110).
+- **A painting the repo makes, not one it borrows.** The mock's painting is a crop of an image
+  whose source and licence nobody has yet. `paint-chrome.mjs` paints one from seeded noise, misty
+  ground and tree canopies, identical on every run, 4 KB, with every pixel held at luminance 0.10.
+  It is ours to ship today, and when Ethan names the painting he wants, it goes through the same
+  clamp (ADR-115).
+- **A stencil, not a picture, for the splash drawing.** A drawing shipped as an image shows its
+  own bounds (the mock does, as a faint rectangle) and needs a second copy for dark mode. As a CSS
+  mask filled with `--splash-line`, only the strokes exist, and the ink's own theme colours them.
+  The Atlas figure in the mock was too soft to trace, so the stencil is an original sphere on a
+  stand until the source file comes (ADR-113).
+- **The query picks the bar, and storage keeps it.** The app's links keep only `?scenario=`, so
+  `?chrome=painting` would vanish on the first click. Rather than teach every link a second
+  parameter, the page reads it once and stores it, the way the sidebar remembers open or closed.
 
 ## 4. Bloopers
 
@@ -622,6 +665,36 @@ The first entries are ideas from before any code existed; the rest are parts of 
   all four stories, and 0 of 360 loads rest short (ADR-109). Lesson: a scroll event does not say
   who scrolled, and it arrives late. Decide at the moment you know what changed, which here is the
   resize. It is "The 20px that was really 16", two levels deeper.
+
+- **The runtime that restarted for a parameter it never reads.** With `?chrome=painting` in the
+  address, the tabs and the marker blinked out a moment after load. The runtime was keyed on the
+  whole query string, and the first redirect keeps only `?scenario=`, so it saw a "new" address
+  and started the worker again. It had always done this for any extra parameter, a tracking tag
+  included; nothing had carried one until now. Fix: key it on the scenario alone,
+  `scenarioQuery()`, with a table test. Lesson: key a memo on what it actually depends on, not on
+  the envelope that happens to carry it.
+- **The avatar that decided how every letter was drawn.** Making the avatar's ring blend the same
+  in both themes (`mix-blend-mode: normal`) changed 35,000 pixels in a panel it is nowhere near.
+  Every glyph in the app had switched from greyscale to coloured subpixel smoothing. Chromium only
+  uses subpixel text when it knows what lies under it, and one blend mode anywhere on the page
+  made it play safe everywhere. The base's text is greyscale because of that ring. Fix: blend
+  `darken` in both themes, which keeps the bar identical across themes and the text as it was.
+  Lesson: a pixel-exact baseline catches what no eye would, and reading the diff (where, how much,
+  what colour) finds the cause faster than guessing.
+- **The trim that nudged a button it never touched.** A 2px frame drawn over the window's body
+  left four pixels of the dark-mode send button one level off. Laid over the body in the page's
+  own layer, the frame changed how Chromium composited what sat under it. `will-change: transform`
+  gives the frame a layer of its own, and every pixel under it is the baseline's again (ADR-112).
+- **The soft ink that the painting made unreadable.** The painting was clamped so cream stayed at
+  5:1, and the lever still failed: the soft ink, cream at 72%, is dimmer than cream and fell to
+  3.1:1 on the brightest strokes. The clamp now holds the painting at 0.10 and the painted bar's
+  soft ink is cream at 85%, 4.72:1 on its brightest pixel. Lesson: a contrast floor belongs to the
+  faintest ink on the surface, not the main one.
+- **The lever that measured the badge as the bell's background.** The first contrast pass hid one
+  node at a time and read what was left in its box. The bell's box also holds the unread badge,
+  which is cream, so the cream bell read 1:1; the badge's round corners gave its "2" the bar as a
+  background. The lever now takes one picture with every glyph and icon removed and measures each
+  ink only over the pixels its own glyphs cover, less anything drawn on top of it.
 
 ## 5. Director's Commentary
 
@@ -1269,3 +1342,50 @@ from any change in the app (ADR-107).
 Senior-engineer takeaway: write the check, watch it fail on the old code with a number, then
 build, and report old value against new value. When it fails after the fix, ask whether the app
 or the camera is wrong before touching either.
+
+### A surface is a lighting setup, not a paint job
+
+The green bar holds a dozen shadcn primitives: tabs, ghost buttons, a toggle group, a badge, an
+avatar, a skeleton. None of them got a colour of its own. The bar redefines what the colour
+*words* mean inside it, and every primitive, which only ever says "ink" or "hover fill", comes out
+right.
+
+```css
+/* packages/catalog/src/tokens.css: one rule re-lights everything inside the bar. */
+.chrome-surface {
+  --ink: var(--on-chrome); /* cream, 8.98:1 on the green */
+  --soft-ink: var(--on-chrome-soft); /* cream at 72%, 5.56:1 */
+  --paper-deep: var(--chrome-hover); /* the hover fill */
+  --focus: var(--on-chrome); /* the ring, cream */
+  /* shadcn's roles resolve on :root, so the ones the bar's primitives read are restated */
+  --accent: var(--paper-deep);
+  --ring: var(--focus);
+  background: var(--chrome);
+}
+/* A piece of cream on the bar puts the night inks back, as a spotlight inside a gel. */
+.chrome-surface .chrome-pill {
+  --ink: var(--on-chrome-pill);
+}
+```
+
+```mermaid
+flowchart TD
+  T[tokens.css :root<br/>--ink, --paper-deep, --focus] --> P[Page: sidebar, threads, menus]
+  T --> C[.chrome-surface<br/>re-maps the same names]
+  C --> B[Tabs, buttons, badge, toggle<br/>say only 'ink', 'hover', 'ring']
+  B --> G[Cream on green, no colours of their own]
+  C --> Pill[.chrome-pill<br/>night inks on cream]
+  M[Menus in portals] -.outside the gel.-> P
+```
+
+The film version: you do not repaint the actors' costumes for a night scene; you change the gel on
+the lights. The bar is a gel. One catch is worth remembering: a custom property that refers to
+another (`--accent: var(--paper-deep)`) is worked out where it is declared, so shadcn's roles,
+declared on `:root`, would keep the page's values inside the bar. The surface has to restate each
+role its primitives read. `.attention-surface` taught that pattern first.
+
+Senior-engineer takeaway: when a region needs a different look, re-map the meaning of the tokens
+for that region instead of restyling the components in it. Then a new component dropped into the
+bar is right on day one, and the contrast lives in one place, where a unit test can check every
+ratio from the token values.
+
