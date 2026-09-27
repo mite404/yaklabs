@@ -109,13 +109,16 @@ function startRuntime(config: {
   - `open { requestId, threadId }`
   - `create { requestId, item }`
   - `rename { requestId, target, name }`
-  - `arrange { requestId, mainId, lanes }`
+  - `arrange { requestId, mainId, lanes, base }`: `base` is the lane ids the page edited from,
+    and the worker keeps any lane added since (a three-way merge), so an arrange sent while a
+    child is being created cannot close the new child's lane
   - `saveShell { requestId, shell }`
   - `send { requestId, threadId, event, accessToken? }`
   - `abort { requestId }`
 - Notices:
-  - `opening { source }` is posted as soon as `init` parses, so a held start still shows its
-    source.
+  - `opening { source }` is posted before any `state`: at once for a scenario, and on the device
+    once the storage kind (OPFS or memory) is known. A held start still shows its source. A
+    migration or version error ends the start in `broken` with its reason, never in memory.
   - `state { source, workspace, replying }` is posted after init and after every write (reply
     start and end included). It is skipped when the serialized form equals the last push.
   - Per-request answers: `opened { requestId, messages }`, `created { requestId, id }`,
