@@ -1219,3 +1219,13 @@ the end moving away.
 Measured in a real browser, a reader's scroll-up during streaming is now kept in all four thread
 stories, and 0 of 360 fresh loads rest short. The cost is that when content above a reader who
 scrolled up grows, it now pushes their view down, where anchoring used to hold it in place.
+
+## ADR-116 - A lane's gap reports the lane's width, and a lane is 320 to 1800px wide
+
+2026-09-27 - Accepted; amends ADR-089.
+The gap after a lane takes the focus and resizes by arrow key, so ARIA requires it to carry a
+value, and axe failed every gap for lacking one. It now reports the lane's width in pixels, read
+aloud as "480 pixels wide", within a range that a drag and the arrow keys both keep to: 320px, as
+before, up to 1800px, which fills the widest canvas a 2560px screen lays out. A default column in
+a pane too narrow for 320px widens the range to hold its width rather than report a value outside
+it.

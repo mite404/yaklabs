@@ -98,6 +98,22 @@ async function openRow(on, title) {
     .waitFor({ timeout: 10_000 });
 }
 
+// A page of its own on a mock scenario (ADR-096), once `ready` is on screen in the tab shown,
+// or in `within` on a page with no tab; its console errors count with the rest.
+async function openScenario(address, ready, within = '[role="tabpanel"]:not([inert])') {
+  const view = await browser.newPage({
+    viewport: { width: 1440, height: 900 },
+    reducedMotion: "reduce",
+  });
+  view.on("console", (message) => {
+    if (message.type() === "error") errors.push(message.text());
+  });
+  view.on("pageerror", (error) => errors.push(String(error)));
+  await view.goto(`${BASE}${address}`, { waitUntil: "load" });
+  await view.locator(`${within} ${ready}`).first().waitFor({ timeout: 15_000 });
+  return view;
+}
+
 try {
   await page.goto(`${BASE}/`, { waitUntil: "load" });
   const title = page.getByRole("heading", { name: "Last week's profit by day" });
@@ -812,6 +828,272 @@ try {
     `${started} workers started; tabs ${taggedTabs.join(" | ")}; draft ${JSON.stringify(taggedKept)}`,
   );
   await tagged.close();
+
+  // A lane title longer than its bar ends in an ellipsis, not a letter cut in half: the box
+  // that holds the text is the one that clips it, since only a block draws the ellipsis.
+  const long = await openScenario("/t/t-013?scenario=long", "article .thread-title");
+  const laneTitles = await long
+    .locator('[role="tabpanel"]:not([inert]) article .thread-title')
+    .evaluateAll((els) =>
+      els.map((el) => {
+        const bar = el.closest(".thread-header").getBoundingClientRect();
+        return {
+          inBar: el.getBoundingClientRect().right <= bar.right,
+          cut: el.scrollWidth > el.clientWidth,
+          ellipsis: getComputedStyle(el).textOverflow === "ellipsis",
+        };
+      }),
+    );
+  await long
+    .locator('[role="tabpanel"]:not([inert]) article .thread-header')
+    .first()
+    .screenshot({ path: path.join(OUT, "lane-title-long.png") });
+  await long.close();
+  const inBar = laneTitles.filter((each) => each.inBar);
+  const cutTitles = laneTitles.filter((each) => each.cut);
+  const withEllipsis = cutTitles.filter((each) => each.ellipsis);
+  record(
+    "a lane title too long for its bar stays in the bar and ends in an ellipsis",
+    cutTitles.length > 0 &&
+      inBar.length === laneTitles.length &&
+      withEllipsis.length === cutTitles.length,
+    `${laneTitles.length} titles, ${inBar.length} in their bar, ${cutTitles.length} cut, ${withEllipsis.length} with an ellipsis`,
+  );
+
+  // A lane's gap takes the focus, so it says how wide its lane is, as a window splitter does:
+  // a value inside its range that follows the lane when an arrow key resizes it.
+  const demo = await openScenario("/t/t-001?scenario=demo", "article .thread-panel");
+  const gaps = demo
+    .locator('[role="tabpanel"]:not([inert])')
+    .getByRole("region", { name: "Compose canvas" })
+    .getByRole("separator");
+  const readGaps = () =>
+    gaps.evaluateAll((els) =>
+      els.map((el) => {
+        const value = (name) => Number(el.getAttribute(`aria-${name}`));
+        const width = Math.round(el.previousElementSibling.getBoundingClientRect().width);
+        return {
+          now: value("valuenow"),
+          width,
+          ok:
+            el.hasAttribute("aria-valuenow") &&
+            value("valuenow") === width &&
+            value("valuemin") <= width &&
+            width <= value("valuemax") &&
+            el.getAttribute("aria-valuetext") === `${width} pixels wide`,
+        };
+      }),
+    );
+  const gapsAtRest = await readGaps();
+  await gaps.first().focus();
+  await demo.keyboard.press("ArrowRight");
+  await demo.waitForTimeout(300);
+  const gapsResized = await readGaps();
+  await demo.close();
+  record(
+    "a lane's gap says the lane's width in pixels, within its range, and follows an arrow key",
+    gapsAtRest.length > 0 &&
+      gapsAtRest.every((gap) => gap.ok) &&
+      gapsResized.every((gap) => gap.ok) &&
+      gapsResized[0].now === gapsAtRest[0].width + 24,
+    `${gapsAtRest.map((gap) => `${gap.now}/${gap.width}`).join(" ")} → ${gapsResized.map((gap) => `${gap.now}/${gap.width}`).join(" ")}`,
+  );
+
+  // Closing a lane from the keyboard hands the focus on rather than dropping it to the page:
+  // to the next lane's close, else the one before's, else Create blank thread.
+  const focusAfterClosing = async (which) => {
+    const view = await openScenario("/t/t-001?scenario=demo", "article .thread-panel");
+    const closes = view
+      .locator('[role="tabpanel"]:not([inert])')
+      .getByRole("region", { name: "Compose canvas" })
+      .getByRole("button", { name: /^Close / });
+    const landed = [];
+    for (const pick of which) {
+      // oxlint-disable-next-line no-await-in-loop -- each close changes the row the next one reads
+      await (pick === "first" ? closes.first() : closes.last()).focus();
+      // oxlint-disable-next-line no-await-in-loop -- as above
+      await view.keyboard.press("Enter");
+      // oxlint-disable-next-line no-await-in-loop -- as above
+      await view.waitForTimeout(300);
+      // oxlint-disable-next-line no-await-in-loop -- as above
+      const name = await view.evaluate(() => {
+        const at = document.activeElement;
+        if (at === null || at === document.body) return "the page";
+        return at.getAttribute("aria-label") ?? at.textContent.trim();
+      });
+      landed.push(name);
+    }
+    await view.close();
+    return landed;
+  };
+  const forward = await focusAfterClosing(["first", "first"]);
+  const back = await focusAfterClosing(["last"]);
+  record(
+    "closing a lane from the keyboard moves the focus to the next lane, the one before, or Create blank thread",
+    forward.join("|") === "Close Saturday leads at every level|Create blank thread" &&
+      back.join("|") === "Close Last week's profit by day",
+    `${forward.join(" → ")}; from the end: ${back.join("")}`,
+  );
+
+  // A thread that cannot be opened keeps the frame an open one has, in the main pane and in a
+  // lane: the paper, the border and the title bar, with the reason and Try again inside it.
+  // The title bar is what takes hold of a lane, so the failed lane still moves along the row.
+  const fails = await openScenario("/t/t-002?scenario=thread-fails", 'button:text-is("Try again")');
+  const failedTab = fails.locator('[role="tabpanel"]:not([inert])');
+  const frames = await failedTab.evaluate((tab) =>
+    [...tab.querySelectorAll("button")]
+      .filter((button) => button.textContent === "Try again")
+      .map((button) => {
+        const frame = button.closest(".thread-panel");
+        return {
+          place: button.closest("article")?.getAttribute("aria-label") ?? "main",
+          named: frame?.getAttribute("aria-label") ?? null,
+          title: frame?.querySelector(".thread-header h2")?.textContent ?? null,
+          paper: frame !== null && getComputedStyle(frame).backgroundColor !== "rgba(0, 0, 0, 0)",
+        };
+      }),
+  );
+  await failedTab.screenshot({ path: path.join(OUT, "thread-fails-framed.png") });
+  const failedCanvas = failedTab.getByRole("region", { name: "Compose canvas" });
+  const failedLanes = () =>
+    failedCanvas
+      .locator(":scope > article")
+      .evaluateAll((els) => els.map((el) => el.getAttribute("aria-label")));
+  const lanesBefore = await failedLanes();
+  const failedBar = failedCanvas.locator("article .thread-header").last();
+  const bar = (await failedBar.count()) === 0 ? null : await failedBar.boundingBox();
+  if (bar !== null) {
+    await fails.mouse.move(bar.x + bar.width - 16, bar.y + bar.height / 2);
+    await fails.mouse.down();
+    await fails.mouse.move(bar.x + bar.width - 40, bar.y + bar.height / 2, { steps: 4 });
+    await fails.mouse.move(bar.x - 400, bar.y + bar.height / 2, { steps: 12 });
+    await fails.mouse.up();
+    await fails.waitForTimeout(400);
+  }
+  const lanesAfter = await failedLanes();
+  await fails.close();
+  const framed = frames.filter(
+    (frame) =>
+      frame.paper &&
+      frame.named === frame.title &&
+      (frame.place === "main" || frame.place === frame.title),
+  );
+  record(
+    "a thread that cannot be opened keeps its frame and title bar, and its lane still moves",
+    frames.length === 2 &&
+      framed.length === frames.length &&
+      lanesBefore.length === 2 &&
+      lanesAfter.join("|") === lanesBefore.toReversed().join("|"),
+    `${framed.length} of ${frames.length} framed (${frames.map((frame) => `${frame.place}: ${frame.title}`).join("; ")}); lanes ${lanesBefore.join(" | ")} → ${lanesAfter.join(" | ")}`,
+  );
+
+  // Try again keeps the focus in its thread rather than dropping it to the page with the
+  // button: when the thread fails again, the focus is on its Try again, in a lane as in the
+  // main pane.
+  const retried = await openScenario(
+    "/t/t-002?scenario=thread-fails",
+    'button:text-is("Try again")',
+  );
+  const retryTab = retried.locator('[role="tabpanel"]:not([inert])');
+  const afterRetry = [];
+  for (const thread of ["Last week's sales", "Saturday leads at every level"]) {
+    // oxlint-disable-next-line no-await-in-loop -- one thread at a time, each read after its retry
+    await retryTab
+      .getByRole("region", { name: thread, exact: true })
+      .getByRole("button", { name: "Try again" })
+      .focus();
+    // oxlint-disable-next-line no-await-in-loop -- as above
+    await retried.keyboard.press("Enter");
+    // oxlint-disable-next-line no-await-in-loop -- as above
+    await retried.waitForTimeout(400);
+    // oxlint-disable-next-line no-await-in-loop -- as above
+    const at = await retried.evaluate(() => {
+      const focused = document.activeElement;
+      if (focused === null || focused === document.body) return "the page";
+      const frame = focused.closest(".thread-panel")?.getAttribute("aria-label");
+      return `${focused.textContent.trim()} in ${frame}`;
+    });
+    afterRetry.push(at);
+  }
+  await retried.close();
+  record(
+    "Try again keeps the focus in its thread, on Try again when it fails again",
+    afterRetry.join("|") ===
+      "Try again in Last week's sales|Try again in Saturday leads at every level",
+    afterRetry.join("; "),
+  );
+
+  // Start a thread leaves with the notice it sits in, and hands the focus to the thread it
+  // starts rather than dropping it to the page: on the thread's compose box once it opens.
+  const home = await openScenario("/?scenario=empty", 'button:text-is("Start a thread")', "main");
+  await home.getByRole("button", { name: "Start a thread" }).focus();
+  await home.keyboard.press("Enter");
+  await home.locator('[role="tabpanel"]:not([inert]) .compose-box textarea').waitFor();
+  await home.waitForTimeout(300);
+  const afterStart = await home.evaluate(() => {
+    const focused = document.activeElement;
+    if (focused === null || focused === document.body) return "the page";
+    const tab = focused.closest('[role="tabpanel"]')?.getAttribute("aria-label");
+    return `${focused.getAttribute("aria-label") ?? focused.textContent.trim()} in ${tab}`;
+  });
+  await home.close();
+  record(
+    "Start a thread puts the focus on the compose box of the thread it starts",
+    afterStart === "Message in New thread",
+    afterStart,
+  );
+
+  // A carry over the canvas rings it in olive all the way round. The canvas fills the window's
+  // rounded corner at the bottom right, so the ring has to follow that curve or be cut off by
+  // it: some pixel on the corner's diagonal is the ring's olive, as the straight edge is.
+  const ringed = await openScenario("/t/t-001?scenario=demo", "article .thread-panel");
+  const ringTab = ringed.locator('[role="tabpanel"]:not([inert])');
+  const cardBar = await ringTab
+    .locator(".thread-panel")
+    .first()
+    .locator(".card-heading")
+    .last()
+    .boundingBox();
+  const ringCanvas = await ringTab.getByRole("region", { name: "Compose canvas" }).boundingBox();
+  await ringed.mouse.move(cardBar.x + 20, cardBar.y + cardBar.height / 2);
+  await ringed.mouse.down();
+  await ringed.mouse.move(cardBar.x + 40, cardBar.y + cardBar.height / 2 + 5, { steps: 5 });
+  await ringed.mouse.move(ringCanvas.x + 120, ringCanvas.y + 200, { steps: 15 });
+  await ringed.waitForTimeout(300);
+  const frame = await ringed.locator('[data-slot="window"]').first().boundingBox();
+  const cornerClip = { x: frame.x + frame.width - 16, y: frame.y + frame.height - 16 };
+  const corner = await ringed.screenshot({ clip: { ...cornerClip, width: 16, height: 16 } });
+  await ringed.screenshot({
+    path: path.join(OUT, "canvas-ring-corner.png"),
+    clip: { x: cornerClip.x - 24, y: cornerClip.y - 24, width: 40, height: 40 },
+  });
+  // How far each pixel on the diagonal, and one on the bottom edge, is from the olive.
+  const fromOlive = await ringed.evaluate(async (b64) => {
+    const bitmap = await createImageBitmap(
+      await (await fetch(`data:image/png;base64,${b64}`)).blob(),
+    );
+    const context = new OffscreenCanvas(bitmap.width, bitmap.height).getContext("2d");
+    context.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--olive");
+    context.fillRect(0, 0, 1, 1);
+    const olive = context.getImageData(0, 0, 1, 1).data;
+    context.drawImage(bitmap, 0, 0);
+    const distance = (x, y) => {
+      const pixel = context.getImageData(x, y, 1, 1).data;
+      return Math.max(...[0, 1, 2].map((i) => Math.abs(pixel[i] - olive[i])));
+    };
+    return {
+      diagonal: Array.from({ length: bitmap.width }, (_, i) => distance(i, i)),
+      edge: distance(0, bitmap.height - 2),
+    };
+  }, corner.toString("base64"));
+  await ringed.keyboard.press("Escape");
+  await ringed.mouse.up();
+  await ringed.close();
+  record(
+    "a carry's ring over the canvas follows the window's rounded corner",
+    fromOlive.edge <= 8 && Math.min(...fromOlive.diagonal) <= 40,
+    `edge ${fromOlive.edge} from the olive; the corner's diagonal ${fromOlive.diagonal.join(" ")}`,
+  );
 } catch (error) {
   record("run", false, String(error));
   await shot("failure");

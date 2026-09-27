@@ -8,12 +8,11 @@ import {
   useRef,
   useState,
   type CSSProperties,
-  type PointerEvent,
   type ReactNode,
   type RefObject,
-  type WheelEvent,
 } from "react";
 import { useLanding, type Landing } from "./canvas-carry";
+import { panRow, usePan } from "./canvas-pan";
 import { LaneSeparator } from "./lane-separator";
 import { displacement, useReorder, type LaneHandlers } from "./lane-reorder";
 
@@ -25,42 +24,6 @@ export type LaneView = { id: LaneId; title: string; width: number | null; node: 
 // is always on screen and the ground beside it says there is more row to the right.
 const LANE_WIDTH = "min(560px, calc(100% - 48px))";
 
-// The ground: the row's own padding, the open space around its words, and the run of ground
-// past it. A press there pans the row; a press on anything in a lane belongs to the lane.
-function isGround(target: EventTarget | null, row: HTMLElement): boolean {
-  return target === row || (target instanceof Element && target.matches("[data-ground]"));
-}
-
-// Panning by the ground (ADR-089): a press on the ground takes hold of the row, and the row
-// follows the pointer until it lets go.
-function usePan(): {
-  onPointerDown: (event: PointerEvent<HTMLElement>) => void;
-  onPointerMove: (event: PointerEvent<HTMLElement>) => void;
-  onPointerUp: () => void;
-} {
-  // Where the pan began: the pointer's x and the row's scroll at that moment.
-  const origin = useRef<{ x: number; scrollLeft: number } | null>(null);
-  return {
-    onPointerDown: (event) => {
-      const row = event.currentTarget;
-      if (event.button !== 0 || !isGround(event.target, row)) return;
-      origin.current = { x: event.clientX, scrollLeft: row.scrollLeft };
-      row.setPointerCapture(event.pointerId);
-      document.documentElement.dataset.dragging = "ground";
-    },
-    onPointerMove: (event) => {
-      if (origin.current) {
-        event.currentTarget.scrollLeft =
-          origin.current.scrollLeft - (event.clientX - origin.current.x);
-      }
-    },
-    onPointerUp: () => {
-      origin.current = null;
-      delete document.documentElement.dataset.dragging;
-    },
-  };
-}
-
 // The strip above a lane: its close, at the far end.
 function LaneStrip({ title, onClose }: { title: string; onClose: () => void }) {
   return (
@@ -70,6 +33,7 @@ function LaneStrip({ title, onClose }: { title: string; onClose: () => void }) {
         size="icon-sm"
         className="rounded-[var(--radius)]"
         aria-label={`Close ${title}`}
+        data-lane-close=""
         onClick={onClose}
       >
         <X />
@@ -132,7 +96,7 @@ function OpenSpace({ lit, onBlank }: { lit: boolean; onBlank: () => void }) {
         <br />
         to start a new thread with context
       </p>
-      <button type="button" className="btn btn-sm" onClick={onBlank}>
+      <button type="button" className="btn btn-sm" data-blank="" onClick={onBlank}>
         Create blank thread
       </button>
     </div>
@@ -151,19 +115,6 @@ function DropMarker({ landing }: { landing: Landing | null }) {
       style={{ left: landing.marker }}
     />
   );
-}
-
-// Whether a wheel landed on a lane, which scrolls itself, rather than on the ground.
-function onLane(event: WheelEvent<HTMLElement>): boolean {
-  return event.nativeEvent
-    .composedPath()
-    .some((node) => node instanceof HTMLElement && node.tagName === "ARTICLE");
-}
-
-// A wheel over the ground pans the row, the way a trackpad's sideways swipe does.
-function panRow(event: WheelEvent<HTMLElement>) {
-  if (event.deltaX !== 0 || onLane(event)) return;
-  event.currentTarget.scrollLeft += event.deltaY;
 }
 
 // What the lanes report: a close, a move to another slot, and a width kept.
@@ -210,6 +161,23 @@ function laneIn(row: HTMLElement | null, id: LaneId): HTMLElement | null {
   return lane instanceof HTMLElement ? lane : null;
 }
 
+// Where the focus goes when the lane `id` closes with it: the next lane's close, else the one
+// before's, else Create blank thread.
+function focusAfter(row: HTMLElement, lanes: LaneView[], id: LaneId): Element | null {
+  const at = lanes.findIndex((lane) => lane.id === id);
+  const neighbour = lanes.slice(at + 1).at(0) ?? lanes.slice(0, at).at(-1);
+  if (neighbour === undefined) return row.querySelector("[data-blank]");
+  return laneIn(row, neighbour.id)?.querySelector("[data-lane-close]") ?? null;
+}
+
+// Before the lane `id` closes, hands on the focus it holds, which would otherwise fall back to
+// the start of the page.
+function handOnFocus(row: HTMLElement, lanes: LaneView[], id: LaneId): void {
+  if (laneIn(row, id)?.contains(document.activeElement) !== true) return;
+  const target = focusAfter(row, lanes, id);
+  if (target instanceof HTMLElement) target.focus();
+}
+
 // Brings a lane into view and flashes it once.
 function flash(lane: HTMLElement): void {
   const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -248,7 +216,8 @@ function useFocusedLane(
  * bar drags it to another place in the row, and the ground drags to pan. The whole row takes a
  * carried card or highlight (ADR-091): while one is over it the pane shows it, and an ink
  * marker stands in the gap it would land in. The canvas keeps no lanes of its own: it reports
- * each change, and the caller's lanes come back changed.
+ * each change, and the caller's lanes come back changed. A lane that closes with the focus in it
+ * hands the focus on to its neighbour.
  */
 export function Canvas({
   lanes,
@@ -268,6 +237,10 @@ export function Canvas({
   const pan = usePan();
   const landing = useLanding(row, onCarry);
   useFocusedLane(row, focus, lanes);
+  const onClose = (id: LaneId) => {
+    if (row.current !== null) handOnFocus(row.current, lanes, id);
+    actions.onClose(id);
+  };
   return (
     // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- the ground pans by pointer and wheel; the keyboard reaches every lane and the Create blank thread button
     <section
@@ -281,7 +254,7 @@ export function Canvas({
       onPointerUp={pan.onPointerUp}
       onPointerCancel={pan.onPointerUp}
     >
-      <LaneRow lanes={lanes} actions={actions} />
+      <LaneRow lanes={lanes} actions={{ ...actions, onClose }} />
       <DropMarker landing={landing} />
       <OpenSpace lit={landing?.marker === null} onBlank={onBlank} />
       {/* The ground goes on for a pane past the open space: the canvas has no right edge. */}
