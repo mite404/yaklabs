@@ -79,25 +79,22 @@ function createdThread(runtime: Runtime, id: string): ThreadId {
   return located.focus ?? located.main;
 }
 
-// The document as the runtime holds it right now, the URL's thread visited, so a verb builds
-// on the latest write rather than on the one the last render saw.
-function docNow(runtime: Runtime, active: Located | null): ShellState | null {
-  const state = runtime.state();
-  if (state.kind !== "ready") return null;
-  const saved = parseShell(state.workspace.shell, state.workspace);
-  return active === null ? saved : visit(saved, active);
-}
-
-/** Saves `change` of the document the runtime holds now; the snapshot shows it at once. */
+/**
+ * Saves `change` of the document the runtime holds now, with the URL's thread visited, so a
+ * verb builds on the latest write rather than on the one the last render saw. A result that
+ * differs from the held document is saved, a visit not saved yet included; the snapshot shows
+ * it at once.
+ */
 export function edit(
   runtime: Runtime,
   active: Located | null,
   change: (doc: ShellState) => ShellState,
 ): void {
-  const before = docNow(runtime, active);
-  if (before === null) return;
-  const after = change(before);
-  if (after !== before) inBackground(runtime.saveShell(after), "Keeping your tabs");
+  const state = runtime.state();
+  if (state.kind !== "ready") return;
+  const held = parseShell(state.workspace.shell, state.workspace); // → ShellState
+  const after = change(active === null ? held : visit(held, active));
+  if (after !== held) inBackground(runtime.saveShell(after), "Keeping your tabs");
 }
 
 // Starts a thread (and its project, when it needs one), then opens it.

@@ -18,6 +18,7 @@ import {
   type Workspace,
 } from "@yaklabs/runtime";
 import { useEffect } from "react";
+import { useLocation } from "react-router";
 import { inBackground, useRuntime } from "../runtime";
 import { Canvas, type LaneView } from "./canvas";
 import { ThreadPane } from "./thread-pane";
@@ -91,7 +92,8 @@ function land(runtime: Runtime, main: ThreadId, carried: Carried, at: number): v
  * A main thread's compose canvas (ADR-089, ADR-092), drawn from the snapshot: its lanes, left
  * to right, each thread lane loading its own turns. Close, reorder, widths and a card dropped
  * between lanes all set the lanes through `arrange`; a highlight or Create blank thread makes
- * a child with its lane in place. A focused child whose lane was closed gets it back.
+ * a child with its lane in place. A child whose lane was closed gets it back each time its
+ * address is visited.
  */
 export function MainCanvas({
   main,
@@ -105,9 +107,13 @@ export function MainCanvas({
   const runtime = useRuntime();
   const lanes = lanesOf(workspace, main);
   const threads = new Map(workspace.threads.map((thread) => [thread.id, thread] as const));
+  // Each visit to a child's address opens its lane, a second click on a row the address already
+  // names included: that click changes the location's key and nothing else.
+  const visit = useLocation().key;
   useEffect(() => {
     if (focus !== null) arrangeFrom(runtime, main, (current) => reopenLane(current, focus));
-  }, [runtime, main, focus]);
+    // oxlint-disable-next-line react/exhaustive-effect-dependencies -- `visit` is what runs it again
+  }, [runtime, main, focus, visit]);
   const focused = lanes.find((lane) => lane.kind === "thread" && lane.threadId === focus);
   return (
     <Canvas

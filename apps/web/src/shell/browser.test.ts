@@ -29,6 +29,16 @@ describe("parseAddress", () => {
       expect(parseAddress(once)).toBe(once);
     }
   });
+  it("refuses what percent-encoding grows past the limit, so a saved shell reads back", () => {
+    for (const input of [
+      `wiki.example/${"東京".repeat(150)}`,
+      `a.example/?q=${'"<'.repeat(400)}`,
+      `a.example/${"😀".repeat(200)}`,
+    ]) {
+      expect(input.length).toBeLessThanOrEqual(2048);
+      expect(parseAddress(input)).toBeNull();
+    }
+  });
 });
 
 describe("pageAddressSchema", () => {

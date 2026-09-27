@@ -133,8 +133,8 @@ function SimulatedPage({ page, go }: { page: Page; go: Go }) {
     <article className="flex flex-col gap-4">
       <h1 className="font-serif text-3xl text-ink">This page is simulated</h1>
       <p className="text-soft-ink">
-        Nothing here reaches the network, so <span className="text-ink">{page.address}</span> has no
-        page of its own.
+        Nothing here reaches the network, so{" "}
+        <span className="text-ink wrap-anywhere">{page.address}</span> has no page of its own.
       </p>
       <p>
         <PageLink to={START_PAGE} go={go}>
