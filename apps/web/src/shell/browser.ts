@@ -24,12 +24,14 @@ const MAX_LENGTH = 2048;
  */
 export function parseAddress(input: string): PageAddress | null {
   const typed = input.trim();
-  if (typed === "" || typed.length > MAX_LENGTH || /\s/.test(typed)) return null;
+  if (typed === "" || /\s/.test(typed)) return null;
   const url = URL.parse(/^[a-z][a-z0-9+.-]*:\/\//i.test(typed) ? typed : `https://${typed}`);
   const web = url !== null && ["http:", "https:"].includes(url.protocol) && url.hostname !== "";
   if (!web || url.username !== "" || url.password !== "") return null;
   url.hash = "";
-  return brandSchema.parse(url.href);
+  // The limit holds for the canonical form, which percent-encoding can make many times longer
+  // than what was typed, so the address a shell saves is one this parse accepts again.
+  return url.href.length > MAX_LENGTH ? null : brandSchema.parse(url.href);
 }
 
 /** The address schema for saved shells: the same parse, so a stored address is a canonical one. */
