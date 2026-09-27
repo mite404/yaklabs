@@ -12,11 +12,11 @@ import {
   type RuntimeData,
   type Source,
 } from "./protocol";
+import { arranged, renamed, withShell, type Edit } from "./edits";
 import { createInbox } from "./inbox";
 import { untilAborted } from "./untilAborted";
 import {
   lanesOf,
-  mergeLanes,
   type Lane,
   type LaneId,
   type ShellState,
@@ -73,8 +73,6 @@ export type Runtime = {
 type Answer = Extract<Notice, { requestId: string }>;
 type Settled = Exclude<Answer, { kind: "failed" | "chunk" }>;
 type Sink = (answer: Answer) => void;
-// A page edit shown before the worker confirms it.
-type Edit = (workspace: Workspace) => Workspace;
 type Post = (command: Command) => void;
 // A command the page waits on for one answer.
 type Asked = Exclude<Command, { kind: "init" | "send" | "abort" }>;
@@ -89,35 +87,9 @@ type Handle = {
   listeners: Set<() => void>;
 };
 
-function renamed(target: RenameTarget, name: string): Edit {
-  return target.kind === "project"
-    ? (ws) => ({
-        ...ws,
-        projects: ws.projects.map((each) => (each.id === target.id ? { ...each, name } : each)),
-      })
-    : (ws) => ({
-        ...ws,
-        threads: ws.threads.map((each) =>
-          each.id === target.id ? { ...each, title: name } : each,
-        ),
-      });
-}
-
-// The page's lanes over whatever the canvas holds by then, merged as the worker will merge them.
-function arranged(mainId: ThreadId, lanes: Lane[], base: LaneId[]): Edit {
-  return (ws) => ({
-    ...ws,
-    lanes: { ...ws.lanes, [mainId]: mergeLanes(lanesOf(ws, mainId), base, lanes) },
-  });
-}
-
 // The lane ids the page sees on a main now: what its `arrange` was edited from.
 function baseOf(state: RuntimeState, mainId: ThreadId): LaneId[] {
   return state.kind === "ready" ? lanesOf(state.workspace, mainId).map((lane) => lane.id) : [];
-}
-
-function withShell(shell: ShellState): Edit {
-  return (ws) => ({ ...ws, shell });
 }
 
 function createHandle(): Handle {
