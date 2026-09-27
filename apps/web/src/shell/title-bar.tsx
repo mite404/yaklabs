@@ -15,7 +15,11 @@ const LIGHTS = ["close", "minimise", "zoom"] as const;
 
 function TrafficLights() {
   return (
-    <div data-slot="traffic-lights" aria-hidden="true" className="flex shrink-0 gap-2 pr-2 pl-4">
+    <div
+      data-slot="traffic-lights"
+      aria-hidden="true"
+      className="flex shrink-0 gap-2 pr-2 pl-4 max-md:hidden"
+    >
       {LIGHTS.map((light) => (
         <span
           key={light}
@@ -40,7 +44,7 @@ export function TitleBar({ theme, chrome }: { theme: ThemeChoice; chrome: Chrome
     <header
       data-slot="title-bar"
       data-chrome={chrome.style}
-      className="chrome-surface flex h-11 shrink-0 items-center gap-2 pr-3 select-none"
+      className="chrome-surface flex h-11 shrink-0 items-center gap-2 pr-3 select-none max-md:gap-1 max-md:pl-2"
     >
       <TrafficLights />
       <SidebarTrigger
@@ -48,7 +52,7 @@ export function TitleBar({ theme, chrome }: { theme: ThemeChoice; chrome: Chrome
         className="shrink-0 rounded-[var(--radius)] text-soft-ink hover:text-ink"
       />
       <TabStrip shell={shell} starting={starting} />
-      <div className="flex shrink-0 items-center gap-2">
+      <div className="flex shrink-0 items-center gap-2 max-md:gap-1">
         <DataMarker />
         <LayoutSwitch shell={shell} />
         <Bell shell={shell} />

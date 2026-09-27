@@ -3,7 +3,7 @@ import { Button } from "@yaklabs/ui/components/button";
 import { Skeleton } from "@yaklabs/ui/components/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@yaklabs/ui/components/tabs";
 import { Plus, X } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useRef, type RefObject } from "react";
 import { panelId } from "./deck";
 import { LAYOUTS } from "./layouts";
 import type { Shell } from "./model";
@@ -25,7 +25,7 @@ function Tab({ thread, shell }: { thread: ThreadSummary; shell: Shell }) {
   return (
     <div
       role="presentation"
-      className={`group/tab relative flex w-[220px] min-w-28 shrink has-data-active:min-w-40 ${active ? "chrome-pill" : ""}`}
+      className={`group/tab relative flex w-[220px] min-w-28 shrink has-data-active:min-w-40 max-md:has-data-active:min-w-[min(calc(100cqw-32px),10rem)] ${active ? "chrome-pill" : ""}`}
     >
       <TabsTrigger
         value={thread.id}
@@ -55,6 +55,26 @@ function Tab({ thread, shell }: { thread: ThreadSummary; shell: Shell }) {
   );
 }
 
+// Keeps the active tab scrolled into view when it changes, and when the strip's width changes
+// under it (a phone rotating, a window resizing), which moves no id.
+function useActiveTabInView(active: ThreadId | null, strip: RefObject<HTMLDivElement | null>) {
+  useEffect(() => {
+    const show = () => {
+      if (active === null) return;
+      document
+        .querySelector(`#${CSS.escape(tabId(active))}`)
+        ?.scrollIntoView({ block: "nearest", inline: "nearest" });
+    };
+    show();
+    const observer = new ResizeObserver(show);
+    const tablist = strip.current?.querySelector('[role="tablist"]');
+    if (tablist !== null && tablist !== undefined) observer.observe(tablist);
+    return () => {
+      observer.disconnect();
+    };
+  }, [active, strip]);
+}
+
 /**
  * The open threads as shadcn Tabs: choosing one goes to its address, which is what makes it
  * active. Tabs narrow as more open; past their floor the strip scrolls, fading at an edge with
@@ -63,14 +83,10 @@ function Tab({ thread, shell }: { thread: ThreadSummary; shell: Shell }) {
  */
 export function TabStrip({ shell, starting }: { shell: Shell | null; starting: boolean }) {
   const active = shell?.active?.main ?? null;
-  useEffect(() => {
-    if (active !== null)
-      document
-        .querySelector(`#${CSS.escape(tabId(active))}`)
-        ?.scrollIntoView({ block: "nearest", inline: "nearest" });
-  }, [active]);
+  const stripRef = useRef<HTMLDivElement>(null);
+  useActiveTabInView(active, stripRef);
   return (
-    <div className="flex min-w-0 flex-1 items-center gap-1">
+    <div ref={stripRef} className="@container flex min-w-0 flex-1 items-center gap-1">
       <Tabs
         value={active}
         onValueChange={(value) => {
