@@ -30,6 +30,8 @@ import {
 
 /** What the shell can change: tabs, threads, projects, panes and the bell. */
 export type ShellVerbs = {
+  /** Goes to a thread's address, main or child; the address keeps the scenario. */
+  open(id: ThreadId): void;
   /** Closes a tab; the one on screen gives way to its right neighbour, else its left, else home. */
   close(main: ThreadId): void;
   /** Starts a main thread in the project (else the active one's, else the first) and opens it. */
@@ -151,6 +153,9 @@ function verbs(deps: Deps, doc: ShellState): ShellVerbs {
     edit(deps, update);
   };
   return {
+    open: (id) => {
+      go(id);
+    },
     close: (main) => {
       const { next } = closeTab(doc, main);
       change((current) => closeTab(current, main).state);

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { keepScenario, legacyFrom, unknownScenario, wantedFrom } from "./source";
+import { keepScenario, legacyFrom, markerFor, unknownScenario, wantedFrom } from "./source";
 
 describe("wantedFrom", () => {
   it("opens the device when the address names no scenario", () => {
@@ -33,6 +33,24 @@ describe("unknownScenario", () => {
   it("names every scenario that exists", () => {
     expect(unknownScenario("nope")).toBe(
       'There is no scenario called "nope". The scenarios are demo, empty, long, loading, failure, thread-fails.',
+    );
+  });
+});
+
+describe("markerFor", () => {
+  const lab = { kind: "lab" } as const;
+  const gateway = { kind: "gateway", baseUrl: "https://kay.example" } as const;
+  it("says nothing until the source is known", () => {
+    expect(markerFor(null, lab)).toBeNull();
+  });
+  it("names a scenario as a mock, whatever agent the build has", () => {
+    expect(markerFor({ kind: "scenario", name: "long" }, gateway)?.label).toBe("Mock: long");
+  });
+  it("says whether the device keeps the threads, and when a live model answers", () => {
+    expect(markerFor({ kind: "device", storage: "opfs" }, lab)?.label).toBe("On this device");
+    expect(markerFor({ kind: "device", storage: "memory" }, lab)?.label).toBe("Not saved");
+    expect(markerFor({ kind: "device", storage: "opfs" }, gateway)?.label).toBe(
+      "On this device · Live model",
     );
   });
 });

@@ -206,6 +206,12 @@ export function unreadCount(state: ShellState, ws: Workspace): number {
   return ws.notifications.filter((each) => !state.read.includes(each.id)).length;
 }
 
+/** The bell's badge: the count, "9+" past nine, nothing at zero. */
+export function badgeText(unread: number): string | null {
+  if (unread <= 0) return null;
+  return unread > 9 ? "9+" : String(unread);
+}
+
 /**
  * Where "/" goes: the tab on screen last in this visit while it is still open, else the open
  * tab with the newest activity in it or its children, else nowhere ("Nothing open").

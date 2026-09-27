@@ -25,7 +25,7 @@ function PaneButton({
     <Button
       variant="ghost"
       size="icon-sm"
-      className="rounded-[var(--radius)]"
+      className="rounded-[var(--radius)] bg-transparent"
       aria-label={label}
       disabled={disabled}
       onClick={onClick}
@@ -38,19 +38,20 @@ function PaneButton({
 // The address field: what was typed until Enter, then whatever the pane shows. A field that
 // cannot be read as an address says so and keeps what was typed.
 function AddressField({ current, onGo }: { current: PageAddress; onGo: Go }) {
-  const [typed, setTyped] = useState<{ over: PageAddress; text: string; refused: boolean }>({
+  const [field, setField] = useState<{ over: PageAddress; text: string; refused: boolean }>({
     over: current,
     text: current,
     refused: false,
   });
-  const field = typed.over === current ? typed : { over: current, text: current, refused: false };
+  // A new page, by any route (a link, back, forward), replaces whatever was being typed.
+  if (field.over !== current) setField({ over: current, text: current, refused: false });
   return (
     <form
       className="relative min-w-0 flex-1"
       onSubmit={(event) => {
         event.preventDefault();
         const to = parseAddress(field.text); // → PageAddress | null
-        if (to === null) setTyped({ ...field, refused: true });
+        if (to === null) setField({ ...field, refused: true });
         else onGo(to);
       }}
     >
@@ -65,7 +66,7 @@ function AddressField({ current, onGo }: { current: PageAddress; onGo: Go }) {
         spellCheck={false}
         className="h-7 rounded-[var(--radius)] border-hairline bg-[var(--control-bg)] pr-20 pl-8 text-xs"
         onChange={(event) => {
-          setTyped({ over: current, text: event.target.value, refused: false });
+          setField({ over: current, text: event.target.value, refused: false });
         }}
       />
       <Badge

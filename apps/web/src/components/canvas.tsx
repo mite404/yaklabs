@@ -345,7 +345,7 @@ function LaneStrip({ title, onClose }: { title: string; onClose: () => void }) {
       <Button
         variant="ghost"
         size="icon-sm"
-        className="rounded-[var(--radius)]"
+        className="rounded-[var(--radius)] bg-transparent"
         aria-label={`Close ${title}`}
         onClick={onClose}
       >

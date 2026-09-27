@@ -9,6 +9,7 @@ import {
 import { describe, expect, it } from "vitest";
 import { pageAddressSchema, START_PAGE } from "./browser";
 import {
+  badgeText,
   browse,
   closeTab,
   firstRun,
@@ -215,6 +216,9 @@ describe("the bell", () => {
     const read = markRead(OPEN, ["n-1"]);
     expect(unreadCount(read, WS)).toBe(1);
     expect(markRead(read, ["n-1"])).toBe(read);
+  });
+  it("caps the badge at 9+ and shows none at zero", () => {
+    expect([0, 1, 9, 10, 12].map((n) => badgeText(n))).toEqual([null, "1", "9", "9+", "9+"]);
   });
 });
 

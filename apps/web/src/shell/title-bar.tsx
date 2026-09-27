@@ -1,0 +1,53 @@
+import { SidebarTrigger } from "@yaklabs/ui/components/sidebar";
+import type { ThemeChoice } from "../theme";
+import { Account } from "./account";
+import { Bell } from "./bell";
+import { DataMarker } from "./data-marker";
+import { LayoutSwitch } from "./layout-switch";
+import { useShell } from "./model";
+import { TabStrip } from "./tab-strip";
+
+// Decorative, as a desktop window's: they do nothing, and a screen reader never meets them.
+const LIGHTS = ["close", "minimise", "zoom"] as const;
+
+function TrafficLights() {
+  return (
+    <div data-slot="traffic-lights" aria-hidden="true" className="flex shrink-0 gap-2 pr-2 pl-4">
+      {LIGHTS.map((light) => (
+        <span
+          key={light}
+          className="size-3 rounded-full border border-hairline"
+          style={{ background: `var(--traffic-${light})` }}
+        />
+      ))}
+    </div>
+  );
+}
+
+/**
+ * The window's one title bar, across its whole width: decorative traffic lights, the sidebar
+ * toggle and the open threads at the left; at the right where the data lives, the layout, the
+ * bell, and the account in the corner (ADR-094).
+ */
+export function TitleBar({ theme }: { theme: ThemeChoice }) {
+  const shell = useShell();
+  return (
+    <header
+      data-slot="title-bar"
+      className="flex h-11 shrink-0 items-center gap-2 bg-paper pr-3 select-none"
+    >
+      <TrafficLights />
+      <SidebarTrigger
+        aria-label="Toggle sidebar"
+        className="shrink-0 rounded-[var(--radius)] bg-transparent text-soft-ink hover:text-ink"
+      />
+      <TabStrip shell={shell} />
+      <div className="flex shrink-0 items-center gap-2">
+        <DataMarker />
+        <LayoutSwitch shell={shell} />
+        <Bell shell={shell} />
+        <Account theme={theme} />
+      </div>
+    </header>
+  );
+}

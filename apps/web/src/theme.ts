@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 export type Theme = "light" | "dark";
 /** What the visitor asked for: a look, or whatever the system prefers. */
 export type ThemePreference = Theme | "system";
+/** The visitor's preference and how to change it, as the root hands it to the workspace. */
+export type ThemeChoice = { preference: ThemePreference; choose: (next: ThemePreference) => void };
 
 const KEY = "theme";
 const DARK_QUERY = "(prefers-color-scheme: dark)";
@@ -43,11 +45,15 @@ export function useTheme(): [ThemePreference, (next: ThemePreference) => void] {
   const [preference, setPreference] = useState<ThemePreference>(readPreference);
   useEffect(() => {
     apply(preference);
-    if (preference !== "system") return undefined;
     const media = matchMedia(DARK_QUERY);
-    const follow = () => apply("system");
+    // Only a visitor following the system moves with it.
+    const follow = () => {
+      if (preference === "system") apply(preference);
+    };
     media.addEventListener("change", follow);
-    return () => media.removeEventListener("change", follow);
+    return () => {
+      media.removeEventListener("change", follow);
+    };
   }, [preference]);
   return [preference, setPreference];
 }

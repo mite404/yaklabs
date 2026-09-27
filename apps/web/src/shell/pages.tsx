@@ -89,20 +89,20 @@ function RadarPage() {
           A storm cell north-east of the harbour, moving east.
         </figcaption>
       </figure>
-      <table className="w-full max-w-72 text-left text-sm">
-        <thead className="text-soft-ink">
+      <table className="max-w-72 text-xs *:*:*:text-left">
+        <thead>
           <tr>
-            <th className="py-1 font-normal">Time</th>
-            <th className="py-1 font-normal">Rain</th>
-            <th className="py-1 font-normal">Wind</th>
+            <th>Time</th>
+            <th>Rain</th>
+            <th>Wind</th>
           </tr>
         </thead>
         <tbody className="text-ink">
           {FORECAST.map((row) => (
-            <tr key={row.time} className="border-t border-hairline">
-              <td className="py-1">{row.time}</td>
-              <td className="py-1">{row.rain}</td>
-              <td className="py-1">{row.wind}</td>
+            <tr key={row.time}>
+              <td>{row.time}</td>
+              <td>{row.rain}</td>
+              <td>{row.wind}</td>
             </tr>
           ))}
         </tbody>
