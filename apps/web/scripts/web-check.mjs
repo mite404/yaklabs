@@ -1278,7 +1278,7 @@ try {
   );
 
   await onOwnPage(
-    "on a phone, choosing a thread in the sidebar sheet closes the sheet",
+    "on a phone the sidebar pushes the page aside, and a tap on the page or a chosen thread closes it",
     "/t/t-005?scenario=demo",
     { viewport: { width: 390, height: 844 } },
     async (own) => {
@@ -1286,12 +1286,43 @@ try {
       await own.locator('[data-slot="project-name"]').filter({ hasText: /\S/ }).waitFor({
         timeout: 15_000,
       });
-      await own.getByRole("button", { name: "Toggle sidebar" }).click();
+      const toggle = own.getByRole("button", { name: "Toggle sidebar" });
+      await toggle.click();
+      await own.waitForTimeout(600);
+      // Pushed, not covered (ADR-120): the bar starts where the drawer ends, and still shows.
+      const push = await own.evaluate(() => {
+        const drawer = document
+          .querySelector('dialog[data-slot="sidebar"]')
+          .getBoundingClientRect();
+        const bar = document.querySelector('header[data-slot="title-bar"]');
+        return {
+          drawer: Math.round(drawer.right),
+          bar: Math.round(bar.getBoundingClientRect().left),
+          inert: bar.inert,
+          spill: document.documentElement.scrollWidth - innerWidth,
+        };
+      });
+      await own.screenshot({ path: path.join(OUT, "sidebar-phone.png") });
+      await own.mouse.click(380, 420);
+      await own.waitForTimeout(600);
+      const afterTap = await own.getByRole("dialog").count();
+      await toggle.click();
+      await own.waitForTimeout(600);
       await own.getByRole("dialog").getByRole("link", { name: "Last week's sales" }).click();
       await own.waitForURL(/\/t\/t-001/);
       await own.waitForTimeout(600);
-      const sheets = await own.getByRole("dialog").count();
-      return { ok: sheets === 0, detail: `${sheets} sheet open after choosing a thread` };
+      const afterChoice = await own.getByRole("dialog").count();
+      return {
+        ok:
+          push.drawer > 0 &&
+          push.bar === push.drawer &&
+          push.bar < 390 &&
+          push.inert === true &&
+          push.spill <= 0 &&
+          afterTap === 0 &&
+          afterChoice === 0,
+        detail: `${JSON.stringify(push)}; open after a tap on the page ${afterTap}; after choosing a thread ${afterChoice}`,
+      };
     },
   );
 
