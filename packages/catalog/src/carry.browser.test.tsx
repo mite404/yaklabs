@@ -1,6 +1,9 @@
+import { useRef } from "react";
+import { flushSync } from "react-dom";
+import { createRoot } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { userEvent } from "vitest/browser";
-import { acceptCarry, armCarry, type Carried, type CarryTarget } from "./carry";
+import { acceptCarry, armCarry, useCarryTarget, type Carried, type CarryTarget } from "./carry";
 
 const carried: Carried = { kind: "text", text: "Saturday leads at every level" };
 
@@ -85,9 +88,9 @@ describe("a press on a handle inside another handle", () => {
     const inner = handle("inner", 0, 0);
     Object.assign(inner.style, { position: "absolute", left: "10px", top: "10px", width: "40px" });
     outer.append(inner);
-    const pressesHeard: EventTarget[] = [];
+    const pressesHeard: (EventTarget | null)[] = [];
     const hear = (event: Event) => {
-      if (event.target) pressesHeard.push(event.target);
+      pressesHeard.push(event.target);
     };
     document.addEventListener("pointerdown", hear);
 
@@ -129,6 +132,56 @@ describe("a carry the window's blur cancels", () => {
     send.dispatchEvent(pointer("pointerup", end.x, end.y));
     send.dispatchEvent(new MouseEvent("click", { bubbles: true, detail: 1 }));
     expect(sent).toBe(1);
+  });
+});
+
+// A target that mounts its element only once it is ready, as a canvas waits for its data, and
+// writes down every carry dropped on it.
+function LateTarget({ ready, dropped }: { ready: number | null; dropped: string[] }) {
+  const ref = useRef<HTMLElement>(null);
+  useCarryTarget(ref, {
+    over: () => true,
+    leave: () => {},
+    drop: () => {
+      dropped.push(`drop on ${ready}`);
+    },
+  });
+  if (ready === null) return <p>Loading</p>;
+  return (
+    <section
+      key={ready}
+      ref={ref}
+      aria-label="Late target"
+      style={{ position: "fixed", left: 300, top: 20, width: 120, height: 60 }}
+    />
+  );
+}
+
+function lateTarget(): HTMLElement {
+  const target = document.querySelector<HTMLElement>("[aria-label='Late target']");
+  if (!target) throw new Error("the target has not mounted");
+  return target;
+}
+
+describe("useCarryTarget", () => {
+  it("takes carries on an element that mounts after it, and on the one that replaces it", () => {
+    const card = handle("card", 20, 20);
+    const host = place("host", 0, 200);
+    const root = createRoot(host);
+    const dropped: string[] = [];
+    const render = (ready: number | null) => {
+      flushSync(() => {
+        root.render(<LateTarget ready={ready} dropped={dropped} />);
+      });
+    };
+
+    render(null);
+    render(1);
+    carryTo(card, lateTarget());
+    render(2);
+    carryTo(card, lateTarget());
+    root.unmount();
+    expect(dropped).toEqual(["drop on 1", "drop on 2"]);
   });
 });
 
