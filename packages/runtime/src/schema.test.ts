@@ -145,6 +145,13 @@ describe("the v2 schema keeps every thread in one place", () => {
       db.exec("update conversations set parent_id = null, project_id = 'p' where id = 'child'");
     }).toThrow("A thread never changes place");
   });
+
+  it("refuses a thread that is its own parent", async () => {
+    const db = await freshDatabase();
+    expect(() => {
+      insertThread(db, "selfie", null, "selfie");
+    }).toThrow("A sub-thread's parent is a main thread");
+  });
 });
 
 describe("the v2 schema keeps lanes on their own main", () => {
