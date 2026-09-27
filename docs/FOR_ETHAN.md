@@ -77,9 +77,10 @@ the bottom right (ADR-113), and Kay's face is the avatar when nobody is signed i
 bar can also be painted, from a painting the repo generates itself (ADR-115). Every one of those is
 Proposed, with its open question listed for Ethan, and a lever of eleven predicates, A to K,
 measures each against a baseline shot on the commit before the polish.
-On a phone the bar then had no room for its own tabs. Below 768px it now drops the traffic
-lights, shortens the marker to one word, and puts the Layout group behind a button, so the tab on
-screen shows whole (ADR-116); P13 holds 390, 520 and 767 to that.
+On a phone the bar then had no room for its own tabs. Below 768px it is now two rows, after
+Amp's phone layout: a top row that never scrolls, with the project's name and a "⋯" for the thread
+and project, and below it the views, Thread, Browser and Canvas (ADR-116); P13 holds 390, 520 and
+767 to that.
 
 ## 2. Cast & Crew
 
@@ -713,8 +714,9 @@ The first entries are ideas from before any code existed; the rest are parts of 
   it, and still demands 44px from 768px up. Lesson: write a check against the intent, not
   against the number that happened to express it on the day.
   The last act: the phone bar had been fixed twice in parallel, as that second row and as the
-  one 44px row of ADR-116. Ethan chose the one row, so A2 asks for 44px at every width again,
-  and the web check's phone test now scrolls to each tab before it taps it.
+  one 44px row of ADR-116. Ethan chose the one row, then saw what the question had meant: the
+  44px was for the desktop. The phone got two rows after all, a fixed row and a row of views, so
+  A2 now asks for 44px from 768px up and 82px below.
 - **The avatar that decided how every letter was drawn.** Making the avatar's ring blend the same
   in both themes (`mix-blend-mode: normal`) changed 35,000 pixels in a panel it is nowhere near.
   Every glyph in the app had switched from greyscale to coloured subpixel smoothing. Chromium only
@@ -1489,7 +1491,8 @@ flowchart LR
   P3 --> M
   M -->|17px| X1[Rejected]
   M -->|37px| X2[Rejected]
-  M -->|82px| K[Kept, then held by P13]
+  M -->|82px| K[Won the budget]
+  K --> E[Ethan: the phone wants two rows]
 ```
 
 The film version: when two camera positions compete, you do not debate them in the production
@@ -1499,3 +1502,9 @@ against.
 
 Senior-engineer takeaway: if a design question has an answer you can measure, measure it. The
 numbers end the argument, and the script that produced them becomes the regression test.
+
+The twist is the other half of the lesson. The ruler answered "what fits in 44px?" perfectly,
+and the answer was set aside, because the 44px rule was meant for the desktop and nobody had
+asked what a phone should be. A measurement settles the question you put to it; it cannot tell
+you that you asked the wrong one. When the question is "what should this be?", put a working
+build in the person's hand, as the picture of Amp's two rows did here, before you optimise.

@@ -1308,22 +1308,23 @@ in localStorage and held for the visit in memory too, so a refused storage still
 Account menu has a Title bar choice beside
 Theme, so Ethan can switch while he decides.
 
-## ADR-116 - Below 768px the title bar drops the window's dress and keeps the thread
+## ADR-116 - On a phone the title bar is two rows: what never scrolls, then the views
 
-2026-09-27 - Proposed (the Layout trigger and the marker's short words are Ethan's to confirm);
+2026-09-27 - Proposed (Ethan's direction, after Amp's phone layout; he will judge it on a phone);
 amends ADR-094 and ADR-096 below 768px only.
-On a phone the bar had no room for its tabs: the traffic lights, the marker and the Layout group
-took 250px of 390, and the tab strip got nothing. Below `md`, where the window is already
-full-bleed (ADR-111), the traffic lights go, since the page no longer reads as a window. The
-marker shows one word ("Mock", "On device", "Not saved", "Live") and keeps its full label for a
-screen reader. The Layout group moves behind one button named "Layout", which opens the same
-group, so its names do not change. The active tab's floor becomes the strip's width less the "+",
-so the thread on screen shows whole, and the other tabs scroll.
-Measured on four prototypes at 390px: keeping the Layout group inline left 17px to 37px of the
-active title however tight the rest was; a trigger leaves the whole tab and 82px of title.
-It replaces a two-row bar built alongside it, which showed every tab but stood 80px tall and
-broke the bar's 44px: Ethan chose the one row, since on a phone the height is the thread's.
-From 768px up nothing changes, and P13 in the workspace lever holds 390, 520 and 767 to it.
+From 768px up the bar stays one 44px row. Below it, where the window is already full-bleed
+(ADR-111), the one row left the tabs no room: the traffic lights, the marker and the Layout group
+took 250px of 390. The phone bar is two rows instead. The top row never scrolls: the sidebar
+toggle, the name of the project on screen, the marker as one word ("Mock", "On device", "Not
+saved", "Live", with the full label kept for a screen reader), the bell, the account, and at the
+far right a "⋯" menu for the thread and its project (New thread, Close this thread, New project).
+The second row is the views, Thread, Browser and Canvas, named in words and scrolling if they
+ever overflow; it is the same Layout group, so its names do not change. The tab strip is hidden
+on a phone, and other threads open from the sidebar, as in Amp.
+Tried first and set aside: one 44px row with the Layout group behind a button and the active tab
+as wide as the strip, which fitted (82px of title at 390px) but hid every other tab and the views
+behind taps; and a second row of tabs (80px), which kept the tabs but not the views.
+P13 in the workspace lever holds 390, 520 and 767 to the two rows, 82px tall.
 
 ## ADR-117 - A lane's gap reports the lane's width, and a lane is 320 to 1800px wide
 
