@@ -1,5 +1,4 @@
 import { sidebarTree, type ProjectNode, type ThreadId, type ThreadSummary } from "@yaklabs/runtime";
-import { Button } from "@yaklabs/ui/components/button";
 import {
   SidebarGroup,
   SidebarGroupLabel,
@@ -13,6 +12,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@yaklabs/ui/components/
 import { ChevronDown, ChevronRight, ChevronUp, Plus } from "lucide-react";
 import { useState, type PointerEvent, type ReactElement } from "react";
 import { Link } from "react-router";
+import { QuietButton } from "../components/quiet-button";
 import { usePaths, useRestart, useRuntimeState } from "../runtime";
 import { useShell, type Shell } from "./model";
 
@@ -238,16 +238,13 @@ function TreeState({ shell }: { shell: Shell | null }) {
     return (
       <div className="flex flex-col items-start gap-2 px-2 py-1 text-sm">
         <p className="text-soft-ink">No projects yet</p>
-        <Button
-          variant="outline"
-          size="sm"
-          className="rounded-[var(--radius)]"
+        <QuietButton
           onClick={() => {
             shell.newProject();
           }}
         >
           New project
-        </Button>
+        </QuietButton>
       </div>
     );
   }
@@ -257,11 +254,7 @@ function TreeState({ shell }: { shell: Shell | null }) {
   return (
     <div className="flex flex-col items-start gap-2 px-2 py-1 text-sm">
       <p className="text-soft-ink">Your threads could not be opened.</p>
-      {restart && (
-        <Button variant="outline" size="sm" className="rounded-[var(--radius)]" onClick={restart}>
-          Try again
-        </Button>
-      )}
+      {restart && <QuietButton onClick={restart}>Try again</QuietButton>}
     </div>
   );
 }

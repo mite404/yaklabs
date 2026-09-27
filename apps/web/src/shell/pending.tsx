@@ -1,5 +1,5 @@
-import { Button } from "@yaklabs/ui/components/button";
 import type { ReactNode } from "react";
+import { QuietButton } from "../components/quiet-button";
 import { useRestart, useRuntimeState } from "../runtime";
 
 /** A quiet message centred in the workspace: what shows where no tab is. */
@@ -23,11 +23,7 @@ export function RuntimePending() {
   return (
     <Notice title="Your threads could not be opened">
       <p className="max-w-md text-sm text-soft-ink">{state.reason}</p>
-      {restart && (
-        <Button variant="outline" size="sm" className="rounded-[var(--radius)]" onClick={restart}>
-          Try again
-        </Button>
-      )}
+      {restart && <QuietButton onClick={restart}>Try again</QuietButton>}
     </Notice>
   );
 }

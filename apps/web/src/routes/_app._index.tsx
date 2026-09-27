@@ -1,5 +1,5 @@
-import { Button } from "@yaklabs/ui/components/button";
 import { Navigate } from "react-router";
+import { QuietButton } from "../components/quiet-button";
 import { usePaths } from "../runtime";
 import { useShell } from "../shell/model";
 import { Notice, RuntimePending } from "../shell/pending";
@@ -17,16 +17,13 @@ export default function Home() {
   return (
     <Notice title="Nothing open">
       <p className="text-sm text-soft-ink">Open a thread from the sidebar, or start one.</p>
-      <Button
-        variant="outline"
-        size="sm"
-        className="rounded-[var(--radius)]"
+      <QuietButton
         onClick={() => {
           shell.newThread();
         }}
       >
         Start a thread
-      </Button>
+      </QuietButton>
     </Notice>
   );
 }
