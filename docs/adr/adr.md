@@ -1088,3 +1088,22 @@ memory from fixed fixtures and never open the device's database, so a demo can n
 read real conversations.
 The app states plainly whether an action is mock, kept on this device, or live with a real model:
 "Live data can follow, with a clear indication when actions have real effects."
+
+## ADR-097 - A lane's title runs the whole bar, and the grip veils it only on hover
+
+2026-09-27 - Accepted (Ethan); amends ADR-089.
+ADR-089 kept a lane's title to half its bar so the six-dot grip never met it, which cut every
+longer title in half at rest. The title now hugs its text and runs the whole bar; while the pointer
+is on the bar's drag area the grip fades up over a veil in the bar's own paper that fades out the
+stretch of title beneath it, and the veil is the grip's hit area, so a press there drags the lane
+and never renames. The rename field draws no rule while editing, so the title reads the same in
+the same box the moment it opens.
+Proof: the workspace lever measures the whole title at rest, the ink beside the grip going from 37
+at rest to 162 on hover, and a 0px rule in the field (`docs/trail/evidence/projects-sidebar/css`).
+
+## ADR-098 - The Disclosure's hover fill sits 4px inside its host
+
+2026-09-27 - Accepted (Ethan).
+The inset the Awaiting card gave its fold by hand now belongs to the Disclosure primitive, so the
+"How I got this" story and every later host get a hover fill that stops short of the card's edges;
+the Awaiting stories render byte-identical in light and dark after the move.
