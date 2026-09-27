@@ -850,6 +850,38 @@ try {
       };
     },
   );
+
+  await onOwnPage(
+    "a cut sidebar row shows its whole name on the first hover and on keyboard focus",
+    "/t/t-001?scenario=long",
+    {},
+    async (own) => {
+      const rows = own.locator('[data-slot="sidebar"] [data-thread="main"]');
+      await rows.first().waitFor({ timeout: 15_000 });
+      const tips = own.locator('[data-slot="tooltip-content"]');
+      const cut = await rows.evaluateAll((els) =>
+        els.slice(0, 2).map((el) => {
+          const label = el.querySelector("[data-label]");
+          return label.scrollWidth > label.clientWidth;
+        }),
+      );
+      const [first, second] = [await rows.nth(0).innerText(), await rows.nth(1).innerText()];
+      await rows.nth(0).hover();
+      await own.waitForTimeout(600);
+      const onHover = await tips.allInnerTexts();
+      await own.mouse.move(900, 450);
+      await own.waitForTimeout(400);
+      await rows.nth(1).focus();
+      await own.keyboard.press("Shift+Tab");
+      await own.keyboard.press("Tab");
+      await own.waitForTimeout(600);
+      const onFocus = await tips.allInnerTexts();
+      return {
+        ok: cut.every(Boolean) && onHover.includes(first) && onFocus.includes(second),
+        detail: `rows cut ${cut.join()}; tooltips on the first hover ${JSON.stringify(onHover)}, on focus ${JSON.stringify(onFocus)}`,
+      };
+    },
+  );
 } catch (error) {
   record("run", false, String(error));
   await shot("failure");
