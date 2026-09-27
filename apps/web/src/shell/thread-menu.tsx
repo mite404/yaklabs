@@ -12,6 +12,18 @@ import { Ellipsis } from "lucide-react";
 import type { Shell } from "./model";
 import { threadActions } from "./state";
 
+/** The name of the project on screen, where a phone's bar shows it in place of the tabs. */
+export function ProjectName({ shell }: { shell: Shell | null }) {
+  return (
+    <span
+      data-slot="project-name"
+      className="min-w-0 truncate px-1 text-sm font-medium text-ink md:hidden"
+    >
+      {shell === null ? null : threadActions(shell.workspace, shell.active).name}
+    </span>
+  );
+}
+
 // The "⋯" itself, which only a phone shows.
 function MoreTrigger({ disabled }: { disabled: boolean }) {
   return (

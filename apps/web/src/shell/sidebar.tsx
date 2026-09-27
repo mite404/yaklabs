@@ -56,8 +56,8 @@ function Place({
   );
 }
 
-// On a phone the sidebar is a modal sheet over the page, so every arrival somewhere new (by a
-// row, a place or a "+") closes it: what was chosen is what shows.
+// On a phone the sidebar is a drawer that pushes the page aside (ADR-120), so every arrival
+// somewhere new (by a row, a place or a "+") closes it: what was chosen is what shows.
 function useSheetClosesOnArrival(): void {
   const { key } = useLocation();
   const { setOpenMobile } = useSidebar();
@@ -84,6 +84,7 @@ export function AppSidebar() {
   return (
     <Sidebar
       collapsible="icon"
+      mobile="push"
       className="absolute h-full border-r-0 group-data-[side=left]:border-r-0"
     >
       <div

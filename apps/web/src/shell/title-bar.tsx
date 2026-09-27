@@ -7,8 +7,7 @@ import { LayoutSwitch } from "./layout-switch";
 import { useShell } from "./model";
 import { SIDEBAR_ID } from "./sidebar";
 import { TabStrip } from "./tab-strip";
-import { threadActions } from "./state";
-import { ThreadMenu } from "./thread-menu";
+import { ProjectName, ThreadMenu } from "./thread-menu";
 
 // Decorative, as a desktop window's: they do nothing, and a screen reader never meets them. On
 // a phone the window is full-bleed, not a window, so they go; on the green bar they need no ring.
@@ -57,20 +56,17 @@ function SidebarToggle() {
 export function TitleBar({ theme, chrome }: Looks) {
   const shell = useShell();
   const starting = useRuntimeState().kind === "starting";
+  const { isMobile, openMobile } = useSidebar();
   return (
     <header
       data-slot="title-bar"
+      inert={isMobile && openMobile}
       data-chrome={chrome.style}
       className="chrome-surface flex h-11 shrink-0 items-center gap-2 pr-3 select-none max-md:grid max-md:h-auto max-md:grid-cols-[auto_minmax(0,1fr)_repeat(4,auto)] max-md:grid-rows-[44px_auto] max-md:gap-x-1 max-md:gap-y-0 max-md:px-2 max-md:pb-1.5"
     >
       <TrafficLights />
       <SidebarToggle />
-      <span
-        data-slot="project-name"
-        className="min-w-0 truncate px-1 text-sm font-medium text-ink md:hidden"
-      >
-        {shell === null ? null : threadActions(shell.workspace, shell.active).name}
-      </span>
+      <ProjectName shell={shell} />
       <TabStrip shell={shell} starting={starting} />
       <div className="flex shrink-0 items-center gap-2 max-md:contents">
         <DataMarker />

@@ -1,4 +1,4 @@
-import { SidebarProvider } from "@yaklabs/ui/components/sidebar";
+import { SidebarProvider, useSidebar } from "@yaklabs/ui/components/sidebar";
 import { cssVars } from "@yaklabs/ui/lib/utils";
 import { useState, type ReactNode } from "react";
 import { useChrome } from "../chrome";
@@ -38,10 +38,13 @@ function rememberSidebar(open: boolean): void {
 // route, since swapping the element would remount the deck and lose every open tab.
 function Workspace({ children }: { children: ReactNode }) {
   const onLab = useMatch("/lab") !== null;
+  const { isMobile, openMobile } = useSidebar();
   return (
     <div
       // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- a main element cannot drop its role on /lab
       role={onLab ? undefined : "main"}
+      // Pushed aside by the phone's drawer, it shows at the edge but takes no focus (ADR-120).
+      inert={isMobile && openMobile}
       className="relative grid min-h-0 w-full min-w-0 flex-1 overflow-hidden bg-background *:[grid-area:1/1] md:rounded-tl-[10px] md:border-t md:border-l md:border-hairline"
     >
       {children}
@@ -71,8 +74,13 @@ export function Window({ theme, children }: { theme: ThemeChoice; children: Reac
             setOpen(next);
             rememberSidebar(next);
           }}
-          className="min-h-0 flex-1 flex-col"
-          style={cssVars({ "--sidebar-width": "16rem", "--sidebar-width-icon": "3.5rem" })}
+          className="min-h-0 flex-1 flex-col transition-transform duration-300 ease-out motion-reduce:transition-none max-md:data-mobile-open:translate-x-(--sidebar-width-mobile)"
+          style={cssVars({
+            "--sidebar-width": "16rem",
+            "--sidebar-width-icon": "3.5rem",
+            // On a phone the drawer takes most of the width and leaves the page's edge in view.
+            "--sidebar-width-mobile": "min(85vw, 20rem)",
+          })}
         >
           <TitleBar theme={theme} chrome={chrome} />
           <div data-slot="window-body" className="window-trim relative flex min-h-0 flex-1">
