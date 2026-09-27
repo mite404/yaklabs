@@ -1107,3 +1107,68 @@ at rest to 162 on hover, and a 0px rule in the field (`docs/trail/evidence/proje
 The inset the Awaiting card gave its fold by hand now belongs to the Disclosure primitive, so the
 "How I got this" story and every later host get a hover fill that stops short of the card's edges;
 the Awaiting stories render byte-identical in light and dark after the move.
+
+## ADR-099 - The worker owns the workspace and pushes one snapshot
+
+2026-09-27 - Accepted; carries out ADR-092 and ADR-076.
+Of four designs put side by side, the one with the smallest surface won: the page sees one
+observable state and five verbs (`open`, `create`, `rename`, `arrange`, `agent`, plus `saveShell`
+for the tabs), and the worker pushes the whole workspace (projects, threads, lanes, the shell, no
+messages) after every write, skipping a push that would change nothing. Every command carries a
+request id and every answer names it, so one failed call no longer fails every call in flight,
+and a write's snapshot always arrives before its answer. A closed lane is an absent lane,
+`arrange` sets a main thread's whole lane list (move, close, reopen, resize and a card drop are
+all one verb), and renames, arranges and shell saves show at once and roll back if refused.
+Proof: 137 runtime tests, among them the ordering, attribution and dedup cases in
+`packages/runtime/src/agentLoop.test.ts`.
+
+## ADR-100 - Schema v2 carries the first build's data over, and converges
+
+2026-09-27 - Accepted; extends ADR-081.
+SQLite gains projects, a parent link on conversations, lanes, the shell document and
+notifications, with checks and triggers that refuse a grandchild, a lane on the wrong canvas and a
+card lane that names a thread. The upgrade is a list of steps keyed by `user_version`, each one
+transaction; the first build's data becomes project "Demo store" with `profit` as its main
+thread and every other conversation its child, the two localStorage lists deciding which lanes
+stay open and in what order. The page clears those lists only after the device store opens on
+the private file system, so a second tab on memory can never lose them.
+Proof: a browser test writes the first build's exact schema with rows shaped like Ethan's,
+migrates twice and once more after a crash inside the step, and gets identical rows each time with
+an empty foreign key check (`packages/runtime/src/sqliteStore.browser.test.ts`).
+
+## ADR-101 - Scenarios load through the store's own writes, with faults as data
+
+2026-09-27 - Accepted for the runtime; extends ADR-096.
+Each scenario (demo, empty, long, loading, failure, thread-fails) fills a fresh in-memory SQLite
+through the same writes the app uses, so a fixture cannot hold a state the schema refuses; the
+clock is fixed, ids count up and turn times are in UTC, so every load is byte-identical. Loading
+and failure are data on the fixture (hold forever, or fail with a fixed reason), never timers, so a
+screenshot of a loading state is stable. A scenario always answers with the lab stand-in.
+Proof: `packages/runtime/src/scenarios.test.ts` and `agentLoop.faults.test.ts`.
+
+## ADR-102 - A carry claims its press on pointerdown
+
+2026-09-27 - Accepted; amends ADR-091.
+Measured in Chromium before building: cancelling `dragstart` keeps the pointer events coming but
+collapses the highlight on the first move, while `preventDefault` on `pointerdown` stops the
+native drag and keeps the highlight through press, moves and release. The carry therefore claims
+the press on `pointerdown` and still refuses `dragstart` inside the thread as a backstop; it
+swallows the click that follows a lifted carry, as a native drag does, and a click on a highlight
+without a lift still clears it. The carry is a pure state machine (idle, armed, carrying) behind a
+thin DOM shell, cancelled by Escape, the window's own blur, `pointercancel` or lost capture.
+
+## ADR-103 - A pinned thread stays pinned through the layout's own scrolls
+
+2026-09-27 - Accepted.
+Chromium's scroll anchoring moves a thread's `scrollTop` while a chart above sizes itself, and the
+scroll event it fires landed with the thread a pixel or two short of its end, so the thread
+unpinned itself and rested short (2 of 15 fresh loads of one dictation story, 7 of 15 of another).
+Only a reader's scroll unpins now; a scroll the layout caused keeps the pin. After the change, none
+of 90 loads across six thread stories rested short. The rule is a pure step with a table test.
+
+## ADR-104 - The lab stand-in answers every message
+
+2026-09-27 - Accepted (Ethan's screenshot).
+The scripted agent stayed silent on a message with no card choice and no file, which in a demo
+reads as a broken thread. It now answers a plain message with one scripted line that says it is
+the lab's stand-in.
