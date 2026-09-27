@@ -246,6 +246,32 @@ describe("the agent loop pushes a state only when the workspace changes", () => 
   });
 });
 
+describe("the agent loop keeps the lanes an arrange had not seen", () => {
+  it("keeps a child created while an arrange was on its way, beside its neighbour", async () => {
+    const { notices, run } = await startLoop();
+    await run(init);
+    await run(child("r1"));
+    await run(child("r2"));
+    const seen = lanesOf(lastWorkspace(notices), profit); // → [l-t-002, l-t-001]
+    const sunday = { kind: "child", parentId: profit, at: 1, title: "Sunday", draft: "" };
+    await Promise.all([
+      run({ kind: "create", requestId: "r3", item: sunday }),
+      run({
+        kind: "arrange",
+        requestId: "r4",
+        mainId: profit,
+        lanes: [seen[1], seen[0]],
+        base: seen.map((lane) => lane.id),
+      }),
+    ]);
+    expect(lanesOf(lastWorkspace(notices), profit).map((lane) => lane.id)).toEqual([
+      "l-t-001",
+      "l-t-002",
+      "l-t-003",
+    ]);
+  });
+});
+
 describe("the agent loop replies", () => {
   it("saves the user's turn and marks the thread replying before it streams", async () => {
     const { notices, store, run } = await startLoop();

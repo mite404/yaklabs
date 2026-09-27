@@ -130,6 +130,20 @@ describe("the runtime shows the page's edits at once", () => {
     expect(lanesOf((await ready(runtime)).workspace, profit)).toEqual(before);
   }, 20_000);
 
+  it("keeps a child created while an arrange was on its way", async () => {
+    const runtime = startLab();
+    const reversed = lanesOf((await ready(runtime)).workspace, profit).toReversed();
+    const creating = newChild(runtime); // its lane lands first, left of the rest
+    const arranging = runtime.arrange(profit, reversed);
+    const id = await creating;
+    await arranging;
+    expect(lanesOf((await ready(runtime)).workspace, profit)).toEqual([
+      ...reversed.slice(0, -1),
+      threadLane(id),
+      ...reversed.slice(-1),
+    ]);
+  }, 20_000);
+
   it("keeps the page's shell across workers", async () => {
     const first = startLab();
     await ready(first);
