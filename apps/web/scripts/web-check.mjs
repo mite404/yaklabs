@@ -1072,6 +1072,40 @@ try {
       };
     },
   );
+
+  await onOwnPage(
+    "a long address on the simulated page wraps inside a narrow browser pane",
+    "/t/t-005?scenario=demo",
+    { viewport: { width: 1024, height: 768 } },
+    async (own) => {
+      const pane = own
+        .locator('[role="tabpanel"]:not([inert])')
+        .getByRole("region", { name: "Browser" });
+      const field = pane.getByRole("textbox", { name: "Address" });
+      await field.waitFor({ timeout: 15_000 });
+      await own.getByRole("button", { name: "Toggle sidebar" }).click();
+      await field.fill("https://example.com/some/really/long/path/that/goes/on/and/on/forever");
+      await field.press("Enter");
+      await pane.getByRole("heading", { name: "This page is simulated" }).waitFor();
+      const fit = await pane.evaluate((region) => {
+        const body = region.querySelector("article").parentElement;
+        const text = [...region.querySelectorAll("article *")].map((el) =>
+          Math.round(el.getBoundingClientRect().right),
+        );
+        return {
+          scroll: body.scrollWidth,
+          client: body.clientWidth,
+          right: Math.max(...text),
+          edge: Math.round(body.getBoundingClientRect().right),
+        };
+      });
+      await own.screenshot({ path: path.join(OUT, "browser-long-address.png") });
+      return {
+        ok: fit.scroll <= fit.client && fit.right <= fit.edge,
+        detail: JSON.stringify(fit),
+      };
+    },
+  );
 } catch (error) {
   record("run", false, String(error));
   await shot("failure");
