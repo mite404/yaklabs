@@ -91,10 +91,7 @@ const rows: Row[] = [
     state: armed,
     input: move({ x: from.x + LIFT_PX, y: from.y }, null),
     next: carrying,
-    effects: [
-      { kind: "lift", from },
-      { kind: "follow", at: { x: from.x + LIFT_PX, y: from.y } },
-    ],
+    effects: [{ kind: "lift" }, { kind: "follow", at: { x: from.x + LIFT_PX, y: from.y } }],
   },
   {
     name: "armed lifts past the lift distance and asks the target under it",
@@ -102,7 +99,7 @@ const rows: Row[] = [
     input: move(far, canvas),
     next: hovering(false),
     effects: [
-      { kind: "lift", from },
+      { kind: "lift" },
       { kind: "follow", at: far },
       { kind: "over", target: canvas, carried, at: far },
     ],

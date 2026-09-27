@@ -48,7 +48,7 @@ export type CarryInput =
  * `follow` moves the picture, and `end` takes down whatever the press put up.
  */
 export type CarryEffect =
-  | { kind: "lift"; from: CarryPoint }
+  | { kind: "lift" }
   | { kind: "follow"; at: CarryPoint }
   | { kind: "over"; target: CarryTarget; carried: Carried; at: CarryPoint }
   | { kind: "leave"; target: CarryTarget }
@@ -73,17 +73,15 @@ export type CarrySource = {
 type Armed = Extract<CarryState, { phase: "armed" }>;
 type Carrying = Extract<CarryState, { phase: "carrying" }>;
 
-// The picture on screen and how far its corner sits from the pointer.
-type Ghost = { element: HTMLElement; offset: CarryPoint };
-
 // One press in the page: the element it landed on holds the pointer once it lifts, and the
-// ghost exists from the lift to the end.
+// ghost, the picture on screen, exists from the lift to the end, `offset` from the pointer.
 type Press = {
   pointerId: number;
   source: CarrySource;
   captor: Element | null;
   listening: AbortController;
-  ghost: Ghost | null;
+  offset: CarryPoint;
+  ghost: HTMLElement | null;
 };
 
 /** How far a press travels before it lifts; anything shorter is a click. */
@@ -146,10 +144,7 @@ function stepArmed(state: Armed, input: CarryInput): [CarryState, CarryEffect[]]
       const { pointerId, carried } = state;
       const lifted: Carrying = { phase: "carrying", pointerId, carried, hover: null };
       const [next, hover] = hoverOver(lifted, input.target, input.at);
-      return [
-        next,
-        [{ kind: "lift", from: state.from }, { kind: "follow", at: input.at }, ...hover],
-      ];
+      return [next, [{ kind: "lift" }, { kind: "follow", at: input.at }, ...hover]];
     }
     case "release":
     case "pointercancel":
@@ -227,24 +222,32 @@ function containerOf(element: Element): { name: string; width: number } | null {
   return null;
 }
 
-function frame(picture: Node, offset: CarryPoint): Ghost {
+// How far the picture's corner sits from the pointer, measured at the press: a picture of its
+// own hangs off the pointer, and a clone of the lifted element keeps the point it was taken at,
+// however far the element moves before the lift, as a thread pinned to its end scrolls.
+function offsetOf({ lift, picture }: CarrySource, from: CarryPoint): CarryPoint {
+  if (picture || !lift) return { x: PICTURE_OFFSET_PX, y: PICTURE_OFFSET_PX };
+  const box = lift.getBoundingClientRect();
+  return { x: box.left - from.x, y: box.top - from.y };
+}
+
+function frame(picture: Node): HTMLElement {
   const element = document.createElement("div");
   element.className = "carry-ghost";
   element.setAttribute("aria-hidden", "true");
   element.inert = true;
   element.append(picture);
-  return { element, offset };
+  return element;
 }
 
-// The picture that rides the pointer, placed where it starts: a picture of its own hangs off
-// the pointer; a clone of the lifted element sits exactly over it, at its size.
-function ghostOf({ lift, picture }: CarrySource, from: CarryPoint): Ghost | null {
-  if (picture) return frame(picture(), { x: PICTURE_OFFSET_PX, y: PICTURE_OFFSET_PX });
+// The picture that rides the pointer: a picture of its own, or a clone of the lifted element
+// at its size.
+function ghostOf({ lift, picture }: CarrySource): HTMLElement | null {
+  if (picture) return frame(picture());
   if (!lift) return null;
-  const box = lift.getBoundingClientRect();
-  const ghost = frame(lift.cloneNode(true), { x: box.left - from.x, y: box.top - from.y });
-  const { style } = ghost.element;
-  style.setProperty("--carry-width", `${box.width}px`);
+  const ghost = frame(lift.cloneNode(true));
+  const { style } = ghost;
+  style.setProperty("--carry-width", `${lift.getBoundingClientRect().width}px`);
   const container = containerOf(lift);
   if (container) {
     style.containerType = "inline-size";
@@ -273,10 +276,10 @@ function swallowStrayClick(): void {
   window.addEventListener("pointerdown", disarm, true);
 }
 
-function putUp(press: Press, from: CarryPoint): void {
+function putUp(press: Press): void {
   const { source, captor, pointerId } = press;
-  press.ghost = ghostOf(source, from);
-  if (press.ghost) document.body.append(press.ghost.element);
+  press.ghost = ghostOf(source);
+  if (press.ghost) document.body.append(press.ghost);
   if (source.lift) source.lift.dataset.lifted = "";
   document.documentElement.dataset.carrying = source.carried.kind;
   captor?.setPointerCapture(pointerId);
@@ -285,7 +288,7 @@ function putUp(press: Press, from: CarryPoint): void {
 function takeDown(press: Press, lifted: boolean): void {
   const { source, captor, pointerId } = press;
   press.listening.abort();
-  press.ghost?.element.remove();
+  press.ghost?.remove();
   if (source.lift) delete source.lift.dataset.lifted;
   delete document.documentElement.dataset.carrying;
   if (captor !== null && captor.hasPointerCapture(pointerId))
@@ -293,16 +296,15 @@ function takeDown(press: Press, lifted: boolean): void {
   if (lifted) swallowStrayClick();
 }
 
-function follow({ ghost }: Press, at: CarryPoint): void {
+function follow({ ghost, offset }: Press, at: CarryPoint): void {
   if (!ghost) return;
-  const [x, y] = [at.x + ghost.offset.x, at.y + ghost.offset.y];
-  ghost.element.style.transform = `translate(${x}px, ${y}px)`;
+  ghost.style.transform = `translate(${at.x + offset.x}px, ${at.y + offset.y}px)`;
 }
 
 function perform(press: Press, effect: CarryEffect): void {
   switch (effect.kind) {
     case "lift":
-      putUp(press, effect.from);
+      putUp(press);
       break;
     case "follow":
       follow(press, effect.at);
@@ -443,12 +445,8 @@ export function useCarryTarget(ref: RefObject<HTMLElement | null>, target: Carry
 export function armCarry(down: CarryPress, source: CarrySource): void {
   if (down.button !== 0) return;
   const { pointerId } = down;
-  const [next] = stepCarry(carry, {
-    kind: "press",
-    pointerId,
-    at: pointOf(down),
-    carried: source.carried,
-  });
+  const at = pointOf(down);
+  const [next] = stepCarry(carry, { kind: "press", pointerId, at, carried: source.carried });
   if (next === carry) return;
   down.preventDefault();
   carry = next;
@@ -457,6 +455,7 @@ export function armCarry(down: CarryPress, source: CarrySource): void {
     source,
     captor: down.target instanceof Element ? down.target : null,
     listening: new AbortController(),
+    offset: offsetOf(source, at),
     ghost: null,
   });
 }
