@@ -13,7 +13,7 @@ const OUT = path.join(ROOT, "apps/web/public/chrome");
 // 1440x44 CSS pixels at 2x; the bar is 44px tall (tasks.md A2).
 const [WIDTH, HEIGHT, SCALE] = [1440, 44, 2];
 // The painted bar's soft ink, cream at 85% (luminance 0.663), needs a ground at or below 0.108
-// for 4.5:1, and cream itself one at or below 0.153; this leaves room for the WebP's rounding.
+// for 4.5:1, and cream itself one at or below 0.153. The decoded file must stay at or below this.
 const MAX_LUMINANCE = 0.1;
 
 // Mist: low, stretched noise tinted between the bar's green and a lighter sage-grey.
@@ -69,48 +69,64 @@ const PAINTING = `
 // hue stays, then encodes WebP and reports the mean colour and the brightest pixel left.
 /* oxlint-disable unicorn/consistent-function-scoping -- finish is serialized into the page, so its
    helpers have to live inside it */
-async function finish({ maxLuminance }) {
+// Runs in the page: holds each pixel at or below a level, scaling its linear light so the hue
+// stays, encodes WebP, decodes the file again and measures what it actually holds, since the
+// lossy encode moves pixels. The level steps down until the decoded file is within the bound.
+async function finish({ bound }) {
   const img = document.querySelector("img");
   await img.decode();
   const canvas = new OffscreenCanvas(img.naturalWidth, img.naturalHeight);
   const context = canvas.getContext("2d");
   context.drawImage(img, 0, 0);
-  const frame = context.getImageData(0, 0, canvas.width, canvas.height);
-  const { data } = frame;
+  const source = context.getImageData(0, 0, canvas.width, canvas.height).data;
   const toLinear = (c) => {
     const s = c / 255;
     return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
   };
   const toByte = (l) =>
     Math.round(255 * (l <= 0.0031308 ? l * 12.92 : 1.055 * l ** (1 / 2.4) - 0.055));
-  const sum = [0, 0, 0];
-  let brightest = 0;
-  for (let i = 0; i < data.length; i += 4) {
-    const lin = [toLinear(data[i]), toLinear(data[i + 1]), toLinear(data[i + 2])];
-    const luminance = 0.2126 * lin[0] + 0.7152 * lin[1] + 0.0722 * lin[2];
-    const k = luminance > maxLuminance ? maxLuminance / luminance : 1;
-    for (let c = 0; c < 3; c += 1) {
-      data[i + c] = Math.min(toByte(lin[c] * k), 255);
-      sum[c] += data[i + c];
+  const luminanceAt = (data, i) =>
+    0.2126 * toLinear(data[i]) + 0.7152 * toLinear(data[i + 1]) + 0.0722 * toLinear(data[i + 2]);
+  const hold = (level) => {
+    const frame = new ImageData(new Uint8ClampedArray(source), canvas.width, canvas.height);
+    const { data } = frame;
+    for (let i = 0; i < data.length; i += 4) {
+      const luminance = luminanceAt(data, i);
+      const k = luminance > level ? level / luminance : 1;
+      for (let c = 0; c < 3; c += 1) data[i + c] = Math.min(toByte(toLinear(data[i + c]) * k), 255);
+      data[i + 3] = 255;
     }
-    data[i + 3] = 255;
-    const held = [0, 1, 2].map((c) => toLinear(data[i + c]));
-    brightest = Math.max(brightest, 0.2126 * held[0] + 0.7152 * held[1] + 0.0722 * held[2]);
-  }
-  context.putImageData(frame, 0, 0);
-  const blob = await canvas.convertToBlob({ type: "image/webp", quality: 0.82 });
-  const bytes = new Uint8Array(await blob.arrayBuffer());
-  let text = "";
-  for (const byte of bytes) text += String.fromCharCode(byte);
-  const pixels = data.length / 4;
-  const mean = sum
-    .map((c) =>
-      Math.round(c / pixels)
+    return frame;
+  };
+  const measure = async (blob) => {
+    const bitmap = await createImageBitmap(blob);
+    const decoded = new OffscreenCanvas(bitmap.width, bitmap.height).getContext("2d");
+    decoded.drawImage(bitmap, 0, 0);
+    const { data } = decoded.getImageData(0, 0, bitmap.width, bitmap.height);
+    const sum = [0, 0, 0];
+    let brightest = 0;
+    for (let i = 0; i < data.length; i += 4) {
+      for (let c = 0; c < 3; c += 1) sum[c] += data[i + c];
+      brightest = Math.max(brightest, luminanceAt(data, i));
+    }
+    const hex = (c) =>
+      Math.round(c / (data.length / 4))
         .toString(16)
-        .padStart(2, "0"),
-    )
-    .join("");
-  return { webp: btoa(text), mean: `#${mean}`, brightest };
+        .padStart(2, "0");
+    return { brightest, mean: `#${sum.map(hex).join("")}` };
+  };
+  for (let level = bound; level > 0; level -= 0.002) {
+    context.putImageData(hold(level), 0, 0);
+    const blob = await canvas.convertToBlob({ type: "image/webp", quality: 0.82 });
+    const found = await measure(blob);
+    if (found.brightest <= bound) {
+      const bytes = new Uint8Array(await blob.arrayBuffer());
+      let text = "";
+      for (const byte of bytes) text += String.fromCharCode(byte);
+      return { webp: btoa(text), level, ...found };
+    }
+  }
+  throw new Error("no level keeps the encoded painting within the bound");
 }
 /* oxlint-enable unicorn/consistent-function-scoping */
 
@@ -122,11 +138,15 @@ const page = await browser.newPage({
 await page.setContent(`<body style="margin:0">${PAINTING}</body>`);
 const png = await page.locator("svg").screenshot();
 await page.setContent(`<img src="data:image/png;base64,${png.toString("base64")}">`);
-const result = await page.evaluate(finish, { maxLuminance: MAX_LUMINANCE });
+const result = await page.evaluate(finish, { bound: MAX_LUMINANCE });
 await browser.close();
 mkdirSync(OUT, { recursive: true });
 const webp = Buffer.from(result.webp, "base64");
 writeFileSync(path.join(OUT, "painting.webp"), webp);
+// What the shipped file holds, decoded: the token test reads it, so the mean colour in
+// tokens.css and the contrast floors are checked against the real asset.
+const facts = { mean: result.mean, brightest: Number(result.brightest.toFixed(4)) };
+writeFileSync(path.join(OUT, "painting.json"), `${JSON.stringify(facts, null, 2)}\n`);
 console.log(
-  `painting.webp ${WIDTH * SCALE}x${HEIGHT * SCALE}, ${webp.length} bytes, mean ${result.mean}, brightest luminance ${result.brightest.toFixed(4)}`,
+  `painting.webp ${WIDTH * SCALE}x${HEIGHT * SCALE}, ${webp.length} bytes, held at ${result.level.toFixed(3)}, decoded mean ${result.mean}, brightest ${facts.brightest}`,
 );

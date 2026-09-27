@@ -110,11 +110,14 @@
   --chrome-line: color-mix(in srgb, var(--yak-cream) 18%, transparent); /* lines only */
   /* "Selected" on the bar, the active tab and the pressed layout: a cream pill, 8.98:1
      against the bar in either theme, with the night green on it (16.1:1). */
-  /* The painted bar (ADR-115): the painting's mean colour, from paint-chrome.mjs, fills the bar
-     before the image loads or if it never does. No pixel of the painting is brighter than
-     luminance 0.101, where cream is 6.04:1 and the painted soft ink, cream at 85%, 4.72:1. */
-  --chrome-painting: #49534b;
-  --on-chrome-painting-soft: color-mix(in srgb, var(--yak-cream) 85%, var(--chrome));
+  /* The painted bar (ADR-115): the painting's mean colour, as painting.json records it from the
+     decoded file, fills the bar before the image loads or if it never does; cream on it 7.41:1.
+     No pixel of the decoded painting is brighter than luminance 0.0963, where cream is 6.23:1
+     and the painted soft ink 4.87:1. */
+  --chrome-painting: #454f47;
+  --on-chrome-painting-soft: color-mix(in srgb, var(--yak-cream) 85%, var(--chrome)); /* 5.79:1 */
+  /* a darkening wash at the bar's ends: moss is darker than every pixel under it, so it only
+     raises the inks' ratios */
   --chrome-painting-wash: color-mix(in srgb, var(--moss) 45%, transparent);
   --chrome-pill: var(--yak-cream);
   --on-chrome-pill: var(--yak-night); /* 16.1:1 */
