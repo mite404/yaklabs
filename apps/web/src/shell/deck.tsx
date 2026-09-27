@@ -4,6 +4,7 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from "@yaklabs/ui/components/resizable";
+import { useIsMobile } from "@yaklabs/ui/hooks/use-mobile";
 import {
   useCallback,
   useEffect,
@@ -26,17 +27,19 @@ import { SPLIT, viewOf, type PaneKind, type View } from "./state";
 type GroupRef = NonNullable<ComponentProps<typeof ResizablePanelGroup>["groupRef"]>;
 type GroupHandle = GroupRef extends Ref<infer Handle> ? NonNullable<Handle> : never;
 
-// The panels' shares for a pane: the thread alone fills the width.
-function layoutFor(pane: PaneKind, split: number): Record<string, number> {
-  return pane === "thread" ? { thread: 100, side: 0 } : { thread: split, side: 100 - split };
+// The panels' shares for a pane. The thread alone fills the width; on a wide screen the browser
+// or the canvas shares it with the thread, and on a phone it fills the width alone.
+function layoutFor(pane: PaneKind, split: number, narrow: boolean): Record<string, number> {
+  if (pane === "thread") return { thread: 100, side: 0 };
+  return narrow ? { thread: 0, side: 100 } : { thread: split, side: 100 - split };
 }
 
-// The thread's share a drag left behind, or null when the drag closed the side pane at the far
-// edge, which only the layout switch may do.
+// The thread's share a drag left behind, or null when the drag closed either pane at its edge,
+// which only the layout switch may do.
 function keptSplit(layout: Record<string, number>): number | null {
   const sizes = new Map(Object.entries(layout)); // → Map<panel id, percent>
   const thread = sizes.get("thread");
-  return thread === undefined || sizes.get("side") === 0 ? null : thread;
+  return thread === undefined || thread === 0 || sizes.get("side") === 0 ? null : thread;
 }
 
 /** The id of the tab panel that holds a main thread's workspace, for the tab that controls it. */
@@ -69,10 +72,13 @@ function Retain({
   );
 }
 
-// The main thread, centred in its pane at the thread's own measure.
-function MainPane({ thread }: { thread: ThreadSummary }) {
+// The main thread, centred in its pane at the thread's own measure. Hidden on a phone while the
+// browser or the canvas has the width, it stays mounted but inert, like a retained pane.
+function MainPane({ thread, hidden }: { thread: ThreadSummary; hidden: boolean }) {
   return (
     <div
+      inert={hidden}
+      data-retain=""
       className="flex h-full min-w-0 justify-center p-4"
       style={{ ["--thread-height" as string]: "100%" }}
     >
@@ -103,28 +109,37 @@ function SidePanes({ shell, thread, view, focus }: Beside) {
   );
 }
 
-// One tab's panes: the main thread, then a panel holding the browser and the canvas. The
-// thread alone collapses that panel; the split is kept on release. The panel's limits never
-// change: the library takes new limits a render late, so a panel made collapsible in the
-// render that collapses it refused to close and left a fifth of the tab blank. A drag can
-// only close it by reaching the far edge, and then the view's layout comes back, since the
-// layout switch alone decides what sits beside the thread.
-function Workspace(beside: Beside) {
-  const { shell, thread, view } = beside;
+// The panel group's handle, whether the screen is a phone's, and the step that lays the panels
+// out as the view says; it runs whenever the view or the screen changes.
+function usePlacement(view: View) {
   const group = useRef<GroupHandle>(null);
-  const alone = view.pane === "thread";
+  const narrow = useIsMobile();
   const place = useCallback(() => {
-    group.current?.setLayout(layoutFor(view.pane, view.split));
-  }, [view.pane, view.split]);
+    group.current?.setLayout(layoutFor(view.pane, view.split, narrow));
+  }, [view.pane, view.split, narrow]);
   useEffect(() => {
     place();
   }, [place]);
+  return { group, narrow, place };
+}
+
+// One tab's panes: the main thread, then a panel holding the browser and the canvas. The
+// thread alone collapses that panel; the split is kept on release. On a phone one pane has the
+// whole width, the one the layout switch names, and the other collapses. The panels' limits
+// never change: the library takes new limits a render late, so a panel made collapsible in the
+// render that collapses it refused to close and left a fifth of the tab blank. A drag can only
+// close a pane by reaching its edge, and then the view's layout comes back, since the layout
+// switch alone decides what is on screen.
+function Workspace(beside: Beside) {
+  const { shell, thread, view } = beside;
+  const { group, narrow, place } = usePlacement(view);
+  const single = view.pane === "thread" || narrow;
   return (
     <ResizablePanelGroup
       orientation="horizontal"
       className="h-full"
       groupRef={group}
-      defaultLayout={layoutFor(view.pane, view.split)}
+      defaultLayout={layoutFor(view.pane, view.split, narrow)}
       onLayoutChanged={(layout, { isUserInteraction }) => {
         if (!isUserInteraction) return;
         const split = keptSplit(layout);
@@ -133,14 +148,20 @@ function Workspace(beside: Beside) {
       }}
     >
       {/* Strings are percentages to the panel library; a bare number would be pixels. */}
-      <ResizablePanel id="thread" minSize={`${SPLIT.min}`}>
-        <MainPane thread={thread} />
+      <ResizablePanel
+        id="thread"
+        minSize={`${SPLIT.min}`}
+        collapsible
+        collapsedSize="0"
+        collapsedThreshold={`${SPLIT.min}`}
+      >
+        <MainPane thread={thread} hidden={narrow && view.pane !== "thread"} />
       </ResizablePanel>
       {/* Above the panes, so nothing positioned in them can cover its hit area. */}
       <ResizableHandle
         aria-label="Resize the thread and the pane beside it"
-        disabled={alone}
-        className={alone ? "hidden" : "drag-hint z-10"}
+        disabled={single}
+        className={single ? "hidden" : "drag-hint z-10"}
         onPointerMove={trackHintLine}
       />
       <ResizablePanel

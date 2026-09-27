@@ -1359,3 +1359,14 @@ nothing in 15 trials, against 3 before. The guard leans on the library's `.opaqu
 whose name the library itself says never changes; the browser test fails if it stops guarding.
 Reloading the tab that has the threads while another waits hands them to the waiting tab, and
 the reloaded tab then waits in turn and says so; nothing is lost.
+
+## ADR-119 - On a phone the workspace shows one pane at a time
+
+2026-09-27 - Accepted (Ethan).
+Below 768px, a thread beside the canvas or the browser left each about 185px, so the chart's
+labels overlapped and its buttons were cut off. On a phone the Layout switch now picks the one
+pane that fills the width (Thread, Browser or Canvas), and the others collapse. They stay mounted
+and inert, so a draft or a streaming reply survives a switch. The panel group and its fixed
+limits stay the same on every screen (ADR-106): the thread's panel is now collapsible too, so a
+phone and a wide screen differ only in the layout the switch asks for, and crossing the
+breakpoint remounts nothing.
