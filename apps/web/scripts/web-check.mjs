@@ -809,6 +809,42 @@ try {
       lanesAfter.join("|") === lanesBefore.toReversed().join("|"),
     `${framed.length} of ${frames.length} framed (${frames.map((frame) => `${frame.place}: ${frame.title}`).join("; ")}); lanes ${lanesBefore.join(" | ")} → ${lanesAfter.join(" | ")}`,
   );
+
+  // Try again keeps the focus in its thread rather than dropping it to the page with the
+  // button: when the thread fails again, the focus is on its Try again, in a lane as in the
+  // main pane.
+  const retried = await openScenario(
+    "/t/t-002?scenario=thread-fails",
+    'button:text-is("Try again")',
+  );
+  const retryTab = retried.locator('[role="tabpanel"]:not([inert])');
+  const afterRetry = [];
+  for (const thread of ["Last week's sales", "Saturday leads at every level"]) {
+    // oxlint-disable-next-line no-await-in-loop -- one thread at a time, each read after its retry
+    await retryTab
+      .getByRole("region", { name: thread, exact: true })
+      .getByRole("button", { name: "Try again" })
+      .focus();
+    // oxlint-disable-next-line no-await-in-loop -- as above
+    await retried.keyboard.press("Enter");
+    // oxlint-disable-next-line no-await-in-loop -- as above
+    await retried.waitForTimeout(400);
+    // oxlint-disable-next-line no-await-in-loop -- as above
+    const at = await retried.evaluate(() => {
+      const focused = document.activeElement;
+      if (focused === null || focused === document.body) return "the page";
+      const frame = focused.closest(".thread-panel")?.getAttribute("aria-label");
+      return `${focused.textContent.trim()} in ${frame}`;
+    });
+    afterRetry.push(at);
+  }
+  await retried.close();
+  record(
+    "Try again keeps the focus in its thread, on Try again when it fails again",
+    afterRetry.join("|") ===
+      "Try again in Last week's sales|Try again in Saturday leads at every level",
+    afterRetry.join("; "),
+  );
 } catch (error) {
   record("run", false, String(error));
   await shot("failure");
