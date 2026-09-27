@@ -1,0 +1,171 @@
+import {
+  locate,
+  type Located,
+  type Runtime,
+  type RuntimeState,
+  type Source,
+  type ThreadId,
+  type ThreadSummary,
+  type Workspace,
+} from "@yaklabs/runtime";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+} from "react";
+import { matchPath, useLocation, useNavigate, useNavigation } from "react-router";
+import { inBackground, usePaths, useRuntimeState, useStartedRuntime } from "../runtime";
+import { parseShell, resume, unreadCount, unsaved, visit, type ShellState } from "./state";
+import { edit, verbs, type Go, type ShellVerbs } from "./verbs";
+
+/**
+ * The shell once the runtime is ready: the snapshot, the saved document with the URL's thread
+ * visited, and the verbs that change what the shell shows. Every part of the frame reads it.
+ */
+export type Shell = ShellVerbs & {
+  source: Source;
+  workspace: Workspace;
+  doc: ShellState;
+  /** The URL's thread; null on "/", on /lab, and for a thread the workspace lacks. */
+  active: Located | null;
+  /** The open main threads, left to right. */
+  tabs: ThreadSummary[];
+  /** Where "/" goes, or null when nothing is open. */
+  resumeTo: ThreadId | null;
+  unread: number;
+};
+
+// The runtime's state once it is ready: its source and its workspace.
+type Ready = Extract<RuntimeState, { kind: "ready" }>;
+
+// What the shell is built from on each render.
+type Parts = {
+  runtime: Runtime;
+  ready: Ready;
+  saved: ShellState;
+  active: Located | null;
+  go: Go;
+  lastShown: ThreadId | null;
+};
+
+const ShellContext = createContext<Shell | null>(null);
+
+// Where a thread the address names sits in the runtime's workspace as it stands now.
+function locateNow(runtime: Runtime, named: string | undefined): Located | undefined {
+  const state = runtime.state();
+  if (named === undefined || state.kind !== "ready") return undefined;
+  return locate(state.workspace, named);
+}
+
+// The URL's thread in the workspace on screen, or null.
+function activeIn(ws: Workspace | null, named: string | undefined): Located | null {
+  if (ws === null || named === undefined) return null;
+  return locate(ws, named) ?? null;
+}
+
+// The shell the frame reads: the document with the URL's thread visited, its tabs, where "/"
+// goes, the unread count, and the verbs.
+function shellOf({ runtime, ready, saved, active, go, lastShown }: Parts): Shell {
+  const { workspace, source } = ready;
+  const doc = active === null ? saved : visit(saved, active);
+  const byId = new Map(workspace.threads.map((thread) => [thread.id, thread] as const));
+  return {
+    source,
+    workspace,
+    doc,
+    active,
+    tabs: doc.tabs.flatMap((id) => byId.get(id) ?? []),
+    resumeTo: resume(doc, workspace, lastShown),
+    unread: unreadCount(doc, workspace),
+    ...verbs({ runtime, workspace, active, go }, doc),
+  };
+}
+
+// The thread the address names, or is on its way to name: a navigation in flight counts at
+// once, so a tab switch shows in the same frame as the click rather than when the router has
+// finished its own asynchronous steps.
+function useNamedThread(): string | undefined {
+  const pending = useNavigation().location; // → Location | undefined
+  const current = useLocation();
+  return matchPath("/t/:threadId", (pending ?? current).pathname)?.params.threadId;
+}
+
+// Goes to a thread, or home, keeping the scenario. It navigates with flushSync, so a tab switch
+// shows the tab in the same frame as the click, never a transition later.
+function useGo(): Go {
+  const navigate = useNavigate();
+  const { pathTo, hrefTo } = usePaths();
+  return useCallback(
+    (to: ThreadId | null) => {
+      void navigate(to === null ? hrefTo("/") : pathTo(to), { flushSync: true });
+    },
+    [navigate, pathTo, hrefTo],
+  );
+}
+
+// The main thread last on screen in this visit, which "/" resumes while its tab is open.
+function useLastShown(active: Located | null): ThreadId | null {
+  const [lastShown, setLastShown] = useState<ThreadId | null>(null);
+  if (active !== null && active.main !== lastShown) setLastShown(active.main);
+  return lastShown;
+}
+
+// Keeps the runtime's document in step with the page: the canonical one whenever it differs
+// (nothing saved yet, or a thread gone), and a visit each time the address names a new thread
+// or the workspace first arrives. Only those visit: a state push must not re-add a tab closed
+// a moment ago while the address still names it on its way to the neighbour.
+function useKeepShell(
+  runtime: Runtime | null,
+  ws: Workspace | null,
+  saved: ShellState | null,
+  named: string | undefined,
+): void {
+  useEffect(() => {
+    const stale = unsaved(saved, ws);
+    if (runtime !== null && stale !== null) {
+      inBackground(runtime.saveShell(stale), "Keeping your tabs");
+    }
+  }, [runtime, ws, saved]);
+
+  const isReady = ws !== null;
+  useEffect(() => {
+    if (runtime === null || !isReady) return;
+    const at = locateNow(runtime, named);
+    if (at !== undefined) edit(runtime, at, (current) => visit(current, at));
+  }, [runtime, isReady, named]);
+}
+
+/**
+ * Provides the shell to the frame and the routes: the document with the URL's thread visited
+ * in render, so what shows never waits for the save, and the verbs that change it. A tab
+ * appears once per thread, and a child's main turns to its canvas.
+ */
+export function ShellProvider({ children }: { children: ReactNode }) {
+  const state = useRuntimeState();
+  const runtime = useStartedRuntime();
+  const named = useNamedThread();
+  const go = useGo();
+  const ws = state.kind === "ready" ? state.workspace : null;
+  const saved = useMemo(() => (ws === null ? null : parseShell(ws.shell, ws)), [ws]);
+  const active = useMemo(() => activeIn(ws, named), [ws, named]);
+  const lastShown = useLastShown(active);
+  useKeepShell(runtime, ws, saved, named);
+
+  const shell = useMemo(
+    () =>
+      state.kind === "ready" && runtime !== null && saved !== null
+        ? shellOf({ runtime, ready: state, saved, active, go, lastShown })
+        : null,
+    [state, runtime, saved, active, go, lastShown],
+  );
+  return <ShellContext value={shell}>{children}</ShellContext>;
+}
+
+/** The shell, or null while the runtime is starting or broken. */
+export function useShell(): Shell | null {
+  return useContext(ShellContext);
+}

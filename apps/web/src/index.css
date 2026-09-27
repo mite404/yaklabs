@@ -5,7 +5,98 @@
 @import "@yaklabs/ui/globals.css";
 @import "@yaklabs/catalog/tokens.css" layer(catalog);
 
+/* A loading row holds still under reduced motion. Outside every layer on purpose: shadcn's
+   skeleton pulses by a utility class, which a rule in the components layer cannot outrank. */
+@media (prefers-reduced-motion: reduce) {
+  [data-slot="skeleton"] {
+    animation: none;
+  }
+}
+
+/* The window's decorative traffic lights (ADR-094): a desktop window's own colours, the one
+   place the app draws something that is not Kay's; the same in either theme, as the OS's are. */
+:root {
+  --traffic-close: #ff5f57;
+  --traffic-minimise: #febc2e;
+  --traffic-zoom: #28c840;
+}
+
+/* The tab strip's fade (tab-strip.tsx): registered so the scroll can animate the lengths. */
+@property --fade-start {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+@property --fade-end {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+
 @layer components {
+  /* shadcn draws its controls with utilities on top of Tailwind's preflight, and the catalog
+     styles bare elements over that preflight (tokens.css): a button gets a paper fill, a
+     hairline border, 7px corners and padding, and a link turns olive. For an element shadcn
+     renders, which carries a data-slot, this puts preflight's values back, so it shows only
+     what its own classes say: a ghost button no box, a toggle no border of its own, a sidebar
+     link the sidebar's ink. This layer outranks the catalog's and yields to every utility. */
+  :where(button[data-slot]) {
+    border: 0 solid;
+    border-radius: 0;
+    background-color: transparent;
+    padding: 0;
+    color: inherit;
+    font-size: inherit;
+  }
+  :where(a[data-slot]) {
+    color: inherit;
+  }
+
+  /* A thread narrower than its widest line lays out at its width instead of spilling past its
+     own border: the panel's one grid column may shrink below its content's longest line, so
+     a chart, a card and the compose hint fit the column. thread.css leaves the column's floor
+     at its content, which a pane beside an open sidebar at 1024px is narrower than. */
+  .thread-panel {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* An edge of the tab strip with tabs past it fades out, so the tab the edge cuts reads as
+     one more to scroll to rather than a clipped label. The fade follows the scroll; a strip
+     whose tabs fit has no scroll timeline, so the animation is idle and nothing fades. */
+  .tab-scroller {
+    scroll-padding-inline: 32px;
+    mask-image: linear-gradient(
+      to right,
+      transparent,
+      #000 var(--fade-start),
+      #000 calc(100% - var(--fade-end)),
+      transparent
+    );
+    animation: tab-fade linear both;
+    animation-timeline: scroll(self inline);
+  }
+  @keyframes tab-fade {
+    from {
+      --fade-start: 0px;
+      --fade-end: 32px;
+    }
+    10%,
+    90% {
+      --fade-start: 32px;
+      --fade-end: 32px;
+    }
+    to {
+      --fade-start: 32px;
+      --fade-end: 0px;
+    }
+  }
+
+  /* A tab, or a pane inside one, that is kept but not shown (the deck, which makes it inert):
+     it skips rendering and keeps its layout and scroll, which display: none would drop. */
+  [data-retain][inert] {
+    content-visibility: hidden;
+  }
+
   /* The canvas is a dotted field (ADR-089): open ground that invites something to be put down. */
   .canvas {
     background-color: var(--bg);
@@ -33,6 +124,24 @@
   html[data-dragging="ground"],
   html[data-dragging="ground"] .canvas {
     cursor: grabbing;
+  }
+  /* A carry over the canvas (ADR-091) shows on the whole pane, where the eye is, not only on
+     the open space at the far end: a ring in the hover green and the ground a shade deeper. */
+  .canvas[data-drop] {
+    background-color: color-mix(in srgb, var(--paper-deep) 55%, var(--bg));
+    box-shadow: inset 0 0 0 2px var(--olive);
+  }
+  /* A focused child's lane says where it is once, as it comes into view. */
+  .lane[data-flash] :is(.thread-panel, .card) {
+    animation: lane-flash 1.2s ease-out;
+  }
+  @keyframes lane-flash {
+    from {
+      box-shadow: 0 0 0 3px var(--olive);
+    }
+    to {
+      box-shadow: 0 0 0 3px transparent;
+    }
   }
 
   /* A divider that drags shows a hint of a line while the pointer is on it (ADR-089): full ink

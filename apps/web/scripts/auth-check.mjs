@@ -6,17 +6,9 @@
 //     pnpm --filter web exec react-router dev --port 5174   # in one terminal
 //   node apps/web/scripts/auth-check.mjs [--base http://127.0.0.1:5174] [--out dir]
 import { mkdirSync, writeFileSync } from "node:fs";
-import { createRequire } from "node:module";
 import path from "node:path";
+import { arg, chromium, ROOT } from "./harness.mjs";
 
-const ROOT = path.resolve(import.meta.dirname, "../../..");
-const playwright = await import(
-  createRequire(path.join(ROOT, "apps/storybook/package.json")).resolve("playwright")
-);
-const { chromium } = playwright.default ?? playwright;
-
-const argv = process.argv.slice(2);
-const arg = (name, fallback) => (argv.includes(name) ? argv[argv.indexOf(name) + 1] : fallback);
 const BASE = arg("--base", "http://127.0.0.1:5174");
 const OUT = arg("--out", path.join(ROOT, ".artifacts/web/auth"));
 mkdirSync(OUT, { recursive: true });

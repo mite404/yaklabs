@@ -5,17 +5,9 @@
 //   pnpm dev:web                                   # in one terminal
 //   node apps/web/scripts/web-check.mjs [--base http://127.0.0.1:5173] [--out dir]
 import { mkdirSync, writeFileSync } from "node:fs";
-import { createRequire } from "node:module";
 import path from "node:path";
+import { arg, chromium, ROOT } from "./harness.mjs";
 
-const ROOT = path.resolve(import.meta.dirname, "../../..");
-const playwright = await import(
-  createRequire(path.join(ROOT, "apps/storybook/package.json")).resolve("playwright")
-);
-const { chromium } = playwright.default ?? playwright;
-
-const argv = process.argv.slice(2);
-const arg = (name, fallback) => (argv.includes(name) ? argv[argv.indexOf(name) + 1] : fallback);
 const BASE = arg("--base", "http://127.0.0.1:5173");
 const OUT = arg(
   "--out",
@@ -42,6 +34,40 @@ page.on("response", (response) => {
   if (response.status() >= 500) errors.push(`${response.status()} ${response.url()}`);
 });
 const shot = (name) => page.screenshot({ path: path.join(OUT, `${name}.png`), fullPage: false });
+
+// Selects the first `count` characters of the main thread's first agent turn, scrolled into
+// view as a person would: a highlight a press can then carry. Returns where to press and what
+// was selected.
+function highlight(count) {
+  return page.evaluate((length) => {
+    const paragraph = document.querySelector('[role="tabpanel"]:not([inert]) .turn-agent p');
+    paragraph.scrollIntoView({ block: "center" });
+    const range = document.createRange();
+    range.setStart(paragraph.firstChild, 0);
+    range.setEnd(paragraph.firstChild, length);
+    getSelection().removeAllRanges();
+    getSelection().addRange(range);
+    const box = range.getClientRects()[0];
+    return { x: box.left + 12, y: box.top + box.height / 2, text: range.toString() };
+  }, count);
+}
+
+// Presses at `from`, lifts past the carry's dead zone and lets go at `to` (ADR-091).
+async function carryTo(from, to) {
+  await page.mouse.move(from.x, from.y);
+  await page.mouse.down();
+  await page.mouse.move(from.x + 12, from.y + 8, { steps: 3 });
+  await page.mouse.move(to.x, to.y, { steps: 8 });
+  await page.waitForTimeout(150);
+  await page.mouse.up();
+}
+
+// The theme lives in the account menu, in the title bar's corner.
+async function chooseTheme(name) {
+  await page.getByRole("button", { name: "Account" }).click();
+  await page.getByRole("menuitemradio", { name }).click();
+  await page.keyboard.press("Escape");
+}
 
 try {
   await page.goto(`${BASE}/`, { waitUntil: "load" });
@@ -104,12 +130,11 @@ try {
       turns.some((t) => t.includes("Answering about Net profit")),
     `${turns.length} turns after reload`,
   );
+  const marker = (await page.locator('[data-slot="data-marker"]').innerText()).trim();
   record(
-    "no memory-only warning",
-    !(await page
-      .getByText("cannot keep conversations")
-      .isVisible()
-      .catch(() => false)),
+    "the marker says the threads are kept on this device, not in memory",
+    marker === "On this device",
+    marker,
   );
 
   // The look is measured, not the attribute: the page, the paper and the ink must all move.
@@ -123,8 +148,7 @@ try {
       };
     });
   const light = await surface();
-  await page.getByRole("button", { name: "Toggle theme" }).click();
-  await page.getByRole("menuitem", { name: "Dark" }).click();
+  await chooseTheme("Dark");
   await page.waitForFunction(() => document.documentElement.dataset.theme === "dark");
   await page.waitForTimeout(300);
   await shot("thread-dark");
@@ -134,39 +158,35 @@ try {
     light.page !== dark.page && light.paper !== dark.paper && light.ink !== dark.ink,
     `paper ${light.paper} → ${dark.paper}`,
   );
-  await page.getByRole("button", { name: "Toggle theme" }).click();
-  await page.getByRole("menuitem", { name: "Light" }).click();
+  await chooseTheme("Light");
   await page.waitForFunction(() => document.documentElement.dataset.theme === "light");
 
-  const rail = page.getByRole("navigation", { name: "Main" });
+  const rail = page.locator('[data-slot="sidebar"]');
   record(
-    "the rail shows Thread and Lab",
-    (await rail.getByRole("link", { name: "Thread" }).isVisible()) &&
+    "the sidebar shows Kay, Documentation and Lab",
+    (await rail.getByRole("link", { name: "Kay", exact: true }).isVisible()) &&
+      (await rail.getByRole("link", { name: "Documentation" }).isVisible()) &&
       (await rail.getByRole("link", { name: "Lab" }).isVisible()),
   );
 
-  const canvas = page.getByRole("region", { name: "Compose canvas" });
+  const canvas = page
+    .locator('[role="tabpanel"]:not([inert])')
+    .getByRole("region", { name: "Compose canvas" });
   record(
     "the canvas opens empty and invites a drop",
     await canvas.getByText("Drag a text selection or card").isVisible(),
   );
 
-  // A highlight dragged out of the thread arrives as plain text on the drop.
-  await page.evaluate(() => {
-    const target = document.querySelector('[aria-label="Compose canvas"]');
-    const data = new DataTransfer();
-    data.setData("text/plain", "Saturday leads at every level");
-    for (const type of ["dragover", "drop"])
-      target.dispatchEvent(
-        new DragEvent(type, { bubbles: true, cancelable: true, dataTransfer: data }),
-      );
-  });
+  // A highlight carried out of the thread starts a thread where it lands.
+  const picked = await highlight(18);
+  const empty = await canvas.getByText("Drag a text selection or card").boundingBox();
+  await carryTo(picked, { x: empty.x + empty.width / 2, y: empty.y - 40 });
   const lane = canvas.locator("article").first();
   await lane.locator(".thread-panel").waitFor({ timeout: 10_000 });
   const laneDraft = await lane.locator("textarea").inputValue();
   record(
     "a dropped highlight starts a thread lane with the quote as its draft",
-    laneDraft.startsWith("> Saturday leads at every level"),
+    laneDraft.startsWith(`> ${picked.text}`),
     laneDraft.split("\n")[0],
   );
 
@@ -308,15 +328,10 @@ try {
   // A third lane, then the first one taken by its title bar and carried to the end of the
   // row: a copy of it floats under the pointer, the lane itself waits dimmed and slides to the
   // slot it would take, and the drop lands it there.
-  await page.evaluate(() => {
-    const target = document.querySelector('[aria-label="Compose canvas"]');
-    const data = new DataTransfer();
-    data.setData("text/plain", "Sunday holds the margin");
-    for (const type of ["dragover", "drop"])
-      target.dispatchEvent(
-        new DragEvent(type, { bubbles: true, cancelable: true, dataTransfer: data }),
-      );
-  });
+  await openSpace.scrollIntoViewIfNeeded();
+  const third = await highlight(20);
+  const end = await openSpace.boundingBox();
+  await carryTo(third, { x: end.x + end.width / 2, y: end.y - 40 });
   await canvas.locator("article").nth(2).locator(".thread-panel").waitFor({ timeout: 10_000 });
   const labelsBefore = await canvas
     .locator("article")
@@ -398,6 +413,60 @@ try {
     labelsAfter.map((label) => label.slice(0, 12)).join(" → "),
   );
 
+  const threadLanes = canvas.locator("article").filter({ has: page.locator(".thread-header") });
+  await threadLanes.first().scrollIntoViewIfNeeded();
+  const firstBar = await threadLanes.first().locator(".thread-header").boundingBox();
+  // The bar's far end, past any title however long.
+  const firstGrip = { x: firstBar.x + firstBar.width - 12, y: firstBar.y + firstBar.height / 2 };
+  await page.mouse.move(firstGrip.x, firstGrip.y);
+  await page.mouse.down();
+  await page.mouse.move(firstGrip.x - 200, firstGrip.y + 30, { steps: 8 });
+  await page.waitForTimeout(250);
+  const liftedBeforeEscape = await page.locator("[data-lifted]").count();
+  await page.keyboard.press("Escape");
+  await page.waitForTimeout(100);
+  const heldAfterEscape = await page.locator("[data-ghost], [data-lifted]").count();
+  await page.mouse.up();
+  await page.waitForTimeout(250);
+  const labelsEscaped = await canvas
+    .locator("article")
+    .evaluateAll((els) => els.map((el) => el.getAttribute("aria-label")));
+  record(
+    "Escape puts a lifted lane back while the button is still down, and letting go moves nothing",
+    liftedBeforeEscape === 1 &&
+      heldAfterEscape === 0 &&
+      labelsEscaped.join("|") === labelsAfter.join("|"),
+    `lifted ${liftedBeforeEscape}, still up after Escape ${heldAfterEscape}; ${labelsEscaped.map((label) => label.slice(0, 12)).join(" → ")}`,
+  );
+
+  // A card's header inside a thread lane arms a carry, which claims its press with
+  // preventDefault and lets it travel on. A stand-in header that claims its press the same way
+  // shows whether the lane leaves a claimed press alone, as it must for the card to go alone.
+  const claimed = threadLanes.first().locator(".thread-panel");
+  await claimed.evaluate((panel) => {
+    const standIn = document.createElement("header");
+    standIn.className = "card-heading";
+    standIn.dataset.claims = "";
+    standIn.style.height = "40px";
+    standIn.addEventListener("pointerdown", (event) => {
+      event.preventDefault();
+    });
+    panel.prepend(standIn);
+  });
+  const claimBox = await page.locator("[data-claims]").boundingBox();
+  await page.mouse.move(claimBox.x + 40, claimBox.y + 20);
+  await page.mouse.down();
+  await page.mouse.move(claimBox.x + 200, claimBox.y + 40, { steps: 6 });
+  await page.waitForTimeout(250);
+  const liftedByClaim = await page.locator("[data-lifted]").count();
+  await page.mouse.up();
+  await page.locator("[data-claims]").evaluate((el) => el.remove());
+  record(
+    "a press something in a lane has claimed, as a card's header does, never lifts the lane",
+    liftedByClaim === 0,
+    `${liftedByClaim} lifted`,
+  );
+
   const handle = page.locator('[data-slot="resizable-handle"]');
   const handleBox = await handle.boundingBox();
   const panel = page.locator('[data-slot="resizable-panel"]').first();
@@ -436,12 +505,13 @@ try {
     .locator("article")
     .evaluateAll((els) => els.map((el) => el.getAttribute("aria-label")));
   record(
-    "thread lanes survive a reload in the order they were left, and card lanes do not",
-    labelsReloaded.join("|") === [labelsBefore[2], labelsBefore[0]].join("|"),
+    "lanes survive a reload in the order they were left, card lanes too",
+    labelsReloaded.join("|") === labelsAfter.join("|"),
     labelsReloaded.map((label) => label.slice(0, 12)).join(" → "),
   );
   // A lane's title, and the main thread's, rename in place and keep the new name.
-  await canvas.locator("article").first().locator(".thread-title").click();
+  const threadLane = canvas.locator("article").filter({ has: page.locator(".thread-title") });
+  await threadLane.first().locator(".thread-title").click();
   await page.keyboard.press("ControlOrMeta+a");
   await page.keyboard.type("Weekend margins");
   await page.keyboard.press("Enter");
@@ -454,7 +524,7 @@ try {
   await page.reload({ waitUntil: "load" });
   await canvas.locator("article .thread-panel").first().waitFor({ timeout: 15_000 });
   await page.waitForTimeout(500);
-  const laneTitle = await canvas.locator("article").first().locator(".thread-header").innerText();
+  const laneTitle = await threadLane.first().locator(".thread-header").innerText();
   const mainTitle = await mainPanel.locator(".thread-header").innerText();
   record(
     "a lane's title and the main thread's rename in place and survive a reload",
@@ -462,6 +532,7 @@ try {
     `${laneTitle} / ${mainTitle}`,
   );
 
+  const open = await canvas.locator("article").count();
   await canvas
     .getByRole("button", { name: /^Close / })
     .first()
@@ -469,11 +540,14 @@ try {
   await page.reload({ waitUntil: "load" });
   await canvas.locator("article .thread-panel").first().waitFor({ timeout: 15_000 });
   await page.waitForTimeout(500);
-  const closedOnce = (await canvas.locator("article").count()) === 1;
-  await canvas
-    .getByRole("button", { name: /^Close / })
-    .first()
-    .click();
+  const closedOnce = (await canvas.locator("article").count()) === open - 1;
+  for (let left = open - 1; left > 0; left--) {
+    // oxlint-disable-next-line no-await-in-loop -- each close changes the row the next one reads
+    await canvas
+      .getByRole("button", { name: /^Close / })
+      .first()
+      .click();
+  }
   await page.reload({ waitUntil: "load" });
   await canvas.getByText("Drag a text selection or card").waitFor({ timeout: 15_000 });
   record(
@@ -485,13 +559,11 @@ try {
   await page.getByText("Useful answers.").waitFor({ timeout: 10_000 });
   await shot("lab");
   record("lab route renders the workbench", true);
-  await page.getByRole("button", { name: "Toggle theme" }).click();
-  await page.getByRole("menuitem", { name: "Dark" }).click();
+  await chooseTheme("Dark");
   await page.waitForFunction(() => document.documentElement.dataset.theme === "dark");
   await page.waitForTimeout(300);
   await shot("lab-dark");
-  await page.getByRole("button", { name: "Toggle theme" }).click();
-  await page.getByRole("menuitem", { name: "Light" }).click();
+  await chooseTheme("Light");
 
   // The dev server serves the catalog's own modules, so the fragment comes from the real encoder.
   const fragment = await page.evaluate(async (root) => {
@@ -520,6 +592,46 @@ try {
     "unknown path shows the not-found page",
     await page.getByText("Page not found").isVisible(),
   );
+
+  // A device file that opens but cannot be read ends the start broken with its reason, never a
+  // fresh starter over threads that are there. A page of its own, so its device is its own;
+  // the pool keeps a 4096-byte header of its own before the database's bytes.
+  const device = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  await device.goto(`${BASE}/`, { waitUntil: "load" });
+  await device.locator(".thread-panel").first().waitFor({ timeout: 20_000 });
+  await device.goto(`${BASE}/share.html`, { waitUntil: "load" });
+  const spoiled = await device.evaluate(async () => {
+    const names = [];
+    async function spoil(dir, at) {
+      for await (const [name, entry] of dir.entries()) {
+        if (entry.kind === "directory") {
+          await spoil(entry, `${at}/${name}`);
+          continue;
+        }
+        if ((await entry.getFile()).size <= 8192) continue;
+        const writable = await entry.createWritable({ keepExistingData: true });
+        await writable.seek(4096);
+        await writable.write(new Uint8Array(4096).fill(0x5a));
+        await writable.close();
+        names.push(`${at}/${name}`);
+      }
+    }
+    await spoil(await navigator.storage.getDirectory(), "");
+    return names;
+  });
+  await device.goto(`${BASE}/`, { waitUntil: "load" });
+  const notice = device.getByText("Your threads could not be opened", { exact: true });
+  await notice.waitFor({ timeout: 20_000 });
+  const reason = await notice.locator("xpath=..").innerText();
+  await device.getByRole("main").getByRole("button", { name: "Try again" }).click();
+  await notice.waitFor({ timeout: 20_000 });
+  await device.screenshot({ path: path.join(OUT, "device-broken.png") });
+  record(
+    "a device file that cannot be read says why and offers Try again, which tries again",
+    spoiled.length === 1 && reason.includes("could not be brought up to date"),
+    `${spoiled.length} file spoiled; ${reason.replaceAll(/\s+/g, " ").slice(0, 140)}`,
+  );
+  await device.close();
 } catch (error) {
   record("run", false, String(error));
   await shot("failure");

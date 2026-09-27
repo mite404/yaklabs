@@ -7,28 +7,50 @@ The agent loop and the conversation store run in a Web Worker from `@yaklabs/run
 
 ## Routes
 
-| Path          | What it shows                                                   | Sign-in   |
-| ------------- | --------------------------------------------------------------- | --------- |
-| `/`           | The thread beside the compose canvas (ADR-089)                  | required  |
-| `/lab`        | The evaluation workbench: fixtures through the same validation  | required  |
-| `/share.html` | One shared card from the link's fragment (ADR-064)              | public    |
-| `/callback`   | Where WorkOS sends visitors back; the provider finishes sign-in | public    |
+| Path           | What it shows                                                        | Sign-in  |
+| -------------- | -------------------------------------------------------------------- | -------- |
+| `/`            | The last thread shown, else the latest main, else "Nothing open"     | required |
+| `/t/:threadId` | That thread's tab: a main beside its canvas, or a child's lane in it | required |
+| `/lab`         | The evaluation workbench: fixtures through the same validation       | required |
+| `/share.html`  | One shared card from the link's fragment (ADR-064)                   | public   |
+| `/callback`    | Where WorkOS sends visitors back; the provider finishes sign-in      | public   |
 
-A rail on the left holds the Kay mark, Thread and Lab, and at its foot the theme and the account.
-On `/`, the thread sits beside the compose canvas: drag a highlight out of the thread onto the
-canvas to start a new thread of the same project with the highlight quoted in its compose box, or
-drag a card by its header to see it large in a lane of its own. The pointer shows a hand over a
-highlight that already exists, never while one is being made. Open space always remains at the
-end of the row for the next drop, and the divider between the thread and the canvas drags anywhere
-along its length. The gap after a lane drags the lane's width, and a lane's title bar, by its
-middle or right, drags the lane to another place in the row (a copy floats under the pointer
-while the lane waits dimmed in the slot it would take); arrow keys on the gap resize the lane, and
-with Shift move it. A click on a thread's title renames it, in a lane or the main thread, and the
-worker keeps the name. The ground runs a pane past the last lane, shows a scrollbar, drags to
-pan, and pans on a vertical wheel. Thread lanes persist because their
-conversations do, in the order they were left (`kay.canvas.order` in localStorage), except the
-ones closed (`kay.canvas.hidden`), and card lanes last the visit. The model is `src/canvas.ts`,
-the surface `src/components/canvas.tsx`.
+Any signed-in route takes `?scenario=` (below), and every link inside the app keeps it.
+
+## The window
+
+The app draws itself as a desktop window (ADR-094): rounded on the page's ground, full-bleed
+below 768px. The title bar runs its whole width: decorative traffic lights, the sidebar toggle,
+the open threads as tabs with "New thread", then the data marker (where threads are kept), the
+layout switch (Thread, Browser, Canvas), the bell and the account, which holds the theme. Below
+it the sidebar (shadcn's `sidebar-16` pattern) opens to Kay, Documentation, Lab and the project
+tree, and collapses to a 56px rail of places. A project row folds its main threads, a main's
+count ("^ 2") folds its children, and the "+" starts a main in that project.
+
+Every tab stays mounted once visited, inert and unpainted while hidden, so a reply, a draft and
+the scroll survive a switch; closing the tab is what unmounts it (`src/shell/deck.tsx`). A tab
+is a resizable pair: the main thread, then the browser or the canvas beside it, or the thread
+alone. The tabs, each tab's layout and split, the browser's history and what has been read make
+up the shell state (`src/shell/state.ts`), which the runtime keeps with the workspace.
+
+On the canvas, drag a highlight out of the thread to start a child thread with the highlight
+quoted in its compose box, or carry a card by its header to see it large in a lane of its own.
+While a carry is over the canvas the whole pane shows it, and an ink marker stands in the gap it
+would land in; open space always remains at the end of the row. The gap after a lane drags the
+lane's width, a lane's title bar drags the lane to another place in the row (Escape puts it
+back), and arrow keys on the gap resize the lane, with Shift moving it. A click on a thread's
+title renames it. Lanes, their order and their widths live in the workspace through the
+runtime's `arrange`, so thread and card lanes alike come back after a reload. The geometry is
+`src/canvas.ts`, the surface `src/components/canvas.tsx`.
+
+## Scenarios
+
+`?scenario=<name>` runs the app on a deterministic mock store in memory instead of the
+browser's own, and the data marker says which. The names are `demo` (two projects with threads,
+lanes and notifications), `empty`, `long` (twelve projects and tabs, long names, a main with
+nine children, a 120-turn thread), `loading` (a start that never finishes), `failure` (a start
+that fails) and `thread-fails` (every open and send fails). An unknown name is refused with the
+list of the valid ones.
 
 "Required" applies only when the build has sign-in turned on (below).
 
@@ -68,12 +90,14 @@ pnpm --filter web build      # build/client, served by the gateway Worker as sta
 
 `src/index.css` loads shadcn's globals from `@yaklabs/ui` and Kay's `tokens.css` in a
 `catalog` cascade layer between Tailwind's preflight and its utilities, so the catalog keeps
-its element styles while a class on a shadcn primitive still wins (ADR-082). The theme is the
-root's `data-theme`, set by `src/theme.ts` and booted from the prerendered shell.
+its element styles while a class on a shadcn primitive still wins (ADR-082). Where the catalog
+styles a bare `button` or `a`, the components layer puts preflight back for any element shadcn
+renders (it carries a `data-slot`), so a shadcn control shows only its own classes. The theme is
+the root's `data-theme`, set by `src/theme.ts` and booted from the prerendered shell.
 
 ## Prove it in a browser
 
-Two scripts drive the app in headless Chromium and exit 1 on any failed step, with screenshots
+Three scripts drive the app in headless Chromium and exit 1 on any failed step, with screenshots
 and a `results.json` in the output directory (`.artifacts/web/<stamp>/` by default).
 
 ```sh
@@ -81,11 +105,13 @@ rm -rf apps/web/node_modules/.vite              # optional: start from a cold Vi
 pnpm dev:web                                    # in one terminal
 node apps/web/scripts/web-check.mjs             # card, slider, reply, chip, reload, routes
 node apps/web/scripts/auth-check.mjs --base http://127.0.0.1:5174   # against a WorkOS-mode server
+node apps/web/scripts/workspace-check.mjs       # P1-P12: carry, canvas, sidebar, tabs, window
 ```
 
 `web-check.mjs` proves the vertical slice: the profit card renders, the slider reaches Net profit,
 the reply names that view, the sent message carries the chip, and every turn survives a reload
 from SQLite in the browser's private file system. `auth-check.mjs` proves the sign-in gate: a
 signed-out visit leaves for WorkOS with the registered callback and the wanted path in `state`,
-while `/share.html` and `/callback` stay public. The last results and screenshots sit in
-`docs/trail/evidence/`.
+while `/share.html` and `/callback` stay public. `workspace-check.mjs` measures the projects,
+sub-threads, shell and carry contract, each check in its own browser context; its P8 reads
+Storybook on port 6106. The last results and screenshots sit in `docs/trail/evidence/`.

@@ -15,10 +15,9 @@ import {
 
 import "./index.css";
 import type { Route } from "./+types/root";
-import Rail from "./components/rail";
 import { env } from "./env";
 import { safeReturnTo } from "./returnTo";
-import { THEME_BOOT, useTheme } from "./theme";
+import { THEME_BOOT, useTheme, type ThemeChoice } from "./theme";
 
 export function Layout({ children }: { children: ReactNode }) {
   return (
@@ -64,10 +63,7 @@ export default function App() {
   return (
     <Providers>
       <TooltipProvider>
-        <div className="grid h-svh grid-cols-[auto_1fr] overflow-hidden">
-          <Rail onTheme={setPreference} />
-          <Outlet />
-        </div>
+        <Outlet context={{ preference, choose: setPreference } satisfies ThemeChoice} />
       </TooltipProvider>
       <Toaster richColors theme={preference} />
     </Providers>
