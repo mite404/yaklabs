@@ -199,9 +199,10 @@ function unexpected(answer: Settled): Error {
 function agentFor(handle: Handle, post: Post, threadId: ThreadId, session?: Session): Agent {
   return {
     async *respond(event, signal) {
-      if (handle.confirmed.kind === "broken") throw new Error(handle.confirmed.reason);
       const accessToken = await session?.getAccessToken(); // → string | undefined
       if (signal.aborted) return;
+      // After the wait for the token: a runtime that broke meanwhile answers nothing more.
+      if (handle.confirmed.kind === "broken") throw new Error(handle.confirmed.reason);
       const requestId = newId();
       const inbox = createInbox<Answer>(); // a reply's answers, pushed by `receive`
       post({ kind: "send", requestId, threadId, event, accessToken }); // throws if malformed
