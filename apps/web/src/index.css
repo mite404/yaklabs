@@ -114,6 +114,9 @@
     z-index: 30;
     box-shadow: inset 0 0 0 2px var(--trim);
     pointer-events: none;
+    /* A layer of its own: laid over the body in the page's layer, it made Chromium composite
+       what lies under it differently, and a dark-mode fill came out a level off. */
+    will-change: transform;
   }
   /* A window with a frame rounds its bottom corners at 12px less its 1px border; the trim bends
      with them rather than being cut off where the corner clips it. */
