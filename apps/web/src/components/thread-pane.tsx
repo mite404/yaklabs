@@ -60,6 +60,13 @@ function useTurns(id: ThreadId): [Turns, () => void] {
   return [turns.key === key ? turns.turns : LOADING, retry];
 }
 
+// Whether the focus waits in `pane` for somewhere to rest: dropped to the page as the part that
+// held it went, or on the frame, which only holds it while the turns come.
+function isWaiting(pane: HTMLElement): boolean {
+  const at = document.activeElement;
+  return at === document.body || at === pane.querySelector(REST.loading);
+}
+
 // Keeps the focus with a thread while what it shows changes under it. Focus in the thread as
 // it changes, on Try again as it is pressed or on the frame while the turns come, would fall to
 // the page with the part that held it, so it moves to where the thread now rests. Focus taken
@@ -67,10 +74,9 @@ function useTurns(id: ThreadId): [Turns, () => void] {
 function useFocusFollows(host: RefObject<HTMLElement | null>, turns: Turns): FocusHandlers {
   const holding = useRef(false);
   useEffect(() => {
-    const at = document.activeElement ?? document.body;
-    const frame = host.current?.querySelector(REST.loading) ?? null;
-    if (!holding.current || (at !== document.body && at !== frame)) return;
-    host.current?.querySelector<HTMLElement>(REST[turns.kind])?.focus();
+    const pane = host.current;
+    if (pane === null || !holding.current || !isWaiting(pane)) return;
+    pane.querySelector<HTMLElement>(REST[turns.kind])?.focus();
   }, [host, turns]);
   return {
     onFocus: () => {

@@ -161,18 +161,20 @@ function laneIn(row: HTMLElement | null, id: LaneId): HTMLElement | null {
   return lane instanceof HTMLElement ? lane : null;
 }
 
-// Before the lane `id` closes, hands on the focus it holds, which would otherwise fall back to
-// the start of the page: to the next lane's close, else the one before's, else Create blank
-// thread.
-function handOnFocus(row: HTMLElement, lanes: LaneView[], id: LaneId): void {
-  const closing = laneIn(row, id);
-  if (closing === null || !closing.contains(document.activeElement)) return;
+// Where the focus goes when the lane `id` closes with it: the next lane's close, else the one
+// before's, else Create blank thread.
+function focusAfter(row: HTMLElement, lanes: LaneView[], id: LaneId): Element | null {
   const at = lanes.findIndex((lane) => lane.id === id);
   const neighbour = lanes.slice(at + 1).at(0) ?? lanes.slice(0, at).at(-1);
-  const target =
-    neighbour === undefined
-      ? row.querySelector("[data-blank]")
-      : laneIn(row, neighbour.id)?.querySelector("[data-lane-close]");
+  if (neighbour === undefined) return row.querySelector("[data-blank]");
+  return laneIn(row, neighbour.id)?.querySelector("[data-lane-close]") ?? null;
+}
+
+// Before the lane `id` closes, hands on the focus it holds, which would otherwise fall back to
+// the start of the page.
+function handOnFocus(row: HTMLElement, lanes: LaneView[], id: LaneId): void {
+  if (laneIn(row, id)?.contains(document.activeElement) !== true) return;
+  const target = focusAfter(row, lanes, id);
   if (target instanceof HTMLElement) target.focus();
 }
 
