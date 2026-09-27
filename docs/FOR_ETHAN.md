@@ -703,6 +703,17 @@ The first entries are ideas from before any code existed; the rest are parts of 
   which is cream, so the cream bell read 1:1; the badge's round corners gave its "2" the bar as a
   background. The lever now takes one picture with every glyph and icon removed and measures each
   ink only over the pixels its own glyphs cover, less anything drawn on top of it.
+- **The address changed behind the router's back.** `?chrome=` was taken out of the address with
+  `history.replaceState` while the page rendered, but React Router kept its own copy of the old
+  address. Clicking the thread already open then looked like a new address to it, so it pushed a
+  second history entry, and Back went nowhere. A boot script now cleans the address before the
+  router starts, the way the theme's boot script sets the theme before React. Lesson: a router
+  owns the address; change it through the router, or before the router exists.
+- **The probe that measured nothing and passed.** A new check for an avatar's initials read
+  `Infinity`: it collected the inks inside the element, never the element's own text, found none,
+  and the minimum of nothing is infinite, which clears every floor. The lever now counts an empty
+  ink list as a failure, and the probe was shown to fail at 4.47:1 with the fix removed. Lesson: a
+  check needs a way to say "I saw nothing", or nothing reads as a pass.
 - **The focus ring the tab strip cut off.** The bar's new 2px ring sat 2px outside each control.
   On a tab that put it outside the tab strip, which scrolls, and a scroller clips whatever lies
   past its edge, so a focused tab showed almost no ring: the exact failure the rule was written

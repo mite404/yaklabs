@@ -1236,7 +1236,9 @@ skeleton tab still shows), and focus is the site's own 2px ring in cream, restor
 green on it (8.98:1 against the bar, 16.1:1 for its text). The pill is the same in both themes:
 the page's own paper would have been 1.63:1 against the bar in dark mode.
 The avatar's ring keeps a blend in both themes, since dropping it switched every glyph on the page
-from greyscale to subpixel smoothing in Chromium.
+from greyscale to subpixel smoothing in Chromium. An avatar with no picture shows its initials in
+the full cream (7.21:1 on its fill), not the soft ink (4.47:1), and shadcn's half-strength ghost
+hover in dark mode is set back to the full fill, so the bar is the same picture hovered too.
 
 ## ADR-111 - The window sits on a desk of its own, 16px in
 
@@ -1296,7 +1298,12 @@ luminance 0.10, since the lossy encode lifted some pixels past the clamp it was 
 first). On it the soft ink is cream at 85% (4.87:1 on the brightest pixel); cream at 72% would
 fall below 4.5:1 there. `painting.json` records the decoded mean and maximum, and the token test
 reads it.
-The solid bar is the default. `?chrome=painting` or `?chrome=solid` picks one once: it is kept in
-localStorage and taken out of the address, since the app's own links keep only the scenario and a
-leftover parameter would undo a later choice. The Account menu has a Title bar choice beside
+Its hover and skeleton fill is a night wash (1.37:1 over the painting's mean) rather than the flat
+bar's cream fill, which vanished on a painting of the same green (1.03:1); a wash only darkens, so
+the inks on it only gain.
+The solid bar is the default. `?chrome=painting` or `?chrome=solid` picks one once: a boot script
+takes it out of the address before the router starts, as the theme's does, since the app's own
+links keep only the scenario and a leftover parameter would undo a later choice. The choice is kept
+in localStorage and held for the visit in memory too, so a refused storage still keeps it. The
+Account menu has a Title bar choice beside
 Theme, so Ethan can switch while he decides.
