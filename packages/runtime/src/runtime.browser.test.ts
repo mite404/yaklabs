@@ -200,4 +200,20 @@ describe("the runtime falls back and breaks down plainly", () => {
       reason: "The runtime was stopped",
     });
   }, 20_000);
+
+  it("fails a reply whose token was still on its way when the runtime stopped", async () => {
+    const runtime = startLab();
+    await ready(runtime);
+    const token = Promise.withResolvers<string>();
+    const session = { getAccessToken: () => token.promise };
+    const replying = collect(
+      runtime.agent(profit, session).respond(ask, new AbortController().signal),
+    );
+    runtime.dispose();
+    token.resolve("a-token");
+    const waited = new Promise((resolve) => {
+      setTimeout(resolve, 2000, "still waiting");
+    });
+    await expect(Promise.race([replying, waited])).rejects.toThrow("The runtime was stopped");
+  }, 20_000);
 });
