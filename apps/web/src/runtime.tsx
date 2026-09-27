@@ -18,7 +18,14 @@ import {
 import { useLocation } from "react-router";
 import { toast } from "sonner";
 import { env } from "./env";
-import { keepScenario, legacyFrom, unknownScenario, wantedFrom, type Wanted } from "./source";
+import {
+  keepScenario,
+  legacyFrom,
+  scenarioQuery,
+  unknownScenario,
+  wantedFrom,
+  type Wanted,
+} from "./source";
 
 // The runtime the page started, what the address asked it to open, and how to start it again.
 type Door = { runtime: Runtime | null; wanted: Wanted; restart: (() => void) | null };
@@ -139,8 +146,10 @@ function RuntimeHost({
  * restart is a new runtime and a new page beneath it, so nothing keeps the failed one's state.
  */
 export function RuntimeProvider({ children }: { children: ReactNode }) {
-  const { search } = useLocation();
-  const wanted = useMemo(() => wantedFrom(search), [search]); // → Wanted
+  // Keyed on the scenario alone: a redirect that drops another parameter, such as ?chrome=,
+  // must not start the worker again.
+  const query = scenarioQuery(useLocation().search); // → "?scenario=demo" | ""
+  const wanted = useMemo(() => wantedFrom(query), [query]); // → Wanted
   const [attempt, setAttempt] = useState(0);
   const restart = useCallback(() => {
     setAttempt((n) => n + 1);
