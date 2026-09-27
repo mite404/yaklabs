@@ -24,16 +24,16 @@ const THEMES: { value: ThemePreference; label: string }[] = [
   { value: "system", label: "System" },
 ];
 
+const CHROMES: { value: ChromeStyle; label: string }[] = [
+  { value: "solid", label: "Solid" },
+  { value: "painting", label: "Painting" },
+];
+
 // "Ethan Arnold" → "EA"; an email alone gives its first letter.
 function initialsOf(names: (string | null)[], email: string): string {
   const letters = names.map((name) => name?.charAt(0) ?? "").join("");
   return (letters === "" ? email.charAt(0) : letters).toUpperCase();
 }
-
-const CHROMES: { value: ChromeStyle; label: string }[] = [
-  { value: "solid", label: "Solid" },
-  { value: "painting", label: "Painting" },
-];
 
 // The title bar's flat green or its painting (ADR-115), while Ethan chooses between them.
 function ChromeChoices({ chrome }: { chrome: ChromeChoice }) {
@@ -57,7 +57,7 @@ function ChromeChoices({ chrome }: { chrome: ChromeChoice }) {
   );
 }
 
-// The light, dark or system look (ADR-090), which every account menu ends with.
+// The light, dark or system look (ADR-090), which every account menu carries.
 function ThemeChoices({ theme }: { theme: ThemeChoice }) {
   return (
     <DropdownMenuGroup>
