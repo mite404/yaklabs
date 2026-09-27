@@ -69,9 +69,9 @@ async function chooseTheme(name) {
   await page.keyboard.press("Escape");
 }
 
-// A page of its own on a mock scenario (ADR-096), once `ready` is on screen in the tab shown;
-// its console errors count with the rest.
-async function openScenario(address, ready) {
+// A page of its own on a mock scenario (ADR-096), once `ready` is on screen in the tab shown,
+// or in `within` on a page with no tab; its console errors count with the rest.
+async function openScenario(address, ready, within = '[role="tabpanel"]:not([inert])') {
   const view = await browser.newPage({
     viewport: { width: 1440, height: 900 },
     reducedMotion: "reduce",
@@ -81,10 +81,7 @@ async function openScenario(address, ready) {
   });
   view.on("pageerror", (error) => errors.push(String(error)));
   await view.goto(`${BASE}${address}`, { waitUntil: "load" });
-  await view
-    .locator(`[role="tabpanel"]:not([inert]) ${ready}`)
-    .first()
-    .waitFor({ timeout: 15_000 });
+  await view.locator(`${within} ${ready}`).first().waitFor({ timeout: 15_000 });
   return view;
 }
 
@@ -844,6 +841,30 @@ try {
     afterRetry.join("|") ===
       "Try again in Last week's sales|Try again in Saturday leads at every level",
     afterRetry.join("; "),
+  );
+
+  // Start a thread leaves with the notice it sits in, and hands the focus to the thread it
+  // starts rather than dropping it to the page: on the thread's compose box once it opens.
+  const started = await openScenario(
+    "/?scenario=empty",
+    'button:text-is("Start a thread")',
+    "main",
+  );
+  await started.getByRole("button", { name: "Start a thread" }).focus();
+  await started.keyboard.press("Enter");
+  await started.locator('[role="tabpanel"]:not([inert]) .compose-box textarea').waitFor();
+  await started.waitForTimeout(300);
+  const afterStart = await started.evaluate(() => {
+    const focused = document.activeElement;
+    if (focused === null || focused === document.body) return "the page";
+    const tab = focused.closest('[role="tabpanel"]')?.getAttribute("aria-label");
+    return `${focused.getAttribute("aria-label") ?? focused.textContent.trim()} in ${tab}`;
+  });
+  await started.close();
+  record(
+    "Start a thread puts the focus on the compose box of the thread it starts",
+    afterStart === "Message in New thread",
+    afterStart,
   );
 } catch (error) {
   record("run", false, String(error));

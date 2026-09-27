@@ -83,6 +83,18 @@ function useFocusFollows(host: RefObject<HTMLElement | null>, turns: Turns): Foc
   };
 }
 
+/**
+ * Puts the focus in the first thread inside `within`, where it rests: on its compose box once
+ * the thread is open, on Try again if it could not open, and on its frame while it opens, from
+ * where the focus follows the thread to one or the other.
+ */
+export function focusThreadIn(within: ParentNode): void {
+  const pane = within.querySelector("[data-thread-pane]");
+  const rest =
+    pane?.querySelector(`${REST.open}, ${REST.failed}`) ?? pane?.querySelector(REST.loading);
+  if (rest instanceof HTMLElement) rest.focus();
+}
+
 // A thread whose turns are not here, in the frame an open thread has: the paper, the border and
 // the title bar, so a lane keeps the bar it is taken by and the main pane keeps its shape.
 function PendingFrame({ title, children }: { title: string; children: ReactNode }) {
@@ -113,7 +125,7 @@ export function ThreadPane({ thread }: { thread: ThreadSummary }) {
   const host = useRef<HTMLDivElement>(null);
   const follow = useFocusFollows(host, turns);
   return (
-    <div ref={host} className="contents" {...follow}>
+    <div ref={host} className="contents" data-thread-pane="" {...follow}>
       {turns.kind === "open" ? (
         <ChatThreadPanel
           thread={{ title: thread.title, messages: turns.messages }}
