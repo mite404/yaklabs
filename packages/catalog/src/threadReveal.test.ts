@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { centerScrollTop, nudgeScrollTop, type Viewport } from "./threadReveal";
+import { centerScrollTop, nudgeScrollTop, pinnedAfterScroll, type Viewport } from "./threadReveal";
 
 // A 600px thread scrolled to 400, with the thread's 20px padding at both ends.
 const view: Viewport = {
@@ -50,5 +50,25 @@ describe("centerScrollTop", () => {
 
   it("never scrolls above the start of the thread", () => {
     expect(centerScrollTop({ top: 40, bottom: 140 }, view)).toBe(0);
+  });
+});
+
+describe("pinnedAfterScroll", () => {
+  it("pins a thread that reaches its end", () => {
+    expect(pinnedAfterScroll(false, 492, { reach: 492, scrollTop: 492 })).toBe(true);
+  });
+
+  it("unpins a reader who scrolls up", () => {
+    expect(pinnedAfterScroll(true, 492, { reach: 492, scrollTop: 300 })).toBe(false);
+  });
+
+  it("keeps the pin when the browser shifts the scroll as content above grows", () => {
+    // Scroll anchoring moved scrollTop 463 → 490 while the reach grew to 492: the layout's
+    // scroll, 2px short of the end, which the next resize pins back.
+    expect(pinnedAfterScroll(true, 463, { reach: 492, scrollTop: 490 })).toBe(true);
+  });
+
+  it("leaves a reader who scrolled up where they are as content grows", () => {
+    expect(pinnedAfterScroll(false, 463, { reach: 492, scrollTop: 300 })).toBe(false);
   });
 });

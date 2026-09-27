@@ -103,6 +103,23 @@ export function centerInScroller(scroller: HTMLElement, element: HTMLElement): v
   scroller.scrollTo({ top, behavior: prefersReducedMotion() ? "auto" : "smooth" });
 }
 
+/** Where a thread's scroll stands: `reach` is the furthest `scrollTop` it can scroll to. */
+export type ScrollStand = { reach: number; scrollTop: number };
+
+/**
+ * Whether a thread stays pinned to its end after a scroll. A scroll the layout caused, such as
+ * the browser keeping a paragraph in place while a chart above it sizes, comes with a new reach;
+ * only a reader's scroll, which leaves the reach as it was, takes the thread off its end.
+ */
+export function pinnedAfterScroll(pinned: boolean, reachBefore: number, now: ScrollStand): boolean {
+  const atEnd = now.reach - now.scrollTop < 2;
+  return atEnd || (pinned && now.reach !== reachBefore);
+}
+
+function standOf(scroller: HTMLElement): ScrollStand {
+  return { reach: scroller.scrollHeight - scroller.clientHeight, scrollTop: scroller.scrollTop };
+}
+
 /**
  * Enforces ADR-038 for every component in the thread, without each one opting in: when a turn
  * grows right after the user clicked or pressed a key inside it (a table, "Show my work", a
@@ -114,22 +131,17 @@ export function centerInScroller(scroller: HTMLElement, element: HTMLElement): v
 export function keepExpansionsInView(scroller: HTMLElement): () => void {
   let interaction: Interaction | undefined;
   const heights = new WeakMap<Element, number>();
-  const reachOf = () => scroller.scrollHeight - scroller.clientHeight; // → the furthest scrollTop
-  const atEnd = () => reachOf() - scroller.scrollTop < 2;
-  let pinned = atEnd();
-  let reach = reachOf();
+  let { reach } = standOf(scroller);
+  let pinned = pinnedAfterScroll(false, reach, standOf(scroller));
 
   const remember = (event: Event) => {
     if (event.target instanceof HTMLElement)
       interaction = { target: event.target, at: performance.now() };
   };
-  // A scroll the layout caused, such as the browser keeping a paragraph in place while a chart
-  // above it sizes, comes with a new reach; only a reader's scroll, which leaves the reach as it
-  // was, takes the thread off its end.
   const track = () => {
-    const moved = reachOf() !== reach;
-    reach = reachOf();
-    pinned = atEnd() || (pinned && moved);
+    const now = standOf(scroller);
+    pinned = pinnedAfterScroll(pinned, reach, now);
+    reach = now.reach;
   };
 
   const resized = new ResizeObserver((entries) => {
