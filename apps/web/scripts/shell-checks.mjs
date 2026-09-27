@@ -143,6 +143,8 @@ export const shellChecks = {
     const { page } = await onThreadPage(browser);
     await makeLane(page, "Weekend margins");
     await makeLane(page, "Sunday");
+    // Naming the second lane scrolls the row to it; the carry aims at the first lane's gap, as P3 does.
+    await canvasOf(page).evaluate((el) => (el.scrollLeft = 0));
     const heading = mainPanel(page).locator(".card-heading").first();
     await heading.scrollIntoViewIfNeeded();
     const hb = await heading.boundingBox();
