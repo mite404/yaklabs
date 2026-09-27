@@ -31,10 +31,10 @@ import {
 } from "./polish-checks.mjs";
 
 const VARIANTS = ["solid", "painting"];
-// The baseline was shot with the window 8px in; it now sits 16px in (ADR-106). A viewport 16px
+// The baseline was shot with the window 8px in; it now sits 16px in (ADR-111). A viewport 16px
 // larger gives the window the baseline's exact size, so boxes and pixels compare one to one.
 const GROWN = { width: 1456, height: 916 };
-// The trim draws 2px over the body's edge (ADR-107); pixel comparisons leave that band out.
+// The trim draws 2px over the body's edge (ADR-112); pixel comparisons leave that band out.
 const TRIM = 2;
 
 const query = (variant) => `chrome=${variant}`;

@@ -105,7 +105,7 @@
     content-visibility: hidden;
   }
 
-  /* The trim (ADR-107): a line in --trim around the window's body, under the bar and down both
+  /* The trim (ADR-112): a line in --trim around the window's body, under the bar and down both
      sides to the bottom, drawn over the edge so it takes no layout and no box below it moves. */
   .window-trim::after {
     content: "";
@@ -126,7 +126,7 @@
     }
   }
 
-  /* The painted bar (ADR-110): the painting under a subtle green wash, darkest at the ends
+  /* The painted bar (ADR-115): the painting under a subtle green wash, darkest at the ends
      where the traffic lights and the account sit, over the painting's mean colour. Its soft ink
      is a step brighter than the flat bar's, since the painting is lighter than the flat green. */
   .chrome-surface[data-chrome="painting"] {
@@ -143,7 +143,7 @@
       var(--chrome-painting);
   }
 
-  /* The empty canvas's splash (ADR-108): the drawing is a mask filled with --splash-line, so it
+  /* The empty canvas's splash (ADR-113): the drawing is a mask filled with --splash-line, so it
      themes with the ink and shows only its strokes, never the bounds of an image. It sits
      behind the words and fades in once, with no fade under reduced motion. */
   .splash {

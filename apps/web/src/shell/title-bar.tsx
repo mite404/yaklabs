@@ -30,8 +30,8 @@ function TrafficLights() {
 /**
  * The window's one title bar, across its whole width: decorative traffic lights, the sidebar
  * toggle and the open threads at the left; at the right where the data lives, the layout, the
- * bell, and the account in the corner (ADR-094). It is green chrome, flat or painted (ADR-105,
- * ADR-110).
+ * bell, and the account in the corner (ADR-094). It is green chrome, flat or painted (ADR-110,
+ * ADR-115).
  */
 export function TitleBar({ theme, chrome }: { theme: ThemeChoice; chrome: ChromeChoice }) {
   const shell = useShell();

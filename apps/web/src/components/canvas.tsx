@@ -116,7 +116,7 @@ function Lane({
   );
 }
 
-// The splash on an empty canvas (ADR-108): a line drawing behind the words, and Kay at the
+// The splash on an empty canvas (ADR-113): a line drawing behind the words, and Kay at the
 // bottom right. Both are pictures only: hidden from the tree, and a press or a carried card goes
 // through them to the ground. Kay stays away from an open space under 480px, a content box under
 // 430px, where he would crowd the words.

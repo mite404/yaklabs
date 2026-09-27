@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-/** The title bar's two looks (ADR-110): the flat green, or the oil painting under a green wash. */
+/** The title bar's two looks (ADR-115): the flat green, or the oil painting under a green wash. */
 export type ChromeStyle = "solid" | "painting";
 /** The visitor's bar and how to change it, as the window hands it to the account menu. */
 export type ChromeChoice = { style: ChromeStyle; choose: (next: ChromeStyle) => void };

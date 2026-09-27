@@ -35,7 +35,7 @@ const CHROMES: { value: ChromeStyle; label: string }[] = [
   { value: "painting", label: "Painting" },
 ];
 
-// The title bar's flat green or its painting (ADR-110), while Ethan chooses between them.
+// The title bar's flat green or its painting (ADR-115), while Ethan chooses between them.
 function ChromeChoices({ chrome }: { chrome: ChromeChoice }) {
   return (
     <DropdownMenuGroup>
@@ -89,7 +89,7 @@ function AccountMenu({ face, children }: { face: ReactNode; children: ReactNode 
         }
       >
         {/* The ring darkens in either theme, as the bar does not change; a blend is also what
-            keeps the page's text on greyscale smoothing, as it has always been (ADR-105). */}
+            keeps the page's text on greyscale smoothing, as it has always been (ADR-110). */}
         <Avatar size="sm" className="dark:after:mix-blend-darken">
           {face}
         </Avatar>
@@ -131,7 +131,7 @@ function WorkOsAccount({ theme, chrome }: { theme: ThemeChoice; chrome: ChromeCh
   );
 }
 
-// A build without sign-in: Kay's face, the one person who is always there (ADR-109), and a
+// A build without sign-in: Kay's face, the one person who is always there (ADR-114), and a
 // menu that says sign-in is off. A signed-in account keeps its own face.
 function LocalAccount({ theme, chrome }: { theme: ThemeChoice; chrome: ChromeChoice }) {
   const face = (

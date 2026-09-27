@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
-// The window chrome's tokens (ADR-105 to ADR-110), each ratio as tokens.css writes it beside
+// The window chrome's tokens (ADR-110 to ADR-115), each ratio as tokens.css writes it beside
 // the token: [foreground, background, ratio written, the floor it must clear].
 type Pair = [string, string, number, number];
 

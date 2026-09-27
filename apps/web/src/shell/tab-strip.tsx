@@ -15,7 +15,7 @@ function tabId(main: ThreadId): string {
 
 // One open thread: its layout's glyph and title, and a close beside it (APG: Delete closes a
 // focused tab, and a middle click closes any). On the green bar a tab is clear at rest, fills on
-// hover, and the active one is the cream pill (ADR-105).
+// hover, and the active one is the cream pill (ADR-110).
 function Tab({ thread, shell }: { thread: ThreadSummary; shell: Shell }) {
   const { Icon } = LAYOUTS[viewOf(shell.doc, thread.id).pane];
   const active = shell.active?.main === thread.id;

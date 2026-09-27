@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// Paints the title bar's oil-painting variant (ADR-110): misty green-grey ground with dark
+// Paints the title bar's oil-painting variant (ADR-115): misty green-grey ground with dark
 // foliage at the top corners, after Ethan's mock (R10), made here from seeded noise so it is
 // ours to ship and the same on every run. Every pixel is then held at or below a luminance that
 // keeps cream text at 4.5:1 on it, so the painting can never fail the bar's contrast.

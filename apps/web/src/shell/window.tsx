@@ -33,8 +33,8 @@ function rememberSidebar(open: boolean): void {
 
 /**
  * The app drawn as a desktop window (ADR-094): a rounded frame on a desk of its own with a
- * margin around it, full-bleed on a narrow screen (ADR-106). The green title bar runs its whole
- * width (ADR-105); below it, framed by the trim, the sidebar (shadcn's sidebar-16 pattern) and,
+ * margin around it, full-bleed on a narrow screen (ADR-111). The green title bar runs its whole
+ * width (ADR-110); below it, framed by the trim, the sidebar (shadcn's sidebar-16 pattern) and,
  * inset like Kay's content pane, the workspace.
  */
 export function Window({ theme, children }: { theme: ThemeChoice; children: ReactNode }) {
