@@ -423,7 +423,9 @@ export const HighlightCarry: Story = {
     paragraph.dispatchEvent(pointer("pointermove", x, y));
     paragraph.dispatchEvent(pointer("pointerdown", x, y, 1));
     paragraph.dispatchEvent(pointer("pointerup", x, y));
-    paragraph.dispatchEvent(new MouseEvent("click", { bubbles: true, clientX: x, clientY: y }));
+    paragraph.dispatchEvent(
+      new MouseEvent("click", { bubbles: true, clientX: x, clientY: y, detail: 1 }),
+    );
     await expect(highlighted()).toBe("");
     await expect(heardBy(target)).toEqual(["over text", "drop text"]);
 
