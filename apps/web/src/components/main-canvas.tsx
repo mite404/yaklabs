@@ -1,21 +1,28 @@
 import { CatalogCard, InteractiveCard } from "@yaklabs/catalog";
+import type { Carried } from "@yaklabs/catalog/carry";
 import type { SharedCard } from "@yaklabs/catalog/share";
 import {
   closeLane,
+  insertLane,
   lanesOf,
   moveLane,
+  newCardLaneId,
+  quoteFor,
+  reopenLane,
   resizeLane,
+  titleFor,
   type Lane,
   type Runtime,
   type ThreadId,
   type ThreadSummary,
   type Workspace,
 } from "@yaklabs/runtime";
+import { useEffect } from "react";
 import { inBackground, useRuntime } from "../runtime";
 import { Canvas, type LaneView } from "./canvas";
 import { ThreadPane } from "./thread-pane";
 
-// What a blank thread is called until someone names it.
+// What a thread started without a title is called until someone names it.
 const NEW_THREAD = "New thread";
 
 function Artifact({ card }: { card: SharedCard }) {
@@ -55,36 +62,73 @@ function arrangeFrom(runtime: Runtime, main: ThreadId, edit: (lanes: Lane[]) => 
   if (after !== before) inBackground(runtime.arrange(main, after), "Arranging the canvas");
 }
 
+// A child of `main` whose lane lands at `at`: a highlight's first line as its title and the
+// highlight quoted as its opening draft, or a blank one.
+function startChild(runtime: Runtime, main: ThreadId, at: number, text: string): void {
+  const item = {
+    kind: "child",
+    parentId: main,
+    at,
+    title: titleFor(text) || NEW_THREAD,
+    draft: text.trim() === "" ? "" : quoteFor(text),
+  } as const;
+  inBackground(runtime.create(item), "Starting a thread");
+}
+
+// What a carry leaves where it lands: a highlight starts a child thread there; a card opens
+// large in a lane of its own.
+function land(runtime: Runtime, main: ThreadId, carried: Carried, at: number): void {
+  if (carried.kind === "text") {
+    startChild(runtime, main, at, carried.text);
+    return;
+  }
+  const { card, title } = carried;
+  const lane: Lane = { id: newCardLaneId(), width: null, kind: "card", card, title };
+  arrangeFrom(runtime, main, (current) => insertLane(current, at, lane));
+}
+
 /**
  * A main thread's compose canvas (ADR-089, ADR-092), drawn from the snapshot: its lanes, left
- * to right, each thread lane loading its own turns. Close, reorder and widths all set the lanes
- * through `arrange`; a blank thread is a new child with its lane at the end.
+ * to right, each thread lane loading its own turns. Close, reorder, widths and a card dropped
+ * between lanes all set the lanes through `arrange`; a highlight or Create blank thread makes
+ * a child with its lane in place. A focused child whose lane was closed gets it back.
  */
-export function MainCanvas({ main, workspace }: { main: ThreadId; workspace: Workspace }) {
+export function MainCanvas({
+  main,
+  workspace,
+  focus,
+}: {
+  main: ThreadId;
+  workspace: Workspace;
+  focus: ThreadId | null;
+}) {
   const runtime = useRuntime();
   const lanes = lanesOf(workspace, main);
   const threads = new Map(workspace.threads.map((thread) => [thread.id, thread] as const));
+  useEffect(() => {
+    if (focus !== null) arrangeFrom(runtime, main, (current) => reopenLane(current, focus));
+  }, [runtime, main, focus]);
+  const focused = lanes.find((lane) => lane.kind === "thread" && lane.threadId === focus);
   return (
     <Canvas
       lanes={lanes.flatMap((lane) => laneView(lane, threads))}
-      onClose={(id) => {
-        arrangeFrom(runtime, main, (current) => closeLane(current, id));
-      }}
-      onMove={(id, to) => {
-        arrangeFrom(runtime, main, (current) => moveLane(current, id, to));
-      }}
-      onResize={(id, px) => {
-        arrangeFrom(runtime, main, (current) => resizeLane(current, id, px));
+      focus={focused?.id ?? null}
+      actions={{
+        onClose: (id) => {
+          arrangeFrom(runtime, main, (current) => closeLane(current, id));
+        },
+        onMove: (id, to) => {
+          arrangeFrom(runtime, main, (current) => moveLane(current, id, to));
+        },
+        onResize: (id, px) => {
+          arrangeFrom(runtime, main, (current) => resizeLane(current, id, px));
+        },
       }}
       onBlank={() => {
-        const item = {
-          kind: "child",
-          parentId: main,
-          at: lanes.length,
-          title: NEW_THREAD,
-          draft: "",
-        } as const;
-        inBackground(runtime.create(item), "Starting a thread");
+        startChild(runtime, main, lanes.length, "");
+      }}
+      onCarry={(carried, at) => {
+        land(runtime, main, carried, at);
       }}
     />
   );

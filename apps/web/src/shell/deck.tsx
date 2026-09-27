@@ -73,7 +73,17 @@ function MainPane({ thread }: { thread: ThreadSummary }) {
 // One tab's panes: the main thread, then a panel holding the browser and the canvas, each
 // retained so a layout switch never stops a lane's reply. The thread alone collapses that
 // panel (and only then may it collapse, so a drag never does); the split is kept on release.
-function Workspace({ shell, thread, view }: { shell: Shell; thread: ThreadSummary; view: View }) {
+function Workspace({
+  shell,
+  thread,
+  view,
+  focus,
+}: {
+  shell: Shell;
+  thread: ThreadSummary;
+  view: View;
+  focus: ThreadId | null;
+}) {
   const group = useRef<GroupHandle>(null);
   const alone = view.pane === "thread";
   useEffect(() => {
@@ -112,7 +122,7 @@ function Workspace({ shell, thread, view }: { shell: Shell; thread: ThreadSummar
           <BrowserPane shell={shell} main={thread.id} browser={view.browser} />
         </Retain>
         <Retain shown={view.pane === "canvas"}>
-          <MainCanvas main={thread.id} workspace={shell.workspace} />
+          <MainCanvas main={thread.id} workspace={shell.workspace} focus={focus} />
         </Retain>
       </ResizablePanel>
     </ResizablePanelGroup>
@@ -138,7 +148,12 @@ export function Deck() {
         role="tabpanel"
         aria-label={thread.title}
       >
-        <Workspace shell={shell} thread={thread} view={viewOf(shell.doc, thread.id)} />
+        <Workspace
+          shell={shell}
+          thread={thread}
+          view={viewOf(shell.doc, thread.id)}
+          focus={shown ? (active?.focus ?? null) : null}
+        />
       </Retain>
     );
   });

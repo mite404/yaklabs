@@ -146,7 +146,7 @@ function liftAt(event: PointerEvent<HTMLElement>, id: LaneId, index: number): Li
 /**
  * Reordering by a lane's grip (ADR-089): past a small dead zone the lane lifts, a copy of it
  * rides the pointer, the lane itself waits dimmed in the slot it would take and the lanes it
- * passes step aside. The lane handlers go on each lane's element.
+ * passes step aside; Escape puts it back. The lane handlers go on each lane's element.
  */
 export function useReorder(onMove: (id: LaneId, to: number) => void): {
   drag: Drag | null;
@@ -155,6 +155,20 @@ export function useReorder(onMove: (id: LaneId, to: number) => void): {
   const [drag, setDrag] = useState<Drag | null>(null);
   const [lift, move] = liftedOf(drag);
   useFloatingCopy(lift, move);
+
+  // Escape puts a lifted lane back where it was; the pointer letting go then moves nothing.
+  const lifted = move !== null;
+  useEffect(() => {
+    const putBack = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      setDrag(null);
+    };
+    if (lifted) window.addEventListener("keydown", putBack);
+    return () => {
+      window.removeEventListener("keydown", putBack);
+    };
+  }, [lifted]);
 
   const laneFor = (id: LaneId, index: number): LaneHandlers => ({
     onPointerDown: (event) => {

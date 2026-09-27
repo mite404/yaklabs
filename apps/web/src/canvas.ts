@@ -25,6 +25,15 @@ export function shiftFor(slots: Slot[], from: number, to: number, i: number, gap
   return 0;
 }
 
+/**
+ * Where something carried to `x` would go in the row: before the first lane whose centre is
+ * right of `x`, else at the end. Slots and `x` share one frame, such as the viewport.
+ */
+export function insertionIndex(slots: Slot[], x: number): number {
+  const at = slots.findIndex((slot) => x < centre(slot));
+  return at === -1 ? slots.length : at;
+}
+
 /** The left edge of the slot the lane at `from` will land in at `to`. */
 export function slotLeft(slots: Slot[], from: number, to: number): number {
   const target = slots[to];
