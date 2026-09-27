@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, userEvent, waitFor, within } from "storybook/test";
+import { expect, fn, userEvent, waitFor, within } from "storybook/test";
 import type { Agent } from "./agent";
 import { ChatThreadPanel } from "./ChatThreadPanel";
 import { threads } from "./thread";
@@ -22,6 +22,55 @@ export const Standard: Story = { args: { thread: threads.trend } };
 /** A narrow thread beside an open split pane: cards switch to compact density. */
 export const NextToSplitPane: Story = {
   args: { thread: threads.trend, width: 420 },
+};
+
+/**
+ * A thread on the canvas can be renamed in place (ADR-089): the title opens as a field on a
+ * click, Enter keeps the new name, Escape keeps the old one.
+ */
+export const Renamable: Story = {
+  args: { thread: threads.trend, width: 420, onRename: fn() },
+  play: async ({ args, canvasElement }) => {
+    const header = canvasElement.querySelector<HTMLElement>(".thread-header");
+    if (!header) throw new Error("the thread did not render");
+    await userEvent.click(within(header).getByRole("button", { name: args.thread.title }));
+    const field = within(header).getByRole("textbox", { name: "Thread title" });
+    await userEvent.clear(field);
+    await userEvent.type(field, "Weekend margins{Enter}");
+    await expect(args.onRename).toHaveBeenCalledWith("Weekend margins");
+    await expect(within(header).getByRole("button", { name: args.thread.title })).toBeVisible();
+
+    await userEvent.click(within(header).getByRole("button", { name: args.thread.title }));
+    await userEvent.type(within(header).getByRole("textbox"), " scrapped{Escape}");
+    await expect(args.onRename).toHaveBeenCalledTimes(1);
+    await expect(within(header).getByRole("button", { name: args.thread.title })).toBeVisible();
+  },
+};
+
+/**
+ * A card dragged by its header rides the pointer whole (ADR-089): the card left behind dims
+ * once the browser has its picture, and comes back when the drag ends.
+ */
+export const CardLift: Story = {
+  args: { thread: threads.trend },
+  play: async ({ canvasElement }) => {
+    const handle = canvasElement.querySelector<HTMLElement>('.card-heading[draggable="true"]');
+    const card = handle?.closest(".card");
+    if (!handle || !card) throw new Error("the thread did not render a draggable card");
+    const box = handle.getBoundingClientRect();
+    const drag = (type: string) =>
+      new DragEvent(type, {
+        bubbles: true,
+        dataTransfer: new DataTransfer(),
+        clientX: box.left + 20,
+        clientY: box.top + 20,
+      });
+    handle.dispatchEvent(drag("dragstart"));
+    await waitFor(() => expect(card).toHaveAttribute("data-lifted"));
+    await expect(getComputedStyle(card).opacity).toBe("0.35");
+    handle.dispatchEvent(drag("dragend"));
+    await expect(card).not.toHaveAttribute("data-lifted");
+  },
 };
 
 /** Fallbacks and catalog limits must stay honest at thread size too. */
@@ -73,12 +122,12 @@ export const InactiveThread: Story = {
 
 /** Dictation takes over the thread: a large center-playhead waveform, typing paused. */
 export const Dictation: Story = {
-  args: { thread: threads.trend, startDictating: true },
+  args: { thread: threads.trend, dictation: { open: true } },
 };
 
 /** An open microphone picker takes Escape first; the next Escape cancels dictation itself. */
 export const DictationPickerEscapes: Story = {
-  args: { thread: threads.trend, startDictating: true },
+  args: { thread: threads.trend, dictation: { open: true } },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(canvas.getByRole("button", { name: /System Default/ }));
@@ -98,12 +147,12 @@ export const DictationPickerEscapes: Story = {
 };
 
 export const DictationNarrow: Story = {
-  args: { thread: threads.trend, startDictating: true, width: 420 },
+  args: { thread: threads.trend, dictation: { open: true }, width: 420 },
 };
 
 /** Uses your real microphone; the browser asks for permission first. */
 export const DictationLiveMicrophone: Story = {
-  args: { thread: threads.trend, startDictating: true, dictationSource: "microphone" },
+  args: { thread: threads.trend, dictation: { open: true, source: "microphone" } },
 };
 
 /** Interactive card (ADR-029): a stepped slider walks gross to net profit; the chart and

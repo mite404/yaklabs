@@ -32,6 +32,17 @@ type AgentMessage = Extract<ThreadMessage, { role: "agent" }>;
 /** Whether the thread is still running, and when the user last sent something. */
 export type ThreadActivity = { active: boolean; lastUserInputAt: number };
 
+/**
+ * How the thread takes dictation: which audio it hears, simulated unless told otherwise, and
+ * whether it opens already recording (stories).
+ */
+export type Dictation = { source?: DictationSource; open?: boolean };
+
+// The dictation setup with its defaults filled in.
+function dictationSetup(dictation: Dictation | undefined): Required<Dictation> {
+  return { source: "simulated", open: false, ...dictation };
+}
+
 // How often the idle clock re-checks when time is live rather than fixed.
 const CLOCK_TICK_MS = 30_000;
 // How long a jumped-to turn stays highlighted so the eye can find it.
@@ -67,6 +78,65 @@ function reserveDockSpace(thread: HTMLElement, slot: HTMLElement): () => void {
     observer.disconnect();
     thread.style.removeProperty("--dock-space");
   };
+}
+
+// The title bar. With `onRename` the title is a button that becomes a field on click: Enter or
+// leaving the field keeps the new name, Escape or an empty name keeps the old one (ADR-089).
+// Every way out goes through the field's blur, so the field is never torn down inside the key
+// event that closed it.
+function ThreadHeader({
+  title,
+  onRename,
+}: {
+  title: string;
+  onRename: ((title: string) => void) | undefined;
+}) {
+  const [editing, setEditing] = useState(false);
+  const field = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (editing) field.current?.select();
+  }, [editing]);
+  const commit = (typed: string) => {
+    const next = typed.trim();
+    if (next !== "" && next !== title) onRename?.(next);
+    setEditing(false);
+  };
+  return (
+    <header className="thread-header">
+      {editing ? (
+        <input
+          className="thread-rename"
+          aria-label="Thread title"
+          defaultValue={title}
+          ref={field}
+          onBlur={(event) => {
+            commit(event.currentTarget.value);
+          }}
+          onKeyDown={(event) => {
+            if (event.key === "Escape") event.currentTarget.value = title;
+            if (event.key === "Enter" || event.key === "Escape") event.currentTarget.blur();
+          }}
+        />
+      ) : (
+        <h2>
+          {onRename ? (
+            <button
+              type="button"
+              className="thread-title"
+              title="Rename this thread"
+              onClick={() => {
+                setEditing(true);
+              }}
+            >
+              {title}
+            </button>
+          ) : (
+            title
+          )}
+        </h2>
+      )}
+    </header>
+  );
 }
 
 // The user's turn: a tinted bubble resting on the thread (ADR-025).
@@ -482,35 +552,37 @@ function focusComposeIn(scroller: HTMLElement | null): void {
  * @param activity Thread state that drives the recap; omit and no recap is shown.
  * A thread's awaiting question shows regardless: being blocked is not an idle state.
  * @param now Fixed clock for deterministic stories and tests; omit for live time.
- * @param dictationSource Audio for dictation: simulated (default) or the real microphone.
- * @param startDictating Open with dictation already recording (stories).
+ * @param dictation Audio for dictation, simulated by default, and whether recording is
+ * already open (stories).
  * @param agent Who answers: the scripted lab stand-in by default, or a real model (ADR-041).
  * @param initialDraft Text waiting in the compose box when the thread opens, such as a
  * highlight dropped on the canvas (ADR-089).
+ * @param onRename When set, the title can be renamed in place; the host keeps the new name.
  */
 export function ChatThreadPanel({
   thread,
   width,
   activity,
   now,
-  dictationSource = "simulated",
-  startDictating = false,
+  dictation,
   agent = labAgent,
   initialDraft = "",
+  onRename,
 }: {
   thread: Thread;
   width?: number;
   activity?: ThreadActivity;
   now?: number;
-  dictationSource?: DictationSource;
-  startDictating?: boolean;
+  dictation?: Dictation;
   agent?: Agent;
   initialDraft?: string;
+  onRename?: (title: string) => void;
 }) {
+  const { source, open } = dictationSetup(dictation);
   const [messages, setMessages] = useState(thread.messages);
   const tell = useAgent(agent, setMessages);
   const [draft, setDraft] = useState(initialDraft);
-  const [dictating, setDictating] = useState(startDictating);
+  const [dictating, setDictating] = useState(open);
   const outbox = useOutbox(thread.messages);
   const [awaiting, setAwaiting] = useAwaiting(thread, tell);
   const recap = useRecap({ thread, activity, now, awaiting, draft });
@@ -564,9 +636,7 @@ export function ChatThreadPanel({
 
   return (
     <section className="thread-panel" style={{ width }} aria-label={thread.title}>
-      <header className="thread-header">
-        <h2>{thread.title}</h2>
-      </header>
+      <ThreadHeader title={thread.title} onRename={onRename} />
       <div className="thread-scroll" ref={scroller}>
         {messages.map((message) => (
           <Turn key={message.id} message={message} onChoose={outbox.choose} />
@@ -616,7 +686,7 @@ export function ChatThreadPanel({
       </div>
       {dictating && (
         <DictationModal
-          source={dictationSource}
+          source={source}
           onCancel={() => {
             endDictation();
           }}
