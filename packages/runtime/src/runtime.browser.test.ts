@@ -51,6 +51,22 @@ describe("the runtime in a Web Worker", () => {
     expect((await second.list()).map((summary) => summary.id)).toContain(id);
   }, 20_000);
 
+  it("keeps a new title across workers", async () => {
+    const id = `demo-${crypto.randomUUID()}`;
+    const first = startLab();
+    await first.open(id, profitThread);
+    const renamed = await first.rename(id, "Weekend margins");
+    expect(renamed.title).toBe("Weekend margins");
+    expect(renamed.messages).toEqual(profitThread.messages);
+    first.dispose();
+
+    const second = startLab();
+    expect((await second.open(id)).title).toBe("Weekend margins");
+    expect((await second.list()).find((summary) => summary.id === id)?.title).toBe(
+      "Weekend margins",
+    );
+  }, 20_000);
+
   it("falls back to memory in a second worker while the first holds the database", async () => {
     const first = startLab();
     expect(await first.ready).toEqual({ storage: "opfs" });

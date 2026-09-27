@@ -96,6 +96,7 @@ export const commandSchema = z.discriminatedUnion("kind", [
   }),
   z.object({ kind: z.literal("abort"), requestId: idSchema }),
   z.object({ kind: z.literal("list") }),
+  z.object({ kind: z.literal("rename"), conversationId: idSchema, title: z.string().min(1) }),
 ]);
 
 /** Everything the worker may tell the page. Replies stream as `chunk`s keyed by request. */

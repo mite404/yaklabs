@@ -24,6 +24,8 @@ export type Runtime = {
   open(conversationId: string, seed?: Thread): Promise<Conversation>;
   /** Every stored conversation, newest first. */
   list(): Promise<ConversationSummary[]>;
+  /** Gives a conversation a new title; resolves to the conversation as it now is. */
+  rename(conversationId: string, title: string): Promise<Conversation>;
   /** The thread's `Agent` for one conversation (ADR-041); replies stream from the worker. */
   agent(conversationId: string, session?: Session): Agent;
   /** Stops the worker; anything still waiting on it fails. */
@@ -214,6 +216,10 @@ export function startRuntime(config: { agent: AgentSpec }): Runtime {
     list: () =>
       ask<ConversationSummary[]>(waiting, post, { kind: "list" }, (caller) => {
         waiting.lists.push(caller);
+      }),
+    rename: (conversationId, title) =>
+      ask<Conversation>(waiting, post, { kind: "rename", conversationId, title }, (caller) => {
+        waiting.opens.set(conversationId, [...(waiting.opens.get(conversationId) ?? []), caller]);
       }),
     agent: (conversationId, session) => createAgentFor(waiting, post, conversationId, session),
     dispose: () => {

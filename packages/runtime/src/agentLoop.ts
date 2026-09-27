@@ -133,6 +133,19 @@ async function send(loop: Loop, command: CommandOf<"send">): Promise<void> {
   }
 }
 
+// A new title, answered like an open: the conversation as it now is.
+async function rename(loop: Loop, { conversationId, title }: CommandOf<"rename">): Promise<void> {
+  const { store } = await started(loop);
+  const { now, post } = loop.host;
+  const conversation = await loop.exclusive(async () => {
+    const current = (await store.open(conversationId)) ?? blankConversation(conversationId, now());
+    const renamed = { ...current, title, updatedAt: now().toISOString() }; // → Conversation
+    await store.save(renamed);
+    return renamed;
+  });
+  post({ kind: "opened", conversation });
+}
+
 async function list(loop: Loop): Promise<void> {
   const { store } = await started(loop);
   loop.host.post({ kind: "listed", conversations: await store.list() });
@@ -151,6 +164,8 @@ function handle(loop: Loop, command: Command): Promise<void> {
       return Promise.resolve();
     case "list":
       return list(loop);
+    case "rename":
+      return rename(loop, command);
     default: {
       const unhandled: never = command;
       return unhandled;

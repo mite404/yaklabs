@@ -42,6 +42,12 @@ describe("commandSchema", () => {
     expect(commandSchema.parse(open)).toEqual(open);
   });
 
+  it("renames only to a title with something in it", () => {
+    const rename = { kind: "rename", conversationId: "demo", title: "Weekend margins" };
+    expect(commandSchema.parse(rename)).toEqual(rename);
+    expect(commandSchema.safeParse({ ...rename, title: "" }).success).toBe(false);
+  });
+
   it("only takes an absolute gateway address", () => {
     expect(commandSchema.safeParse(gatewayInit("http://localhost:5173")).success).toBe(true);
     expect(commandSchema.safeParse(gatewayInit("/api")).success).toBe(false);
