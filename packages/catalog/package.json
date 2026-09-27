@@ -5,6 +5,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./agent": "./src/agent.ts",
+    "./carry": "./src/carry.ts",
     "./catalog": "./src/catalog.ts",
     "./inputModality": "./src/inputModality.ts",
     "./interactive": "./src/interactive.ts",
