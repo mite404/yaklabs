@@ -177,13 +177,68 @@ try {
     .locator(".card-heading")
     .first();
   await heading.scrollIntoViewIfNeeded();
-  await heading.dragTo(canvas.getByText("Drag a text selection or card"));
+  await canvas.getByText("Drag a text selection or card").scrollIntoViewIfNeeded();
+  const openSpaceBox = await canvas.getByText("Drag a text selection or card").boundingBox();
+  const headingBox = await heading.boundingBox();
+  await page.mouse.move(headingBox.x + 30, headingBox.y + headingBox.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(headingBox.x + 60, headingBox.y + 20, { steps: 4 });
+  await page.mouse.move(openSpaceBox.x + 20, openSpaceBox.y + 20, { steps: 8 });
+  const liftedCards = await page.locator(".card[data-lifted]").count();
+  await page.mouse.up();
   await canvas.locator("article").nth(1).locator(".card").waitFor({ timeout: 10_000 });
   await shot("canvas-lanes");
   record(
     "a card dragged by its header opens large in its own lane",
     await canvas.locator("article").nth(1).getByRole("slider").isVisible(),
   );
+  record(
+    "while a card is dragged out of the thread, the card left behind dims, and comes back after",
+    liftedCards === 1 && (await page.locator(".card[data-lifted]").count()) === 0,
+    `${liftedCards} dimmed during, ${await page.locator(".card[data-lifted]").count()} after`,
+  );
+
+  // With a lane on it the canvas has no right edge: the ground runs a pane past the open space,
+  // the scrollbar says so, and the ground itself drags to pan.
+  // Headless Chromium hides scrollbars, so the bar itself is not measured here; the overflow
+  // it would report is.
+  const overflow = await canvas.evaluate((el) => el.scrollWidth - el.clientWidth);
+  record(
+    "the ground runs a pane past the last lane",
+    overflow >= 500,
+    `${overflow}px past the pane`,
+  );
+  const canvasBox = await canvas.boundingBox();
+  await page.mouse.move(canvasBox.x + 8, canvasBox.y + 8);
+  await page.mouse.down();
+  await page.mouse.move(canvasBox.x + 8 - 200, canvasBox.y + 8, { steps: 6 });
+  const dragged = await canvas.evaluate((el) => el.scrollLeft);
+  await page.mouse.up();
+  record("the ground drags to pan the row", dragged > 150, `scrolled ${Math.round(dragged)}px`);
+  await canvas.evaluate((el) => {
+    el.scrollLeft = 0;
+  });
+
+  // The grip fades up in the middle of a lane's title bar, and stays away over the title.
+  const firstHeader = canvas.locator("article").first().locator(".thread-header");
+  const firstHeaderBox = await firstHeader.boundingBox();
+  await page.mouse.move(
+    firstHeaderBox.x + firstHeaderBox.width * 0.6,
+    firstHeaderBox.y + firstHeaderBox.height / 2,
+  );
+  await page.waitForTimeout(250);
+  const gripShown = await firstHeader.evaluate((el) => getComputedStyle(el, "::after").opacity);
+  const titleButton = canvas.locator("article").first().locator(".thread-title");
+  await titleButton.hover();
+  await page.waitForTimeout(250);
+  const gripHidden = await firstHeader.evaluate((el) => getComputedStyle(el, "::after").opacity);
+  const titleCursor = await titleButton.evaluate((el) => getComputedStyle(el).cursor);
+  record(
+    "the grip fades up in the middle of the title bar, and not over the title, which is for renaming",
+    gripShown === "1" && gripHidden === "0" && titleCursor === "text",
+    `grip ${gripShown} in the middle, ${gripHidden} over the title; title cursor ${titleCursor}`,
+  );
+  await page.mouse.move(10, 10);
 
   // The gap after a lane drags its width; the hint line lights where the pointer is.
   const separator = canvas.getByRole("separator", { name: /^Resize / }).first();
@@ -234,17 +289,17 @@ try {
   // Two lanes outgrow the pane; the row pans by a sideways wheel, and by a vertical one over
   // the ground between and after the lanes.
   const openSpace = canvas.getByText("Drag a text selection or card");
+  await openSpace.scrollIntoViewIfNeeded();
   const openBox = await openSpace.boundingBox();
+  const leftBefore = await canvas.evaluate((el) => el.scrollLeft);
   await page.mouse.move(openBox.x + openBox.width / 2, openBox.y - 40);
   await page.mouse.wheel(0, 160);
-  const panned = await canvas.evaluate((el) => ({
-    overflow: el.scrollWidth > el.clientWidth,
-    left: el.scrollLeft,
-  }));
+  await page.waitForTimeout(100);
+  const panned = await canvas.evaluate((el) => el.scrollLeft);
   record(
-    "the row pans sideways once lanes outgrow the pane",
-    panned.overflow && panned.left > 100,
-    `scrolled ${Math.round(panned.left)}px`,
+    "a vertical wheel over the ground pans the row sideways",
+    panned - leftBefore >= 100,
+    `scrolled ${Math.round(panned - leftBefore)}px`,
   );
   await canvas.evaluate((el) => {
     el.scrollLeft = 0;
@@ -276,9 +331,10 @@ try {
   const titleBox = await titleBar.boundingBox();
   const grabHand = await titleBar.evaluate((el) => getComputedStyle(el).cursor);
   const laneBox = await canvas.locator("article").first().boundingBox();
-  await page.mouse.move(titleBox.x + 40, titleBox.y + titleBox.height / 2);
+  const grip = titleBox.x + titleBox.width * 0.6;
+  await page.mouse.move(grip, titleBox.y + titleBox.height / 2);
   await page.mouse.down();
-  await page.mouse.move(titleBox.x + 40 + 300, titleBox.y + 30, { steps: 6 });
+  await page.mouse.move(grip + 300, titleBox.y + 30, { steps: 6 });
   await page.waitForTimeout(250);
   const lift = await page.evaluate(
     ([expectedLeft, laneWidth]) => {
@@ -313,7 +369,7 @@ try {
       lift.inPlace,
     `cursor ${grabHand}; ${JSON.stringify(lift)}`,
   );
-  await page.mouse.move(titleBox.x + 40 + laneWidths[0] + 16 + 60, titleBox.y + 30, { steps: 6 });
+  await page.mouse.move(grip + laneWidths[0] + 16 + 60, titleBox.y + 30, { steps: 6 });
   await page.waitForTimeout(250);
   const slid = await page.evaluate(
     (expected) =>
@@ -328,11 +384,9 @@ try {
     slid,
     `expected a slide of ${Math.round(laneWidths[1] + 16)}px`,
   );
-  await page.mouse.move(
-    titleBox.x + 40 + laneWidths[0] + laneWidths[1] + 32 + 60,
-    titleBox.y + 30,
-    { steps: 6 },
-  );
+  await page.mouse.move(grip + laneWidths[0] + laneWidths[1] + 32 + 60, titleBox.y + 30, {
+    steps: 6,
+  });
   await page.mouse.up();
   const labelsAfter = await canvas
     .locator("article")
@@ -386,6 +440,28 @@ try {
     labelsReloaded.join("|") === [labelsBefore[2], labelsBefore[0]].join("|"),
     labelsReloaded.map((label) => label.slice(0, 12)).join(" → "),
   );
+  // A lane's title, and the main thread's, rename in place and keep the new name.
+  await canvas.locator("article").first().locator(".thread-title").click();
+  await page.keyboard.press("ControlOrMeta+a");
+  await page.keyboard.type("Weekend margins");
+  await page.keyboard.press("Enter");
+  const mainPanel = page.locator('[data-slot="resizable-panel"]').first();
+  await mainPanel.locator(".thread-title").click();
+  await page.keyboard.press("ControlOrMeta+a");
+  await page.keyboard.type("Sales, last week");
+  await page.keyboard.press("Enter");
+  await page.waitForTimeout(300);
+  await page.reload({ waitUntil: "load" });
+  await canvas.locator("article .thread-panel").first().waitFor({ timeout: 15_000 });
+  await page.waitForTimeout(500);
+  const laneTitle = await canvas.locator("article").first().locator(".thread-header").innerText();
+  const mainTitle = await mainPanel.locator(".thread-header").innerText();
+  record(
+    "a lane's title and the main thread's rename in place and survive a reload",
+    laneTitle === "Weekend margins" && mainTitle === "Sales, last week",
+    `${laneTitle} / ${mainTitle}`,
+  );
+
   await canvas
     .getByRole("button", { name: /^Close / })
     .first()

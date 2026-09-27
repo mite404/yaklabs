@@ -44,8 +44,9 @@ export function meta() {
 }
 
 // Starts the worker for this visit, asks the browser to keep its data (ADR-081), and opens the
-// conversation; leaving the page stops the worker.
-function useThread(): Thread {
+// conversation; leaving the page stops the worker. `rename` gives the open conversation a new
+// title, kept by the worker.
+function useThread(): [Thread, (title: string) => void] {
   const [thread, setThread] = useState<Thread>({ kind: "opening" });
   useEffect(() => {
     let live = true;
@@ -68,7 +69,12 @@ function useThread(): Thread {
       runtime.dispose();
     };
   }, []);
-  return thread;
+  const rename = (title: string) => {
+    if (thread.kind !== "open") return;
+    void thread.runtime.rename(thread.conversation.id, title);
+    setThread({ ...thread, conversation: { ...thread.conversation, title } });
+  };
+  return [thread, rename];
 }
 
 // What the canvas can do to its lanes.
@@ -77,6 +83,7 @@ type LaneActions = {
   drop: (drop: Drop) => void;
   close: (id: string) => void;
   move: (id: string, to: number) => void;
+  rename: (id: string, title: string) => void;
 };
 
 // The canvas's lanes: every other conversation the worker holds, in the order they were left
@@ -140,7 +147,18 @@ function useLanes(runtime: Runtime): LaneActions {
     setLanes(moved);
   }
 
-  return { lanes, drop: (drop) => void add(drop), close, move };
+  function rename(id: string, title: string) {
+    void runtime.rename(id, title);
+    setLanes((current) =>
+      current.map((lane) =>
+        lane.kind === "thread" && lane.id === id
+          ? { ...lane, conversation: { ...lane.conversation, title } }
+          : lane,
+      ),
+    );
+  }
+
+  return { lanes, drop: (drop) => void add(drop), close, move, rename };
 }
 
 function Artifact({ card }: { card: SharedCard }) {
@@ -153,9 +171,17 @@ function Artifact({ card }: { card: SharedCard }) {
 
 // The primary thread beside the canvas; the divider between them drags anywhere along its
 // length, the canvas takes what is dropped on it.
-function Workspace({ runtime, conversation }: { runtime: Runtime; conversation: Conversation }) {
+function Workspace({
+  runtime,
+  conversation,
+  onRename,
+}: {
+  runtime: Runtime;
+  conversation: Conversation;
+  onRename: (title: string) => void;
+}) {
   const session = useSession();
-  const { lanes, drop, close, move } = useLanes(runtime);
+  const { lanes, drop, close, move, rename } = useLanes(runtime);
   const views: LaneView[] = lanes.map((lane) =>
     lane.kind === "thread"
       ? {
@@ -167,6 +193,9 @@ function Workspace({ runtime, conversation }: { runtime: Runtime; conversation: 
               thread={{ title: lane.conversation.title, messages: lane.conversation.messages }}
               agent={runtime.agent(lane.id, session)}
               initialDraft={lane.draft}
+              onRename={(title) => {
+                rename(lane.id, title);
+              }}
             />
           ),
         }
@@ -184,6 +213,7 @@ function Workspace({ runtime, conversation }: { runtime: Runtime; conversation: 
             key={conversation.id}
             thread={{ title: conversation.title, messages: conversation.messages }}
             agent={runtime.agent(conversation.id, session)}
+            onRename={onRename}
           />
         </div>
       </ResizablePanel>
@@ -210,7 +240,7 @@ function Workspace({ runtime, conversation }: { runtime: Runtime; conversation: 
 
 /** The thread and, beside it, the compose canvas (ADR-089). */
 export default function ThreadPage() {
-  const thread = useThread();
+  const [thread, renameThread] = useThread();
   if (thread.kind === "opening") {
     return <p className="p-4 text-soft-ink">Opening your conversation…</p>;
   }
@@ -232,7 +262,7 @@ export default function ThreadPage() {
       ) : (
         <span />
       )}
-      <Workspace runtime={runtime} conversation={conversation} />
+      <Workspace runtime={runtime} conversation={conversation} onRename={renameThread} />
     </div>
   );
 }

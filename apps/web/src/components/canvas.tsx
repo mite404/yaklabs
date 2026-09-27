@@ -1,5 +1,5 @@
 import { Button } from "@yaklabs/ui/components/button";
-import { GripHorizontal, X } from "lucide-react";
+import { X } from "lucide-react";
 import {
   Fragment,
   useEffect,
@@ -34,7 +34,7 @@ const LANE_MIN_PX = 320;
 const GAP_PX = 16;
 // How far a grip travels before its lane lifts, so a click stays a click.
 const LIFT_PX = 6;
-// How far one arrow key moves a separator, and a lane by its grip.
+// How far one arrow key moves a separator; with Shift, how many slots it moves the lane.
 const KEY_STEPS: Partial<Record<string, number>> = { ArrowLeft: -24, ArrowRight: 24 };
 const KEY_MOVES: Partial<Record<string, number>> = { ArrowLeft: -1, ArrowRight: 1 };
 
@@ -66,16 +66,21 @@ type LaneHandlers = {
   onPointerCancel: () => void;
 };
 
-// What takes hold of a lane: the grip in its strip and the title bar of what it shows, the
-// same bar that drags a card out of a thread. Any other button in those bars keeps its job.
-const GRIP = "[data-grip], .thread-header, .card-heading";
+// What takes hold of a lane: the title bar of what it shows, the same bar that drags a card
+// out of a thread. The title itself is for renaming, and any button in the bar keeps its job.
+const GRIP = ".thread-header, .card-heading";
+const NOT_GRIP = "h2, .card-heading-text, input, button";
 
 function isGrip(target: EventTarget | null): boolean {
   return (
-    target instanceof Element &&
-    target.closest(GRIP) !== null &&
-    target.closest("button:not([data-grip])") === null
+    target instanceof Element && target.closest(GRIP) !== null && target.closest(NOT_GRIP) === null
   );
+}
+
+// The ground: the row's own padding, the open space around its words, and the run of ground
+// past it. A press there pans the row; a press on anything in a lane belongs to the lane.
+function isGround(target: EventTarget | null, row: HTMLElement): boolean {
+  return target === row || (target instanceof Element && target.matches("[data-ground]"));
 }
 
 // The lane a separator resizes is the one before it in the row.
@@ -189,7 +194,6 @@ function liftAt(event: PointerEvent<HTMLElement>, id: string, index: number): Li
 function useReorder(onMove: (id: string, to: number) => void): {
   drag: Drag | null;
   laneFor: (id: string, index: number) => LaneHandlers;
-  keysFor: (id: string, index: number) => (event: KeyboardEvent<HTMLElement>) => void;
 } {
   const [drag, setDrag] = useState<Drag | null>(null);
   const [lift, move] = liftedOf(drag);
@@ -216,14 +220,37 @@ function useReorder(onMove: (id: string, to: number) => void): {
     },
   });
 
-  const keysFor = (id: string, index: number) => (event: KeyboardEvent<HTMLElement>) => {
-    const step = KEY_MOVES[event.key];
-    if (step === undefined) return;
-    event.preventDefault();
-    onMove(id, index + step);
-  };
+  return { drag, laneFor };
+}
 
-  return { drag, laneFor, keysFor };
+// Panning by the ground (ADR-089): a press on the ground takes hold of the row, and the row
+// follows the pointer until it lets go.
+function usePan(): {
+  onPointerDown: (event: PointerEvent<HTMLElement>) => void;
+  onPointerMove: (event: PointerEvent<HTMLElement>) => void;
+  onPointerUp: () => void;
+} {
+  // Where the pan began: the pointer's x and the row's scroll at that moment.
+  const origin = useRef<{ x: number; scrollLeft: number } | null>(null);
+  return {
+    onPointerDown: (event) => {
+      const row = event.currentTarget;
+      if (event.button !== 0 || !isGround(event.target, row)) return;
+      origin.current = { x: event.clientX, scrollLeft: row.scrollLeft };
+      row.setPointerCapture(event.pointerId);
+      document.documentElement.dataset.dragging = "ground";
+    },
+    onPointerMove: (event) => {
+      if (origin.current) {
+        event.currentTarget.scrollLeft =
+          origin.current.scrollLeft - (event.clientX - origin.current.x);
+      }
+    },
+    onPointerUp: () => {
+      origin.current = null;
+      delete document.documentElement.dataset.dragging;
+    },
+  };
 }
 
 // How far lane `index` is displaced while a move is under way: the lifted lane to the slot it
@@ -245,10 +272,12 @@ function LaneSeparator({
   title,
   style,
   onResize,
+  onMove,
 }: {
   title: string;
   style: CSSProperties;
   onResize: (px: number) => void;
+  onMove: (step: number) => void;
 }) {
   const [dragging, setDragging] = useState(false);
   // Where the drag began: the pointer's x and the lane's width at that moment.
@@ -272,12 +301,23 @@ function LaneSeparator({
     origin.current = null;
     setDragging(false);
   }
-  function key(event: KeyboardEvent<HTMLDivElement>) {
+  // Arrows resize the lane before the gap; with Shift they move it a slot instead.
+  function resizeByKey(event: KeyboardEvent<HTMLDivElement>) {
     const lane = laneBefore(event.currentTarget);
     const step = KEY_STEPS[event.key];
     if (!lane || step === undefined) return;
     event.preventDefault();
     onResize(clampWidth(lane.getBoundingClientRect().width + step));
+  }
+  function moveByKey(event: KeyboardEvent<HTMLDivElement>) {
+    const step = KEY_MOVES[event.key];
+    if (step === undefined) return;
+    event.preventDefault();
+    onMove(step);
+  }
+  function key(event: KeyboardEvent<HTMLDivElement>) {
+    if (event.shiftKey) moveByKey(event);
+    else resizeByKey(event);
   }
 
   /* oxlint-disable jsx-a11y/prefer-tag-over-role -- a separator that takes focus and a drag is a widget; an hr can do neither */
@@ -285,7 +325,7 @@ function LaneSeparator({
     <div
       role="separator"
       aria-orientation="vertical"
-      aria-label={`Resize ${title}`}
+      aria-label={`Resize or move ${title}`}
       tabIndex={0}
       data-dragging={dragging || undefined}
       className="drag-hint lane-shift relative w-4 shrink-0 cursor-col-resize outline-none"
@@ -300,29 +340,10 @@ function LaneSeparator({
   /* oxlint-enable jsx-a11y/prefer-tag-over-role */
 }
 
-// The strip above a lane: its grip at one end, its close at the other. The grip is also the
-// keyboard's way to move the lane; the pointer takes hold through the lane itself.
-function LaneStrip({
-  title,
-  onKeyDown,
-  onClose,
-}: {
-  title: string;
-  onKeyDown: (event: KeyboardEvent<HTMLElement>) => void;
-  onClose: () => void;
-}) {
+// The strip above a lane: its close, at the far end.
+function LaneStrip({ title, onClose }: { title: string; onClose: () => void }) {
   return (
-    <div className="flex h-8 items-center justify-between">
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        className="touch-none rounded-[var(--radius)] text-soft-ink"
-        aria-label={`Move ${title}`}
-        data-grip=""
-        onKeyDown={onKeyDown}
-      >
-        <GripHorizontal />
-      </Button>
+    <div className="flex h-8 items-center justify-end">
       <Button
         variant="ghost"
         size="icon-sm"
@@ -342,7 +363,6 @@ function Lane({
   lifted,
   style,
   handlers,
-  onKeyDown,
   onClose,
 }: {
   lane: LaneView;
@@ -350,11 +370,10 @@ function Lane({
   lifted: boolean;
   style: CSSProperties;
   handlers: LaneHandlers;
-  onKeyDown: (event: KeyboardEvent<HTMLElement>) => void;
   onClose: (id: string) => void;
 }) {
   return (
-    // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- the pointer takes hold of the lane by its title bar; the keyboard moves it by the grip button
+    // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- the pointer takes hold of the lane by its title bar; the keyboard moves it from the gap after it
     <article
       className="lane lane-shift flex h-full shrink-0 flex-col"
       style={{ width: width ?? LANE_WIDTH, ...style }}
@@ -364,7 +383,6 @@ function Lane({
     >
       <LaneStrip
         title={lane.title}
-        onKeyDown={onKeyDown}
         onClose={() => {
           onClose(lane.id);
         }}
@@ -382,6 +400,7 @@ function Lane({
 function OpenSpace({ over, onBlank }: { over: boolean; onBlank: () => void }) {
   return (
     <div
+      data-ground=""
       className={`flex h-full min-w-[320px] flex-1 flex-col items-center justify-center gap-4 rounded-[var(--radius-card)] border border-dashed p-6 text-center transition-colors ${
         over ? "border-olive bg-paper-deep/60" : "border-hairline"
       }`}
@@ -442,8 +461,8 @@ function useDropTarget(onDrop: (drop: Drop) => void): {
 /**
  * The compose canvas (ADR-089): a row of lanes that grows to the right, with open space at
  * the end that takes the next drop. A highlight from a thread starts a new thread there; a
- * card dragged by its header opens large. The gap after each lane drags the lane's width, and
- * a lane's title bar or grip drags it to another place in the row.
+ * card dragged by its header opens large. The gap after each lane drags the lane's width, a
+ * lane's title bar drags it to another place in the row, and the ground drags to pan.
  */
 export function Canvas({
   lanes,
@@ -460,6 +479,7 @@ export function Canvas({
 }) {
   const target = useDropTarget(onDrop);
   const reorder = useReorder(onMove);
+  const pan = usePan();
   // Widths set by dragging, by lane id; a lane not listed is still at its default width.
   const [widths, setWidths] = useState<Record<string, number>>({});
 
@@ -472,6 +492,10 @@ export function Canvas({
       onDragLeave={target.onDragLeave}
       onDrop={target.onDrop}
       onWheel={panRow}
+      onPointerDown={pan.onPointerDown}
+      onPointerMove={pan.onPointerMove}
+      onPointerUp={pan.onPointerUp}
+      onPointerCancel={pan.onPointerUp}
     >
       {lanes.map((lane, index) => (
         <Fragment key={lane.id}>
@@ -481,7 +505,6 @@ export function Canvas({
             lifted={reorder.drag?.move?.id === lane.id}
             style={{ transform: displacement(reorder.drag, index) }}
             handlers={reorder.laneFor(lane.id, index)}
-            onKeyDown={reorder.keysFor(lane.id, index)}
             onClose={onClose}
           />
           <LaneSeparator
@@ -490,10 +513,15 @@ export function Canvas({
             onResize={(px) => {
               setWidths((current) => ({ ...current, [lane.id]: px }));
             }}
+            onMove={(step) => {
+              onMove(lane.id, index + step);
+            }}
           />
         </Fragment>
       ))}
       <OpenSpace over={target.over} onBlank={onBlank} />
+      {/* The ground goes on for a pane past the open space: the canvas has no right edge. */}
+      {lanes.length > 0 && <div data-ground="" aria-hidden="true" className="w-full shrink-0" />}
     </section>
   );
 }
