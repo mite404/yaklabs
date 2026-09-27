@@ -743,6 +743,22 @@ try {
       };
     },
   );
+
+  await onOwnPage(
+    "the sidebar is a navigation landmark holding the rail and the projects",
+    "/t/t-005?scenario=demo",
+    {},
+    async (own) => {
+      await tabsOf(own).first().waitFor({ timeout: 15_000 });
+      const nav = own.getByRole("navigation", { name: "Sidebar" });
+      const held = {
+        kay: await nav.getByRole("link", { name: "Kay", exact: true }).count(),
+        lab: await nav.getByRole("link", { name: "Lab", exact: true }).count(),
+        project: await nav.getByRole("button", { name: "Demo store", exact: true }).count(),
+      };
+      return { ok: Object.values(held).every((n) => n === 1), detail: JSON.stringify(held) };
+    },
+  );
 } catch (error) {
   record("run", false, String(error));
   await shot("failure");

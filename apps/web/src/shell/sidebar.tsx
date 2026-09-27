@@ -54,10 +54,13 @@ function Place({
   );
 }
 
+/** The id of the sidebar's navigation landmark, which the title bar's toggle controls. */
+export const SIDEBAR_ID = "sidebar";
+
 /**
- * The sidebar below the title bar (shadcn's sidebar-16 pattern). Collapsed it is today's 56px
- * rail of places; open it names them and lists the projects. The account and the theme live in
- * the title bar, so the rail keeps only places.
+ * The sidebar below the title bar (shadcn's sidebar-16 pattern), one navigation landmark.
+ * Collapsed it is today's 56px rail of places; open it names them and lists the projects. The
+ * account and the theme live in the title bar, so the rail keeps only places.
  */
 export function AppSidebar() {
   const { hrefTo } = usePaths();
@@ -67,29 +70,39 @@ export function AppSidebar() {
       collapsible="icon"
       className="absolute h-full border-r-0 group-data-[side=left]:border-r-0"
     >
-      <SidebarHeader className="gap-0.5 px-2 pt-2">
-        <SidebarMenu className="gap-0.5">
-          <Place label="Kay" link={<Link to={hrefTo("/")} aria-label="Kay" />}>
-            <KayMark className="text-ink" />
-            <span className="font-serif text-lg text-ink">Kay</span>
-          </Place>
-          <Place
-            label="Documentation"
-            link={<a href={DOCS_URL} target="_blank" rel="noreferrer" aria-label="Documentation" />}
-          >
-            <BookOpen />
-            <span className="text-ink">Documentation</span>
-            <ArrowUpRight aria-hidden="true" className="ml-auto size-3.5! text-soft-ink" />
-          </Place>
-          <Place label="Lab" link={<Link to={hrefTo("/lab")} />} active={pathname === "/lab"}>
-            <FlaskConical />
-            <span className="text-ink">Lab</span>
-          </Place>
-        </SidebarMenu>
-      </SidebarHeader>
-      <SidebarContent>
-        <ProjectTree />
-      </SidebarContent>
+      <div
+        id={SIDEBAR_ID}
+        // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- the catalog's tokens.css styles every bare nav (its gap, and the colour of each span in a button), which would restyle the tree
+        role="navigation"
+        aria-label="Sidebar"
+        className="flex min-h-0 flex-1 flex-col"
+      >
+        <SidebarHeader className="gap-0.5 px-2 pt-2">
+          <SidebarMenu className="gap-0.5">
+            <Place label="Kay" link={<Link to={hrefTo("/")} aria-label="Kay" />}>
+              <KayMark className="text-ink" />
+              <span className="font-serif text-lg text-ink">Kay</span>
+            </Place>
+            <Place
+              label="Documentation"
+              link={
+                <a href={DOCS_URL} target="_blank" rel="noreferrer" aria-label="Documentation" />
+              }
+            >
+              <BookOpen />
+              <span className="text-ink">Documentation</span>
+              <ArrowUpRight aria-hidden="true" className="ml-auto size-3.5! text-soft-ink" />
+            </Place>
+            <Place label="Lab" link={<Link to={hrefTo("/lab")} />} active={pathname === "/lab"}>
+              <FlaskConical />
+              <span className="text-ink">Lab</span>
+            </Place>
+          </SidebarMenu>
+        </SidebarHeader>
+        <SidebarContent>
+          <ProjectTree />
+        </SidebarContent>
+      </div>
     </Sidebar>
   );
 }
