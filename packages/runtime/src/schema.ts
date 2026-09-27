@@ -174,7 +174,11 @@ function laneRow(mainId: ThreadId, seq: number, lane: Lane): BindingSpec {
     : [mainId, seq, lane.id, null, JSON.stringify(lane.card), lane.title, lane.width];
 }
 
-/** Replaces a main thread's lanes with exactly `lanes`, left to right. */
+/**
+ * Replaces a main thread's lanes with exactly `lanes`, left to right.
+ * @throws When a lane breaks a rule: the main is missing or a sub-thread, a thread lane is not
+ *   one of its own children or its id is not `l-<threadId>`, or an id appears twice.
+ */
 export function writeLanes(db: Database, mainId: ThreadId, lanes: Lane[]): void {
   db.exec({ sql: "delete from lanes where main_id = ?", bind: [mainId] });
   for (const [seq, lane] of lanes.entries()) {
