@@ -97,6 +97,24 @@
     content-visibility: hidden;
   }
 
+  /* The trim (ADR-107): a line in --trim around the window's body, under the bar and down both
+     sides to the bottom, drawn over the edge so it takes no layout and no box below it moves. */
+  .window-trim::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 30;
+    box-shadow: inset 0 0 0 2px var(--trim);
+    pointer-events: none;
+  }
+  /* A window with a frame rounds its bottom corners at 12px less its 1px border; the trim bends
+     with them rather than being cut off where the corner clips it. */
+  @media (width >= 48rem) {
+    .window-trim::after {
+      border-radius: 0 0 11px 11px;
+    }
+  }
+
   /* The canvas is a dotted field (ADR-089): open ground that invites something to be put down. */
   .canvas {
     background-color: var(--bg);

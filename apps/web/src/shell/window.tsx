@@ -31,34 +31,38 @@ function rememberSidebar(open: boolean): void {
 }
 
 /**
- * The app drawn as a desktop window (ADR-094): a rounded frame on the page's own ground with a
- * margin around it, full-bleed on a narrow screen. The title bar runs its whole width; below it
- * the sidebar (shadcn's sidebar-16 pattern) and, inset like Kay's content pane, the workspace.
+ * The app drawn as a desktop window (ADR-094): a rounded frame on a desk of its own with a
+ * margin around it, full-bleed on a narrow screen (ADR-106). The green title bar runs its whole
+ * width (ADR-105); below it, framed by the trim, the sidebar (shadcn's sidebar-16 pattern) and,
+ * inset like Kay's content pane, the workspace.
  */
 export function Window({ theme, children }: { theme: ThemeChoice; children: ReactNode }) {
   const [open, setOpen] = useState(readSidebarOpen);
   return (
-    <div
-      data-slot="window"
-      className="fixed inset-0 flex flex-col overflow-hidden bg-paper md:inset-2 md:rounded-[12px] md:border md:border-hairline md:shadow-[0_8px_32px_var(--shadow)]"
-    >
-      <SidebarProvider
-        open={open}
-        onOpenChange={(next) => {
-          setOpen(next);
-          rememberSidebar(next);
-        }}
-        className="min-h-0 flex-1 flex-col"
-        style={cssVars({ "--sidebar-width": "16rem", "--sidebar-width-icon": "3.5rem" })}
+    <>
+      <div data-slot="desk" aria-hidden="true" className="fixed inset-0 bg-[var(--desk)]" />
+      <div
+        data-slot="window"
+        className="fixed inset-0 flex flex-col overflow-hidden bg-paper md:inset-4 md:rounded-[12px] md:border md:border-hairline md:shadow-[0_8px_32px_var(--shadow)]"
       >
-        <TitleBar theme={theme} />
-        <div className="relative flex min-h-0 flex-1">
-          <AppSidebar />
-          <SidebarInset className="m-0 grid min-h-0 max-w-none min-w-0 overflow-hidden bg-background p-0 *:[grid-area:1/1] md:rounded-tl-[10px] md:border-t md:border-l md:border-hairline">
-            {children}
-          </SidebarInset>
-        </div>
-      </SidebarProvider>
-    </div>
+        <SidebarProvider
+          open={open}
+          onOpenChange={(next) => {
+            setOpen(next);
+            rememberSidebar(next);
+          }}
+          className="min-h-0 flex-1 flex-col"
+          style={cssVars({ "--sidebar-width": "16rem", "--sidebar-width-icon": "3.5rem" })}
+        >
+          <TitleBar theme={theme} />
+          <div data-slot="window-body" className="window-trim relative flex min-h-0 flex-1">
+            <AppSidebar />
+            <SidebarInset className="m-0 grid min-h-0 max-w-none min-w-0 overflow-hidden bg-background p-0 *:[grid-area:1/1] md:rounded-tl-[10px] md:border-t md:border-l md:border-hairline">
+              {children}
+            </SidebarInset>
+          </div>
+        </SidebarProvider>
+      </div>
+    </>
   );
 }

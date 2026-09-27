@@ -241,8 +241,8 @@ const LIFT_PX = 6;
 
 ## Web (the integrator)
 
-- **Frame.** The app is a window inside the viewport: a rounded 12px frame on the page's own
-  ground with an 8px margin, full-bleed below 768px.
+- **Frame.** The app is a window inside the viewport: a rounded 12px frame on a desk of its own
+  (`--desk`) with a 16px margin, full-bleed below 768px (ADR-106, amending the 8px first built).
 - **Title bar, left to right.** Decorative traffic lights, then the sidebar toggle, then
   `TabStrip`. At the right end: the data marker, the layout switch, the bell, and the account
   avatar in the corner.
