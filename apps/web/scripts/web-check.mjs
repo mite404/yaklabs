@@ -1180,11 +1180,13 @@ try {
   );
 
   await onOwnPage(
-    "at phone width the active tab is whole, every tab scrolls into reach, and each control takes a tap",
+    "at phone width the bar's top row and its row of views each take a tap, and nothing spills",
     "/t/t-005?scenario=demo",
     { viewport: { width: 390, height: 844 } },
     async (own) => {
-      await tabsOf(own).first().waitFor({ timeout: 15_000 });
+      await own.locator('[data-slot="project-name"]').filter({ hasText: /\S/ }).waitFor({
+        timeout: 15_000,
+      });
       const look = await own.evaluate(() => {
         const bar = document.querySelector('header[data-slot="title-bar"]');
         const width = innerWidth;
@@ -1197,26 +1199,20 @@ try {
           );
           return rect.width > 0 && rect.left >= 0 && rect.right <= width && el.contains(hit);
         };
-        const scroller = bar.querySelector(".tab-scroller").getBoundingClientRect();
-        const selected = bar.querySelector('[role="tab"][aria-selected="true"]');
-        const shown = selected.getBoundingClientRect();
-        const whole = shown.left >= scroller.left - 0.5 && shown.right <= scroller.right + 0.5;
-        const [plus, layout, account] = [
-          '[aria-label="New thread"]',
-          'button[aria-label="Layout"]',
+        // Two rows (ADR-116): the controls that never scroll, then the views.
+        const top = [
+          '[aria-label="Toggle sidebar"]',
+          '[aria-label^="Notifications"]',
           '[aria-label="Account"]',
+          '[aria-label="Thread and project actions"]',
         ].map((selector) => takesTap(bar.querySelector(selector)));
-        // One row (ADR-116): a tab beside the active one is scrolled to before it is tapped.
-        const tabs = [...bar.querySelectorAll('[role="tab"]')].map((tab) => {
-          tab.scrollIntoView({ block: "nearest", inline: "nearest" });
-          return takesTap(tab);
-        });
+        const views = [...bar.querySelectorAll('[role="group"][aria-label="Layout"] button')].map(
+          takesTap,
+        );
         return {
-          whole,
-          tabs,
-          plus,
-          layout,
-          account,
+          project: bar.querySelector('[data-slot="project-name"]').textContent,
+          top,
+          views,
           height: bar.getBoundingClientRect().height,
           spill: bar.scrollWidth - bar.clientWidth,
         };
@@ -1224,13 +1220,11 @@ try {
       await own.screenshot({ path: path.join(OUT, "title-bar-phone.png") });
       return {
         ok:
-          look.whole === true &&
-          look.tabs.length === 2 &&
-          look.tabs.every(Boolean) === true &&
-          look.plus === true &&
-          look.layout === true &&
-          look.account === true &&
-          look.height === 44 &&
+          look.project === "Service desk" &&
+          look.top.every(Boolean) === true &&
+          look.views.length === 3 &&
+          look.views.every(Boolean) === true &&
+          look.height === 82 &&
           look.spill <= 0,
         detail: JSON.stringify(look),
       };
@@ -1284,7 +1278,10 @@ try {
     "/t/t-005?scenario=demo",
     { viewport: { width: 390, height: 844 } },
     async (own) => {
-      await tabsOf(own).first().waitFor({ timeout: 15_000 });
+      // A phone shows the project's name where a desktop shows tabs (ADR-116).
+      await own.locator('[data-slot="project-name"]').filter({ hasText: /\S/ }).waitFor({
+        timeout: 15_000,
+      });
       await own.getByRole("button", { name: "Toggle sidebar" }).click();
       await own.getByRole("dialog").getByRole("link", { name: "Last week's sales" }).click();
       await own.waitForURL(/\/t\/t-001/);

@@ -63,7 +63,10 @@ export async function openScenario(
       .locator('[data-sidebar="menu-skeleton"]')
       .first()
       .waitFor({ state: "detached", timeout: 20_000 });
-    await page.getByRole("tab", { selected: true }).waitFor({ timeout: 20_000 });
+    // A phone hides the tabs behind its row of views (ADR-116); one is still selected.
+    await page
+      .getByRole("tab", { selected: true, includeHidden: true })
+      .waitFor({ state: "attached", timeout: 20_000 });
     await settle(page);
   }
   return { page, context, errors };
@@ -92,9 +95,6 @@ export async function toEmpty(page) {
   if (await link.isVisible()) await link.click();
   else await page.goto(`${BASE}/t/t-004${new URL(page.url()).search}`);
   await page.locator('[role="tabpanel"][aria-label="Refund audit"]:not([inert])').waitFor();
-  // Below 768px the group sits behind the bar's Layout button (ADR-116).
-  const trigger = titleBar(page).getByRole("button", { name: "Layout", exact: true });
-  if ((await trigger.isVisible()) === true) await trigger.click();
   await layoutButton(page, "Canvas").click();
   await canvasIn(page).waitFor();
   await page.mouse.move(0, 0);
@@ -233,7 +233,7 @@ export async function boxesOf(page) {
 
 // What 0.6 records, per theme; the aria trees are theme-independent but cost nothing twice.
 // The title bar's height at each width in WIDTHS, resizing `page` as it goes: one row of 44px
-// at every width (A2, ADR-116).
+// from 768px up, and two rows below (A2, ADR-116).
 export async function headerHeights(page) {
   const heights = [];
   for (const viewport of WIDTHS) {

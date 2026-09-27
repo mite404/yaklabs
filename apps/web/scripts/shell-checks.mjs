@@ -24,11 +24,13 @@ const boxOf = (locator) => locator.boundingBox().catch(() => null);
 
 // The widths below the window's frame (ADR-111) where the bar must still fit (ADR-116).
 const NARROW = [390, 520, 767];
-// About ten characters of the active tab's title at 12px.
+// About ten characters of the project's name at 14px.
 const LEGIBLE_PX = 64;
+// The phone bar's two rows (ADR-116): 44px of controls, then the views' 32px and a 6px foot.
+const PHONE_BAR = 82;
 
-// Runs in the page: the bar's controls left to right, whether any two overlap or leave the bar,
-// and how much of the active tab and its title the tabs' scroller shows.
+// Runs in the page: the top row's controls left to right, whether any two overlap, leave the bar
+// or fall out of the top row, how much of the project's name shows, and the views below it.
 function barLayout() {
   const bar = document.querySelector('header[data-slot="title-bar"]');
   const edge = bar.getBoundingClientRect();
@@ -36,12 +38,11 @@ function barLayout() {
     [...bar.querySelectorAll(selector)].find((el) => el.getClientRects().length > 0);
   const controls = [
     ["toggle", drawn('[aria-label="Toggle sidebar"]')],
-    ["tabs", drawn(".tab-scroller")],
-    ["new", drawn('[aria-label="New thread"]')],
+    ["project", drawn('[data-slot="project-name"]')],
     ["marker", drawn('[data-slot="data-marker"]')?.closest("button")],
-    ["layout", drawn('button[aria-label="Layout"], [role="group"][aria-label="Layout"]')],
     ["bell", drawn('[aria-label^="Notifications"]')],
     ["account", drawn('[aria-label="Account"]')],
+    ["more", drawn('[aria-label="Thread and project actions"]')],
   ]
     .filter(([, el]) => el !== undefined && el !== null)
     .map(([name, el]) => [name, el.getBoundingClientRect()]);
@@ -50,26 +51,32 @@ function barLayout() {
     .filter(([, box], i) => box.x < controls[i][1].right - 0.5)
     .map(([name], i) => `${controls[i][0]}>${name}`);
   const outside = controls
-    .filter(([, box]) => box.x < edge.x - 0.5 || box.right > edge.right + 0.5)
+    .filter(
+      ([, box]) =>
+        box.x < edge.x - 0.5 || box.right > edge.right + 0.5 || box.bottom > edge.y + 44.5,
+    )
     .map(([name]) => name);
-  const list = bar.querySelector(".tab-scroller").getBoundingClientRect();
-  const tab = bar.querySelector('[role="tab"][aria-selected="true"]').getBoundingClientRect();
-  const title = bar.querySelector('[role="tab"][aria-selected="true"] .truncate');
-  const shown = title.getBoundingClientRect();
+  const name = bar.querySelector('[data-slot="project-name"]');
+  const views = [...bar.querySelectorAll('[role="group"][aria-label="Layout"] button')];
+  const below = views.every((view) => {
+    const box = view.getBoundingClientRect();
+    return box.y >= edge.y + 44 - 0.5 && box.x >= edge.x && box.right <= edge.right + 0.5;
+  });
   return {
     height: Math.round(edge.height),
     scroll: [bar.scrollWidth, bar.clientWidth],
     page: [document.documentElement.scrollWidth, document.documentElement.clientWidth],
-    names: controls.map(([name]) => name),
+    names: controls.map(([each]) => each),
     overlaps,
     outside,
-    tabWhole: tab.x >= list.x - 0.5 && tab.right <= list.right + 0.5,
-    titlePx: Math.round(Math.min(shown.right, list.right) - Math.max(shown.x, list.x)),
-    titleFull: title.scrollWidth,
+    namePx: Math.round(name.getBoundingClientRect().width),
+    nameFull: name.scrollWidth,
+    views: views.map((view) => view.textContent.trim()),
+    below,
   };
 }
 
-// One width in one theme: the bar's layout, its picture, and on a phone the Layout menu at work.
+// One width in one theme: the bar's two rows, their picture, and a tap on the Canvas view.
 async function narrowBar(browser, { theme, width }) {
   const context = await browser.newContext({
     viewport: { width, height: 844 },
@@ -80,34 +87,31 @@ async function narrowBar(browser, { theme, width }) {
   }, theme);
   const page = await context.newPage();
   await page.goto(`${BASE}/?scenario=demo`, { waitUntil: "load" });
-  await page.getByRole("tab", { selected: true }).waitFor({ timeout: 20_000 });
+  await page.locator('[data-slot="project-name"]').filter({ hasText: /\S/ }).waitFor({
+    timeout: 20_000,
+  });
   await page.evaluate(() => document.fonts.ready);
-  await page.mouse.move(width / 2, 400);
   const m = await page.evaluate(barLayout);
   const fits =
-    m.height === 44 &&
+    m.height === PHONE_BAR &&
     m.scroll[0] === m.scroll[1] &&
     m.page[0] === m.page[1] &&
-    m.names.length === 7 &&
+    m.names.length === 6 &&
     m.overlaps.length === 0 &&
     m.outside.length === 0 &&
-    m.tabWhole === true &&
-    m.titlePx >= Math.min(m.titleFull, LEGIBLE_PX);
+    m.namePx >= Math.min(m.nameFull, LEGIBLE_PX) &&
+    m.views.join("|") === "Thread|Browser|Canvas" &&
+    m.below;
   await titleBar(page).screenshot({ path: shotPath(`P13-bar-${width}-${theme}`) });
-  const trigger = titleBar(page).getByRole("button", { name: "Layout", exact: true });
-  let switched = width >= 768 || (await trigger.isVisible()) === true;
-  if (width < 768 && switched) {
-    await trigger.click();
-    await layoutButton(page, "Canvas").click();
-    await page
-      .locator('[role="tabpanel"]:not([inert]) [aria-label="Compose canvas"]')
-      .waitFor({ timeout: 10_000 });
-    switched = (await page.getByRole("group", { name: "Layout" }).count()) === 0;
-  }
+  await layoutButton(page, "Canvas").click();
+  await page
+    .locator('[role="tabpanel"]:not([inert]) [aria-label="Compose canvas"]')
+    .waitFor({ timeout: 10_000 });
+  const pressed = await layoutButton(page, "Canvas").getAttribute("aria-pressed");
   await context.close();
   return {
-    ok: fits && switched,
-    note: `${theme} ${width}: 44px ${m.height === 44}; bar ${m.scroll.join("/")}; page ${m.page.join("/")}; ${m.names.length} controls; overlaps [${m.overlaps}]; outside [${m.outside}]; tab whole ${m.tabWhole}; title ${m.titlePx}/${m.titleFull}px; layout menu ${switched}`,
+    ok: fits && pressed === "true",
+    note: `${theme} ${width}: ${m.height}px; bar ${m.scroll.join("/")}; page ${m.page.join("/")}; top row [${m.names}]; overlaps [${m.overlaps}]; outside [${m.outside}]; name ${m.namePx}/${m.nameFull}px; views ${m.views.join("|")} below ${m.below}; canvas pressed ${pressed}`,
   };
 }
 
