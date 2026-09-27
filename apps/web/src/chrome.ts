@@ -7,36 +7,50 @@ export type ChromeChoice = { style: ChromeStyle; choose: (next: ChromeStyle) => 
 
 const KEY = "kay.chrome";
 const PARAM = "chrome";
+const SEED = "chromeSeed"; // → <html data-chrome-seed>
 const STYLES: readonly ChromeStyle[] = ["solid", "painting"];
 
-const styleOf = (value: string | null): ChromeStyle | null =>
+/**
+ * Runs from the prerendered shell before React and the router load, as THEME_BOOT does: a
+ * `?chrome=` in the address is handed to the page as `data-chrome-seed` and taken out of the
+ * address, so the router never sees it and no link or history entry carries it on.
+ */
+export const CHROME_BOOT = `(()=>{try{var u=new URL(location.href),c=u.searchParams.get(${JSON.stringify(PARAM)});if(c!==null){if(${JSON.stringify(STYLES)}.indexOf(c)>=0)document.documentElement.dataset.${SEED}=c;u.searchParams.delete(${JSON.stringify(PARAM)});history.replaceState(history.state,"",u)}}catch(e){}})()`;
+
+// The choice for this visit, above any remount of the window, for when storage is refused.
+let held: ChromeStyle | null = null;
+
+const styleOf = (value: string | null | undefined): ChromeStyle | null =>
   STYLES.find((each) => each === value) ?? null;
 
 function remember(style: ChromeStyle): void {
+  held = style;
   try {
     localStorage.setItem(KEY, style);
   } catch {
-    // The choice holds for this visit.
+    // Private windows may refuse storage; `held` keeps the choice for this visit.
   }
 }
 
-// `?chrome=` is a one-time seed: it is kept as the visitor's choice and taken out of the address,
-// so a remount or a reload keeps what they later pick from the menu. Then the stored choice;
-// then the solid bar.
-function readChrome(): ChromeStyle {
-  const url = new URL(location.href);
-  const asked = styleOf(url.searchParams.get(PARAM)); // → ChromeStyle | null
-  if (asked !== null) {
-    remember(asked);
-    url.searchParams.delete(PARAM);
-    history.replaceState(history.state, "", url);
-    return asked;
-  }
+function stored(): ChromeStyle | null {
   try {
-    return styleOf(localStorage.getItem(KEY)) ?? "solid";
+    return styleOf(localStorage.getItem(KEY)); // → ChromeStyle | null
   } catch {
-    return "solid";
+    return null;
   }
+}
+
+// The visit's own choice first; then a `?chrome=` the boot script seeded, kept as the choice;
+// then the stored choice; then the solid bar.
+function readChrome(): ChromeStyle {
+  if (held !== null) return held;
+  const seed = styleOf(document.documentElement.dataset[SEED]);
+  if (seed !== null) {
+    delete document.documentElement.dataset[SEED];
+    remember(seed);
+    return seed;
+  }
+  return stored() ?? "solid";
 }
 
 /** The bar's look, read before the first paint so it never flips, and a setter that keeps it. */
