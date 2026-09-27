@@ -1352,3 +1352,12 @@ and inert, so a draft or a streaming reply survives a switch. The panel group an
 limits stay the same on every screen (ADR-106): the thread's panel is now collapsible too, so a
 phone and a wide screen differ only in the layout the switch asks for, and crossing the
 breakpoint remounts nothing.
+
+## ADR-120 - On a phone the title bar puts the tabs on a row of their own
+
+2026-09-27 - Accepted (Ethan, relayed by the PR #13 session).
+At 390px the one-row title bar squeezed the tab strip to nothing and slid New thread under the
+data marker. Below 768px the tabs now take a row of their own under the controls, 80px in all,
+so every tab stays whole and tappable. A one-row, 44px bar that hid the Layout switch behind a
+button was tried in #14 and withdrawn: Ethan wants two rows on a phone and one on a wide screen.
+With ADR-119, a phone shows the controls, then the tabs, then one pane.
