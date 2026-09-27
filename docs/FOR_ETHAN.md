@@ -77,6 +77,9 @@ the bottom right (ADR-113), and Kay's face is the avatar when nobody is signed i
 bar can also be painted, from a painting the repo generates itself (ADR-115). Every one of those is
 Proposed, with its open question listed for Ethan, and a lever of eleven predicates, A to K,
 measures each against a baseline shot on the commit before the polish.
+On a phone the bar then had no room for its own tabs. Below 768px it now drops the traffic
+lights, shortens the marker to one word, and puts the Layout group behind a button, so the tab on
+screen shows whole (ADR-116); P13 holds 390, 520 and 767 to that.
 
 ## 2. Cast & Crew
 
@@ -709,6 +712,15 @@ The first entries are ideas from before any code existed; the rest are parts of 
   for. The lever passed because it asked whether any pixel near the control was bright. A tab now
   draws its ring inside itself (cream, or night on the pill), and the lever asks how much of each
   side of the control the ring covers, so a ring clipped on one side fails.
+
+- **The tab that would not fit its own floor.** On a phone the active tab's floor is the strip's
+  width less the "+", written `min(100cqw - 32px, 10rem)`. A first try used `min(100%, 10rem)` and
+  changed nothing: the tab list sizes itself from its tabs, so a percentage of it is a percentage
+  of an answer that depends on the question. A container query unit measures the strip instead,
+  whose width comes from the bar. Then the tab still landed 32px short of whole, because the
+  scroller keeps 32px of `scroll-padding` for its edge fade, and a tab exactly as wide as the
+  scroller has no room for it. Below 768px that padding is now zero. Lesson: when a size refuses
+  to change, ask what it is measured against before changing the number.
 
 ## 5. Director's Commentary
 
@@ -1403,3 +1415,38 @@ for that region instead of restyling the components in it. Then a new component 
 bar is right on day one, and the contrast lives in one place, where a unit test can check every
 ratio from the token values.
 
+### Settle a layout fight with a ruler, not a meeting
+
+The phone bar had four candidate fixes and a fixed budget: 390 pixels. Rather than argue which
+control deserved the space, each candidate was a few lines of CSS injected into the real app, and
+one script measured what the active tab's title got.
+
+```js
+// apps/web/scripts/shell-checks.mjs, P13: how much of the active title does the list show?
+const list = bar.querySelector('[role="tablist"]').getBoundingClientRect();
+const title = bar.querySelector('[role="tab"][aria-selected="true"] .truncate');
+const shown = title.getBoundingClientRect();
+return Math.round(Math.min(shown.right, list.right) - Math.max(shown.x, list.x));
+// → 17px with the Layout group inline, 37px with an icon marker, about 84px behind a trigger
+```
+
+```mermaid
+flowchart LR
+  Q[Which control gives way?] --> P1[Prototype: all inline, tighter]
+  Q --> P2[Prototype: icon marker]
+  Q --> P3[Prototype: Layout behind a button]
+  P1 --> M[One probe, same page, same widths]
+  P2 --> M
+  P3 --> M
+  M -->|17px| X1[Rejected]
+  M -->|37px| X2[Rejected]
+  M -->|about 84px| K[Kept, then held by P13]
+```
+
+The film version: when two camera positions compete, you do not debate them in the production
+office; you shoot both on the stand-in and look at the monitor. The probe is the stand-in, and
+the winning shot's numbers become the continuity sheet (P13) that every later take is checked
+against.
+
+Senior-engineer takeaway: if a design question has an answer you can measure, measure it. The
+numbers end the argument, and the script that produced them becomes the regression test.
