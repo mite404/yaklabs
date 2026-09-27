@@ -121,6 +121,9 @@
   /* the trim around the window's body (Q5 to Q7): olive until Ethan picks, 6.57:1 against the
      bright paper; never the focus grey, so it cannot read as a ring (ADR-053) */
   --trim: var(--olive);
+  /* the splash's line drawing on an empty canvas: the ink at 12%, which follows the theme, so
+     a stroke stands 1.2:1 off the field in either mode and never competes with the words */
+  --splash-line: color-mix(in srgb, var(--ink) 12%, transparent);
 
   --radius-card: 14px; /* the catalog card and the thread panel; shadcn owns --radius (ADR-082) */
   --space: 24px;

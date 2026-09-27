@@ -116,17 +116,46 @@ function Lane({
   );
 }
 
-// The open space at the end of the row: the whole canvas when it is empty, a slimmer
-// column once lanes exist, so there is always somewhere to drop the next thing, and it lights
-// up when a carry would land there. The button is the catalog's own, the one a card's "Show my
-// work" uses.
-function OpenSpace({ lit, onBlank }: { lit: boolean; onBlank: () => void }) {
+// The splash on an empty canvas (ADR-108): a line drawing behind the words, and Kay at the
+// bottom right. Both are pictures only: hidden from the tree, and a press or a carried card goes
+// through them to the ground. Kay stays away from an open space under 480px, a content box under
+// 430px, where he would crowd the words.
+function Splash() {
+  return (
+    <div data-slot="canvas-splash" aria-hidden="true" className="splash pointer-events-none">
+      <div data-slot="splash-drawing" className="splash-drawing absolute inset-6" />
+      <img
+        data-slot="kay-mascot"
+        src="/kay/kay.webp"
+        alt=""
+        width={96}
+        height={110}
+        className="absolute right-6 bottom-6 hidden w-24 @min-[430px]:block"
+      />
+    </div>
+  );
+}
+
+// The open space at the end of the row: the whole canvas when it is empty, with the splash
+// behind its words, and a slimmer column once lanes exist, so there is always somewhere to drop
+// the next thing. It lights up when a carry would land there. The button is the catalog's own,
+// the one a card's "Show my work" uses.
+function OpenSpace({
+  lit,
+  splash,
+  onBlank,
+}: {
+  lit: boolean;
+  splash: boolean;
+  onBlank: () => void;
+}) {
   return (
     <div
       data-ground=""
       data-lit={lit || undefined}
-      className="flex h-full min-w-[320px] flex-1 flex-col items-center justify-center gap-4 rounded-[var(--radius-card)] border border-dashed border-hairline p-6 text-center transition-colors data-lit:border-olive data-lit:bg-paper-deep/60"
+      className="@container relative isolate flex h-full min-w-[320px] flex-1 flex-col items-center justify-center gap-4 rounded-[var(--radius-card)] border border-dashed border-hairline p-6 text-center transition-colors data-lit:border-olive data-lit:bg-paper-deep/60"
     >
+      {splash && <Splash />}
       <p className="font-serif text-xl text-ink">
         Drag a text selection or card
         <br />
@@ -270,7 +299,11 @@ export function Canvas({
           style={{ left: landing.marker }}
         />
       )}
-      <OpenSpace lit={landing !== null && landing.marker === null} onBlank={onBlank} />
+      <OpenSpace
+        lit={landing !== null && landing.marker === null}
+        splash={lanes.length === 0}
+        onBlank={onBlank}
+      />
       {/* The ground goes on for a pane past the open space: the canvas has no right edge. */}
       {lanes.length > 0 && <div data-ground="" aria-hidden="true" className="w-full shrink-0" />}
     </section>

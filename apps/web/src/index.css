@@ -115,6 +115,30 @@
     }
   }
 
+  /* The empty canvas's splash (ADR-108): the drawing is a mask filled with --splash-line, so it
+     themes with the ink and shows only its strokes, never the bounds of an image. It sits
+     behind the words and fades in once, with no fade under reduced motion. */
+  .splash {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    animation: splash-in 150ms ease-out;
+  }
+  .splash-drawing {
+    background-color: var(--splash-line);
+    mask: url("/splash/sphere.svg") center / contain no-repeat;
+  }
+  @keyframes splash-in {
+    from {
+      opacity: 0;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .splash {
+      animation: none;
+    }
+  }
+
   /* The canvas is a dotted field (ADR-089): open ground that invites something to be put down. */
   .canvas {
     background-color: var(--bg);
