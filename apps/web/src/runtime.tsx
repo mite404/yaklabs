@@ -95,6 +95,22 @@ function stateBefore(wanted: Wanted): RuntimeState {
   }
 }
 
+// The data an address asks for as one string, so two addresses that differ only in another
+// query parameter compare equal.
+function dataOf(wanted: Wanted): string {
+  return wanted.kind === "device" ? "device" : `${wanted.kind}:${wanted.name}`;
+}
+
+// What the address asks the runtime to open, kept as the same object for as long as it asks
+// for the same data: a link keeps only ?scenario=, and a new object would restart the worker.
+function useWanted(): Wanted {
+  const asked = wantedFrom(useLocation().search); // → Wanted, a new object on every render
+  const [wanted, setWanted] = useState(asked);
+  if (dataOf(asked) === dataOf(wanted)) return wanted;
+  setWanted(asked);
+  return asked;
+}
+
 function useDoor(): Door {
   const door = useContext(DoorContext);
   if (door === null) throw new Error("The runtime hooks need <RuntimeProvider> above them");
@@ -139,8 +155,7 @@ function RuntimeHost({
  * restart is a new runtime and a new page beneath it, so nothing keeps the failed one's state.
  */
 export function RuntimeProvider({ children }: { children: ReactNode }) {
-  const { search } = useLocation();
-  const wanted = useMemo(() => wantedFrom(search), [search]); // → Wanted
+  const wanted = useWanted();
   const [attempt, setAttempt] = useState(0);
   const restart = useCallback(() => {
     setAttempt((n) => n + 1);
