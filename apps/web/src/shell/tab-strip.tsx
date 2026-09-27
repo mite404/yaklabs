@@ -3,7 +3,7 @@ import { Button } from "@yaklabs/ui/components/button";
 import { Skeleton } from "@yaklabs/ui/components/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@yaklabs/ui/components/tabs";
 import { Plus, X } from "lucide-react";
-import { useEffect, useRef, useState, type RefObject } from "react";
+import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
 import { panelId } from "./deck";
 import { LAYOUTS } from "./layouts";
 import type { Shell } from "./model";
@@ -18,6 +18,7 @@ const TAB_BOX = "w-[220px] min-w-28 shrink data-active:min-w-40";
 type Hover = {
   hovered: ThreadId | null;
   handlers: (id: ThreadId) => { onPointerEnter: () => void; onPointerLeave: () => void };
+  leave: (id: ThreadId) => void;
 };
 
 function tabId(main: ThreadId): string {
@@ -30,6 +31,9 @@ function tabOf(main: ThreadId): HTMLElement | null {
 
 function useHover(): Hover {
   const [hovered, setHovered] = useState<ThreadId | null>(null);
+  const leave = useCallback((id: ThreadId) => {
+    setHovered((current) => (current === id ? null : current));
+  }, []);
   return {
     hovered,
     handlers: (id) => ({
@@ -37,9 +41,10 @@ function useHover(): Hover {
         setHovered(id);
       },
       onPointerLeave: () => {
-        setHovered((current) => (current === id ? null : current));
+        leave(id);
       },
     }),
+    leave,
   };
 }
 
@@ -76,6 +81,14 @@ type TabProps = {
 // middle click closes any).
 function Tab({ thread, shell, hover, plus }: TabProps) {
   const { Icon } = LAYOUTS[viewOf(shell.doc, thread.id).pane];
+  const { leave } = hover;
+  // A tab closed under the pointer never hears it leave, so its hover would come back with it.
+  useEffect(
+    () => () => {
+      leave(thread.id);
+    },
+    [leave, thread.id],
+  );
   const close = (control: Element) => {
     closeFrom(shell, thread.id, control, plus);
   };

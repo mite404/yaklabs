@@ -910,7 +910,7 @@ try {
           now: value("valuenow"),
           width,
           ok:
-            el.hasAttribute("aria-valuenow") &&
+            el.getAttribute("aria-valuenow") !== null &&
             value("valuenow") === width &&
             value("valuemin") <= width &&
             width <= value("valuemax") &&
@@ -927,8 +927,8 @@ try {
   record(
     "a lane's gap says the lane's width in pixels, within its range, and follows an arrow key",
     gapsAtRest.length > 0 &&
-      gapsAtRest.every((gap) => gap.ok) &&
-      gapsResized.every((gap) => gap.ok) &&
+      gapsAtRest.every((gap) => gap.ok) === true &&
+      gapsResized.every((gap) => gap.ok) === true &&
       gapsResized[0].now === gapsAtRest[0].width + 24,
     `${gapsAtRest.map((gap) => `${gap.now}/${gap.width}`).join(" ")} → ${gapsResized.map((gap) => `${gap.now}/${gap.width}`).join(" ")}`,
   );
@@ -1010,7 +1010,7 @@ try {
   await fails.close();
   const framed = frames.filter(
     (frame) =>
-      frame.paper &&
+      frame.paper === true &&
       frame.named === frame.title &&
       (frame.place === "main" || frame.place === frame.title),
   );
@@ -1167,7 +1167,7 @@ try {
       await own.keyboard.press("Delete");
       await own.waitForURL(/\/t\/t-001/);
       const next = await focusOn(own);
-      if (next.startsWith("tab ")) {
+      if (next.startsWith("tab ") === true) {
         await own.keyboard.press("Delete");
         await own.getByText("Nothing open").waitFor();
       }
@@ -1206,9 +1206,9 @@ try {
       return {
         ok:
           look.tabs.length === 2 &&
-          look.tabs.every(Boolean) &&
-          look.plus &&
-          look.account &&
+          look.tabs.every(Boolean) === true &&
+          look.plus === true &&
+          look.account === true &&
           look.spill <= 0,
         detail: JSON.stringify(look),
       };
@@ -1242,8 +1242,9 @@ try {
         toggle.evaluate((el) => ({
           expanded: el.getAttribute("aria-expanded"),
           controls:
-            document.getElementById(el.getAttribute("aria-controls"))?.getAttribute("aria-label") ??
-            null,
+            document
+              .querySelector(`#${CSS.escape(el.getAttribute("aria-controls"))}`)
+              ?.getAttribute("aria-label") ?? null,
         }));
       const before = await state();
       await toggle.click();
@@ -1348,7 +1349,10 @@ try {
       await own.waitForTimeout(600);
       const onFocus = await tips.allInnerTexts();
       return {
-        ok: cut.every(Boolean) && onHover.includes(first) && onFocus.includes(second),
+        ok:
+          cut.every(Boolean) === true &&
+          onHover.includes(first) === true &&
+          onFocus.includes(second) === true,
         detail: `rows cut ${cut.join()}; tooltips on the first hover ${JSON.stringify(onHover)}, on focus ${JSON.stringify(onFocus)}`,
       };
     },
@@ -1611,11 +1615,11 @@ try {
       { timeout: 20_000 },
     )
     .catch(() => {});
-  const reopened = await mainTitles(secondTab);
+  const handedOver = await mainTitles(secondTab);
   record(
     "a second tab says the threads are open in another tab, and opens them once it closes",
-    heldShown === true && reopened.join("|") === kept.join("|"),
-    `held notice ${heldShown}; ${reopened.join(", ")}`,
+    heldShown === true && handedOver.join("|") === kept.join("|"),
+    `held notice ${heldShown}; ${handedOver.join(", ")}`,
   );
   await tabs.close();
 
@@ -1634,6 +1638,149 @@ try {
     `${landed.pathname}${landed.search} · ${mockMarker}`,
   );
   await mock.close();
+
+  await onOwnPage(
+    "a tab closed under the pointer comes back at rest: no close and no cut title once inactive",
+    "/t/t-001?scenario=demo",
+    {},
+    async (own) => {
+      const reopened = "Service desk weekly review";
+      const tab = tabsOf(own).filter({ hasText: reopened });
+      const closer = own.getByRole("button", { name: `Close ${reopened}`, exact: true });
+      await tab.waitFor({ timeout: 15_000 });
+      // Closes the tab under the pointer, leaves the strip straight down so the pointer crosses
+      // no other tab, opens the thread again from the sidebar, then goes back to the first tab
+      // by keyboard, and reads the reopened tab.
+      const cycle = async (close) => {
+        await tab.hover();
+        const at = await close(); // → the box the pointer closed it from
+        await tab.waitFor({ state: "detached" });
+        await own.mouse.move(at.x + at.width / 2, 600, { steps: 4 });
+        await openRow(own, reopened);
+        await tab.focus();
+        await own.keyboard.press("ArrowLeft");
+        await own.keyboard.press("Enter");
+        await own.waitForURL(/\/t\/t-001\?/);
+        const hovered = await tab.evaluate((el) => el.dataset.hovered !== undefined);
+        const shown = await closer.evaluate((el) => getComputedStyle(el).opacity);
+        return `hovered ${hovered}, close ${shown}`;
+      };
+      const byClose = await cycle(async () => {
+        const from = await closer.boundingBox();
+        await closer.click();
+        return from;
+      });
+      const byMiddle = await cycle(async () => {
+        const from = await tab.boundingBox();
+        await tab.click({ button: "middle" });
+        return from;
+      });
+      const rest = "hovered false, close 0";
+      return {
+        ok: byClose === rest && byMiddle === rest,
+        detail: `after its close: ${byClose}; after a middle click: ${byMiddle}`,
+      };
+    },
+  );
+
+  await onOwnPage(
+    "a thread opened from the Lab never draws over it, and a tab click still shows its tab at once",
+    "/lab?scenario=demo",
+    {},
+    async (own) => {
+      await own.getByText("Useful answers.").waitFor({ timeout: 15_000 });
+      await own.evaluate(() => {
+        window.painted = [];
+        document.addEventListener(
+          "pointerdown",
+          () => {
+            window.pressedAt = window.painted.length;
+          },
+          { capture: true },
+        );
+        requestAnimationFrame(function tick() {
+          window.painted.push({
+            lab: document.body.innerText.includes("Useful answers."),
+            tab:
+              document
+                .querySelector('[role="tabpanel"]:not([inert])')
+                ?.getAttribute("aria-label") ?? null,
+          });
+          requestAnimationFrame(tick);
+        });
+      });
+      const sincePress = () => own.evaluate(() => window.painted.slice(window.pressedAt));
+      await openRow(own, "Refund audit");
+      await own.waitForTimeout(300);
+      const fromLab = await sincePress();
+      await tabsOf(own).filter({ hasText: "Last week's sales" }).click();
+      await own.waitForTimeout(300);
+      const fromTab = await sincePress();
+      const overLab = fromLab.filter((paint) => paint.lab === true && paint.tab !== null).length;
+      const tabAfter = fromTab.findIndex((paint) => paint.tab === "Last week's sales");
+      return {
+        ok:
+          overLab === 0 && fromLab.at(-1)?.tab === "Refund audit" && tabAfter >= 0 && tabAfter <= 1,
+        detail: `${overLab} frames drew the thread over the Lab; the tab clicked showed ${tabAfter} frames after the press`,
+      };
+    },
+  );
+
+  await onOwnPage(
+    "each visit to a child brings its lane into view and flashes it once, panned away or closed",
+    "/t/t-002?scenario=demo",
+    {},
+    async (own) => {
+      const saturday = "Saturday leads at every level";
+      const region = own
+        .locator('[role="tabpanel"]:not([inert])')
+        .getByRole("region", { name: "Compose canvas" });
+      const saturdayLane = region.locator(`:scope > article[aria-label="${saturday}"]`);
+      const saturdayRow = own
+        .locator('[data-slot="sidebar"]')
+        .getByRole("link", { name: saturday, exact: true });
+      await saturdayLane.waitFor({ timeout: 15_000 });
+      // The arrival's own flash ends before the count starts.
+      await own.waitForTimeout(1500);
+      await region.evaluate((row) => {
+        window.flashes = 0;
+        new MutationObserver((records) => {
+          window.flashes += records.filter(
+            (each) => each.target.dataset.flash !== undefined,
+          ).length;
+        }).observe(row, { subtree: true, attributeFilter: ["data-flash"] });
+      });
+      // Clicks the child's row, lets the lane slide in and its flash end, then reads whether the
+      // lane sits whole in the canvas and how often a lane flashed since the last visit.
+      const visit = async () => {
+        await saturdayRow.click();
+        await saturdayLane.waitFor({ timeout: 5_000 });
+        await own.waitForTimeout(1500);
+        return region.evaluate((row, name) => {
+          const edges = row
+            .querySelector(`:scope > article[aria-label="${name}"]`)
+            .getBoundingClientRect();
+          const pane = row.getBoundingClientRect();
+          const inView = edges.left >= pane.left - 1 && edges.right <= pane.right + 1;
+          const seen = `in view ${inView}, flashed ${window.flashes}`;
+          window.flashes = 0;
+          return seen;
+        }, saturday);
+      };
+      await region.evaluate((row) => {
+        row.scrollLeft = row.scrollWidth;
+      });
+      const pannedAway = await visit();
+      await region.getByRole("button", { name: `Close ${saturday}`, exact: true }).click();
+      await saturdayLane.waitFor({ state: "detached", timeout: 10_000 });
+      const closed = await visit();
+      const once = "in view true, flashed 1";
+      return {
+        ok: pannedAway === once && closed === once,
+        detail: `after panning it away: ${pannedAway}; after closing it: ${closed}`,
+      };
+    },
+  );
 } catch (error) {
   record("run", false, String(error));
   await shot("failure");
