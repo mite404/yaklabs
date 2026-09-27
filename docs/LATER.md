@@ -37,7 +37,10 @@ this list when it ships.
   storing its envelope beside the hidden-lane list (ADR-089).
 - **A keyboard path onto the canvas.** Drag and drop has none; the Create blank thread button is
   the only keyboard route, and a "send highlight to canvas" action on the selection would give it
-  one. Lane widths and order do have one: arrow keys on a gap or a grip.
+  one. Lane widths and order do have one: arrow keys on a gap resize the lane before it, and with
+  Shift they move it.
+- **A name of the lane's own for a card.** A card's title comes from its payload and cannot be
+  renamed; a lane could keep a name for it beside the order.
 - **Make the catalog pass `noUncheckedIndexedAccess`.** Eight index reads in `interactive.ts` and
   `thread.ts` fail it, so `packages/runtime` keeps the flag off; the catalog should pass the
   shared base config.

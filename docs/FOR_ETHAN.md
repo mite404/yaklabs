@@ -42,6 +42,12 @@ space says what to drag and offers "Create
 blank thread" in the site's own button. And the hand over a highlight learned its manners: it waits
 until the highlight is finished, because the I-beam while selecting is a convention older than the
 web.
+The title bar then became the whole story of a lane: its middle and right take hold of it, with a
+six-dot grip fading up to say so, and its far left is the thread's name, which a click turns into
+a field. The name is kept in the vault, so the worker learned one more word, `rename`. The canvas
+lost its right edge along the way: the ground runs a pane past the last lane, a thin scrollbar
+admits it, and the ground drags to pan. And a card pulled out of the thread now rides whole, the
+one left behind dimmed, the same pattern as a lane.
 
 ## 2. Cast & Crew
 
@@ -62,7 +68,9 @@ Nothing is built yet, so the cast is the set of ideas the prototypes will be mad
   on stage and sign-in at the door (ADR-083, ADR-084).
 - **The runtime worker** (`packages/runtime`) is the production office behind the stage. It keeps
   the call sheets (the conversation store) and runs the shoot (the agent loop); the stage only
-  passes notes through one door, and each note is checked on both sides (ADR-076, ADR-086).
+  passes notes through one door, and each note is checked on both sides (ADR-076, ADR-086). It also
+  keeps a thread's name: a rename in the header goes to the worker, which answers as it does an
+  open, with the conversation as it now is.
 - **The gateway** (`apps/gateway`) is the stage door and the runner. The guard checks every pass
   against the list WorkOS publishes (its signing keys); the runner carries the pages to the
   writers' room (Claude), relays each line back as it is spoken, and keeps no copy (ADR-085).
@@ -438,6 +446,24 @@ Nothing is built yet, so the cast is the set of ideas the prototypes will be mad
   session, so both sides of the comparison were the old code. Fix: `launch` now clears that cache
   before it starts. Lesson: a comparison is only as good as the certainty that the two sides
   differ in the way you think.
+- **The pane with no overflow.** "The canvas is not horizontally scrollable." The lever said it
+  was: the row overflowed and a wheel panned it. Both were right. On a wide screen a lane or two
+  fit inside the pane, nothing overflowed, no scrollbar appeared, and the ground stopped at the
+  edge, which is not what an infinite canvas feels like. Fix: the ground runs a full pane past the
+  open space once a lane exists, the scrollbar stays in view, and the ground drags to pan. Lesson:
+  a report that contradicts a measurement is usually about a case the measurement never set up.
+- **The drop that missed the pane.** Proving that a dragged card dims meant driving the drag by
+  hand instead of Playwright's one-call drag, and the drop stopped landing. The target's box was
+  correct and off-screen: the one-call version had scrolled it into view on its own, and the
+  hand-driven one did not. Lesson: when a convenience call is replaced by its parts, list what
+  the convenience did for free.
+- **The field torn down inside its own key event.** The story suite passed and printed one
+  React warning: a component had suspended inside an `act` scope. It came from the Renamable
+  story, only on Enter or Escape, never on a click elsewhere. The key handler was closing the
+  rename field, so React unmounted the focused input in the middle of the key event that
+  reached it; a blur closed it after the event was over. Fix: Enter and Escape blur the field,
+  and the blur is the one way out. Lesson: a test that passes with a warning is a test with a
+  finding, and the bisect is cheap when each run takes fifteen seconds.
 - **The divider under the floor.** Ethan asked where the hint line's fade began, and proving the
   new profile meant hovering the real divider between thread and canvas, which the lever had
   never done: it had only measured the gaps between lanes. The divider's hint never lit. Giving

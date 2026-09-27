@@ -984,8 +984,17 @@ lane itself stays in the row dimmed and, once its centre crosses a neighbour's, 
 slot it would take as the lanes it passes step aside. The placeholder is therefore the lane's own
 shape, never a blank; the copy is a snapshot of its DOM with the draft and the scroll carried over,
 and the row's DOM is left alone until the drop, because moving the pressed element would release
-its pointer capture. The order is kept in `kay.canvas.order` beside the hidden list, and arrow
-keys on the grip move a lane one slot. A
+its pointer capture. The bar is the handle by its middle and right: a six-dot grip fades up at its
+centre while the pointer is on that part, and stays away from the far left, where the title is a
+field waiting to open. A click on the title renames the thread in place, Enter keeps the new name
+and Escape the old, and the worker keeps it (`rename`, answered like `open`), for a lane and the
+main thread alike; a card's title comes from its payload and stays. Nothing sits above a lane but
+its close. The order is kept in `kay.canvas.order` beside the hidden list, and Shift with the arrow
+keys on a gap moves the lane before it one slot. The canvas has no right edge: once a lane is on
+it the ground runs a full pane past the open space, a thin scrollbar in the rule colour stays in
+view to say so, and the ground itself drags to pan. A card dragged out of a thread rides the
+pointer whole, the drag image being the card and not its handle, and the card left behind dims
+until the drag ends. A
 vertical wheel over the ground pans the row, since the row has nothing vertical to scroll. The open
 space reads "Drag a text selection or card / to start a new thread with context" over the catalog's
 own button, "Create blank thread", the one a card's "Show my work" uses. The close stays in the

@@ -20,10 +20,12 @@ canvas to start a new thread of the same project with the highlight quoted in it
 drag a card by its header to see it large in a lane of its own. The pointer shows a hand over a
 highlight that already exists, never while one is being made. Open space always remains at the
 end of the row for the next drop, and the divider between the thread and the canvas drags anywhere
-along its length. The gap after a lane drags the lane's width, a lane's title bar or the grip
-above it drags the lane to another place in the row (a copy floats under the pointer while the
-lane waits dimmed in the slot it would take), arrow keys on the gap or the grip do the same, and a
-wheel over the ground pans the row. Thread lanes persist because their
+along its length. The gap after a lane drags the lane's width, and a lane's title bar, by its
+middle or right, drags the lane to another place in the row (a copy floats under the pointer
+while the lane waits dimmed in the slot it would take); arrow keys on the gap resize the lane, and
+with Shift move it. A click on a thread's title renames it, in a lane or the main thread, and the
+worker keeps the name. The ground runs a pane past the last lane, shows a scrollbar, drags to
+pan, and pans on a vertical wheel. Thread lanes persist because their
 conversations do, in the order they were left (`kay.canvas.order` in localStorage), except the
 ones closed (`kay.canvas.hidden`), and card lanes last the visit. The model is `src/canvas.ts`,
 the surface `src/components/canvas.tsx`.
