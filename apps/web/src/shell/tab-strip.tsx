@@ -111,13 +111,13 @@ function Tab({ thread, shell, hover, plus }: TabProps) {
 function CloseSlot({ thread, shell, hover, plus }: TabProps) {
   const active = shell.active?.main === thread.id;
   return (
-    <div data-active={active || undefined} className={`relative ${TAB_BOX}`}>
+    <div data-active={active || undefined} className={`group/slot relative ${TAB_BOX}`}>
       <button
         type="button"
         tabIndex={-1}
         aria-label={`Close ${thread.title}`}
-        data-shown={active || hover.hovered === thread.id || undefined}
-        className="pointer-events-auto absolute top-1/2 right-1.5 flex size-5 -translate-y-1/2 items-center justify-center rounded-[var(--radius)] border-0 bg-transparent p-0 text-soft-ink opacity-0 data-shown:opacity-100 hover:bg-paper-deep hover:text-ink"
+        data-hovered={hover.hovered === thread.id || undefined}
+        className="pointer-events-auto absolute top-1/2 right-1.5 flex size-5 -translate-y-1/2 items-center justify-center rounded-[var(--radius)] border-0 bg-transparent p-0 text-soft-ink opacity-0 group-data-active/slot:opacity-100 data-hovered:opacity-100 hover:bg-paper-deep hover:text-ink"
         {...hover.handlers(thread.id)}
         onClick={(event) => {
           closeFrom(shell, thread.id, event.currentTarget, plus);
