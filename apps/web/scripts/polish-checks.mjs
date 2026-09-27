@@ -39,12 +39,13 @@ export async function openScenario(
     viewport = WIDTHS[0],
     motion = "reduce",
     ready = true,
+    scale = 1,
   },
 ) {
   const context = await browser.newContext({
     viewport,
     reducedMotion: motion,
-    deviceScaleFactor: 1,
+    deviceScaleFactor: scale,
   });
   await context.addInitScript((chosen) => {
     localStorage.setItem("theme", chosen);
@@ -258,7 +259,12 @@ async function record(browser, theme) {
     const opened = await openScenario(browser, { scenario, theme, ready: false });
     await opened.page.locator('[data-slot="data-marker"]').waitFor({ timeout: 20_000 });
     await opened.page.waitForTimeout(1500);
-    out[scenario] = { header: await titleBar(opened.page).ariaSnapshot() };
+    out[scenario] = {
+      header: await titleBar(opened.page).ariaSnapshot(),
+      sidebar: await sidebar(opened.page).ariaSnapshot(),
+      canvas:
+        (await canvasIn(opened.page).count()) > 0 ? await canvasIn(opened.page).ariaSnapshot() : "",
+    };
     await opened.context.close();
   }
   return { out, files };

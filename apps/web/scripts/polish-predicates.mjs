@@ -145,15 +145,19 @@ async function inkReport(page, scope) {
     delete el.dataset.polishScope;
   });
   const { pixels, width } = await pixelsOf(page, png);
+  // At a device scale above 1 the picture has that many pixels per CSS pixel; every one counts.
+  const dpr = await page.evaluate(() => devicePixelRatio);
   const failures = [];
   const worstOf = { text: [], icon: [] };
   for (const ink of list) {
     const fg = rgbOf(ink.colour);
     let lowest = Infinity;
-    for (let y = Math.floor(ink.rect.y); y < Math.ceil(ink.rect.y + ink.rect.height); y += 1) {
-      for (let x = Math.floor(ink.rect.x); x < Math.ceil(ink.rect.x + ink.rect.width); x += 1) {
-        if (ink.covers.some((r) => inside(r, x + 0.5, y + 0.5))) continue;
-        const [px, py] = [Math.round(x - box.x), Math.round(y - box.y)];
+    const [top, bottom] = [ink.rect.y * dpr, (ink.rect.y + ink.rect.height) * dpr];
+    const [left, right] = [ink.rect.x * dpr, (ink.rect.x + ink.rect.width) * dpr];
+    for (let y = Math.floor(top); y < Math.ceil(bottom); y += 1) {
+      for (let x = Math.floor(left); x < Math.ceil(right); x += 1) {
+        if (ink.covers.some((r) => inside(r, (x + 0.5) / dpr, (y + 0.5) / dpr))) continue;
+        const [px, py] = [Math.round(x - box.x * dpr), Math.round(y - box.y * dpr)];
         if (px < 0 || py < 0 || px >= width) continue;
         const pixel = pixels[py * width + px];
         if (pixel !== undefined) lowest = Math.min(lowest, ratio(fg, pixel));
@@ -192,6 +196,77 @@ async function pixelAt(page, x, y) {
 
 const barColour = async (page) =>
   rgbOf(await titleBar(page).evaluate((el) => getComputedStyle(el).backgroundColor));
+
+// The share of the middle 60% of a side that `hit` covers: a rounded ring bends away before a
+// side's ends, and a clipped or missing side covers none of its middle.
+const along = (length, hit) => {
+  const [from, to] = [Math.floor(length * 0.2), Math.ceil(length * 0.8)];
+  let covered = 0;
+  for (let t = from; t < to; t += 1) if (hit(t)) covered += 1;
+  return covered / (to - from);
+};
+const strip = (from) => Array.from({ length: 8 }, (_, k) => from + k);
+
+// E3's ring: how much of each side of a focused control the ring covers. Two pictures of the
+// control's box grown by 4px, focused and not; a ring pixel is one that changed and stands 3:1
+// off what was there before. A side counts the share of its length with such a pixel in the 8px
+// strip across that edge, so a ring clipped on one side, or missing, fails.
+async function ringCover(page, control) {
+  const box = await control.boundingBox();
+  const clip = { x: box.x - 4, y: box.y - 4, width: box.width + 8, height: box.height + 8 };
+  const focused = await pixelsOf(page, await page.screenshot({ clip }));
+  await control.evaluate((el) => {
+    el.blur();
+  });
+  await settle(page);
+  const rest = await pixelsOf(page, await page.screenshot({ clip }));
+  const { width, height } = focused;
+  const ring = (x, y) => {
+    const i = y * width + x;
+    return ratio(focused.pixels[i], rest.pixels[i]) >= 3;
+  };
+  const sides = {
+    top: along(width, (x) => strip(0).some((y) => ring(x, y))),
+    bottom: along(width, (x) => strip(height - 8).some((y) => ring(x, y))),
+    left: along(height, (y) => strip(0).some((x) => ring(x, y))),
+    right: along(height, (y) => strip(width - 8).some((x) => ring(x, y))),
+  };
+  return round(Math.min(...Object.values(sides)));
+}
+
+// Tab until `control` has the keyboard's focus.
+async function tabTo(page, control) {
+  await page.locator("body").focus();
+  for (let i = 0; i < 40; i += 1) {
+    await page.keyboard.press("Tab");
+    if (await control.evaluate((el) => el === document.activeElement)) return;
+  }
+}
+
+// E3 for the bar's focus stops: the sidebar toggle, the active tab, the next tab, the bell and
+// the account, each as the share of its ring's worst side.
+async function ringsOf(page) {
+  const bar = titleBar(page);
+  const out = {};
+  for (const [label, control] of [
+    ["toggle", bar.getByRole("button", { name: "Toggle sidebar" })],
+    ["active tab", bar.getByRole("tab", { selected: true })],
+    ["bell", bar.getByRole("button", { name: /^Notifications/ })],
+    ["account", bar.getByRole("button", { name: "Account" })],
+  ]) {
+    await tabTo(page, control);
+    await settle(page);
+    out[label] = await ringCover(page, control);
+    if (label === "active tab") {
+      await tabTo(page, control);
+      await page.keyboard.press("ArrowRight");
+      const next = bar.locator('[role="tab"]:focus');
+      await settle(page);
+      out["next tab"] = await ringCover(page, next);
+    }
+  }
+  return out;
+}
 
 export const polishChecks = {
   // Section 1: the solid bar.
@@ -266,6 +341,16 @@ export const polishChecks = {
         );
         await context.close();
       }
+    }
+    {
+      // At 2x the painting's own pixels reach the screen unaveraged.
+      const sharp = await openScenario(browser, { query: query("painting"), scale: 2 });
+      const report = await inkReport(sharp.page, titleBar(sharp.page));
+      ok &&= report.failures.length === 0;
+      notes.push(
+        `light 1440 at 2x: text ${report.text} icons ${report.icons} ${report.failures.join(", ")}`,
+      );
+      await sharp.context.close();
     }
     const long = await openScenario(browser, { scenario: "long", query: query("painting") });
     await tabs(long.page).last().scrollIntoViewIfNeeded();
@@ -380,24 +465,47 @@ export const polishChecks = {
     for (const theme of THEMES) {
       for (const variant of VARIANTS) {
         const { page, context } = await openScenario(browser, { theme, query: query(variant) });
+        // D1: every tab at rest and hovered, its label and its icons (the close shows on hover),
+        // here and in the long scenario's twelve, each scrolled into view.
         const labels = [];
-        for (let i = 0; i < (await tabs(page).count()); i += 1) {
-          labels.push((await inkReport(page, tabs(page).nth(i))).text);
-          await tabs(page).nth(i).hover();
-          await settle(page);
-          labels.push((await inkReport(page, tabs(page).nth(i))).text);
-          await page.mouse.move(700, 600);
-          await settle(page);
-        }
+        const misses = [];
+        const sweep = async (on) => {
+          for (let i = 0; i < (await tabs(on).count()); i += 1) {
+            const tab = tabs(on).nth(i);
+            const host = tab.locator("xpath=..");
+            await tab.scrollIntoViewIfNeeded();
+            await on.mouse.move(700, 600);
+            await settle(on);
+            for (const state of ["rest", "hover"]) {
+              if (state === "hover") {
+                await tab.hover();
+                await settle(on);
+              }
+              const report = await inkReport(on, host);
+              labels.push(report.text);
+              misses.push(...report.failures.map((f) => `tab ${i} ${state}: ${f}`));
+            }
+          }
+          await on.mouse.move(700, 600);
+          await settle(on);
+        };
+        await sweep(page);
+        const long = await openScenario(browser, {
+          scenario: "long",
+          theme,
+          query: query(variant),
+        });
+        await sweep(long.page);
+        await long.context.close();
         const active = tabs(page).and(page.getByRole("tab", { selected: true }));
         const fill = rgbOf(await active.evaluate((el) => getComputedStyle(el).backgroundColor));
         const d2 =
           variant === "solid"
             ? ratio(fill, await barColour(page))
             : ratio(fill, rgbOf(await tokenColour(page, "--chrome-painting")));
-        const d1 = min(labels) >= 4.5;
+        const d1 = misses.length === 0 && min(labels) >= 4.5;
         ok &&= d1 && d2 >= 3;
-        notes.push(`${theme} ${variant}: D1 ${min(labels)}; D2 ${round(d2)}`);
+        notes.push(`${theme} ${variant}: D1 ${min(labels)} ${misses.join(", ")}; D2 ${round(d2)}`);
         await context.close();
       }
     }
@@ -466,28 +574,8 @@ export const polishChecks = {
       const badgeFill = rgbOf(await badge.evaluate((el) => getComputedStyle(el).backgroundColor));
       const badgeText = rgbOf(await badge.evaluate((el) => getComputedStyle(el).color));
       const e2 = ratio(badgeFill, bar) >= 3 && ratio(badgeText, badgeFill) >= 4.5;
-      const rings = [];
-      for (const name of ["Toggle sidebar", /^Notifications/, "Account"]) {
-        const control = titleBar(page).getByRole("button", { name });
-        await page.locator("body").focus();
-        for (let i = 0; i < 40; i += 1) {
-          await page.keyboard.press("Tab");
-          if (await control.evaluate((el) => el === document.activeElement)) break;
-        }
-        const cbox = await control.boundingBox();
-        const png = await page.screenshot({
-          clip: { x: cbox.x - 4, y: cbox.y - 4, width: cbox.width + 8, height: cbox.height + 8 },
-        });
-        const { pixels, width } = await pixelsOf(page, png);
-        let best = 0;
-        for (const [i, pixel] of pixels.entries()) {
-          const [x, y] = [i % width, Math.floor(i / width)];
-          const band = x < 4 || y < 4 || x >= width - 4 || y >= cbox.height + 4;
-          if (band) best = Math.max(best, ratio(pixel, bar));
-        }
-        rings.push(round(best));
-      }
-      const e3 = rings.every((r) => r >= 3);
+      const rings = await ringsOf(page);
+      const e3 = Object.values(rings).every((r) => r >= 0.9);
       await page.keyboard.press("Escape");
       await titleBar(page)
         .getByRole("button", { name: /^Notifications/ })
@@ -537,7 +625,7 @@ export const polishChecks = {
       const e1 = right.failures.length === 0;
       ok &&= e1 && e2 && e3 && e4 && e5 && e6 && e7;
       notes.push(
-        `${theme}: E1 ${right.text}/${right.icons}; E2 ${round(ratio(badgeFill, bar))}/${round(ratio(badgeText, badgeFill))}; E3 ${rings.join("/")}; E4 ${menuBg} ${itemInk} ${e4}; E5 ${e5}; E6 ${round(ratio(pressedFill, bar))}; E7 ${e7}`,
+        `${theme}: E1 ${right.text}/${right.icons}; E2 ${round(ratio(badgeFill, bar))}/${round(ratio(badgeText, badgeFill))}; E3 ${JSON.stringify(rings)}; E4 ${menuBg} ${itemInk} ${e4}; E5 ${e5}; E6 ${round(ratio(pressedFill, bar))}; E7 ${e7}`,
       );
       await context.close();
     }
@@ -557,6 +645,9 @@ export const polishChecks = {
     }
     {
       const painted = await openScenario(browser, { query: query("painting") });
+      const paintedRings = await ringsOf(painted.page);
+      ok &&= Object.values(paintedRings).every((r) => r >= 0.9);
+      notes.push(`painting E3 ${JSON.stringify(paintedRings)}`);
       const right = await inkReport(
         painted.page,
         titleBar(painted.page).locator(":scope > div").last(),
@@ -672,6 +763,26 @@ export const polishChecks = {
       notes.push(
         `${theme}: G1 empty ${g1empty}; G3 empty ${g3empty}; G4 ${g4.join("/")}; G5 ${round(darkest)}; G6 ${cornerSame}`,
       );
+      // The brief's order, bottom to top: field, lit fill, drawing, words and button, Kay.
+      const order = await openSpace(page).evaluate((space) => {
+        const layer = space.querySelector('[data-slot="canvas-splash"]');
+        const kayImg = space.querySelector('[data-slot="kay-mascot"]');
+        const blank = space.querySelector("button");
+        return {
+          fill: getComputedStyle(space, "::before").zIndex,
+          drawing: getComputedStyle(layer).zIndex,
+          kayAfterButton:
+            blank.compareDocumentPosition(kayImg) === Node.DOCUMENT_POSITION_FOLLOWING,
+          kay: getComputedStyle(kayImg).zIndex,
+        };
+      });
+      const stacked =
+        Number(order.fill) < Number(order.drawing) &&
+        Number(order.drawing) < 0 &&
+        order.kayAfterButton &&
+        order.kay === "auto";
+      ok &&= stacked;
+      notes.push(`${theme}: order ${JSON.stringify(order)} ${stacked}`);
       if (theme === "light") await page.screenshot({ path: shotPath("G-empty-light") });
       await toLanes(page);
       const g1lanes = await splash(page).count();
@@ -933,6 +1044,21 @@ export const polishChecks = {
         (await sidebar(page).ariaSnapshot()) === base.lanes.sidebar,
         (await canvasIn(page).ariaSnapshot()) === base.lanes.canvas,
       );
+      for (const scenario of ["long", "loading"]) {
+        const opened = await openScenario(browser, { scenario, theme, ready: scenario === "long" });
+        await opened.page.locator('[data-slot="data-marker"]').waitFor();
+        await opened.page.waitForTimeout(1500);
+        const canvas =
+          (await canvasIn(opened.page).count()) > 0
+            ? await canvasIn(opened.page).ariaSnapshot()
+            : "";
+        k1.push(
+          (await titleBar(opened.page).ariaSnapshot()) === base[scenario].header,
+          (await sidebar(opened.page).ariaSnapshot()) === base[scenario].sidebar,
+          canvas === base[scenario].canvas,
+        );
+        await opened.context.close();
+      }
       ok &&= k1.every(Boolean) && k2.same;
       notes.push(
         `${theme}: K1 ${k1.join("/")}; K2 tab panel as baseline ${k2.same} (${k2.differ} px differ)`,
