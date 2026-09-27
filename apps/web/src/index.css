@@ -5,6 +5,14 @@
 @import "@yaklabs/ui/globals.css";
 @import "@yaklabs/catalog/tokens.css" layer(catalog);
 
+/* A loading row holds still under reduced motion. Outside every layer on purpose: shadcn's
+   skeleton pulses by a utility class, which a rule in the components layer cannot outrank. */
+@media (prefers-reduced-motion: reduce) {
+  [data-slot="skeleton"] {
+    animation: none;
+  }
+}
+
 /* The window's decorative traffic lights (ADR-094): a desktop window's own colours, the one
    place the app draws something that is not Kay's; the same in either theme, as the OS's are. */
 :root {
@@ -166,10 +174,6 @@
     pointer-events: none;
   }
   @media (prefers-reduced-motion: reduce) {
-    /* A loading row holds still: shadcn's skeleton pulses otherwise. */
-    [data-slot="skeleton"] {
-      animation: none;
-    }
     .drag-hint::before,
     .lane-shift,
     .lane :is(.thread-header, .card-heading)::before,
