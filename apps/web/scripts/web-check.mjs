@@ -682,6 +682,45 @@ try {
       withEllipsis.length === cutTitles.length,
     `${laneTitles.length} titles, ${inBar.length} in their bar, ${cutTitles.length} cut, ${withEllipsis.length} with an ellipsis`,
   );
+
+  // A lane's gap takes the focus, so it says how wide its lane is, as a window splitter does:
+  // a value inside its range that follows the lane when an arrow key resizes it.
+  const demo = await openScenario("/t/t-001?scenario=demo", "article .thread-panel");
+  const gaps = demo
+    .locator('[role="tabpanel"]:not([inert])')
+    .getByRole("region", { name: "Compose canvas" })
+    .getByRole("separator");
+  const readGaps = () =>
+    gaps.evaluateAll((els) =>
+      els.map((el) => {
+        const value = (name) => Number(el.getAttribute(`aria-${name}`));
+        const width = Math.round(el.previousElementSibling.getBoundingClientRect().width);
+        return {
+          now: value("valuenow"),
+          width,
+          ok:
+            el.hasAttribute("aria-valuenow") &&
+            value("valuenow") === width &&
+            value("valuemin") <= width &&
+            width <= value("valuemax") &&
+            el.getAttribute("aria-valuetext") === `${width} pixels wide`,
+        };
+      }),
+    );
+  const gapsAtRest = await readGaps();
+  await gaps.first().focus();
+  await demo.keyboard.press("ArrowRight");
+  await demo.waitForTimeout(300);
+  const gapsResized = await readGaps();
+  await demo.close();
+  record(
+    "a lane's gap says the lane's width in pixels, within its range, and follows an arrow key",
+    gapsAtRest.length > 0 &&
+      gapsAtRest.every((gap) => gap.ok) &&
+      gapsResized.every((gap) => gap.ok) &&
+      gapsResized[0].now === gapsAtRest[0].width + 24,
+    `${gapsAtRest.map((gap) => `${gap.now}/${gap.width}`).join(" ")} → ${gapsResized.map((gap) => `${gap.now}/${gap.width}`).join(" ")}`,
+  );
 } catch (error) {
   record("run", false, String(error));
   await shot("failure");
