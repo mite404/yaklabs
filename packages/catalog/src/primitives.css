@@ -90,9 +90,11 @@
   }
 }
 
-/* Disclosure: a header that folds the body below it. */
+/* Disclosure: a header that folds the body below it. Inset 4px from the host's edges, so the
+   hover fill never runs flush with a card's own edge. */
 .disclosure-header {
-  width: 100%;
+  width: calc(100% - 8px);
+  margin: 0 4px;
   display: flex;
   align-items: center;
   gap: 10px;

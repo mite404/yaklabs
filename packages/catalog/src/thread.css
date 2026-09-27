@@ -403,11 +403,8 @@
   padding-bottom: 4px;
 }
 /* The fold (Disclosure) spans the card, so its line is flush with the card's edges; the
-   header sits 4px in, so its 8px padding puts the label on the same 12px inset as the body. */
-.awaiting .disclosure-header {
-  width: calc(100% - 8px);
-  margin: 0 4px;
-}
+   header's own 4px inset plus its 8px padding puts the label on the same 12px inset as
+   the body below. */
 .awaiting .disclosure-body {
   padding: 0 12px;
 }
