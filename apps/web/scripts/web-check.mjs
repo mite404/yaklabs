@@ -91,6 +91,15 @@ async function onOwnPage(step, address, options, measure) {
 // The open threads, by the tablist the title bar names.
 const tabsOf = (own) => own.getByRole("tablist", { name: "Open threads" }).getByRole("tab");
 
+// The element with focus, as a screen reader would name it: its role, then its name.
+const focusOn = (own) =>
+  own.evaluate(() => {
+    const at = document.activeElement;
+    if (at === null || at === document.body) return "body";
+    const role = at.getAttribute("role") ?? at.tagName.toLowerCase();
+    return `${role} ${at.getAttribute("aria-label") ?? at.textContent.trim()}`;
+  });
+
 try {
   await page.goto(`${BASE}/`, { waitUntil: "load" });
   const title = page.getByRole("heading", { name: "Last week's profit by day" });
@@ -673,6 +682,28 @@ try {
       return {
         ok: strays === 0 && shown === "1" && left.join() === "Service desk weekly review",
         detail: `${strays} buttons in the tablist; close shown on hover ${shown}; tabs left ${left.join(", ")}`,
+      };
+    },
+  );
+
+  await onOwnPage(
+    "closing a focused tab by key hands focus to the tab that takes its place, then to New thread",
+    "/t/t-005?scenario=demo",
+    {},
+    async (own) => {
+      await tabsOf(own).first().waitFor({ timeout: 15_000 });
+      await tabsOf(own).filter({ hasText: "Service desk weekly review" }).focus();
+      await own.keyboard.press("Delete");
+      await own.waitForURL(/\/t\/t-001/);
+      const next = await focusOn(own);
+      if (next.startsWith("tab ")) {
+        await own.keyboard.press("Delete");
+        await own.getByText("Nothing open").waitFor();
+      }
+      const none = await focusOn(own);
+      return {
+        ok: next === "tab Last week's sales" && none === "button New thread",
+        detail: `focus after closing the selected tab: ${next}; after closing the last: ${none}`,
       };
     },
   );
