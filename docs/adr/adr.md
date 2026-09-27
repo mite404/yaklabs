@@ -1313,5 +1313,5 @@ screen reader. The Layout group moves behind one button named "Layout", which op
 group, so its names do not change. The active tab's floor becomes the strip's width less the "+",
 so the thread on screen shows whole, and the other tabs scroll.
 Measured on four prototypes at 390px: keeping the Layout group inline left 17px to 37px of the
-active title however tight the rest was; a trigger leaves the whole tab and about 84px of title.
+active title however tight the rest was; a trigger leaves the whole tab and 82px of title.
 From 768px up nothing changes, and P13 in the workspace lever holds 390, 520 and 767 to it.

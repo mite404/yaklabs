@@ -1427,7 +1427,7 @@ const list = bar.querySelector('[role="tablist"]').getBoundingClientRect();
 const title = bar.querySelector('[role="tab"][aria-selected="true"] .truncate');
 const shown = title.getBoundingClientRect();
 return Math.round(Math.min(shown.right, list.right) - Math.max(shown.x, list.x));
-// → 17px with the Layout group inline, 37px with an icon marker, about 84px behind a trigger
+// → 17px with the Layout group inline, 37px with an icon marker, 82px behind a trigger
 ```
 
 ```mermaid
@@ -1440,7 +1440,7 @@ flowchart LR
   P3 --> M
   M -->|17px| X1[Rejected]
   M -->|37px| X2[Rejected]
-  M -->|about 84px| K[Kept, then held by P13]
+  M -->|82px| K[Kept, then held by P13]
 ```
 
 The film version: when two camera positions compete, you do not debate them in the production
