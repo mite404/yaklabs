@@ -676,6 +676,22 @@ try {
     `held notice ${heldShown}; ${reopened.join(", ")}`,
   );
   await tabs.close();
+
+  // The lab's brand link keeps the scenario the lab was opened on, as every link the app builds
+  // does, so a mock visit never drifts onto the device's threads (ADR-096).
+  const mock = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  await mock.goto(`${BASE}/lab?scenario=demo`, { waitUntil: "load" });
+  await mock.getByText("Useful answers.").waitFor({ timeout: 10_000 });
+  await mock.getByRole("link", { name: /Fieldnotes/ }).click();
+  await mock.locator('[data-thread="main"]').first().waitFor({ timeout: 20_000 });
+  const landed = new URL(mock.url());
+  const mockMarker = (await mock.locator('[data-slot="data-marker"]').innerText()).trim();
+  record(
+    "the lab's brand link keeps the scenario, so a mock visit stays on mock data",
+    landed.searchParams.get("scenario") === "demo" && mockMarker === "Mock: demo",
+    `${landed.pathname}${landed.search} · ${mockMarker}`,
+  );
+  await mock.close();
 } catch (error) {
   record("run", false, String(error));
   await shot("failure");
