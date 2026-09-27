@@ -10,10 +10,8 @@ import type { Shell } from "./model";
 import { closeTab, viewOf } from "./state";
 
 // A tab's box. A tablist may own only tabs, so each close button sits in a layer over the
-// tablist, in a slot with this same box in the same row: it lines up with its tab unmeasured. On a
-// phone the active one is as wide as the strip less the "+" (ADR-116).
-const TAB_BOX =
-  "w-[220px] min-w-28 shrink data-active:min-w-40 max-md:data-active:min-w-[min(calc(100cqw-32px),10rem)]";
+// tablist, in a slot with this same box in the same row: it lines up with its tab unmeasured.
+const TAB_BOX = "w-[220px] min-w-28 shrink data-active:min-w-40";
 
 // Marks a tab hovered while the pointer is on it or on its close button. The two sit in
 // different layers, so neither :hover nor a Tailwind group can pair them.
@@ -50,20 +48,11 @@ function useHover(): Hover {
   };
 }
 
-// Scrolls the active tab into view whenever it changes, and whenever the strip's width changes
-// under it (a phone rotating, a window resizing), which moves no id.
-function useInView(active: ThreadId | null, strip: RefObject<HTMLDivElement | null>): void {
+// Scrolls the active tab into view whenever it changes.
+function useInView(active: ThreadId | null): void {
   useEffect(() => {
-    const show = () => {
-      if (active !== null) tabOf(active)?.scrollIntoView({ block: "nearest", inline: "nearest" });
-    };
-    show();
-    const observer = new ResizeObserver(show);
-    if (strip.current !== null) observer.observe(strip.current);
-    return () => {
-      observer.disconnect();
-    };
-  }, [active, strip]);
+    if (active !== null) tabOf(active)?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [active]);
 }
 
 // Closes a tab from one of its own controls. If that control held focus, focus moves to the tab
@@ -164,10 +153,9 @@ export function TabStrip({ shell, starting }: { shell: Shell | null; starting: b
   const active = shell?.active?.main ?? null;
   const hover = useHover();
   const plus = useRef<HTMLButtonElement>(null);
-  const strip = useRef<HTMLDivElement>(null);
-  useInView(active, strip);
+  useInView(active);
   return (
-    <div ref={strip} className="@container flex min-w-0 flex-1 items-center gap-1">
+    <div className="flex min-w-0 flex-1 items-center gap-1 max-md:hidden">
       <Tabs
         value={active}
         onValueChange={(value) => {

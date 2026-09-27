@@ -107,13 +107,6 @@
     animation: tab-fade linear both;
     animation-timeline: scroll(self inline);
   }
-  /* On a phone the active tab can be as wide as the scroller (ADR-116), which leaves no room for
-     the fade's padding: kept, it scrolls the tab 32px short of whole. */
-  @media (width < 48rem) {
-    .tab-scroller {
-      scroll-padding-inline: 0px;
-    }
-  }
   @keyframes tab-fade {
     from {
       --fade-start: 0px;
