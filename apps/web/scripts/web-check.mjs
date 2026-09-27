@@ -799,6 +799,32 @@ try {
       return { ok: sheets === 0, detail: `${sheets} sheet open after choosing a thread` };
     },
   );
+
+  await onOwnPage(
+    "the collapsed rail's icons sit centred in their squares",
+    "/t/t-005?scenario=demo",
+    { viewport: { width: 1024, height: 768 } },
+    async (own) => {
+      await tabsOf(own).first().waitFor({ timeout: 15_000 });
+      const offsets = await own.locator('[data-slot="sidebar"]').evaluate((side) =>
+        ["Kay", "Documentation", "Lab"].map((name) => {
+          const link = [...side.querySelectorAll("a")].find(
+            (a) => (a.getAttribute("aria-label") ?? a.textContent.trim()) === name,
+          );
+          const square = link.getBoundingClientRect();
+          const glyph = link.querySelector("svg").getBoundingClientRect();
+          return [
+            glyph.left + glyph.width / 2 - (square.left + square.width / 2),
+            glyph.top + glyph.height / 2 - (square.top + square.height / 2),
+          ];
+        }),
+      );
+      return {
+        ok: offsets.flat().every((offset) => Math.abs(offset) < 0.5),
+        detail: `icon centre minus square centre (x, y): ${offsets.map((pair) => pair.join(", ")).join("; ")}`,
+      };
+    },
+  );
 } catch (error) {
   record("run", false, String(error));
   await shot("failure");

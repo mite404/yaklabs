@@ -21,9 +21,10 @@ const KAY_MARK_POINTS =
 const DOCS_URL = "https://docs.meetkay.ai";
 
 // A rail button as today's rail drew them: 40px in the collapsed rail, the label beside it
-// open, the glyph soft until the pointer is on it or its place is open.
+// open, the glyph soft until the pointer is on it or its place is open. Collapsed, 10px of
+// padding centres the 20px glyph in its square, where shadcn's 8px suits a 16px one.
 const RAIL_BUTTON =
-  "h-10 gap-3 px-3 text-sm text-soft-ink hover:text-ink data-active:text-ink group-data-[collapsible=icon]:size-10! [&_svg]:size-5";
+  "h-10 gap-3 px-3 text-sm text-soft-ink hover:text-ink data-active:text-ink group-data-[collapsible=icon]:size-10! group-data-[collapsible=icon]:p-2.5! [&_svg]:size-5";
 
 // Kay's mark, one polygon in the text colour; decorative, since its link carries the name.
 function KayMark({ className }: { className?: string }) {
