@@ -882,6 +882,28 @@ try {
       };
     },
   );
+
+  await onOwnPage(
+    "a project name with an unbroken word wraps inside its tooltip",
+    "/t/t-001?scenario=long",
+    {},
+    async (own) => {
+      const row = own
+        .locator('[data-slot="sidebar"] button[aria-expanded]')
+        .filter({ hasText: "Supplierinvoice" })
+        .first();
+      await row.waitFor({ timeout: 15_000 });
+      await row.scrollIntoViewIfNeeded();
+      await row.hover();
+      const tip = own
+        .locator('[data-slot="tooltip-content"]')
+        .filter({ hasText: "Supplierinvoice" });
+      await tip.waitFor({ timeout: 3000 });
+      const fit = await tip.evaluate((el) => ({ client: el.clientWidth, scroll: el.scrollWidth }));
+      await own.screenshot({ path: path.join(OUT, "tooltip-unbroken.png") });
+      return { ok: fit.scroll <= fit.client, detail: JSON.stringify(fit) };
+    },
+  );
 } catch (error) {
   record("run", false, String(error));
   await shot("failure");

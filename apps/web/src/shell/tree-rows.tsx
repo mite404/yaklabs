@@ -38,7 +38,7 @@ function Named({ name, row }: { name: string; row: ReactElement }) {
       }}
     >
       <TooltipTrigger render={row} />
-      <TooltipContent side="right" className="max-w-80">
+      <TooltipContent side="right" className="max-w-80 wrap-anywhere">
         {name}
       </TooltipContent>
     </Tooltip>
