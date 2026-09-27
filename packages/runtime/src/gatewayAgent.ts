@@ -56,7 +56,8 @@ export function createGatewayAgent(options: GatewayAgentOptions): Agent {
     async *respond(event, signal) {
       const conversation = await store.open(conversationId); // → Conversation | undefined
       if (conversation === undefined) throw new Error(`No conversation ${conversationId}`);
-      const request = toModelRequest(historyBefore(conversation, event), event); // → GatewayRequest
+      const { messages } = historyBefore(conversation, event); // → ThreadMessage[]
+      const request = toModelRequest(messages, event); // → GatewayRequest
       try {
         // Typed as a plain Response: the reply is a stream, not the route's JSON.
         const response: Response = await client.api.messages.$post(

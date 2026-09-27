@@ -1,17 +1,11 @@
 import type { AgentEvent } from "@yaklabs/catalog/agent";
-import { profitCard } from "@yaklabs/catalog/thread";
+import { profitCard, type ThreadMessage } from "@yaklabs/catalog/thread";
 import { gatewayRequestSchema } from "gateway/contract";
 import { describe, expect, it } from "vitest";
 import { toModelRequest } from "./modelRequest";
-import type { Conversation } from "./protocol";
 import { netProfitChoice, profitThread } from "./testing";
 
-const demo: Conversation = {
-  id: "demo",
-  title: profitThread.title,
-  updatedAt: "2026-09-26T10:02:00.000Z",
-  messages: profitThread.messages,
-};
+const demo: ThreadMessage[] = profitThread.messages;
 
 // The user stepped the card to net profit, then asked about it.
 const ask: AgentEvent = {
@@ -21,14 +15,12 @@ const ask: AgentEvent = {
 };
 
 // A long thread of alternating turns: u1, a1, u2, a2, …
-const longThread = (turns: number): Conversation => ({
-  ...demo,
-  messages: Array.from({ length: turns }, (_, i) =>
+const longThread = (turns: number): ThreadMessage[] =>
+  Array.from({ length: turns }, (_, i) =>
     i % 2 === 0
       ? { id: `u${i}`, role: "user", text: `Question ${i}`, time: "9:00" }
       : { id: `a${i}`, role: "agent", text: `Answer ${i}`, time: "9:00" },
-  ),
-});
+  );
 
 describe("toModelRequest shows the model the card", () => {
   it("puts the card view the user set in the final user turn", () => {
@@ -77,20 +69,17 @@ describe("toModelRequest speaks the gateway's language", () => {
 
 describe("toModelRequest carries what rode along", () => {
   it("names the card choices and files an earlier user turn carried", () => {
-    const earlier: Conversation = {
+    const earlier: ThreadMessage[] = [
       ...demo,
-      messages: [
-        ...demo.messages,
-        {
-          id: "u2",
-          role: "user",
-          text: "And this?",
-          time: "10:03",
-          attachments: [netProfitChoice],
-          files: [{ id: "u2-f1", label: "till-roll.png" }],
-        },
-      ],
-    };
+      {
+        id: "u2",
+        role: "user",
+        text: "And this?",
+        time: "10:03",
+        attachments: [netProfitChoice],
+        files: [{ id: "u2-f1", label: "till-roll.png" }],
+      },
+    ];
     const { messages } = toModelRequest(earlier, { kind: "answer", text: "Yes" });
     expect(messages.at(-2)?.content).toBe(
       "And this?\n[Card view: Net profit · Sep 14–20]\n[Attached file: till-roll.png]",
