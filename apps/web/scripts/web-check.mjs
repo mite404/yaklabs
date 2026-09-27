@@ -421,11 +421,35 @@ try {
     labelsAfter.map((label) => label.slice(0, 12)).join(" → "),
   );
 
+  const threadLanes = canvas.locator("article").filter({ has: page.locator(".thread-header") });
+  await threadLanes.first().scrollIntoViewIfNeeded();
+  const firstBar = await threadLanes.first().locator(".thread-header").boundingBox();
+  // The bar's far end, past any title however long.
+  const firstGrip = { x: firstBar.x + firstBar.width - 12, y: firstBar.y + firstBar.height / 2 };
+  await page.mouse.move(firstGrip.x, firstGrip.y);
+  await page.mouse.down();
+  await page.mouse.move(firstGrip.x - 200, firstGrip.y + 30, { steps: 8 });
+  await page.waitForTimeout(250);
+  const liftedBeforeEscape = await page.locator("[data-lifted]").count();
+  await page.keyboard.press("Escape");
+  await page.waitForTimeout(100);
+  const heldAfterEscape = await page.locator("[data-ghost], [data-lifted]").count();
+  await page.mouse.up();
+  await page.waitForTimeout(250);
+  const labelsEscaped = await canvas
+    .locator("article")
+    .evaluateAll((els) => els.map((el) => el.getAttribute("aria-label")));
+  record(
+    "Escape puts a lifted lane back while the button is still down, and letting go moves nothing",
+    liftedBeforeEscape === 1 &&
+      heldAfterEscape === 0 &&
+      labelsEscaped.join("|") === labelsAfter.join("|"),
+    `lifted ${liftedBeforeEscape}, still up after Escape ${heldAfterEscape}; ${labelsEscaped.map((label) => label.slice(0, 12)).join(" → ")}`,
+  );
+
   // A card's header inside a thread lane arms a carry, which claims its press with
   // preventDefault and lets it travel on. A stand-in header that claims its press the same way
   // shows whether the lane leaves a claimed press alone, as it must for the card to go alone.
-  const threadLanes = canvas.locator("article").filter({ has: page.locator(".thread-header") });
-  await threadLanes.first().scrollIntoViewIfNeeded();
   const claimed = threadLanes.first().locator(".thread-panel");
   await claimed.evaluate((panel) => {
     const standIn = document.createElement("header");
