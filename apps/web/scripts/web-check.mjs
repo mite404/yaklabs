@@ -1058,7 +1058,11 @@ try {
 
   // Start a thread leaves with the notice it sits in, and hands the focus to the thread it
   // starts rather than dropping it to the page: on the thread's compose box once it opens.
-  const home = await openScenario("/?scenario=empty", 'button:text-is("Start a thread")', "main");
+  const home = await openScenario(
+    "/?scenario=empty",
+    'button:text-is("Start a thread")',
+    '[role="main"]',
+  );
   await home.getByRole("button", { name: "Start a thread" }).focus();
   await home.keyboard.press("Enter");
   await home.locator('[role="tabpanel"]:not([inert]) .compose-box textarea').waitFor();
