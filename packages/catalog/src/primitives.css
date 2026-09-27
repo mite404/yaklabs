@@ -194,10 +194,15 @@ html[data-carrying] * {
   pointer-events: none;
   will-change: transform;
 }
-.carry-ghost > * {
+.carry-ghost [data-carry-picture] {
   width: var(--carry-width, auto);
   margin: 0;
   box-shadow: 0 18px 48px var(--shadow-strong);
+}
+/* A clone starts its animations over, so a value that flashed in once would flash again on the
+   picture: the picture holds still, as the card stands. */
+.carry-ghost * {
+  animation: none !important;
 }
 /* A highlight in flight: one line of it, cut short with an ellipsis. */
 .carry-quote {

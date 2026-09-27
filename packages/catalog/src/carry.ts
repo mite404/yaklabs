@@ -231,21 +231,42 @@ function offsetOf({ lift, picture }: CarrySource, from: CarryPoint): CarryPoint 
   return { x: box.left - from.x, y: box.top - from.y };
 }
 
-function frame(picture: Node): HTMLElement {
+// An empty copy of each of `lift`'s ancestors below the body, around its clone. Laid out as if
+// absent (`display: contents`), they still match the selectors and hand down the inherited
+// styles that shaped `lift` at home, such as the thread's type size and line height, so the
+// clone looks like the element it pictures.
+function atHome(lift: HTMLElement, clone: HTMLElement): HTMLElement {
+  let wrapped = clone;
+  for (let home = lift.parentElement; home && home !== document.body; home = home.parentElement) {
+    const shell = document.createElement(home.localName);
+    for (const { name, value } of home.attributes)
+      if (name !== "id") shell.setAttribute(name, value);
+    shell.style.display = "contents";
+    shell.append(wrapped);
+    wrapped = shell;
+  }
+  return wrapped;
+}
+
+// What rides the pointer: the picture, marked for the stylesheet, and whatever surrounds it.
+function frame(picture: HTMLElement, around: HTMLElement = picture): HTMLElement {
+  picture.dataset.carryPicture = "";
   const element = document.createElement("div");
   element.className = "carry-ghost";
   element.setAttribute("aria-hidden", "true");
   element.inert = true;
-  element.append(picture);
+  element.append(around);
   return element;
 }
 
 // The picture that rides the pointer: a picture of its own, or a clone of the lifted element
-// at its size.
+// at its size, drawn as it is at home.
 function ghostOf({ lift, picture }: CarrySource): HTMLElement | null {
   if (picture) return frame(picture());
   if (!lift) return null;
-  const ghost = frame(lift.cloneNode(true));
+  const clone = lift.cloneNode(true);
+  if (!(clone instanceof HTMLElement)) return null;
+  const ghost = frame(clone, atHome(lift, clone));
   const { style } = ghost;
   style.setProperty("--carry-width", `${lift.getBoundingClientRect().width}px`);
   const container = containerOf(lift);
