@@ -1,4 +1,5 @@
 import { latestMain, type ThreadId, type Workspace } from "@yaklabs/runtime";
+import { Button } from "@yaklabs/ui/components/button";
 import {
   ResizableHandle,
   ResizablePanel,
@@ -7,7 +8,7 @@ import {
 import { trackHintLine } from "../components/divider";
 import { MainCanvas } from "../components/main-canvas";
 import { ThreadPane } from "../components/thread-pane";
-import { useRuntimeState } from "../runtime";
+import { useRestart, useRuntimeState } from "../runtime";
 
 export function meta() {
   return [{ title: "Kay" }];
@@ -44,6 +45,7 @@ function MainAndCanvas({ main, workspace }: { main: ThreadId; workspace: Workspa
 /** The latest main thread and, beside it, its compose canvas (ADR-089, ADR-092). */
 export default function ThreadPage() {
   const state = useRuntimeState();
+  const restart = useRestart();
   if (state.kind === "starting") {
     return <p className="p-4 text-soft-ink">Opening your threads…</p>;
   }
@@ -52,6 +54,11 @@ export default function ThreadPage() {
       <div className="p-4">
         <p className="text-ink">Your threads could not be opened.</p>
         <p className="text-sm text-soft-ink">{state.reason}</p>
+        {restart && (
+          <Button variant="outline" size="sm" onClick={restart}>
+            Try again
+          </Button>
+        )}
       </div>
     );
   }
