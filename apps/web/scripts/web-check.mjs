@@ -114,6 +114,37 @@ async function openScenario(address, ready, within = '[role="tabpanel"]:not([ine
   return view;
 }
 
+// A step on a page of its own at `address`, a mock scenario, so no device data is touched. A
+// throw fails that step alone, and the steps after it still run.
+async function onOwnPage(step, address, options, measure) {
+  const own = await browser.newPage({ viewport: { width: 1280, height: 900 }, ...options });
+  own.on("console", (message) => {
+    if (message.type() === "error") errors.push(message.text());
+  });
+  own.on("pageerror", (error) => errors.push(String(error)));
+  try {
+    await own.goto(`${BASE}${address}`, { waitUntil: "load" });
+    const { ok, detail } = await measure(own);
+    record(step, ok, detail);
+  } catch (error) {
+    record(step, false, String(error).split("\n")[0]);
+  } finally {
+    await own.close();
+  }
+}
+
+// The open threads, by the tablist the title bar names.
+const tabsOf = (own) => own.getByRole("tablist", { name: "Open threads" }).getByRole("tab");
+
+// The element with focus, as a screen reader would name it: its role, then its name.
+const focusOn = (own) =>
+  own.evaluate(() => {
+    const at = document.activeElement;
+    if (at === null || at === document.body) return "body";
+    const role = at.getAttribute("role") ?? at.tagName.toLowerCase();
+    return `${role} ${at.getAttribute("aria-label") ?? at.textContent.trim()}`;
+  });
+
 try {
   await page.goto(`${BASE}/`, { waitUntil: "load" });
   const title = page.getByRole("heading", { name: "Last week's profit by day" });
@@ -961,12 +992,14 @@ try {
       .evaluateAll((els) => els.map((el) => el.getAttribute("aria-label")));
   const lanesBefore = await failedLanes();
   const failedBar = failedCanvas.locator("article .thread-header").last();
-  const bar = (await failedBar.count()) === 0 ? null : await failedBar.boundingBox();
-  if (bar !== null) {
-    await fails.mouse.move(bar.x + bar.width - 16, bar.y + bar.height / 2);
+  const failedBox = (await failedBar.count()) === 0 ? null : await failedBar.boundingBox();
+  if (failedBox !== null) {
+    await fails.mouse.move(failedBox.x + failedBox.width - 16, failedBox.y + failedBox.height / 2);
     await fails.mouse.down();
-    await fails.mouse.move(bar.x + bar.width - 40, bar.y + bar.height / 2, { steps: 4 });
-    await fails.mouse.move(bar.x - 400, bar.y + bar.height / 2, { steps: 12 });
+    await fails.mouse.move(failedBox.x + failedBox.width - 40, failedBox.y + failedBox.height / 2, {
+      steps: 4,
+    });
+    await fails.mouse.move(failedBox.x - 400, failedBox.y + failedBox.height / 2, { steps: 12 });
     await fails.mouse.up();
     await fails.waitForTimeout(400);
   }
@@ -1093,6 +1126,449 @@ try {
     "a carry's ring over the canvas follows the window's rounded corner",
     fromOlive.edge <= 8 && Math.min(...fromOlive.diagonal) <= 40,
     `edge ${fromOlive.edge} from the olive; the corner's diagonal ${fromOlive.diagonal.join(" ")}`,
+  );
+
+  await onOwnPage(
+    "the tab strip holds only tabs, and a tab's close button still closes it",
+    "/t/t-005?scenario=demo",
+    {},
+    async (own) => {
+      const strip = own.getByRole("tablist", { name: "Open threads" });
+      await tabsOf(own).first().waitFor({ timeout: 15_000 });
+      const strays = await strip.getByRole("button").count();
+      await strip.getByRole("tab", { name: "Last week's sales" }).hover();
+      await own.waitForTimeout(100);
+      const closer = own.getByRole("button", { name: "Close Last week's sales" });
+      const shown = await closer.evaluate((el) => getComputedStyle(el).opacity);
+      await closer.click();
+      await own.waitForTimeout(300);
+      const left = await tabsOf(own).allInnerTexts();
+      return {
+        ok: strays === 0 && shown === "1" && left.join() === "Service desk weekly review",
+        detail: `${strays} buttons in the tablist; close shown on hover ${shown}; tabs left ${left.join(", ")}`,
+      };
+    },
+  );
+
+  await onOwnPage(
+    "closing a focused tab by key hands focus to the tab that takes its place, then to New thread",
+    "/t/t-005?scenario=demo",
+    {},
+    async (own) => {
+      await tabsOf(own).first().waitFor({ timeout: 15_000 });
+      await tabsOf(own).filter({ hasText: "Service desk weekly review" }).focus();
+      await own.keyboard.press("Delete");
+      await own.waitForURL(/\/t\/t-001/);
+      const next = await focusOn(own);
+      if (next.startsWith("tab ")) {
+        await own.keyboard.press("Delete");
+        await own.getByText("Nothing open").waitFor();
+      }
+      const none = await focusOn(own);
+      return {
+        ok: next === "tab Last week's sales" && none === "button New thread",
+        detail: `focus after closing the selected tab: ${next}; after closing the last: ${none}`,
+      };
+    },
+  );
+
+  await onOwnPage(
+    "at phone width every tab, New thread and Account stay on screen, and New thread takes a tap",
+    "/t/t-005?scenario=demo",
+    { viewport: { width: 390, height: 844 } },
+    async (own) => {
+      await tabsOf(own).first().waitFor({ timeout: 15_000 });
+      const look = await own.evaluate(() => {
+        const bar = document.querySelector('header[data-slot="title-bar"]');
+        // On screen, and a tap at its centre lands on it: nothing clips or covers it.
+        const [plus, account, ...tabs] = [
+          bar.querySelector('[aria-label="New thread"]'),
+          bar.querySelector('[aria-label="Account"]'),
+          ...bar.querySelectorAll('[role="tab"]'),
+        ].map((el) => {
+          const rect = el.getBoundingClientRect();
+          const hit = document.elementFromPoint(
+            rect.left + rect.width / 2,
+            rect.top + rect.height / 2,
+          );
+          return rect.width > 0 && rect.left >= 0 && rect.right <= innerWidth && el.contains(hit);
+        });
+        return { tabs, plus, account, spill: bar.scrollWidth - bar.clientWidth };
+      });
+      await own.screenshot({ path: path.join(OUT, "title-bar-phone.png") });
+      return {
+        ok:
+          look.tabs.length === 2 &&
+          look.tabs.every(Boolean) &&
+          look.plus &&
+          look.account &&
+          look.spill <= 0,
+        detail: JSON.stringify(look),
+      };
+    },
+  );
+
+  await onOwnPage(
+    "the sidebar is a navigation landmark holding the rail and the projects",
+    "/t/t-005?scenario=demo",
+    {},
+    async (own) => {
+      await tabsOf(own).first().waitFor({ timeout: 15_000 });
+      const nav = own.getByRole("navigation", { name: "Sidebar" });
+      const held = {
+        kay: await nav.getByRole("link", { name: "Kay", exact: true }).count(),
+        lab: await nav.getByRole("link", { name: "Lab", exact: true }).count(),
+        project: await nav.getByRole("button", { name: "Demo store", exact: true }).count(),
+      };
+      return { ok: Object.values(held).every((n) => n === 1), detail: JSON.stringify(held) };
+    },
+  );
+
+  await onOwnPage(
+    "Toggle sidebar says whether the sidebar is expanded, and names what it controls",
+    "/t/t-005?scenario=demo",
+    {},
+    async (own) => {
+      await tabsOf(own).first().waitFor({ timeout: 15_000 });
+      const toggle = own.getByRole("button", { name: "Toggle sidebar" });
+      const state = () =>
+        toggle.evaluate((el) => ({
+          expanded: el.getAttribute("aria-expanded"),
+          controls:
+            document.getElementById(el.getAttribute("aria-controls"))?.getAttribute("aria-label") ??
+            null,
+        }));
+      const before = await state();
+      await toggle.click();
+      const after = await state();
+      return {
+        ok:
+          before.expanded === "true" && after.expanded === "false" && before.controls === "Sidebar",
+        detail: `before ${JSON.stringify(before)}, after ${JSON.stringify(after)}`,
+      };
+    },
+  );
+
+  await onOwnPage(
+    "on a phone, choosing a thread in the sidebar sheet closes the sheet",
+    "/t/t-005?scenario=demo",
+    { viewport: { width: 390, height: 844 } },
+    async (own) => {
+      await tabsOf(own).first().waitFor({ timeout: 15_000 });
+      await own.getByRole("button", { name: "Toggle sidebar" }).click();
+      await own.getByRole("dialog").getByRole("link", { name: "Last week's sales" }).click();
+      await own.waitForURL(/\/t\/t-001/);
+      await own.waitForTimeout(600);
+      const sheets = await own.getByRole("dialog").count();
+      return { ok: sheets === 0, detail: `${sheets} sheet open after choosing a thread` };
+    },
+  );
+
+  await onOwnPage(
+    "the collapsed rail's icons sit centred in their squares",
+    "/t/t-005?scenario=demo",
+    { viewport: { width: 1024, height: 768 } },
+    async (own) => {
+      await tabsOf(own).first().waitFor({ timeout: 15_000 });
+      const offsets = await own.locator('[data-slot="sidebar"]').evaluate((side) =>
+        ["Kay", "Documentation", "Lab"].map((name) => {
+          const link = [...side.querySelectorAll("a")].find(
+            (a) => (a.getAttribute("aria-label") ?? a.textContent.trim()) === name,
+          );
+          const square = link.getBoundingClientRect();
+          const glyph = link.querySelector("svg").getBoundingClientRect();
+          return [
+            glyph.left + glyph.width / 2 - (square.left + square.width / 2),
+            glyph.top + glyph.height / 2 - (square.top + square.height / 2),
+          ];
+        }),
+      );
+      return {
+        ok: offsets.flat().every((offset) => Math.abs(offset) < 0.5),
+        detail: `icon centre minus square centre (x, y): ${offsets.map((pair) => pair.join(", ")).join("; ")}`,
+      };
+    },
+  );
+
+  await onOwnPage(
+    "Toggle sidebar looks the same at rest whether the sidebar is open or not",
+    "/t/t-005?scenario=demo",
+    {},
+    async (own) => {
+      await tabsOf(own).first().waitFor({ timeout: 15_000 });
+      const toggle = own.getByRole("button", { name: "Toggle sidebar" });
+      const look = async () => {
+        await own.mouse.move(900, 600);
+        await own.waitForTimeout(250);
+        return toggle.evaluate((el) => {
+          const style = getComputedStyle(el);
+          return `${style.backgroundColor} ${style.color}`;
+        });
+      };
+      const expanded = await look();
+      await toggle.click();
+      const collapsed = await look();
+      return {
+        ok: expanded === collapsed,
+        detail: `expanded ${expanded}; collapsed ${collapsed}`,
+      };
+    },
+  );
+
+  await onOwnPage(
+    "a cut sidebar row shows its whole name on the first hover and on keyboard focus",
+    "/t/t-001?scenario=long",
+    {},
+    async (own) => {
+      const rows = own.locator('[data-slot="sidebar"] [data-thread="main"]');
+      await rows.first().waitFor({ timeout: 15_000 });
+      const tips = own.locator('[data-slot="tooltip-content"]');
+      const cut = await rows.evaluateAll((els) =>
+        els.slice(0, 2).map((el) => {
+          const label = el.querySelector("[data-label]");
+          return label.scrollWidth > label.clientWidth;
+        }),
+      );
+      const [first, second] = [await rows.nth(0).innerText(), await rows.nth(1).innerText()];
+      await rows.nth(0).hover();
+      await own.waitForTimeout(600);
+      const onHover = await tips.allInnerTexts();
+      await own.mouse.move(900, 450);
+      await own.waitForTimeout(400);
+      await rows.nth(1).focus();
+      await own.keyboard.press("Shift+Tab");
+      await own.keyboard.press("Tab");
+      await own.waitForTimeout(600);
+      const onFocus = await tips.allInnerTexts();
+      return {
+        ok: cut.every(Boolean) && onHover.includes(first) && onFocus.includes(second),
+        detail: `rows cut ${cut.join()}; tooltips on the first hover ${JSON.stringify(onHover)}, on focus ${JSON.stringify(onFocus)}`,
+      };
+    },
+  );
+
+  await onOwnPage(
+    "a project name with an unbroken word wraps inside its tooltip",
+    "/t/t-001?scenario=long",
+    {},
+    async (own) => {
+      const row = own
+        .locator('[data-slot="sidebar"] button[aria-expanded]')
+        .filter({ hasText: "Supplierinvoice" })
+        .first();
+      await row.waitFor({ timeout: 15_000 });
+      await row.scrollIntoViewIfNeeded();
+      await row.hover();
+      const tip = own
+        .locator('[data-slot="tooltip-content"]')
+        .filter({ hasText: "Supplierinvoice" });
+      await tip.waitFor({ timeout: 3000 });
+      const fit = await tip.evaluate((el) => ({ client: el.clientWidth, scroll: el.scrollWidth }));
+      await own.screenshot({ path: path.join(OUT, "tooltip-unbroken.png") });
+      return { ok: fit.scroll <= fit.client, detail: JSON.stringify(fit) };
+    },
+  );
+
+  await onOwnPage(
+    "New project hands focus to the new thread's row in the sidebar",
+    "/?scenario=empty",
+    {},
+    async (own) => {
+      await own.getByRole("button", { name: "New project" }).focus();
+      await own.keyboard.press("Enter");
+      await own.waitForURL(/\/t\//);
+      await own.waitForTimeout(500);
+      const at = await own.evaluate(() => ({
+        current: document.activeElement.getAttribute("aria-current"),
+        sidebar: document.activeElement.closest('[data-slot="sidebar"]') !== null,
+      }));
+      return {
+        ok: at.current === "page" && at.sidebar,
+        detail: `focus on ${await focusOn(own)}, current ${at.current}, in the sidebar ${at.sidebar}`,
+      };
+    },
+  );
+
+  await onOwnPage(
+    "the data marker is a button whose accessible description is its hint",
+    "/t/t-005?scenario=demo",
+    {},
+    async (own) => {
+      await tabsOf(own).first().waitFor({ timeout: 15_000 });
+      const cdp = await own.context().newCDPSession(own);
+      const { root } = await cdp.send("DOM.getDocument");
+      const { nodeId } = await cdp.send("DOM.querySelector", {
+        nodeId: root.nodeId,
+        selector: ':has(> [data-slot="data-marker"])',
+      });
+      const [node] = (await cdp.send("Accessibility.getPartialAXTree", { nodeId })).nodes;
+      const read = {
+        role: node.role?.value,
+        name: node.name?.value,
+        description: node.description?.value ?? "",
+      };
+      return {
+        ok:
+          read.role === "button" &&
+          read.name === "Mock: demo" &&
+          read.description.includes("Nothing here is saved"),
+        detail: JSON.stringify(read),
+      };
+    },
+  );
+
+  await onOwnPage(
+    "a thread page and /lab each have exactly one main landmark",
+    "/t/t-005?scenario=demo",
+    {},
+    async (own) => {
+      await tabsOf(own).first().waitFor({ timeout: 15_000 });
+      const onThread = await own.getByRole("main").count();
+      await own.goto(`${BASE}/lab?scenario=demo`, { waitUntil: "load" });
+      await own.getByText("Useful answers.").waitFor({ timeout: 10_000 });
+      const onLab = await own.getByRole("main").count();
+      return {
+        ok: onThread === 1 && onLab === 1,
+        detail: `${onThread} on a thread, ${onLab} on /lab`,
+      };
+    },
+  );
+
+  await onOwnPage(
+    "the browser's Simulated badge clears 4.5:1 on the address field, light and dark",
+    "/t/t-005?scenario=demo",
+    {},
+    async (own) => {
+      const badge = own
+        .locator('[role="tabpanel"]:not([inert])')
+        .getByRole("region", { name: "Browser" })
+        .getByText("Simulated", { exact: true });
+      const ratio = async (colorScheme) => {
+        await own.emulateMedia({ colorScheme });
+        await own.reload({ waitUntil: "load" });
+        await badge.waitFor({ timeout: 15_000 });
+        return badge.evaluate((el) => {
+          // Every fill under the badge's centre, painted bottom up onto one pixel, gives the
+          // colour its text is read against.
+          const rect = el.getBoundingClientRect();
+          const under = document.elementsFromPoint(
+            rect.left + rect.width / 2,
+            rect.top + rect.height / 2,
+          );
+          const pixel = document.createElement("canvas").getContext("2d");
+          const paint = (color) => {
+            pixel.fillStyle = color;
+            pixel.fillRect(0, 0, 1, 1);
+            return [...pixel.getImageData(0, 0, 1, 1).data];
+          };
+          for (const node of [...under.toReversed(), el]) {
+            paint(getComputedStyle(node).backgroundColor);
+          }
+          const ground = paint("transparent");
+          const ink = paint(getComputedStyle(el).color);
+          const [bright, deep] = [ink, ground]
+            .map((rgba) => {
+              const [r, g, b] = rgba.slice(0, 3).map((c) => {
+                const s = c / 255;
+                return s <= 0.04045 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+              });
+              return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+            })
+            .toSorted((a, b) => b - a);
+          return Math.round(((bright + 0.05) / (deep + 0.05)) * 100) / 100;
+        });
+      };
+      const onLight = await ratio("light");
+      const onDark = await ratio("dark");
+      return {
+        ok: onLight >= 4.5 && onDark >= 4.5,
+        detail: `light ${onLight}:1, dark ${onDark}:1`,
+      };
+    },
+  );
+
+  await onOwnPage(
+    "a refused address says why in text the field is described by and a screen reader hears",
+    "/t/t-005?scenario=demo",
+    {},
+    async (own) => {
+      const bar = own
+        .locator('[role="tabpanel"]:not([inert])')
+        .getByRole("region", { name: "Browser" })
+        .locator("header");
+      const field = bar.getByRole("textbox", { name: "Address" });
+      await field.waitFor({ timeout: 15_000 });
+      await field.fill("two words");
+      await field.press("Enter");
+      const said = () =>
+        field.evaluate((el) => {
+          const notes = (el.getAttribute("aria-describedby") ?? "")
+            .split(" ")
+            .filter((id) => id !== "")
+            .map((id) => document.querySelector(`#${CSS.escape(id)}`))
+            .filter((note) => note !== null);
+          return {
+            invalid: el.getAttribute("aria-invalid"),
+            says: notes.map((note) => note.textContent.trim()).join(" "),
+            seen: notes.some((note) => note.checkVisibility() === true && note.offsetWidth > 0),
+            heard: notes.some((note) => note.closest('[role="alert"], [aria-live]') !== null),
+            kept: el.value,
+          };
+        });
+      const refused = await said();
+      const strip = await bar.boundingBox();
+      await own.screenshot({
+        path: path.join(OUT, "address-refused.png"),
+        clip: { ...strip, height: strip.height + 40 },
+      });
+      await field.press("End");
+      await own.keyboard.type("s");
+      const typing = await said();
+      return {
+        ok:
+          refused.invalid === "true" &&
+          refused.says !== "" &&
+          refused.seen === true &&
+          refused.heard === true &&
+          refused.kept === "two words" &&
+          typing.says === "",
+        detail: `refused ${JSON.stringify(refused)}; typing again ${JSON.stringify(typing)}`,
+      };
+    },
+  );
+
+  await onOwnPage(
+    "a long address on the simulated page wraps inside a narrow browser pane",
+    "/t/t-005?scenario=demo",
+    { viewport: { width: 1024, height: 768 } },
+    async (own) => {
+      const pane = own
+        .locator('[role="tabpanel"]:not([inert])')
+        .getByRole("region", { name: "Browser" });
+      const field = pane.getByRole("textbox", { name: "Address" });
+      await field.waitFor({ timeout: 15_000 });
+      await own.getByRole("button", { name: "Toggle sidebar" }).click();
+      await field.fill("https://example.com/some/really/long/path/that/goes/on/and/on/forever");
+      await field.press("Enter");
+      await pane.getByRole("heading", { name: "This page is simulated" }).waitFor();
+      const fit = await pane.evaluate((region) => {
+        const body = region.querySelector("article").parentElement;
+        const text = [...region.querySelectorAll("article *")].map((el) =>
+          Math.round(el.getBoundingClientRect().right),
+        );
+        return {
+          scroll: body.scrollWidth,
+          client: body.clientWidth,
+          right: Math.max(...text),
+          edge: Math.round(body.getBoundingClientRect().right),
+        };
+      });
+      await own.screenshot({ path: path.join(OUT, "browser-long-address.png") });
+      return {
+        ok: fit.scroll <= fit.client && fit.right <= fit.edge,
+        detail: JSON.stringify(fit),
+      };
+    },
   );
 } catch (error) {
   record("run", false, String(error));

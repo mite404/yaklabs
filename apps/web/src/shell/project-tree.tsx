@@ -8,7 +8,7 @@ import {
   SidebarMenuSkeleton,
 } from "@yaklabs/ui/components/sidebar";
 import { Plus } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
 import { QuietButton } from "../components/quiet-button";
 import { useRestart, useRuntimeState } from "../runtime";
 import { useShell, type Shell } from "./model";
@@ -37,6 +37,23 @@ function useFolds(): Folds {
 // The thread the address names: a child, else its main.
 function threadOn(active: Located | null): ThreadId | null {
   return active === null ? null : (active.focus ?? active.main);
+}
+
+// New project leaves with the empty tree it sat in, taking focus with it; once the thread it
+// starts is open, its row takes focus, unless something else has taken it meanwhile. Returns
+// what arms that hand-off.
+function useHandOff(tree: RefObject<HTMLElement | null>, shell: Shell | null): () => void {
+  const armed = useRef(false);
+  const at = shell === null ? null : threadOn(shell.active); // → ThreadId | null
+  useEffect(() => {
+    if (!armed.current || at === null) return;
+    armed.current = false;
+    const row = tree.current?.querySelector<HTMLElement>('[aria-current="page"]');
+    if (document.activeElement === document.body) row?.focus();
+  }, [tree, at]);
+  return () => {
+    armed.current = true;
+  };
 }
 
 // A main thread, the count that folds its children, and the children below it. `at` is the
@@ -112,7 +129,7 @@ function ProjectRows({ node, shell, folds }: { node: ProjectNode; shell: Shell; 
 }
 
 // What the tree says while there is no tree: rows on their way, a failed start, or nothing yet.
-function TreeState({ shell }: { shell: Shell | null }) {
+function TreeState({ shell, onNewProject }: { shell: Shell | null; onNewProject: () => void }) {
   const state = useRuntimeState();
   const restart = useRestart();
   if (shell !== null) {
@@ -121,6 +138,7 @@ function TreeState({ shell }: { shell: Shell | null }) {
         <p className="text-soft-ink">No projects yet</p>
         <QuietButton
           onClick={() => {
+            onNewProject();
             shell.newProject();
           }}
         >
@@ -148,12 +166,14 @@ function TreeState({ shell }: { shell: Shell | null }) {
 export function ProjectTree() {
   const shell = useShell();
   const folds = useFolds();
+  const group = useRef<HTMLDivElement>(null);
+  const handOff = useHandOff(group, shell);
   const tree = shell === null ? [] : sidebarTree(shell.workspace);
   return (
-    <SidebarGroup className="group-data-[collapsible=icon]:hidden">
+    <SidebarGroup ref={group} className="group-data-[collapsible=icon]:hidden">
       <SidebarGroupLabel className="text-soft-ink">Projects</SidebarGroupLabel>
       {shell === null || tree.length === 0 ? (
-        <TreeState shell={shell} />
+        <TreeState shell={shell} onNewProject={handOff} />
       ) : (
         <SidebarMenu className="gap-2">
           {tree.map((node) => (
