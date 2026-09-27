@@ -11,6 +11,7 @@ import {
   type Notice,
   type StorageKind,
 } from "./protocol";
+import { createInbox, type Inbox } from "./inbox";
 import { untilAborted } from "./untilAborted";
 
 /** How the page reaches the signed-in user's token, e.g. AuthKit's `getAccessToken` (ADR-084). */
@@ -33,8 +34,6 @@ export type Runtime = {
 };
 
 type ReplyNotice = Extract<Notice, { kind: "chunk" | "done" | "failed" }>;
-// A reply's notices, pushed in by the router and pulled out by `respond`.
-type Inbox = AsyncIterable<ReplyNotice> & { push(notice: ReplyNotice): void };
 type Deferred<T> = Pick<PromiseWithResolvers<T>, "resolve" | "reject">;
 
 // Everything waiting on the worker, so each notice finds its caller and a failure reaches all.
@@ -42,31 +41,9 @@ type Waiting = {
   ready: PromiseWithResolvers<{ storage: StorageKind }>;
   opens: Map<string, Deferred<Conversation>[]>; // conversationId → callers
   lists: Deferred<ConversationSummary[]>[]; // oldest first; the worker answers in order
-  replies: Map<string, Inbox>; // requestId → its inbox
+  replies: Map<string, Inbox<ReplyNotice>>; // requestId → its inbox
   broken?: Error;
 };
-
-function createInbox(): Inbox {
-  const queued: ReplyNotice[] = [];
-  const takers: ((notice: ReplyNotice) => void)[] = [];
-  const next = (): Promise<IteratorResult<ReplyNotice>> => {
-    const notice = queued.shift();
-    if (notice !== undefined) return Promise.resolve({ done: false, value: notice });
-    return new Promise((resolve) => {
-      takers.push((value) => {
-        resolve({ done: false, value });
-      });
-    });
-  };
-  return {
-    push: (notice) => {
-      const take = takers.shift();
-      if (take === undefined) queued.push(notice);
-      else take(notice);
-    },
-    [Symbol.asyncIterator]: () => ({ next }),
-  };
-}
 
 // Fails everyone waiting. An `error` notice fails the calls it cannot be told apart from
 // (opens, lists, start-up); a broken worker fails replies too, and every later call.
@@ -160,7 +137,7 @@ function createAgentFor(
       const accessToken = await session?.getAccessToken(); // → string | undefined
       if (signal.aborted) return;
       const requestId = crypto.randomUUID();
-      const inbox = createInbox();
+      const inbox = createInbox<ReplyNotice>(); // the reply's notices, pushed by the router
       post({ kind: "send", requestId, conversationId, event, accessToken }); // throws if malformed
       waiting.replies.set(requestId, inbox);
       let finished = false;
