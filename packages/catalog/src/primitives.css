@@ -163,9 +163,11 @@
 }
 
 /* Card header: title left, actions right, and a flush line under it, edge to edge. */
-/* A header that carries its card (ADR-089) says so with the cursor. */
+/* A header that carries its card (ADR-089) says so with the cursor. A finger on it carries the
+   card too, so the browser leaves its moves to the carry instead of panning the page. */
 .card-heading[data-carry] {
   cursor: grab;
+  touch-action: none;
 }
 .card-heading[data-carry]:active {
   cursor: grabbing;
