@@ -17,6 +17,7 @@ import "./index.css";
 import type { Route } from "./+types/root";
 import { env } from "./env";
 import { safeReturnTo } from "./returnTo";
+import { CHROME_BOOT } from "./chrome";
 import { THEME_BOOT, useTheme, type ThemeChoice } from "./theme";
 
 export function Layout({ children }: { children: ReactNode }) {
@@ -28,6 +29,7 @@ export function Layout({ children }: { children: ReactNode }) {
         <Meta />
         <Links />
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOT }} />
+        <script dangerouslySetInnerHTML={{ __html: CHROME_BOOT }} />
       </head>
       <body>
         {children}

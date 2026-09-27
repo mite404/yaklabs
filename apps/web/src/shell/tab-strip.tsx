@@ -78,7 +78,8 @@ type TabProps = {
 };
 
 // One open thread: its layout's glyph and title (APG: Delete closes a focused tab, and a
-// middle click closes any).
+// middle click closes any). On the green bar a tab is clear at rest, fills while hovered, and the
+// active one is the cream pill (ADR-110).
 function Tab({ thread, shell, hover, plus }: TabProps) {
   const { Icon } = LAYOUTS[viewOf(shell.doc, thread.id).pane];
   const { leave } = hover;
@@ -96,14 +97,14 @@ function Tab({ thread, shell, hover, plus }: TabProps) {
     <div
       role="presentation"
       data-active={shell.active?.main === thread.id || undefined}
-      className={`flex ${TAB_BOX}`}
+      className={`chrome-pill flex ${TAB_BOX}`}
     >
       <TabsTrigger
         value={thread.id}
         id={tabId(thread.id)}
         aria-controls={panelId(thread.id)}
         data-hovered={hover.hovered === thread.id || undefined}
-        className="tab h-[30px] w-full min-w-0 flex-none justify-start gap-2 rounded-[var(--radius)] border-hairline/0 bg-paper-deep px-2.5 text-xs font-normal data-hovered:pr-7 data-active:pr-7 text-soft-ink hover:text-ink data-active:border-hairline data-active:bg-[var(--control-bg)] data-active:text-ink dark:text-soft-ink dark:data-active:border-hairline dark:data-active:bg-[var(--control-bg)]"
+        className="tab h-[30px] w-full min-w-0 flex-none justify-start gap-2 rounded-[var(--radius)] bg-transparent px-2.5 text-xs font-normal text-soft-ink data-hovered:pr-7 data-hovered:text-ink data-hovered:not-data-active:bg-paper-deep data-active:bg-[var(--chrome-pill)] data-active:pr-7 data-active:text-ink dark:text-soft-ink dark:data-hovered:text-ink dark:data-active:border-transparent dark:data-active:bg-[var(--chrome-pill)] dark:data-active:text-ink"
         {...hover.handlers(thread.id)}
         onAuxClick={(event) => {
           if (event.button === 1) close(event.currentTarget);
@@ -124,7 +125,7 @@ function Tab({ thread, shell, hover, plus }: TabProps) {
 function CloseSlot({ thread, shell, hover, plus }: TabProps) {
   const active = shell.active?.main === thread.id;
   return (
-    <div data-active={active || undefined} className={`group/slot relative ${TAB_BOX}`}>
+    <div data-active={active || undefined} className={`chrome-pill group/slot relative ${TAB_BOX}`}>
       <button
         type="button"
         tabIndex={-1}

@@ -13,6 +13,24 @@
   }
 }
 
+/* A focused control on the green bar shows the site's own ring (tokens.css): 2px of --focus,
+   cream there, 8.98:1 against the bar. shadcn's outline-none would leave only a 1px ring at half
+   strength, 3.6:1 at best and less on the painting, so this sits outside every layer too. */
+.chrome-surface :focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+/* shadcn's ghost button hovers at half strength in dark mode (dark:hover:bg-muted/50). The bar
+   is the same in either theme (ADR-110), so its hover is the full fill there too. */
+:root[data-theme="dark"] .chrome-surface .dark\:hover\:bg-muted\/50:hover {
+  background-color: var(--muted);
+}
+/* A tab draws its ring inside itself: the tab strip scrolls, and a scroller clips whatever lies
+   past its edge. On the active tab's pill the ring is the pill's own night ink (16.1:1). */
+.chrome-surface .tab:focus-visible {
+  outline-offset: -2px;
+  box-shadow: none; /* shadcn's half-strength ring outside the tab, which the strip clipped */
+}
 /* A lane's title clips with an ellipsis where it outgrows its bar (ADR-097). The rename button
    holds the text, and the heading cannot put an ellipsis inside a button, which lays out as one
    unbreakable box, so the button clips as a block of its own, held to the heading's width
@@ -109,6 +127,86 @@
      it skips rendering and keeps its layout and scroll, which display: none would drop. */
   [data-retain][inert] {
     content-visibility: hidden;
+  }
+
+  /* The trim (ADR-112): a line in --trim around the window's body, under the bar and down both
+     sides to the bottom, drawn over the edge so it takes no layout and no box below it moves. */
+  .window-trim::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: 30;
+    box-shadow: inset 0 0 0 2px var(--trim);
+    pointer-events: none;
+    /* A layer of its own: laid over the body in the page's layer, it made Chromium composite
+       what lies under it differently, and a dark-mode fill came out a level off. */
+    will-change: transform;
+  }
+  /* A window with a frame rounds its bottom corners at 12px less its 1px border; the trim bends
+     with them rather than being cut off where the corner clips it. */
+  @media (width >= 48rem) {
+    .window-trim::after {
+      border-radius: 0 0 11px 11px;
+    }
+  }
+
+  /* The painted bar (ADR-115): the painting under a subtle green wash, darkest at the ends
+     where the traffic lights and the account sit, over the painting's mean colour. Its soft ink
+     is a step brighter than the flat bar's, since the painting is lighter than the flat green. */
+  .chrome-surface[data-chrome="painting"] {
+    --soft-ink: var(--on-chrome-painting-soft);
+    --paper-deep: var(--chrome-painting-hover);
+    background:
+      linear-gradient(
+        to right,
+        var(--chrome-painting-wash),
+        transparent 30%,
+        transparent 70%,
+        var(--chrome-painting-wash)
+      ),
+      url("/chrome/painting.webp") center / cover no-repeat,
+      var(--chrome-painting);
+  }
+
+  /* The empty canvas's splash (ADR-113): the drawing is a mask filled with --splash-line, so it
+     themes with the ink and shows only its strokes, never the bounds of an image. It sits
+     behind the words, and it and Kay fade in once, with no fade under reduced motion. */
+  .splash {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+  }
+  .splash-drawing {
+    background-color: var(--splash-line);
+    mask: url("/splash/sphere.svg") center / contain no-repeat;
+  }
+  .splash,
+  .splash-in {
+    animation: splash-in 150ms ease-out;
+  }
+  @keyframes splash-in {
+    from {
+      opacity: 0;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .splash,
+    .splash-in {
+      animation: none;
+    }
+  }
+  /* The open space lights up under a carry (ADR-091) on a layer below the splash drawing, so the
+     drawing stays on top of the fill, as the words do. */
+  .open-space::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -2;
+    border-radius: inherit;
+    transition: background-color 150ms ease;
+  }
+  .open-space[data-lit]::before {
+    background-color: color-mix(in srgb, var(--paper-deep) 60%, transparent);
   }
 
   /* The canvas is a dotted field (ADR-089): open ground that invites something to be put down. */

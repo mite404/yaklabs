@@ -1,6 +1,7 @@
 import { SidebarProvider } from "@yaklabs/ui/components/sidebar";
 import { cssVars } from "@yaklabs/ui/lib/utils";
 import { useState, type ReactNode } from "react";
+import { useChrome } from "../chrome";
 import { useMatch } from "react-router";
 import type { ThemeChoice } from "../theme";
 import { AppSidebar } from "./sidebar";
@@ -49,32 +50,37 @@ function Workspace({ children }: { children: ReactNode }) {
 }
 
 /**
- * The app drawn as a desktop window (ADR-094): a rounded frame on the page's own ground with a
- * margin around it, full-bleed on a narrow screen. The title bar runs its whole width; below it
- * the sidebar (shadcn's sidebar-16 pattern) and, inset like Kay's content pane, the workspace.
+ * The app drawn as a desktop window (ADR-094): a rounded frame on a desk of its own with a
+ * margin around it, full-bleed on a narrow screen (ADR-111). The green title bar runs its whole
+ * width (ADR-110); below it, framed by the trim, the sidebar (shadcn's sidebar-16 pattern) and,
+ * inset like Kay's content pane, the workspace.
  */
 export function Window({ theme, children }: { theme: ThemeChoice; children: ReactNode }) {
   const [open, setOpen] = useState(readSidebarOpen);
+  const chrome = useChrome();
   return (
-    <div
-      data-slot="window"
-      className="fixed inset-0 flex flex-col overflow-hidden bg-paper md:inset-2 md:rounded-[12px] md:border md:border-hairline md:shadow-[0_8px_32px_var(--shadow)]"
-    >
-      <SidebarProvider
-        open={open}
-        onOpenChange={(next) => {
-          setOpen(next);
-          rememberSidebar(next);
-        }}
-        className="min-h-0 flex-1 flex-col"
-        style={cssVars({ "--sidebar-width": "16rem", "--sidebar-width-icon": "3.5rem" })}
+    <>
+      <div data-slot="desk" aria-hidden="true" className="fixed inset-0 bg-[var(--desk)]" />
+      <div
+        data-slot="window"
+        className="fixed inset-0 flex flex-col overflow-hidden bg-paper md:inset-4 md:rounded-[12px] md:border md:border-hairline md:shadow-[0_8px_32px_var(--shadow)]"
       >
-        <TitleBar theme={theme} />
-        <div className="relative flex min-h-0 flex-1">
-          <AppSidebar />
-          <Workspace>{children}</Workspace>
-        </div>
-      </SidebarProvider>
-    </div>
+        <SidebarProvider
+          open={open}
+          onOpenChange={(next) => {
+            setOpen(next);
+            rememberSidebar(next);
+          }}
+          className="min-h-0 flex-1 flex-col"
+          style={cssVars({ "--sidebar-width": "16rem", "--sidebar-width-icon": "3.5rem" })}
+        >
+          <TitleBar theme={theme} chrome={chrome} />
+          <div data-slot="window-body" className="window-trim relative flex min-h-0 flex-1">
+            <AppSidebar />
+            <Workspace>{children}</Workspace>
+          </div>
+        </SidebarProvider>
+      </div>
+    </>
   );
 }

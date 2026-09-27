@@ -1220,6 +1220,94 @@ Measured in a real browser, a reader's scroll-up during streaming is now kept in
 stories, and 0 of 360 fresh loads rest short. The cost is that when content above a reader who
 scrolled up grows, it now pushes their view down, where anchoring used to hold it in place.
 
+## ADR-110 - The title bar is green window chrome, the same in both themes
+
+2026-09-27 - Proposed (Ethan's mock R9; the hex is his to confirm, Q3); amends ADR-055 and ADR-058.
+Green was kept for button hovers alone; the title bar now carries it too, as window chrome, which
+is not content and so does not compete with the hover. `--chrome` is `#3b423c`, sampled from the
+mock and flagged in `tokens.css` until Ethan names the value.
+The bar is the same in light and dark, as a desktop window's frame and its traffic lights are,
+and everything on it is cream: `.chrome-surface` remaps Kay's roles and the shadcn roles its
+primitives read, the way `.attention-surface` does, so no component carries colours of its own.
+Ink is cream (8.98:1), soft ink cream at 72% (5.56:1), a hover fills cream at 8% (1.25:1, so a
+skeleton tab still shows), and focus is the site's own 2px ring in cream, restored over shadcn's
+`outline-none`, which had left a 1px ring at 1.3:1 to 3.2:1.
+"Selected" on the bar, the active tab and the pressed layout, is one cream pill with the night
+green on it (8.98:1 against the bar, 16.1:1 for its text). The pill is the same in both themes:
+the page's own paper would have been 1.63:1 against the bar in dark mode.
+The avatar's ring keeps a blend in both themes, since dropping it switched every glyph on the page
+from greyscale to subpixel smoothing in Chromium. An avatar with no picture shows its initials in
+the full cream (7.21:1 on its fill), not the soft ink (4.47:1), and shadcn's half-strength ghost
+hover in dark mode is set back to the full fill, so the bar is the same picture hovered too.
+
+## ADR-111 - The window sits on a desk of its own, 16px in
+
+2026-09-27 - Proposed (Ethan's mock R9; the ground and the margin are his to confirm, Q10).
+The page behind the window is `--desk`, not the app's own ground, so the window's sides and bottom
+show against it: a warm grey between Ethan's two stone greys in light mode (1.43:1 against the
+paper, 1.54:1 against the bright paper), where the mock's cool grey would be a sampled colour
+(ADR-051); his slate in dark mode (2.75:1 against the paper). A desk darker than the dark paper
+cannot reach 1.3:1, since black itself is 1.24:1.
+The margin is 16px from 768px up, as in the mock, instead of 8px, and the contract's frame line
+says so. Below 768px the window is still full-bleed.
+
+## ADR-112 - A trim frames the window's body, olive until Ethan picks
+
+2026-09-27 - Proposed (Ethan's mock R10; placement, colour and whether it is a Figma outline are
+open, Q5 to Q7).
+A 2px `--trim` line runs under the bar, down both sides and along the bottom, following the
+window's bottom corners. It is drawn over the body's edge on a layer of its own, so no box below
+the bar moves and every pixel under it paints as before; drawn in the page's own layer, it had
+made Chromium composite a dark-mode fill a level off.
+Its colour is olive (6.57:1 against the bright paper, 5.79:1 against the dark paper), not the
+mock's blue, which no token declares and which reads as a keyboard focus ring (ADR-053).
+
+## ADR-113 - The empty canvas shows a splash
+
+2026-09-27 - Proposed (Ethan's brief; the drawing's source is his to supply, Q11).
+While the canvas has no lanes, a line drawing sits behind its words and Kay stands at the open
+space's bottom right. Both are pictures only: hidden from the accessibility tree, and a press, a
+pan or a carried card goes through them to the ground. The first lane that lands sends them away,
+and they come back with the last lane closed.
+The drawing is a CSS mask filled with `--splash-line`, the ink at 12%, so only its strokes show
+(1.26:1 against the field in light, 1.36:1 in dark) and it themes with the ink. Until the Atlas
+figure's source arrives, the mask is an original drawing, a sphere on a desk stand over
+golden-ratio construction lines.
+Kay is a transparent WebP cut from the mock by `cut-kay.mjs`, a placeholder until Kay's published
+file arrives. He hides where the open space is under 480px, and there is no idle animation; the
+splash fades in over 150ms, and not at all under reduced motion.
+Bottom to top: the dotted field, the carry's lit fill, the drawing, the words and the button, and
+Kay, so a carry tints the ground but never the drawing, and Kay stands in front.
+
+## ADR-114 - Kay's face is the avatar when the build has no sign-in
+
+2026-09-27 - Proposed (Ethan's mock R9; who the face stands for is his call, Q8).
+The mock puts Kay's face in the title bar's corner, which ADR-094 gives to the account. With
+sign-in off there is no account to show, so the corner shows Kay; a WorkOS user keeps their own
+picture or initials. The button's name stays "Account" and the picture has no alternative text.
+
+## ADR-115 - The title bar can be painted, and stays solid by default
+
+2026-09-27 - Proposed (Ethan's exploration; the default and the painting itself are his to choose,
+Q2 and Q4).
+The painted bar is an oil painting under a moss wash at its ends, over the painting's mean colour,
+so a slow or blocked image still leaves a passing bar. The painting is made in the repo by
+`paint-chrome.mjs` from seeded noise, so it is ours to ship and identical on every run. The script
+decodes the WebP it wrote and lowers its clamp until no pixel of the file is brighter than
+luminance 0.10, since the lossy encode lifted some pixels past the clamp it was given (0.134 at
+first). On it the soft ink is cream at 85% (4.87:1 on the brightest pixel); cream at 72% would
+fall below 4.5:1 there. `painting.json` records the decoded mean and maximum, and the token test
+reads it.
+Its hover and skeleton fill is a night wash (1.37:1 over the painting's mean) rather than the flat
+bar's cream fill, which vanished on a painting of the same green (1.03:1); a wash only darkens, so
+the inks on it only gain.
+The solid bar is the default. `?chrome=painting` or `?chrome=solid` picks one once: a boot script
+takes it out of the address before the router starts, as the theme's does, since the app's own
+links keep only the scenario and a leftover parameter would undo a later choice. The choice is kept
+in localStorage and held for the visit in memory too, so a refused storage still keeps it. The
+Account menu has a Title bar choice beside
+Theme, so Ethan can switch while he decides.
+
 ## ADR-117 - A lane's gap reports the lane's width, and a lane is 320 to 1800px wide
 
 2026-09-27 - Accepted; amends ADR-089.

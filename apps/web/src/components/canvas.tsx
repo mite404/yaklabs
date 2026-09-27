@@ -14,6 +14,7 @@ import {
 import { useLanding, type Landing } from "./canvas-carry";
 import { panRow, usePan } from "./canvas-pan";
 import { LaneSeparator } from "./lane-separator";
+import { Kay, SplashDrawing } from "./splash";
 import { displacement, useReorder, type LaneHandlers } from "./lane-reorder";
 
 /** One lane on the canvas: its name, the width it was left at (null: the default), its content. */
@@ -80,17 +81,26 @@ function Lane({
   );
 }
 
-// The open space at the end of the row: the whole canvas when it is empty, a slimmer
-// column once lanes exist, so there is always somewhere to drop the next thing, and it lights
-// up when a carry would land there. The button is the catalog's own, the one a card's "Show my
-// work" uses.
-function OpenSpace({ lit, onBlank }: { lit: boolean; onBlank: () => void }) {
+// The open space at the end of the row: the whole canvas when it is empty, with the splash
+// behind its words, and a slimmer column once lanes exist, so there is always somewhere to drop
+// the next thing. It lights up when a carry would land there. The button is the catalog's own,
+// the one a card's "Show my work" uses.
+function OpenSpace({
+  lit,
+  splash,
+  onBlank,
+}: {
+  lit: boolean;
+  splash: boolean;
+  onBlank: () => void;
+}) {
   return (
     <div
       data-ground=""
       data-lit={lit || undefined}
-      className="flex h-full min-w-[320px] flex-1 flex-col items-center justify-center gap-4 rounded-[var(--radius-card)] border border-dashed border-hairline p-6 text-center transition-colors data-lit:border-olive data-lit:bg-paper-deep/60"
+      className="open-space @container relative isolate flex h-full min-w-[320px] flex-1 flex-col items-center justify-center gap-4 rounded-[var(--radius-card)] border border-dashed border-hairline p-6 text-center transition-colors data-lit:border-olive"
     >
+      {splash && <SplashDrawing />}
       <p className="font-serif text-xl text-ink">
         Drag a text selection or card
         <br />
@@ -99,6 +109,7 @@ function OpenSpace({ lit, onBlank }: { lit: boolean; onBlank: () => void }) {
       <button type="button" className="btn btn-sm" data-blank="" onClick={onBlank}>
         Create blank thread
       </button>
+      {splash && <Kay />}
     </div>
   );
 }
@@ -260,7 +271,7 @@ export function Canvas({
     >
       <LaneRow lanes={lanes} actions={{ ...actions, onClose }} />
       <DropMarker landing={landing} />
-      <OpenSpace lit={landing?.marker === null} onBlank={onBlank} />
+      <OpenSpace lit={landing?.marker === null} splash={lanes.length === 0} onBlank={onBlank} />
       {/* The ground goes on for a pane past the open space: the canvas has no right edge. */}
       {lanes.length > 0 && <div data-ground="" aria-hidden="true" className="w-full shrink-0" />}
     </section>

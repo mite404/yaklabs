@@ -1,7 +1,6 @@
 import { SidebarTrigger, useSidebar } from "@yaklabs/ui/components/sidebar";
 import { useRuntimeState } from "../runtime";
-import type { ThemeChoice } from "../theme";
-import { Account } from "./account";
+import { Account, type Looks } from "./account";
 import { Bell } from "./bell";
 import { DataMarker } from "./data-marker";
 import { LayoutSwitch } from "./layout-switch";
@@ -10,7 +9,7 @@ import { SIDEBAR_ID } from "./sidebar";
 import { TabStrip } from "./tab-strip";
 
 // Decorative, as a desktop window's: they do nothing, and a screen reader never meets them. On
-// a phone the window is full-bleed, not a window, so they go.
+// a phone the window is full-bleed, not a window, so they go; on the green bar they need no ring.
 const LIGHTS = ["close", "minimise", "zoom"] as const;
 
 function TrafficLights() {
@@ -23,7 +22,7 @@ function TrafficLights() {
       {LIGHTS.map((light) => (
         <span
           key={light}
-          className="size-3 rounded-full border border-hairline"
+          className="size-3 rounded-full"
           style={{ background: `var(--traffic-${light})` }}
         />
       ))}
@@ -49,16 +48,18 @@ function SidebarToggle() {
 /**
  * The window's one title bar, across its whole width: decorative traffic lights, the sidebar
  * toggle and the open threads at the left; at the right where the data lives, the layout, the
- * bell, and the account in the corner (ADR-094). On a phone the tabs take a row of their own
- * below, so neither they nor the controls are squeezed off the screen.
+ * bell, and the account in the corner (ADR-094). It is green chrome, flat or painted (ADR-110,
+ * ADR-115). On a phone the tabs take a row of their own below, so neither they nor the controls
+ * are squeezed off the screen.
  */
-export function TitleBar({ theme }: { theme: ThemeChoice }) {
+export function TitleBar({ theme, chrome }: Looks) {
   const shell = useShell();
   const starting = useRuntimeState().kind === "starting";
   return (
     <header
       data-slot="title-bar"
-      className="grid shrink-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-x-2 gap-y-1 bg-paper px-3 py-[5px] select-none md:flex md:h-11 md:py-0 md:pl-0"
+      data-chrome={chrome.style}
+      className="chrome-surface grid shrink-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-x-2 gap-y-1 px-3 py-[5px] select-none md:flex md:h-11 md:py-0 md:pl-0"
     >
       <TrafficLights />
       <SidebarToggle />
@@ -67,7 +68,7 @@ export function TitleBar({ theme }: { theme: ThemeChoice }) {
         <DataMarker />
         <LayoutSwitch shell={shell} />
         <Bell shell={shell} />
-        <Account theme={theme} />
+        <Account theme={theme} chrome={chrome} />
       </div>
     </header>
   );

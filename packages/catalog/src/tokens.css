@@ -100,6 +100,46 @@
   --awaiting-label-bg: var(--yak-orange);
   --awaiting-label-ink: var(--yak-brown-ink);
 
+  /* The window chrome (ADR-110): the title bar is a deep green in either theme, as a desktop
+     window's frame is, and everything on it is cream. Ratios are against --chrome. */
+  --chrome: #3b423c; /* Ethan's mock, sampled (R9); confirm the hex (Q3) */
+  --on-chrome: var(--yak-cream); /* 8.98:1 */
+  --on-chrome-soft: color-mix(in srgb, var(--yak-cream) 72%, var(--chrome)); /* 5.56:1 */
+  /* hover fill: 1.25:1 against the bar, so a skeleton shows; cream on it 7.21:1 */
+  --chrome-hover: color-mix(in srgb, var(--yak-cream) 8%, var(--chrome));
+  /* lines only, never a boundary a control depends on: 1.63:1 against the bar */
+  --chrome-line: color-mix(in srgb, var(--yak-cream) 18%, transparent);
+  /* The painted bar (ADR-115): the painting's mean colour, as painting.json records it from the
+     decoded file, fills the bar before the image loads or if it never does; cream on it 7.41:1.
+     No pixel of the decoded painting is brighter than luminance 0.0963, where cream is 6.23:1
+     and the painted soft ink 4.87:1. */
+  --chrome-painting: #454f47;
+  --on-chrome-painting-soft: color-mix(in srgb, var(--yak-cream) 85%, var(--chrome)); /* 5.79:1 */
+  /* a darkening wash at the bar's ends: moss is darker than every pixel under it, so it only
+     raises the inks' ratios */
+  --chrome-painting-wash: color-mix(in srgb, var(--moss) 45%, transparent);
+  /* the painted bar's hover and skeleton fill: a night wash, since a flat fill vanishes on a
+     painting of the same green (1.03:1); 1.37:1 over the painting's mean, and it only darkens,
+     so cream on it is 10.12:1 and the painted soft ink 7.91:1 */
+  --chrome-painting-hover: color-mix(in srgb, var(--yak-night) 35%, transparent);
+  /* "Selected" on the bar, the active tab and the pressed layout: a cream pill, 8.98:1
+     against the bar in either theme, with the night green on it (16.1:1). */
+  --chrome-pill: var(--yak-cream);
+  --on-chrome-pill: var(--yak-night); /* 16.1:1 */
+  --on-chrome-pill-soft: color-mix(in srgb, var(--yak-night) 72%, var(--yak-cream)); /* 6.93:1 */
+  /* the close button's hover on the pill; soft ink on it 5.89:1 */
+  --chrome-pill-hover: color-mix(in srgb, var(--yak-night) 8%, var(--yak-cream));
+  /* derived: the desk the window sits on, between Ethan's two stone greys; 1.54:1 against the
+     bright paper, 1.43:1 against the paper and 6.30:1 against the bar, so every edge shows (Q10) */
+  --desk: color-mix(in srgb, var(--yak-stone-pale) 85%, var(--yak-stone));
+  /* the trim around the window's body (Q5 to Q7): olive until Ethan picks, 6.57:1 against the
+     bright paper; never the focus grey, so it cannot read as a ring (ADR-053) */
+  --trim: var(--olive);
+  /* the splash's line drawing on an empty canvas: the ink at 12%, which follows the theme, so
+     a stroke stands 1.26:1 off the field in light and 1.36:1 in dark, visible without ever
+     competing with the words */
+  --splash-line: color-mix(in srgb, var(--ink) 12%, transparent);
+
   --radius-card: 14px; /* the catalog card and the thread panel; shadcn owns --radius (ADR-082) */
   --space: 24px;
 }
@@ -238,6 +278,10 @@ button:hover {
   --rule: rgba(240, 239, 234, 0.72);
   --hairline: rgba(240, 239, 234, 0.18);
   --olive: #8e9d6f; /* derived: the same hue, lifted so the slider's accent clears 3:1 (5.8:1) */
+  /* --trim follows the olive: 5.79:1 against the paper */
+  /* Ethan's slate as the desk: 2.75:1 against the paper, 1.69:1 against the bar; a desk darker
+     than the paper cannot reach 1.3:1, since black itself is 1.24:1 */
+  --desk: var(--yak-slate);
   --data: #b5b5ae; /* chart marks: 8.2:1 */
   --on-ink: var(--yak-night); /* 16.1:1 on the cream */
   --bubble-tint: color-mix(in srgb, var(--sage) 16%, var(--paper));
@@ -281,6 +325,45 @@ button:hover {
   background: var(--attention-bg);
   color: var(--ink);
 }
+/* The window chrome (ADR-110): the title bar redefines the roles, as the attention surface
+   does, so every primitive on it comes out cream on green with no colours of its own. shadcn's
+   roles (packages/ui globals.css) resolve on the root, so the ones the bar's primitives read are
+   restated here. Menus and tooltips open in portals outside the bar and keep the page's roles. */
+.chrome-surface {
+  --ink: var(--on-chrome);
+  --soft-ink: var(--on-chrome-soft);
+  --paper-deep: var(--chrome-hover);
+  --hairline: var(--chrome-line);
+  --rule: var(--on-chrome-soft);
+  --focus: var(--on-chrome); /* 8.98:1; the page's grey ring would be 2.98:1 here */
+  --on-ink: var(--on-chrome-pill);
+  --foreground: var(--ink);
+  --muted: var(--paper-deep);
+  --muted-foreground: var(--soft-ink);
+  --accent: var(--paper-deep);
+  --accent-foreground: var(--ink);
+  --primary: var(--ink);
+  --primary-foreground: var(--on-ink);
+  --border: var(--hairline);
+  --input: var(--rule);
+  --ring: var(--focus);
+  background: var(--chrome);
+  color: var(--ink);
+}
+/* The pill: a piece of cream on the bar, with the night inks back on it, the focus ring too,
+   since a tab draws its ring inside itself. A `.chrome-pill` is cream while it is active. */
+.chrome-surface .chrome-pill[data-active] {
+  --focus: var(--on-chrome-pill); /* 16.1:1 on the pill */
+  --ink: var(--on-chrome-pill);
+  --soft-ink: var(--on-chrome-pill-soft);
+  --paper-deep: var(--chrome-pill-hover);
+  --foreground: var(--ink);
+  --muted: var(--paper-deep);
+  --muted-foreground: var(--soft-ink);
+  --accent: var(--paper-deep);
+  --accent-foreground: var(--ink);
+}
+
 /* A tile on the attention surface: its own fill and text, so choices stand apart by colour. */
 .attention-surface .tile {
   --ink: var(--tile-ink);
