@@ -21,7 +21,10 @@ function Tab({ thread, shell }: { thread: ThreadSummary; shell: Shell }) {
     shell.close(thread.id);
   };
   return (
-    <div role="presentation" className="group/tab relative flex w-[220px] min-w-28 shrink">
+    <div
+      role="presentation"
+      className="group/tab relative flex w-[220px] min-w-28 shrink has-data-active:min-w-40"
+    >
       <TabsTrigger
         value={thread.id}
         id={tabId(thread.id)}
