@@ -83,6 +83,12 @@ export const agentSpecSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("gateway"), baseUrl: z.url() }),
 ]);
 
+/** The v1 canvas's two localStorage keys, which only the 1 → 2 migration reads. */
+export const legacyCanvasSchema = z.object({
+  hidden: z.array(z.string()),
+  order: z.array(z.string()),
+});
+
 /** Everything the page may ask of the worker (ADR-076, ADR-086). */
 export const commandSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("init"), agent: agentSpecSchema }),
@@ -118,6 +124,8 @@ export type Notice = z.infer<typeof noticeSchema>;
 export type Conversation = z.infer<typeof conversationSchema>;
 /** A conversation in the list, newest first. */
 export type ConversationSummary = z.infer<typeof conversationSummarySchema>;
+/** The v1 canvas's hidden lanes and lane order, as the page read them from localStorage. */
+export type LegacyCanvas = z.infer<typeof legacyCanvasSchema>;
 /** The agent the worker runs, chosen once at `init`. */
 export type AgentSpec = z.infer<typeof agentSpecSchema>;
 /** Where the worker keeps conversations: the browser's private file system, or memory. */

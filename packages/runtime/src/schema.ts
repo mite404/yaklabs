@@ -1,0 +1,282 @@
+import type { BindingSpec, Database } from "@sqlite.org/sqlite-wasm";
+import { z } from "zod";
+import type { LegacyCanvas } from "./protocol";
+import {
+  projectIdSchema,
+  threadIdSchema,
+  threadLane,
+  type Lane,
+  type Place,
+  type Project,
+  type ThreadId,
+} from "./workspace";
+
+/** A v1 conversation as the 1 → 2 step reads it. */
+export type V1Row = { id: ThreadId; updatedAt: string };
+
+/** The v2 rows a v1 database becomes: the whole policy of the 1 → 2 step, as data. */
+export type V2Plan = {
+  projects: Project[];
+  threads: { id: ThreadId; createdAt: string; place: Place }[]; // mains before their children
+  lanes: { mainId: ThreadId; lanes: Lane[] }[];
+};
+
+// One migration step. It runs inside the transaction that also bumps `user_version`.
+type Step = (db: Database, legacy: LegacyCanvas | undefined) => void;
+
+// Rows hold what every turn has; `extra_json` holds the rest (its id, chips, files and cards).
+// The full-text index is an external-content FTS5 table kept in step by triggers, so it can
+// never disagree with the rows it indexes.
+const V1_DDL = `
+  create table if not exists conversations (
+    id text primary key,
+    title text not null,
+    updated_at text not null
+  );
+  create table if not exists messages (
+    conversation_id text not null references conversations (id) on delete cascade,
+    seq integer not null,
+    role text not null check (role in ('user', 'agent')),
+    text text not null,
+    time text not null,
+    extra_json text not null,
+    primary key (conversation_id, seq)
+  );
+  create virtual table if not exists messages_fts using fts5 (
+    text, content = 'messages', content_rowid = 'rowid'
+  );
+  create trigger if not exists messages_fts_insert after insert on messages begin
+    insert into messages_fts (rowid, text) values (new.rowid, new.text);
+  end;
+  create trigger if not exists messages_fts_delete after delete on messages begin
+    insert into messages_fts (messages_fts, rowid, text) values ('delete', old.rowid, old.text);
+  end;
+  create trigger if not exists messages_fts_update after update on messages begin
+    insert into messages_fts (messages_fts, rowid, text) values ('delete', old.rowid, old.text);
+    insert into messages_fts (rowid, text) values (new.rowid, new.text);
+  end;
+`;
+// Step 1 → 2 builds the new `conversations` beside the old one, fills it from the plan, then
+// swaps it in: a table check is the only way to hold "a main or a child, never both", and a
+// check cannot be added to a table that exists. It runs with foreign keys off, so dropping the
+// old table leaves `messages` alone, and `messages` points at the new one once it is renamed.
+const V2_TABLES = `
+  create table projects (
+    id text primary key,
+    name text not null,
+    created_at text not null
+  );
+  create table conversations_next (
+    id text primary key,
+    title text not null,
+    created_at text not null,
+    updated_at text not null,
+    project_id text references projects (id),
+    parent_id text references conversations (id),
+    draft text not null default '',
+    check ((project_id is null) <> (parent_id is null))
+  );
+`;
+const V2_SWAP = `
+  drop table conversations;
+  alter table conversations_next rename to conversations;
+`;
+// A check cannot read another row, so the rules that span rows are triggers: a child's parent
+// is a main (depth one), no thread changes place, and a thread lane sits on its own main.
+const V2_RULES = `
+  create index conversations_by_project on conversations (project_id);
+  create index conversations_by_parent on conversations (parent_id);
+  create trigger conversations_depth_one before insert on conversations
+  when new.parent_id is not null
+    and (select parent_id from conversations where id = new.parent_id) is not null
+  begin
+    select raise(abort, 'A sub-thread cannot have sub-threads');
+  end;
+  create trigger conversations_place_fixed before update of project_id, parent_id on conversations
+  when new.project_id is not old.project_id or new.parent_id is not old.parent_id
+  begin
+    select raise(abort, 'A thread never changes place');
+  end;
+  create table lanes (
+    main_id text not null references conversations (id),
+    seq integer not null,
+    id text not null,
+    thread_id text references conversations (id),
+    card_json text,
+    title text,
+    width real check (width is null or width > 0),
+    primary key (main_id, id),
+    unique (main_id, seq),
+    check ((thread_id is null) <> (card_json is null)),
+    check ((card_json is null) = (title is null)),
+    check (thread_id is null or id = 'l-' || thread_id)
+  );
+  create trigger lanes_on_own_main before insert on lanes
+  when (select parent_id from conversations where id = new.main_id) is not null
+    or (new.thread_id is not null
+        and (select parent_id from conversations where id = new.thread_id) is not new.main_id)
+  begin
+    select raise(abort, 'A lane sits on a main thread, and a thread lane on its own');
+  end;
+  create trigger lanes_replaced_whole before update on lanes
+  begin
+    select raise(abort, 'Lanes are replaced, never edited');
+  end;
+  create table shell (
+    id integer primary key check (id = 1),
+    json text not null
+  );
+  create table notifications (
+    id text primary key,
+    thread_id text not null references conversations (id),
+    text text not null,
+    at text not null
+  );
+`;
+
+const INSERT_PROJECT = "insert into projects (id, name, created_at) values (?, ?, ?)";
+// A v1 row moves over with its title and times; its place comes from the plan.
+const MOVE_CONVERSATION = `
+  insert into conversations_next (id, title, created_at, updated_at, project_id, parent_id)
+  select id, title, ?, updated_at, ?, ? from conversations where id = ?
+`;
+const INSERT_LANE = `
+  insert into lanes (main_id, seq, id, thread_id, card_json, title, width)
+  values (?, ?, ?, ?, ?, ?, ?)
+`;
+
+// The project and main thread a v1 database's `profit` conversation becomes.
+const DEMO_PROJECT = { id: projectIdSchema.parse("demo-store"), name: "Demo store" };
+const PROFIT = threadIdSchema.parse("profit");
+
+const v1RowSchema = z.object({ id: threadIdSchema, updated_at: z.string() });
+
+// Oldest first; the id breaks ties so the order never depends on insertion.
+function byUpdated(a: V1Row, b: V1Row): number {
+  return a.updatedAt.localeCompare(b.updatedAt) || a.id.localeCompare(b.id);
+}
+
+// The rows in the saved order, with any it does not name after them in their own order.
+function sortByOrder(rows: V1Row[], order: string[]): V1Row[] {
+  const rank = new Map(order.map((id, index) => [id, index])); // → id → position
+  const named = rows
+    .filter((row) => rank.has(row.id))
+    .toSorted((a, b) => (rank.get(a.id) ?? 0) - (rank.get(b.id) ?? 0));
+  return [...named, ...rows.filter((row) => !rank.has(row.id))];
+}
+
+function laneRow(mainId: ThreadId, seq: number, lane: Lane): BindingSpec {
+  return lane.kind === "thread"
+    ? [mainId, seq, lane.id, lane.threadId, null, null, lane.width]
+    : [mainId, seq, lane.id, null, JSON.stringify(lane.card), lane.title, lane.width];
+}
+
+// Replaces a main thread's lanes with exactly `lanes`, left to right.
+function writeLanes(db: Database, mainId: ThreadId, lanes: Lane[]): void {
+  db.exec({ sql: "delete from lanes where main_id = ?", bind: [mainId] });
+  for (const [seq, lane] of lanes.entries()) {
+    db.exec({ sql: INSERT_LANE, bind: laneRow(mainId, seq, lane) });
+  }
+}
+
+function userVersion(db: Database): number {
+  return z.number().parse(db.selectValue("pragma user_version"));
+}
+
+function migrateToV2(db: Database, legacy: LegacyCanvas | undefined): void {
+  const rows = db
+    .selectObjects("select id, updated_at from conversations")
+    .map((row) => v1RowSchema.parse(row))
+    .map(({ id, updated_at }) => ({ id, updatedAt: updated_at })); // → V1Row[]
+  const plan = planV2(rows, legacy);
+  db.exec(V2_TABLES);
+  for (const { id, name, createdAt } of plan.projects) {
+    db.exec({ sql: INSERT_PROJECT, bind: [id, name, createdAt] });
+  }
+  for (const { id, createdAt, place } of plan.threads) {
+    const projectId = place.kind === "main" ? place.projectId : null;
+    const parentId = place.kind === "child" ? place.parentId : null;
+    db.exec({ sql: MOVE_CONVERSATION, bind: [createdAt, projectId, parentId, id] });
+  }
+  db.exec(V2_SWAP);
+  db.exec(V2_RULES);
+  for (const { mainId, lanes } of plan.lanes) writeLanes(db, mainId, lanes);
+}
+
+/**
+ * The v2 rows a v1 database becomes. With a `profit` conversation, it is the main thread of a
+ * "Demo store" project and every other conversation is its child; the children the v1 canvas
+ * did not hide become its lanes, in the v1 canvas's order, then oldest first. Without
+ * `profit`, every conversation is a main of that project, with no lanes. No rows, no plan.
+ */
+export function planV2(rows: V1Row[], legacy: LegacyCanvas | undefined): V2Plan {
+  const oldest = rows.toSorted(byUpdated);
+  const first = oldest.at(0);
+  if (first === undefined) return { projects: [], threads: [], lanes: [] };
+  const project: Project = { ...DEMO_PROJECT, createdAt: first.updatedAt };
+  const main: Place = { kind: "main", projectId: project.id };
+  const profit = oldest.find((row) => row.id === PROFIT);
+  if (profit === undefined) {
+    const threads = oldest.map((row) => ({ id: row.id, createdAt: row.updatedAt, place: main }));
+    return { projects: [project], threads, lanes: [] };
+  }
+  const children = oldest.filter((row) => row !== profit);
+  const hidden = new Set(legacy?.hidden);
+  const shown = sortByOrder(
+    children.filter((row) => !hidden.has(row.id)),
+    legacy?.order ?? [],
+  );
+  const child: Place = { kind: "child", parentId: PROFIT };
+  return {
+    projects: [project],
+    threads: [
+      { id: PROFIT, createdAt: profit.updatedAt, place: main },
+      ...children.map((row) => ({ id: row.id, createdAt: row.updatedAt, place: child })),
+    ],
+    lanes: [{ mainId: PROFIT, lanes: shown.map((row) => threadLane(row.id)) }],
+  };
+}
+
+/** The steps from each `user_version` to the next: 0 → 1 is the v1 schema, 1 → 2 the rebuild. */
+export const migrationSteps: readonly Step[] = [
+  (db) => {
+    db.exec(V1_DDL);
+  },
+  migrateToV2,
+];
+
+/**
+ * Brings the database to the newest schema, one step per `user_version`. Each step runs in one
+ * transaction that also bumps the version once `foreign_key_check` finds nothing, so a crash
+ * rolls that step back and the next run repeats it; a finished step never reruns. Foreign keys
+ * are off during a step (the pragma does nothing inside a transaction) and on again after.
+ *
+ * @throws When a step fails or leaves a broken reference (the database stays at the last
+ *   finished version), or when the database is newer than `steps` knows.
+ */
+export function migrate(
+  db: Database,
+  legacy?: LegacyCanvas,
+  steps: readonly Step[] = migrationSteps,
+): void {
+  for (let version = userVersion(db); version < steps.length; version = userVersion(db)) {
+    db.exec("pragma foreign_keys = off");
+    try {
+      db.transaction((tx) => {
+        steps[version](tx, legacy);
+        const broken = tx.selectObjects("pragma foreign_key_check");
+        if (broken.length > 0) {
+          throw new Error(
+            `Step ${version} → ${version + 1} broke references: ${JSON.stringify(broken)}`,
+          );
+        }
+        tx.exec(`pragma user_version = ${version + 1}`);
+      });
+    } finally {
+      db.exec("pragma foreign_keys = on");
+    }
+  }
+  if (userVersion(db) > steps.length) {
+    throw new Error(`The database is at version ${userVersion(db)}, newer than this build`);
+  }
+}

@@ -7,6 +7,7 @@ import sqlite3InitModule, {
 import type { ThreadMessage } from "@yaklabs/catalog/thread";
 import { z } from "zod";
 import { threadMessageSchema, type Conversation, type ConversationSummary } from "./protocol";
+import { migrate, migrationSteps } from "./schema";
 import { foldWords, newestFirst, toSummary, type ConversationStore } from "./store";
 
 /**
@@ -20,41 +21,6 @@ export type SqliteStore = ConversationStore & { close(): void };
 
 // Names become an OPFS directory and a file, so they stay plain.
 const NAME = /^[a-z0-9][a-z0-9-]{0,39}$/;
-
-// Rows hold what every turn has; `extra_json` holds the rest (its id, chips, files and cards).
-// The full-text index is an external-content FTS5 table kept in step by triggers, so it can
-// never disagree with the rows it indexes.
-const SCHEMA = `
-  pragma foreign_keys = on;
-  create table if not exists conversations (
-    id text primary key,
-    title text not null,
-    updated_at text not null
-  );
-  create table if not exists messages (
-    conversation_id text not null references conversations (id) on delete cascade,
-    seq integer not null,
-    role text not null check (role in ('user', 'agent')),
-    text text not null,
-    time text not null,
-    extra_json text not null,
-    primary key (conversation_id, seq)
-  );
-  create virtual table if not exists messages_fts using fts5 (
-    text, content = 'messages', content_rowid = 'rowid'
-  );
-  create trigger if not exists messages_fts_insert after insert on messages begin
-    insert into messages_fts (rowid, text) values (new.rowid, new.text);
-  end;
-  create trigger if not exists messages_fts_delete after delete on messages begin
-    insert into messages_fts (messages_fts, rowid, text) values ('delete', old.rowid, old.text);
-  end;
-  create trigger if not exists messages_fts_update after update on messages begin
-    insert into messages_fts (messages_fts, rowid, text) values ('delete', old.rowid, old.text);
-    insert into messages_fts (rowid, text) values (new.rowid, new.text);
-  end;
-  pragma user_version = 1;
-`;
 
 const UPSERT_CONVERSATION = `
   insert into conversations (id, title, updated_at) values (?, ?, ?)
@@ -161,7 +127,13 @@ function readSummaries(db: Database, query?: string): ConversationSummary[] {
   return rows.map((row) => fromSummaryRow(row)).toSorted(newestFirst);
 }
 
-async function openDatabase(location: StoreLocation): Promise<Database> {
+/**
+ * Opens the database file itself, with no schema applied: a named file in the private file
+ * system (only inside a Worker), or memory.
+ *
+ * @throws As `openSqliteStore` does for the location.
+ */
+export async function openDatabase(location: StoreLocation): Promise<Database> {
   const api = await (sqlite3 ??= sqlite3InitModule()); // → Sqlite3Static
   if (location.kind === "memory") return new api.oo1.DB(":memory:", "c");
   if (!NAME.test(location.name)) throw new Error(`Unusable store name: ${location.name}`);
@@ -181,7 +153,8 @@ async function openDatabase(location: StoreLocation): Promise<Database> {
  */
 export async function openSqliteStore(location: StoreLocation): Promise<SqliteStore> {
   const db = await openDatabase(location);
-  db.exec(SCHEMA);
+  db.exec("pragma foreign_keys = on");
+  migrate(db, undefined, migrationSteps.slice(0, 1));
 
   return {
     open: (id) => settle(() => readConversation(db, id)),
