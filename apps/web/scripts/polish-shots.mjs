@@ -12,7 +12,7 @@ const DIR = path.resolve(ROOT, arg("--dir", ".artifacts/polish/shots"));
 const QUERY = arg("--query");
 const PREFIX = arg("--prefix", "");
 
-const browser = await chromium.launch();
+const browser = await chromium.launch({ args: ["--disable-partial-raster"] }); // ADR-107
 mkdirSync(DIR, { recursive: true });
 const file = (name) => path.join(DIR, `${PREFIX}${name}.png`);
 

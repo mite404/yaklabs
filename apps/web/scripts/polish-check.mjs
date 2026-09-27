@@ -11,7 +11,7 @@ import { capture } from "./polish-checks.mjs";
 import { polishChecks } from "./polish-predicates.mjs";
 
 if (process.argv.includes("--capture")) {
-  const browser = await chromium.launch();
+  const browser = await chromium.launch({ args: ["--disable-partial-raster"] }); // ADR-107
   await capture(browser);
   await browser.close();
   console.log("baseline written to .artifacts/polish/baseline");
