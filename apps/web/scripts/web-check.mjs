@@ -907,7 +907,7 @@ try {
           now: value("valuenow"),
           width,
           ok:
-            el.hasAttribute("aria-valuenow") &&
+            el.getAttribute("aria-valuenow") !== null &&
             value("valuenow") === width &&
             value("valuemin") <= width &&
             width <= value("valuemax") &&
@@ -924,8 +924,8 @@ try {
   record(
     "a lane's gap says the lane's width in pixels, within its range, and follows an arrow key",
     gapsAtRest.length > 0 &&
-      gapsAtRest.every((gap) => gap.ok) &&
-      gapsResized.every((gap) => gap.ok) &&
+      gapsAtRest.every((gap) => gap.ok) === true &&
+      gapsResized.every((gap) => gap.ok) === true &&
       gapsResized[0].now === gapsAtRest[0].width + 24,
     `${gapsAtRest.map((gap) => `${gap.now}/${gap.width}`).join(" ")} → ${gapsResized.map((gap) => `${gap.now}/${gap.width}`).join(" ")}`,
   );
@@ -1007,7 +1007,7 @@ try {
   await fails.close();
   const framed = frames.filter(
     (frame) =>
-      frame.paper &&
+      frame.paper === true &&
       frame.named === frame.title &&
       (frame.place === "main" || frame.place === frame.title),
   );
@@ -1164,7 +1164,7 @@ try {
       await own.keyboard.press("Delete");
       await own.waitForURL(/\/t\/t-001/);
       const next = await focusOn(own);
-      if (next.startsWith("tab ")) {
+      if (next.startsWith("tab ") === true) {
         await own.keyboard.press("Delete");
         await own.getByText("Nothing open").waitFor();
       }
@@ -1203,9 +1203,9 @@ try {
       return {
         ok:
           look.tabs.length === 2 &&
-          look.tabs.every(Boolean) &&
-          look.plus &&
-          look.account &&
+          look.tabs.every(Boolean) === true &&
+          look.plus === true &&
+          look.account === true &&
           look.spill <= 0,
         detail: JSON.stringify(look),
       };
@@ -1239,8 +1239,9 @@ try {
         toggle.evaluate((el) => ({
           expanded: el.getAttribute("aria-expanded"),
           controls:
-            document.getElementById(el.getAttribute("aria-controls"))?.getAttribute("aria-label") ??
-            null,
+            document
+              .querySelector(`#${CSS.escape(el.getAttribute("aria-controls"))}`)
+              ?.getAttribute("aria-label") ?? null,
         }));
       const before = await state();
       await toggle.click();
@@ -1345,7 +1346,10 @@ try {
       await own.waitForTimeout(600);
       const onFocus = await tips.allInnerTexts();
       return {
-        ok: cut.every(Boolean) && onHover.includes(first) && onFocus.includes(second),
+        ok:
+          cut.every(Boolean) === true &&
+          onHover.includes(first) === true &&
+          onFocus.includes(second) === true,
         detail: `rows cut ${cut.join()}; tooltips on the first hover ${JSON.stringify(onHover)}, on focus ${JSON.stringify(onFocus)}`,
       };
     },
