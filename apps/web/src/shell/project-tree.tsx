@@ -22,6 +22,16 @@ const SKELETON_WIDTHS = [168, 132, 150];
 // A row: the hover fill stays inside the sidebar's padding, with the site's 4px corners.
 const ROW = "h-8 rounded-[var(--radius)] text-sm";
 
+// A project's threads sit one step in under its name, so the name reads as the label of the
+// group below it. The fill still spans the row; only the words move in. A child's "↳" stands
+// where its main's title starts, and its own title one step further in.
+const THREAD_ROW = `${ROW} pl-6`;
+
+// shadcn leaves room at a row's right end when its item holds an action. The project's "+"
+// shares its item with the project's threads, so that room reaches every thread row; a row
+// with no count of its own takes it back for its title.
+const NO_ACTION = "group-has-data-[sidebar=menu-action]/menu-item:pr-2";
+
 // Ids folded by hand: projects, and mains with their children. Nothing is folded at first.
 type Folds = { folded: Set<string>; toggle: (id: string) => void };
 
@@ -63,15 +73,19 @@ function Named({ name, row }: { name: string; row: ReactElement }) {
   );
 }
 
-// A thread row: a link named by its title. A child reads "↳ title" at one indent.
+// A thread row: a link named by its title, indented under its project. A child reads
+// "↳ title", one step further in than its main.
 function ThreadRow({
   thread,
   active,
   child,
+  counted,
 }: {
   thread: ThreadSummary;
   active: boolean;
   child: boolean;
+  /** Whether the row's item holds the count that folds its children. */
+  counted: boolean;
 }) {
   const { pathTo } = usePaths();
   return (
@@ -83,7 +97,7 @@ function ThreadRow({
           isActive={active}
           aria-current={active ? "page" : undefined}
           data-thread={child ? "child" : "main"}
-          className={`${ROW} text-soft-ink data-active:text-ink`}
+          className={`${THREAD_ROW} ${counted ? "" : NO_ACTION} text-soft-ink data-active:text-ink`}
         >
           {child && (
             <span aria-hidden="true" className="shrink-0 text-soft-ink">
@@ -115,7 +129,12 @@ function MainRows({
   return (
     <>
       <SidebarMenuItem>
-        <ThreadRow thread={main} active={at === main.id} child={false} />
+        <ThreadRow
+          thread={main}
+          active={at === main.id}
+          child={false}
+          counted={children.length > 0}
+        />
         {children.length > 0 && (
           <SidebarMenuAction
             aria-expanded={open}
@@ -133,7 +152,7 @@ function MainRows({
       {open &&
         children.map((thread) => (
           <SidebarMenuItem key={thread.id}>
-            <ThreadRow thread={thread} active={at === thread.id} child />
+            <ThreadRow thread={thread} active={at === thread.id} child counted={false} />
           </SidebarMenuItem>
         ))}
     </>
@@ -262,7 +281,7 @@ export function ProjectTree() {
       {shell === null || tree.length === 0 ? (
         <TreeState shell={shell} />
       ) : (
-        <SidebarMenu className="gap-0.5">
+        <SidebarMenu className="gap-2">
           {tree.map((node) => (
             <ProjectRows key={node.project.id} node={node} shell={shell} folds={folds} />
           ))}
