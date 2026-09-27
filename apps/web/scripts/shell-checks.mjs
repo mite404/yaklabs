@@ -231,6 +231,13 @@ export const shellChecks = {
     };
     await tabsOf(page).filter({ hasText: "Last week's sales" }).click();
     const canvasAfter = await canvasOf(page).isVisible();
+    await layoutButton(page, "Thread").click();
+    await page.waitForTimeout(300);
+    const alone = await page.locator('[role="tabpanel"]:not([inert])').evaluate((tab) => {
+      const thread = tab.querySelector('[data-slot="resizable-panel"]');
+      const share = thread.getBoundingClientRect().width / tab.getBoundingClientRect().width;
+      return Math.round(share * 100);
+    });
     await titleBar(page).screenshot({ path: shotPath("P9-title-bar") });
     return {
       ok:
@@ -241,8 +248,9 @@ export const shellChecks = {
         afterReload.tabs === 2 &&
         afterReload.active.includes("New thread") &&
         afterReload.browser &&
-        canvasAfter,
-      detail: `browser ${browserShown}; back to canvas ${canvasBack} with draft ${JSON.stringify(draft)}; browser again ${browserBack}; after reload ${JSON.stringify(afterReload)}, canvas ${canvasAfter}`,
+        canvasAfter &&
+        alone === 100,
+      detail: `browser ${browserShown}; back to canvas ${canvasBack} with draft ${JSON.stringify(draft)}; browser again ${browserBack}; after reload ${JSON.stringify(afterReload)}, canvas ${canvasAfter}; the thread alone fills ${alone}% of its tab`,
     };
   },
 

@@ -88,8 +88,11 @@ function SidePanes({ shell, thread, view, focus }: Beside) {
 }
 
 // One tab's panes: the main thread, then a panel holding the browser and the canvas. The
-// thread alone collapses that panel (and only then may it collapse, so a drag never does);
-// the split is kept on release.
+// thread alone collapses that panel; the split is kept on release. The panel's limits never
+// change: the library takes new limits a render late, so a panel made collapsible in the
+// render that collapses it refused to close and left a fifth of the tab blank. A drag can
+// only close it by reaching the far edge, and then the view's layout comes back, since the
+// layout switch alone decides what sits beside the thread.
 function Workspace(beside: Beside) {
   const { shell, thread, view } = beside;
   const group = useRef<GroupHandle>(null);
@@ -104,8 +107,11 @@ function Workspace(beside: Beside) {
       groupRef={group}
       defaultLayout={layoutFor(view.pane, view.split)}
       onLayoutChanged={(layout, { isUserInteraction }) => {
-        const split = new Map(Object.entries(layout)).get("thread"); // → number | undefined
-        if (isUserInteraction && !alone && split !== undefined) shell.setSplit(thread.id, split);
+        const sizes = new Map(Object.entries(layout)); // → Map<panel id, percent>
+        const split = sizes.get("thread");
+        if (!isUserInteraction || alone || split === undefined) return;
+        if (sizes.get("side") === 0) group.current?.setLayout(layoutFor(view.pane, view.split));
+        else shell.setSplit(thread.id, split);
       }}
     >
       {/* Strings are percentages to the panel library; a bare number would be pixels. */}
@@ -122,8 +128,9 @@ function Workspace(beside: Beside) {
       <ResizablePanel
         id="side"
         minSize={`${100 - SPLIT.max}`}
-        collapsible={alone}
+        collapsible
         collapsedSize="0"
+        collapsedThreshold={`${100 - SPLIT.max}`}
         className="grid"
       >
         <SidePanes {...beside} />
