@@ -600,6 +600,46 @@ try {
     "unknown path shows the not-found page",
     await page.getByText("Page not found").isVisible(),
   );
+
+  // A device file that opens but cannot be read ends the start broken with its reason, never a
+  // fresh starter over threads that are there. A page of its own, so its device is its own;
+  // the pool keeps a 4096-byte header of its own before the database's bytes.
+  const device = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  await device.goto(`${BASE}/`, { waitUntil: "load" });
+  await device.locator(".thread-panel").first().waitFor({ timeout: 20_000 });
+  await device.goto(`${BASE}/share.html`, { waitUntil: "load" });
+  const spoiled = await device.evaluate(async () => {
+    const names = [];
+    async function spoil(dir, at) {
+      for await (const [name, entry] of dir.entries()) {
+        if (entry.kind === "directory") {
+          await spoil(entry, `${at}/${name}`);
+          continue;
+        }
+        if ((await entry.getFile()).size <= 8192) continue;
+        const writable = await entry.createWritable({ keepExistingData: true });
+        await writable.seek(4096);
+        await writable.write(new Uint8Array(4096).fill(0x5a));
+        await writable.close();
+        names.push(`${at}/${name}`);
+      }
+    }
+    await spoil(await navigator.storage.getDirectory(), "");
+    return names;
+  });
+  await device.goto(`${BASE}/`, { waitUntil: "load" });
+  const notice = device.getByText("Your threads could not be opened", { exact: true });
+  await notice.waitFor({ timeout: 20_000 });
+  const reason = await notice.locator("xpath=..").innerText();
+  await device.getByRole("main").getByRole("button", { name: "Try again" }).click();
+  await notice.waitFor({ timeout: 20_000 });
+  await device.screenshot({ path: path.join(OUT, "device-broken.png") });
+  record(
+    "a device file that cannot be read says why and offers Try again, which tries again",
+    spoiled.length === 1 && reason.includes("could not be brought up to date"),
+    `${spoiled.length} file spoiled; ${reason.replaceAll(/\s+/g, " ").slice(0, 140)}`,
+  );
+  await device.close();
 } catch (error) {
   record("run", false, String(error));
   await shot("failure");
