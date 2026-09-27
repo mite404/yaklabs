@@ -3,216 +3,27 @@ import { Button } from "@yaklabs/ui/components/button";
 import { X } from "lucide-react";
 import {
   Fragment,
-  useEffect,
   useRef,
   useState,
   type CSSProperties,
-  type KeyboardEvent,
   type PointerEvent,
   type ReactNode,
   type WheelEvent,
 } from "react";
-import { landingIndex, shiftFor, slotLeft, type Slot } from "../canvas";
-import { trackHintLine } from "./divider";
+import { LaneSeparator } from "./lane-separator";
+import { displacement, useReorder, type LaneHandlers } from "./lane-reorder";
 
 /** One lane on the canvas: its name, the width it was left at (null: the default), its content. */
 export type LaneView = { id: LaneId; title: string; width: number | null; node: ReactNode };
 
 // A lane is a fixed column so the thread inside keeps one measure: this wide until its
-// separator is dragged, and never narrower than this.
+// separator is dragged.
 const LANE_WIDTH = "min(560px, 80vw)";
-const LANE_MIN_PX = 320;
-// The gap between lanes, which is the separator's width.
-const GAP_PX = 16;
-// How far a grip travels before its lane lifts, so a click stays a click.
-const LIFT_PX = 6;
-// How far one arrow key moves a separator; with Shift, how many slots it moves the lane.
-const KEY_STEPS: Partial<Record<string, number>> = { ArrowLeft: -24, ArrowRight: 24 };
-const KEY_MOVES: Partial<Record<string, number>> = { ArrowLeft: -1, ArrowRight: 1 };
-
-// A lane on its way somewhere (ADR-089): which, from which slot, the slot it would land in,
-// and how far the pointer has carried it.
-type Move = { id: LaneId; from: number; to: number; dx: number; dy: number };
-
-// What a drag measured as it began, so the lift itself never moves the targets: every lane's
-// slot along the row, the pointer's place, and the lane's box on screen. The lane itself is
-// kept for the copy that floats under the pointer.
-type Lift = {
-  id: LaneId;
-  from: number;
-  x: number;
-  y: number;
-  slots: Slot[];
-  box: DOMRect;
-  lane: HTMLElement;
-};
-
-// A lane in hand: what was measured when its grip was pressed and, once the lane has travelled
-// far enough to lift, where it is on its way to.
-type Drag = { lift: Lift; move: Move | null };
-
-type LaneHandlers = {
-  onPointerDown: (event: PointerEvent<HTMLElement>) => void;
-  onPointerMove: (event: PointerEvent<HTMLElement>) => void;
-  onPointerUp: () => void;
-  onPointerCancel: () => void;
-};
-
-// What takes hold of a lane: the title bar of what it shows, the same bar that drags a card
-// out of a thread. The title itself is for renaming, and any button in the bar keeps its job.
-const GRIP = ".thread-header, .card-heading";
-const NOT_GRIP = "h2, .card-heading-text, input, button";
-
-function isGrip(target: EventTarget | null): boolean {
-  return (
-    target instanceof Element && target.closest(GRIP) !== null && target.closest(NOT_GRIP) === null
-  );
-}
 
 // The ground: the row's own padding, the open space around its words, and the run of ground
 // past it. A press there pans the row; a press on anything in a lane belongs to the lane.
 function isGround(target: EventTarget | null, row: HTMLElement): boolean {
   return target === row || (target instanceof Element && target.matches("[data-ground]"));
-}
-
-// The lane a separator resizes is the one before it in the row.
-function laneBefore(separator: HTMLElement): HTMLElement | undefined {
-  const lane = separator.previousElementSibling;
-  return lane instanceof HTMLElement ? lane : undefined;
-}
-
-function clampWidth(px: number): number {
-  return Math.max(LANE_MIN_PX, Math.round(px));
-}
-
-// Every lane's slot along the row, in the row's own coordinates (its scroll included).
-function measureSlots(row: HTMLElement): Slot[] {
-  const rowBox = row.getBoundingClientRect();
-  return [...row.querySelectorAll(":scope > article")].map((el) => {
-    const box = el.getBoundingClientRect();
-    return { left: box.left - rowBox.left + row.scrollLeft, width: box.width };
-  });
-}
-
-// The drag as the pointer reaches (x, y): unchanged until the lane has travelled enough to lift.
-function dragTo(drag: Drag, x: number, y: number): Drag {
-  const dx = x - drag.lift.x;
-  const dy = y - drag.lift.y;
-  if (drag.move === null && Math.abs(dx) < LIFT_PX && Math.abs(dy) < LIFT_PX) return drag;
-  const { id, from, slots } = drag.lift;
-  return { ...drag, move: { id, from, to: landingIndex(slots, from, dx), dx, dy } };
-}
-
-// A snapshot's live parts: what was typed and how far each part had scrolled, which cloning
-// the DOM leaves behind. `to` has to be in the document already for the scrolling to take.
-function syncSnapshot(from: HTMLElement, to: HTMLElement): void {
-  const sources = from.querySelectorAll("*");
-  const targets = to.querySelectorAll("*");
-  sources.forEach((source, i) => {
-    const target = targets[i];
-    if (source instanceof HTMLTextAreaElement && target instanceof HTMLTextAreaElement) {
-      target.value = source.value;
-    }
-    if (source.scrollTop !== 0) target.scrollTop = source.scrollTop;
-  });
-}
-
-// A copy of the lane, fixed to the screen where the lane was, to float under the pointer.
-function floatingCopyOf(lift: Lift): HTMLElement | null {
-  const clone = lift.lane.cloneNode(true);
-  if (!(clone instanceof HTMLElement)) return null;
-  delete clone.dataset.lifted;
-  clone.dataset.ghost = "";
-  clone.setAttribute("aria-hidden", "true");
-  clone.classList.add("lane-ghost");
-  clone.style.left = `${lift.box.left}px`;
-  clone.style.top = `${lift.box.top}px`;
-  clone.style.width = `${lift.box.width}px`;
-  clone.style.height = `${lift.box.height}px`;
-  return clone;
-}
-
-// The copy of the lane that floats under the pointer while the lane itself waits, dimmed, in
-// the slot it would take. It appears when the lane lifts and moves by however far the pointer
-// has gone since.
-function useFloatingCopy(lift: Lift | null, move: Move | null): void {
-  const copy = useRef<HTMLElement | null>(null);
-
-  useEffect(() => {
-    const clone = lift && floatingCopyOf(lift);
-    if (!clone) return () => {};
-    document.body.append(clone);
-    syncSnapshot(lift.lane, clone);
-    document.documentElement.dataset.dragging = "lane";
-    copy.current = clone;
-    return () => {
-      clone.remove();
-      delete document.documentElement.dataset.dragging;
-      copy.current = null;
-    };
-  }, [lift]);
-
-  useEffect(() => {
-    if (copy.current && move) {
-      copy.current.style.transform = `translate(${move.dx}px, ${move.dy}px)`;
-    }
-  }, [move]);
-}
-
-// The lifted lane and its move, or nothing while the pointer is still within the dead zone.
-function liftedOf(drag: Drag | null): [Lift | null, Move | null] {
-  return drag?.move ? [drag.lift, drag.move] : [null, null];
-}
-
-// What a press on a lane measured, or nothing when it was not on a grip.
-function liftAt(event: PointerEvent<HTMLElement>, id: LaneId, index: number): Lift | null {
-  const row = event.currentTarget.closest("section");
-  if (event.button !== 0 || !row || !isGrip(event.target)) return null;
-  const lane = event.currentTarget;
-  return {
-    id,
-    from: index,
-    x: event.clientX,
-    y: event.clientY,
-    slots: measureSlots(row),
-    box: lane.getBoundingClientRect(),
-    lane,
-  };
-}
-
-// Reordering by a lane's grip: past a small dead zone the lane lifts, a copy of it rides the
-// pointer, the lane itself waits dimmed in the slot it would take and the lanes it passes step
-// aside. Arrow keys on the grip move the lane one slot either way.
-function useReorder(onMove: (id: LaneId, to: number) => void): {
-  drag: Drag | null;
-  laneFor: (id: LaneId, index: number) => LaneHandlers;
-} {
-  const [drag, setDrag] = useState<Drag | null>(null);
-  const [lift, move] = liftedOf(drag);
-  useFloatingCopy(lift, move);
-
-  const laneFor = (id: LaneId, index: number): LaneHandlers => ({
-    onPointerDown: (event) => {
-      const pressed = liftAt(event, id, index);
-      if (!pressed) return;
-      event.preventDefault();
-      setDrag({ lift: pressed, move: null });
-      pressed.lane.setPointerCapture(event.pointerId);
-    },
-    onPointerMove: (event) => {
-      const { clientX, clientY } = event;
-      setDrag((current) => current && dragTo(current, clientX, clientY));
-    },
-    onPointerUp: () => {
-      if (drag?.move && drag.move.to !== drag.move.from) onMove(drag.move.id, drag.move.to);
-      setDrag(null);
-    },
-    onPointerCancel: () => {
-      setDrag(null);
-    },
-  });
-
-  return { drag, laneFor };
 }
 
 // Panning by the ground (ADR-089): a press on the ground takes hold of the row, and the row
@@ -243,99 +54,6 @@ function usePan(): {
       delete document.documentElement.dataset.dragging;
     },
   };
-}
-
-// How far lane `index` is displaced while a move is under way: the lifted lane to the slot it
-// would take, the lanes it passes by its room.
-function displacement(drag: Drag | null, index: number): string {
-  if (!drag?.move) return "";
-  const { slots } = drag.lift;
-  const { from, to } = drag.move;
-  const px =
-    index === from
-      ? slotLeft(slots, from, to) - slots[from].left
-      : shiftFor(slots, from, to, index, GAP_PX);
-  return `translateX(${px}px)`;
-}
-
-// The gap after a lane, which drags the lane's right edge (ADR-089). The hint line shows while
-// the pointer is on it; pointer capture keeps the drag alive once the pointer outruns the gap.
-// The width follows the pointer and is kept when it lets go; an arrow key keeps its step at once.
-function LaneSeparator({
-  title,
-  style,
-  onResize,
-  onMove,
-}: {
-  title: string;
-  style: CSSProperties;
-  onResize: (px: number, kept: boolean) => void;
-  onMove: (step: number) => void;
-}) {
-  const [dragging, setDragging] = useState(false);
-  // Where the drag began (the pointer's x and the lane's width then) and the width reached since.
-  const origin = useRef<{ x: number; width: number; reached: number } | null>(null);
-
-  function down(event: PointerEvent<HTMLDivElement>) {
-    const lane = laneBefore(event.currentTarget);
-    if (event.button !== 0 || !lane) return;
-    event.preventDefault();
-    const width = lane.getBoundingClientRect().width;
-    origin.current = { x: event.clientX, width, reached: width };
-    event.currentTarget.setPointerCapture(event.pointerId);
-    setDragging(true);
-  }
-  function moveBy(event: PointerEvent<HTMLDivElement>) {
-    trackHintLine(event);
-    if (origin.current) {
-      const px = clampWidth(origin.current.width + event.clientX - origin.current.x);
-      origin.current.reached = px;
-      onResize(px, false);
-    }
-  }
-  function up() {
-    const drag = origin.current;
-    origin.current = null;
-    setDragging(false);
-    if (drag && drag.reached !== drag.width) onResize(drag.reached, true);
-  }
-  // Arrows resize the lane before the gap; with Shift they move it a slot instead.
-  function resizeByKey(event: KeyboardEvent<HTMLDivElement>) {
-    const lane = laneBefore(event.currentTarget);
-    const step = KEY_STEPS[event.key];
-    if (!lane || step === undefined) return;
-    event.preventDefault();
-    onResize(clampWidth(lane.getBoundingClientRect().width + step), true);
-  }
-  function moveByKey(event: KeyboardEvent<HTMLDivElement>) {
-    const step = KEY_MOVES[event.key];
-    if (step === undefined) return;
-    event.preventDefault();
-    onMove(step);
-  }
-  function key(event: KeyboardEvent<HTMLDivElement>) {
-    if (event.shiftKey) moveByKey(event);
-    else resizeByKey(event);
-  }
-
-  /* oxlint-disable jsx-a11y/prefer-tag-over-role -- a separator that takes focus and a drag is a widget; an hr can do neither */
-  return (
-    <div
-      role="separator"
-      aria-orientation="vertical"
-      aria-label={`Resize or move ${title}`}
-      tabIndex={0}
-      data-dragging={dragging || undefined}
-      className="drag-hint lane-shift relative w-4 shrink-0 cursor-col-resize outline-none"
-      style={style}
-      onPointerDown={down}
-      onPointerMove={moveBy}
-      onPointerUp={up}
-      onPointerCancel={up}
-      onKeyDown={key}
-    />
-  );
-  /* oxlint-enable jsx-a11y/prefer-tag-over-role */
 }
 
 // The strip above a lane: its close, at the far end.
