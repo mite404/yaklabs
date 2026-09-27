@@ -88,7 +88,11 @@ function AccountMenu({ face, children }: { face: ReactNode; children: ReactNode 
           <Button variant="ghost" size="icon" className="rounded-full" aria-label="Account" />
         }
       >
-        <Avatar size="sm">{face}</Avatar>
+        {/* The ring darkens in either theme, as the bar does not change; a blend is also what
+            keeps the page's text on greyscale smoothing, as it has always been (ADR-105). */}
+        <Avatar size="sm" className="dark:after:mix-blend-darken">
+          {face}
+        </Avatar>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
         {children}
