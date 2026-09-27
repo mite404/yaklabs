@@ -20,7 +20,6 @@
   outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
-
 /* A tab draws its ring inside itself: the tab strip scrolls, and a scroller clips whatever lies
    past its edge. On the active tab's pill the ring is the pill's own night ink (16.1:1). */
 .chrome-surface .tab:focus-visible {
@@ -152,16 +151,19 @@
 
   /* The empty canvas's splash (ADR-113): the drawing is a mask filled with --splash-line, so it
      themes with the ink and shows only its strokes, never the bounds of an image. It sits
-     behind the words and fades in once, with no fade under reduced motion. */
+     behind the words, and it and Kay fade in once, with no fade under reduced motion. */
   .splash {
     position: absolute;
     inset: 0;
     z-index: -1;
-    animation: splash-in 150ms ease-out;
   }
   .splash-drawing {
     background-color: var(--splash-line);
     mask: url("/splash/sphere.svg") center / contain no-repeat;
+  }
+  .splash,
+  .splash-in {
+    animation: splash-in 150ms ease-out;
   }
   @keyframes splash-in {
     from {
@@ -169,9 +171,23 @@
     }
   }
   @media (prefers-reduced-motion: reduce) {
-    .splash {
+    .splash,
+    .splash-in {
       animation: none;
     }
+  }
+  /* The open space lights up under a carry (ADR-091) on a layer below the splash drawing, so the
+     drawing stays on top of the fill, as the words do. */
+  .open-space::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -2;
+    border-radius: inherit;
+    transition: background-color 150ms ease;
+  }
+  .open-space[data-lit]::before {
+    background-color: color-mix(in srgb, var(--paper-deep) 60%, transparent);
   }
 
   /* The canvas is a dotted field (ADR-089): open ground that invites something to be put down. */
