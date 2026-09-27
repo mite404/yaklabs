@@ -1,17 +1,8 @@
 // The harness the workspace lever runs on: a browser, the addresses, the output folder, and a
 // runner that gives every check its own page so one failure never hides another.
 import { mkdirSync, writeFileSync } from "node:fs";
-import { createRequire } from "node:module";
 import path from "node:path";
-
-export const ROOT = path.resolve(import.meta.dirname, "../../..");
-const playwright = await import(
-  createRequire(path.join(ROOT, "apps/storybook/package.json")).resolve("playwright")
-);
-const { chromium } = playwright.default ?? playwright;
-
-const argv = process.argv.slice(2);
-const arg = (name, fallback) => (argv.includes(name) ? argv[argv.indexOf(name) + 1] : fallback);
+import { arg, chromium, ROOT } from "./harness.mjs";
 
 export const BASE = arg("--base", "http://127.0.0.1:5173");
 export const STORYBOOK = arg("--storybook", "http://127.0.0.1:6106");
