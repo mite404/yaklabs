@@ -13,6 +13,7 @@ import {
   browse,
   closeTab,
   firstRun,
+  leavesChild,
   markRead,
   parseShell,
   prune,
@@ -21,6 +22,7 @@ import {
   setSplit,
   stepBrowser,
   unreadCount,
+  unsaved,
   viewOf,
   visit,
   type BrowserState,
@@ -172,6 +174,24 @@ describe("setPane and setSplit", () => {
     expect(viewOf(setSplit(OPEN, PROFIT, 10), PROFIT).split).toBe(28);
     expect(viewOf(setSplit(OPEN, PROFIT, 95), PROFIT).split).toBe(80);
     expect(viewOf(setSplit(OPEN, PROFIT, 61.5), PROFIT).split).toBe(61.5);
+  });
+  it("leaves a child's address only when its own main turns off the canvas", () => {
+    const onChild = { main: PROFIT, focus: SATURDAY };
+    expect(leavesChild(onChild, PROFIT, "thread")).toBe(true);
+    expect(leavesChild(onChild, PROFIT, "browser")).toBe(true);
+    expect(leavesChild(onChild, PROFIT, "canvas")).toBe(false);
+    expect(leavesChild(onChild, TREND, "thread")).toBe(false);
+    expect(leavesChild({ main: PROFIT, focus: null }, PROFIT, "thread")).toBe(false);
+    expect(leavesChild(null, PROFIT, "thread")).toBe(false);
+  });
+});
+
+describe("unsaved", () => {
+  it("asks for a save only when the workspace holds a different document", () => {
+    expect(unsaved(OPEN, WS)).toBe(OPEN);
+    expect(unsaved(OPEN, { ...WS, shell: structuredClone(OPEN) })).toBeNull();
+    expect(unsaved(null, WS)).toBeNull();
+    expect(unsaved(OPEN, null)).toBeNull();
   });
 });
 
