@@ -1,8 +1,11 @@
-// A highlight inside the thread is something to pick up (ADR-089), and the pointer says so
-// before the browser's own drag does: an open hand over a highlight that already exists, a
-// closed one from press to release. While a highlight is being made the I-beam stays, as it
-// has in every word processor: the hand is for a highlight the user comes back to, not the one
-// under the button. The thread carries the state as `data-grab`; the stylesheet draws the hands.
+import { armCarry } from "./carry";
+
+// A highlight inside the thread is something to pick up (ADR-089), and the pointer says so:
+// an open hand over a highlight that already exists, a closed one from press to release. While
+// a highlight is being made the I-beam stays, as it has in every word processor: the hand is
+// for a highlight the user comes back to, not the one under the button. The thread carries the
+// state as `data-grab`; the stylesheet draws the hands. A press on the highlight carries its
+// text (carry.ts), never the browser's own drag, which would drop the highlight as it starts.
 
 // The edges of a box, which is all the hit test reads of a DOMRect.
 type Box = Pick<DOMRectReadOnly, "left" | "right" | "top" | "bottom">;
@@ -33,20 +36,39 @@ function pointerOf(event: PointerEvent): Pointer {
   return { x: event.clientX, y: event.clientY, buttons: event.buttons };
 }
 
+// The highlight inside `within`; undefined when there is none there.
+function highlightIn(within: HTMLElement): Range | undefined {
+  const selection = within.ownerDocument.getSelection();
+  if (!selection || selection.isCollapsed || selection.rangeCount === 0) return undefined;
+  const range = selection.getRangeAt(0);
+  return within.contains(range.commonAncestorContainer) ? range : undefined;
+}
+
 // The line boxes of the highlight inside `within`; none when there is no highlight there.
 function highlightBoxes(within: HTMLElement): Iterable<Box> {
-  const selection = within.ownerDocument.getSelection();
-  if (!selection || selection.isCollapsed || selection.rangeCount === 0) return [];
-  const range = selection.getRangeAt(0);
-  return within.contains(range.commonAncestorContainer) ? range.getClientRects() : [];
+  return highlightIn(within)?.getClientRects() ?? [];
+}
+
+// What rides the pointer for a highlight: its text on one line, in quotes.
+function quoteChip(document: Document, text: string): HTMLElement {
+  const chip = document.createElement("div");
+  chip.className = "carry-quote";
+  chip.textContent = `“${text.replaceAll(/\s+/g, " ").trim()}”`;
+  return chip;
+}
+
+function refuseDrag(event: DragEvent): void {
+  event.preventDefault();
 }
 
 /**
  * Marks `thread` with `data-grab="ready"` while the pointer rests on a highlight inside it and
- * `"held"` from press to release, so the stylesheet can show the open and closed hands.
- * Returns the function that stops marking.
+ * `"held"` from press to release, so the stylesheet can show the open and closed hands, and
+ * carries the highlight's text from a press on it. A click on the highlight clears it, as it
+ * would have without the carry. Returns the function that stops all of it.
  */
 export function markGrabbableHighlight(thread: HTMLElement): () => void {
+  const document = thread.ownerDocument;
   let held = false;
   // Where the pointer last was and which buttons were down there. A button down is a highlight
   // being made, so the selection growing under it never shows the hand until it is released.
@@ -65,26 +87,36 @@ export function markGrabbableHighlight(thread: HTMLElement): () => void {
   };
   const onDown = (event: PointerEvent) => {
     last = pointerOf(event);
-    if (event.button !== 0 || thread.dataset.grab !== "ready") return;
+    const text = highlightIn(thread)?.toString();
+    if (event.button !== 0 || thread.dataset.grab !== "ready" || text === undefined) return;
     held = true;
     mark("held");
+    armCarry(event, {
+      carried: { kind: "text", text },
+      picture: () => quoteChip(document, text),
+    });
+  };
+  const onClick = (event: MouseEvent) => {
+    if (pointInBoxes(highlightBoxes(thread), event.clientX, event.clientY))
+      document.getSelection()?.removeAllRanges();
   };
   const release = () => {
     held = false;
     last = { ...last, buttons: 0 };
     refresh();
   };
-  const document = thread.ownerDocument;
   thread.addEventListener("pointermove", onMove);
   thread.addEventListener("pointerdown", onDown);
-  thread.addEventListener("dragend", release);
+  thread.addEventListener("click", onClick);
+  thread.addEventListener("dragstart", refuseDrag);
   document.addEventListener("pointerup", release);
   document.addEventListener("pointercancel", release);
   document.addEventListener("selectionchange", refresh);
   return () => {
     thread.removeEventListener("pointermove", onMove);
     thread.removeEventListener("pointerdown", onDown);
-    thread.removeEventListener("dragend", release);
+    thread.removeEventListener("click", onClick);
+    thread.removeEventListener("dragstart", refuseDrag);
     document.removeEventListener("pointerup", release);
     document.removeEventListener("pointercancel", release);
     document.removeEventListener("selectionchange", refresh);

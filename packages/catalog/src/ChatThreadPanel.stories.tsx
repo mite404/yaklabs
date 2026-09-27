@@ -319,6 +319,32 @@ export const ReplyFails: Story = {
   },
 };
 
+// Highlights the first agent paragraph and rests the pointer on it until the thread shows the
+// open hand.
+async function readyHighlight(canvasElement: HTMLElement) {
+  const scroller = canvasElement.querySelector<HTMLElement>(".thread-scroll");
+  const paragraph = canvasElement.querySelector<HTMLElement>(".turn-agent p");
+  if (!scroller || !paragraph) throw new Error("the thread did not render");
+  const range = document.createRange();
+  range.selectNodeContents(paragraph);
+  document.getSelection()?.removeAllRanges();
+  document.getSelection()?.addRange(range);
+  const box = range.getBoundingClientRect();
+  const [x, y] = [box.left + 12, box.top + box.height / 2];
+
+  // The thread starts watching the pointer in an effect, so the first move is repeated
+  // until it is heard; a plain throw keeps the retries out of the console.
+  await waitFor(() => {
+    paragraph.dispatchEvent(pointer("pointermove", x, y));
+    if (scroller.dataset.grab !== "ready") throw new Error("the thread is not listening yet");
+  });
+  return { scroller, paragraph, range, box, x, y };
+}
+
+function highlighted(): string | undefined {
+  return document.getSelection()?.toString();
+}
+
 /**
  * A highlight is something to pick up: an open hand over it, a closed one while it is held, and
  * the I-beam for as long as the highlight is still being made.
@@ -326,22 +352,7 @@ export const ReplyFails: Story = {
 export const HighlightGrab: Story = {
   args: { thread: threads.trend },
   play: async ({ canvasElement }) => {
-    const scroller = canvasElement.querySelector<HTMLElement>(".thread-scroll");
-    const paragraph = canvasElement.querySelector<HTMLElement>(".turn-agent p");
-    if (!scroller || !paragraph) throw new Error("the thread did not render");
-    const range = document.createRange();
-    range.selectNodeContents(paragraph);
-    document.getSelection()?.removeAllRanges();
-    document.getSelection()?.addRange(range);
-    const box = range.getBoundingClientRect();
-    const [x, y] = [box.left + 12, box.top + box.height / 2];
-
-    // The thread starts watching the pointer in an effect, so the first move is repeated
-    // until it is heard; a plain throw keeps the retries out of the console.
-    await waitFor(() => {
-      paragraph.dispatchEvent(pointer("pointermove", x, y));
-      if (scroller.dataset.grab !== "ready") throw new Error("the thread is not listening yet");
-    });
+    const { scroller, paragraph, range, box, x, y } = await readyHighlight(canvasElement);
     await expect(scroller).toHaveAttribute("data-grab", "ready");
     await expect(getComputedStyle(scroller).cursor).toBe("grab");
 
@@ -367,5 +378,52 @@ export const HighlightGrab: Story = {
     await expect(getComputedStyle(scroller).cursor).not.toBe("grab");
     document.dispatchEvent(pointer("pointerup", x + 24, y));
     await expect(scroller).toHaveAttribute("data-grab", "ready");
+  },
+};
+
+/**
+ * A highlight carries its text (ADR-089): a quote chip rides the pointer, the highlight stays
+ * where it was, and the target gets the words. A click on the highlight, with no carry, clears
+ * it as it always has, and the browser's own drag never starts inside the thread.
+ */
+export const HighlightCarry: Story = {
+  args: { thread: threads.trend },
+  render: withCarryTarget,
+  play: async ({ canvasElement }) => {
+    const { paragraph, x, y } = await readyHighlight(canvasElement);
+    const target = within(canvasElement).getByRole("region", { name: "Carry target" });
+    const drop = middleOf(target);
+    const words = paragraph.textContent;
+
+    const down = pointer("pointerdown", x, y, 1);
+    paragraph.dispatchEvent(down);
+    await expect(down.defaultPrevented).toBe(true);
+    target.dispatchEvent(pointer("pointermove", drop.x, drop.y, 1));
+    await expect(document.documentElement).toHaveAttribute("data-carrying", "text");
+    await expect(document.querySelector(".carry-ghost .carry-quote")).toHaveTextContent(
+      `“${words}”`,
+    );
+    await expect(highlighted()).toBe(words);
+
+    target.dispatchEvent(pointer("pointerup", drop.x, drop.y));
+    await expect(document.documentElement).not.toHaveAttribute("data-carrying");
+    await expect(document.querySelector(".carry-ghost")).toBeNull();
+    await waitFor(() => expect(heardBy(target)).toEqual(["over text", "drop text"]));
+    await expect(JSON.parse(target.dataset.landed ?? "null")).toEqual({
+      kind: "text",
+      text: words,
+    });
+    await expect(highlighted()).toBe(words);
+
+    paragraph.dispatchEvent(pointer("pointermove", x, y));
+    paragraph.dispatchEvent(pointer("pointerdown", x, y, 1));
+    paragraph.dispatchEvent(pointer("pointerup", x, y));
+    paragraph.dispatchEvent(new MouseEvent("click", { bubbles: true, clientX: x, clientY: y }));
+    await expect(highlighted()).toBe("");
+    await expect(heardBy(target)).toEqual(["over text", "drop text"]);
+
+    const drag = new DragEvent("dragstart", { bubbles: true, cancelable: true });
+    paragraph.dispatchEvent(drag);
+    await expect(drag.defaultPrevented).toBe(true);
   },
 };
