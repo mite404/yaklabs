@@ -14,8 +14,8 @@ sequenceDiagram
   participant S as SQLite
   P->>R: runtime.arrange(mainId, lanes)
   R-->>P: state() shows the new lanes at once
-  R->>W: arrange { requestId, mainId, lanes }
-  W->>S: replace the main's lanes (one transaction)
+  R->>W: arrange { requestId, mainId, lanes, base }
+  W->>S: keep lanes added since base, replace the rest (one transaction)
   W-->>R: state { source, workspace, replying }
   W-->>R: done { requestId }
   R-->>P: state() is the worker's again; the promise settles
@@ -100,6 +100,10 @@ turn a dropped highlight into a child's title and opening draft.
 - `rename`, `arrange` and `saveShell` show in `state()` at once. The edit drops when its answer
   comes: by then the worker's state holds the write, or the write was refused and the promise
   rejects, so a refusal rolls itself back.
+- `arrange` sends `base`, the main's lane ids as `state()` showed them when it was called. The
+  worker keeps any lane added since (a child whose `create` was still in flight) beside its
+  neighbour, so an arrange computed from a stale `state()` never closes it. The page's overlay
+  merges the same way (`mergeLanes` in `src/workspace.ts`).
 - A malformed notice, a worker that fails to load, a `broken` notice or `dispose()` breaks the
   runtime: every call still waiting fails, and so does every later one.
 
@@ -115,7 +119,7 @@ own types, so a field the catalog adds as required, or retypes, fails to compile
 | `open { requestId, threadId }`                      | `opened { requestId, messages }`   |
 | `create { requestId, item }`                        | `state`, then `created { id }`     |
 | `rename { requestId, target, name }`                | `state`, then `done`               |
-| `arrange { requestId, mainId, lanes }`              | `state`, then `done`               |
+| `arrange { requestId, mainId, lanes, base }`        | `state`, then `done`               |
 | `saveShell { requestId, shell }`                    | `state`, then `done`               |
 | `send { requestId, threadId, event, accessToken? }` | `state`, `chunk`s, `state`, `done` |
 | `abort { requestId }`                               | nothing; the reply stops           |
@@ -123,6 +127,8 @@ own types, so a field the catalog adds as required, or retypes, fails to compile
 - Any request can answer `failed { requestId, reason }` instead, and only that request fails.
 - `broken { reason }` is for what no request caused: a failed start, or a command so malformed it
   names no request.
+- `opening { source }` goes out before a scenario opens, so a scenario that fails to load still
+  names itself. On the device it goes out once the store has opened and its storage is known.
 - `state { source, workspace, replying }` is pushed after `init` and after every write, a reply's
   start and end included, and skipped when its serialized form equals the last one pushed.
 - One `Map<requestId, sink>` in the page routes every answer.
@@ -130,8 +136,12 @@ own types, so a field the catalog adds as required, or retypes, fails to compile
 ## The worker's contract
 
 - `init` on the device opens `yaklabs` in OPFS, migrating it with the v1 canvas keys the page
-  sent, or falls back to memory with a `console.warn`. An empty device store gets the Demo store
-  project and its `profit` thread from the catalog's seed. A second `init` does nothing.
+  sent. Only a refused file system (`StorageUnavailableError`) falls back to memory, with a
+  `console.warn`. A file that opened but cannot be read or migrated (say, a version newer than
+  this build) is closed and breaks the start with its reason, so the page offers Try again
+  rather than a fresh starter over threads that are hidden but intact. An empty device store
+  gets the Demo store project and its `profit` thread from the catalog's seed. A second `init`
+  does nothing.
 - `send` saves the user's turn first, so a failed reply never loses what the user sent, and spends
   the thread's draft. A `message` becomes a user turn with its `attachments` and its `files` as
   `{ id, label }`, an `answer` becomes a user turn with its text, and `question-rejected` adds no
@@ -174,7 +184,8 @@ pragma does nothing inside a transaction.
 - 1 → 2 rebuilds `conversations` with `created_at`, `project_id`, `parent_id` and `draft`, and
   `check ((project_id is null) <> (parent_id is null))`, then adds `projects`,
   `lanes (main_id, seq, id, thread_id, card_json, title, width)`, `shell` and `notifications`.
-  Triggers hold what a check cannot: depth one, fixed places, and a thread lane on its own main.
+  Triggers hold what a check cannot: depth one (a child's parent is a main that already
+  exists, so never itself), fixed places, and a thread lane on its own main.
   `planV2(rows, legacy)` is the step's whole policy: `profit` becomes the Demo store's main and
   every other conversation its child; the children the v1 canvas did not hide become its lanes,
   in its order, then oldest first.
