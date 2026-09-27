@@ -5,6 +5,7 @@ import { ensureStarter, type NewThread, type Store } from "./store";
 import { netProfitChoice, profitThread } from "./testing";
 import {
   laneIdSchema,
+  lanesOf,
   projectIdSchema,
   threadIdSchema,
   threadLane,
@@ -126,7 +127,8 @@ describe("the store renames", () => {
     store.rename({ kind: "project", id: store1 }, "Corner shop");
     store.rename({ kind: "thread", id: main }, "Weekend margins");
     const { projects, threads } = store.workspace();
-    expect([projects[0].name, threads[0].title]).toEqual(["Corner shop", "Weekend margins"]);
+    expect(projects.map((project) => project.name)).toEqual(["Corner shop"]);
+    expect(threads.map((each) => each.title)).toEqual(["Weekend margins", "other"]);
     expect(() => {
       store.rename({ kind: "thread", id: t("missing") }, "x");
     }).toThrow("No thread missing");
@@ -139,7 +141,10 @@ describe("the store keeps lanes", () => {
     addChild(store, "child", 0);
     addChild(store, "second", 0);
     addChild(store, "closed");
-    expect(store.workspace().lanes[main].map((lane) => lane.id)).toEqual(["l-second", "l-child"]);
+    expect(lanesOf(store.workspace(), main).map((lane) => lane.id)).toEqual([
+      "l-second",
+      "l-child",
+    ]);
   });
 
   it("sets a canvas to exactly the lanes it is given, the same on a second run", async () => {

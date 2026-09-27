@@ -239,12 +239,12 @@ export function planV2(rows: V1Row[], legacy: LegacyCanvas | undefined): V2Plan 
 }
 
 /** The steps from each `user_version` to the next: 0 → 1 is the v1 schema, 1 → 2 the rebuild. */
-export const migrationSteps: readonly Step[] = [
-  (db) => {
+export const migrationSteps = [
+  (db: Database) => {
     db.exec(V1_DDL);
   },
   migrateToV2,
-];
+] as const satisfies readonly Step[];
 
 /**
  * Brings the database to the newest schema, one step per `user_version`. Each step runs in one
@@ -260,11 +260,16 @@ export function migrate(
   legacy?: LegacyCanvas,
   steps: readonly Step[] = migrationSteps,
 ): void {
-  for (let version = userVersion(db); version < steps.length; version = userVersion(db)) {
+  const start = userVersion(db);
+  if (start > steps.length) {
+    throw new Error(`The database is at version ${start}, newer than this build`);
+  }
+  for (const [offset, step] of steps.slice(start).entries()) {
+    const version = start + offset;
     db.exec("pragma foreign_keys = off");
     try {
       db.transaction((tx) => {
-        steps[version](tx, legacy);
+        step(tx, legacy);
         const broken = tx.selectObjects("pragma foreign_key_check");
         if (broken.length > 0) {
           throw new Error(
@@ -276,8 +281,5 @@ export function migrate(
     } finally {
       db.exec("pragma foreign_keys = on");
     }
-  }
-  if (userVersion(db) > steps.length) {
-    throw new Error(`The database is at version ${userVersion(db)}, newer than this build`);
   }
 }

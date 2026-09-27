@@ -8,6 +8,7 @@ import { openSqliteStore } from "./sqliteStore";
 import { ensureStarter, type Store } from "./store";
 import { netProfitChoice } from "./testing";
 import {
+  lanesOf,
   projectIdSchema,
   threadIdSchema,
   threadLane,
@@ -89,8 +90,10 @@ function states(notices: Notice[]): Extract<Notice, { kind: "state" }>[] {
   return notices.flatMap((notice) => (notice.kind === "state" ? [notice] : []));
 }
 
-function lastWorkspace(notices: Notice[]): Workspace | undefined {
-  return states(notices).at(-1)?.workspace;
+function lastWorkspace(notices: Notice[]): Workspace {
+  const last = states(notices).at(-1);
+  if (last === undefined) throw new Error("The loop pushed no state");
+  return last.workspace;
 }
 
 const streamed = (notices: Notice[]): string =>
@@ -104,7 +107,7 @@ describe("the agent loop starts", () => {
     await run(init);
     expect(beats(notices)).toEqual(["opening", "state"]);
     expect(notices[0]).toEqual({ kind: "opening", source: { kind: "device", storage: "memory" } });
-    expect(lastWorkspace(notices)?.threads.map((thread) => thread.id)).toEqual(["profit"]);
+    expect(lastWorkspace(notices).threads.map((thread) => thread.id)).toEqual(["profit"]);
   });
 
   it("starts once, however often it is asked", async () => {
@@ -185,11 +188,11 @@ describe("the agent loop pushes the state before it answers a write", () => {
     const created = notices.at(-1);
     const workspace = lastWorkspace(notices);
     expect(created).toEqual({ kind: "created", requestId: "r2", id: "t-001" });
-    expect(workspace?.threads.find((thread) => thread.id === "t-001")).toMatchObject({
+    expect(workspace.threads.find((thread) => thread.id === "t-001")).toMatchObject({
       place: { kind: "child", parentId: "profit" },
       draft: "> Saturday\n\n",
     });
-    expect(workspace?.lanes[profit].map((lane) => lane.id)).toEqual(["l-t-001"]);
+    expect(lanesOf(workspace, profit).map((lane) => lane.id)).toEqual(["l-t-001"]);
   });
 
   it("names an untitled main thread, and answers rename, arrange and shell with done", async () => {
@@ -218,8 +221,8 @@ describe("the agent loop pushes the state before it answers a write", () => {
       "done",
     ]);
     const workspace = lastWorkspace(notices);
-    expect(workspace?.threads.map((thread) => thread.title)).toEqual(["Margins", "New thread"]);
-    expect(workspace?.shell).toEqual({ version: 1 });
+    expect(workspace.threads.map((thread) => thread.title)).toEqual(["Margins", "New thread"]);
+    expect(workspace.shell).toEqual({ version: 1 });
   });
 });
 
@@ -249,9 +252,7 @@ describe("the agent loop replies", () => {
     await run(init);
     await run(sendAsk);
     expect(beats(notices)).toEqual(["opening", "state", "chunk", "state", "done"]);
-    const [, during, after] = states(notices);
-    expect(during.replying).toEqual(["profit"]);
-    expect(after.replying).toEqual([]);
+    expect(states(notices).map((state) => state.replying)).toEqual([[], ["profit"], []]);
     expect(streamed(notices)).toContain("Net profit · Sep 14–20");
     expect(store.transcript(profit)?.messages.slice(2)).toEqual([
       {
@@ -273,7 +274,7 @@ describe("the agent loop replies", () => {
     const id = threadIdSchema.parse("t-001");
     await run({ ...sendAsk, requestId: "r2", threadId: id });
     expect(store.transcript(id)?.draft).toBe("");
-    expect(lastWorkspace(notices)?.threads.find((thread) => thread.id === id)?.draft).toBe("");
+    expect(lastWorkspace(notices).threads.find((thread) => thread.id === id)?.draft).toBe("");
   });
 
   it("adds no user turn for a rejected question, only the agent's plain-words ask", async () => {

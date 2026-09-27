@@ -1,4 +1,4 @@
-import { threads, type ThreadMessage } from "@yaklabs/catalog/thread";
+import { threads, type Thread, type ThreadMessage } from "@yaklabs/catalog/thread";
 import type { Transcript } from "./conversation";
 import type { RenameTarget } from "./protocol";
 import { DEMO_PROJECT, PROFIT } from "./schema";
@@ -66,6 +66,16 @@ export type Store = {
 };
 
 /**
+ * One of the catalog's seed threads by name.
+ * @throws When the catalog has no thread by that name.
+ */
+export function seedThread(name: string): Thread {
+  const thread = new Map(Object.entries(threads)).get(name); // → Thread | undefined
+  if (thread === undefined) throw new Error(`The catalog has no seed thread named ${name}`);
+  return thread;
+}
+
+/**
  * Gives an empty device store the Demo store project and its `profit` main thread, seeded from
  * the catalog's profit thread, as the page used to. A store with any thread is left alone, so
  * running it again changes nothing.
@@ -76,13 +86,7 @@ export function ensureStarter(store: Store, at: string): void {
   if (!projects.some((project) => project.id === DEMO_PROJECT.id)) {
     store.addProject({ ...DEMO_PROJECT, createdAt: at });
   }
-  store.addThread({
-    id: PROFIT,
-    title: threads.profit.title,
-    place: { kind: "main", projectId: DEMO_PROJECT.id },
-    createdAt: at,
-    updatedAt: at,
-    draft: "",
-    messages: threads.profit.messages,
-  });
+  const { title, messages } = seedThread("profit");
+  const place = { kind: "main", projectId: DEMO_PROJECT.id } as const;
+  store.addThread({ id: PROFIT, title, place, createdAt: at, updatedAt: at, draft: "", messages });
 }

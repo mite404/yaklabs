@@ -159,7 +159,7 @@ export function newCardLaneId(): LaneId {
 
 /** A main thread's canvas, left to right; none for an id that is not a main. */
 export function lanesOf(ws: Workspace, mainId: ThreadId): Lane[] {
-  return Object.hasOwn(ws.lanes, mainId) ? ws.lanes[mainId] : [];
+  return new Map(Object.entries(ws.lanes)).get(mainId) ?? [];
 }
 
 /** `lane` placed at `at` (clamped to the ends), moved there if the list already holds it. */

@@ -124,7 +124,11 @@ describe("lane edits are idempotent list edits", () => {
     ["insert before the start", (list) => insertLane(list, -5, x), ["l-x", "l-a", "l-b", "l-c"]],
     ["insert past the end", (list) => insertLane(list, 99, x), ["l-a", "l-b", "l-c", "l-x"]],
     ["insert at NaN", (list) => insertLane(list, Number.NaN, x), ["l-a", "l-b", "l-c", "l-x"]],
-    ["insert one it holds", (list) => insertLane(list, 0, lanes[2]), ["l-c", "l-a", "l-b"]],
+    [
+      "insert one it holds",
+      (list) => insertLane(list, 0, threadLane(t("c"))),
+      ["l-c", "l-a", "l-b"],
+    ],
     ["move to the start", (list) => moveLane(list, lane("c"), 0), ["l-c", "l-a", "l-b"]],
     ["move to the end", (list) => moveLane(list, lane("a"), 2), ["l-b", "l-c", "l-a"]],
     ["move a missing lane", (list) => moveLane(list, lane("x"), 0), ["l-a", "l-b", "l-c"]],

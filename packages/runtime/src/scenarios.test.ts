@@ -1,10 +1,10 @@
-import { threads } from "@yaklabs/catalog/thread";
 import { describe, expect, it, onTestFinished } from "vitest";
 import { z } from "zod";
 import type { Opened } from "./agentLoop";
 import { scenarioNames, type ScenarioName } from "./protocol";
 import { openScenario } from "./scenarios";
-import { lanesOf, sidebarTree, type ThreadId, type Workspace } from "./workspace";
+import { seedThread } from "./store";
+import { lanesOf, sidebarTree, threadIdSchema, type ThreadId, type Workspace } from "./workspace";
 
 // A scenario, opened fresh and closed when the test ends.
 async function open(name: ScenarioName): Promise<Opened> {
@@ -32,6 +32,9 @@ function outline(ws: Workspace) {
   }));
 }
 
+const [profitTitle, trendTitle] = [seedThread("profit").title, seedThread("trend").title];
+// The first thread each fixture writes: the demo's profit thread, the long scenario's busiest.
+const first = threadIdSchema.parse("t-001");
 const title = (ws: Workspace, id: ThreadId) => ws.threads.find((thread) => thread.id === id)?.title;
 
 describe("scenarios load the same every time", () => {
@@ -51,16 +54,16 @@ describe("the demo scenario", () => {
       {
         "Demo store": [
           ["Refund audit"],
-          [threads.profit.title, "Saturday leads at every level", "Why is Tuesday quiet?"],
+          [profitTitle, "Saturday leads at every level", "Why is Tuesday quiet?"],
         ],
       },
-      { "Service desk": [[threads.trend.title]] },
+      { "Service desk": [[trendTitle]] },
     ]);
   });
 
   it("opens a card and one child beside profit, two tabs, and two notifications", async () => {
     const ws = (await open("demo")).store.workspace();
-    const profit = ws.threads[0].id;
+    const profit = first;
     expect(lanesOf(ws, profit).map((lane) => [lane.kind, lane.id])).toEqual([
       ["card", "c-001"],
       ["thread", "l-t-002"],
@@ -71,7 +74,7 @@ describe("the demo scenario", () => {
     });
     expect(ws.notifications.map((each) => title(ws, each.threadId))).toEqual([
       "Refund audit",
-      threads.trend.title,
+      trendTitle,
     ]);
   });
 });
@@ -92,7 +95,7 @@ describe("the long and empty scenarios", () => {
       .flatMap(({ mains }) => mains)
       .find((node) => node.children.length > 0);
     expect(busiest?.children).toHaveLength(9);
-    expect(store.transcript(ws.threads[0].id)?.messages).toHaveLength(120);
+    expect(store.transcript(first)?.messages).toHaveLength(120);
     expect(z.object({ tabs: z.array(z.string()) }).parse(ws.shell).tabs).toHaveLength(12);
     expect(ws.notifications).toHaveLength(12);
   });

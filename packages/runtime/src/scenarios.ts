@@ -1,9 +1,9 @@
-import { profitCard, threads, type ThreadMessage } from "@yaklabs/catalog/thread";
+import { profitCard, type ThreadMessage } from "@yaklabs/catalog/thread";
 import type { Faults, Opened } from "./agentLoop";
 import { fixedMint, type Mint } from "./mint";
 import type { ScenarioName } from "./protocol";
 import { openSqliteStore } from "./sqliteStore";
-import type { Store } from "./store";
+import { seedThread, type Store } from "./store";
 import {
   threadLane,
   type Lane,
@@ -34,7 +34,6 @@ const DAY = 24 * 60;
 // The simulated browser's pages (the page's registry uses .example hosts, RFC 2606).
 const START_PAGE = "https://start.example/";
 const RADAR_PAGE = "https://weather.example/radar";
-const PANES: Pane[] = ["thread", "browser", "canvas"];
 // A 60-character word with no break in it, for the layouts that must wrap or clip one.
 const LONG_WORD = "Supplierinvoicereconciliationacrossthenorthernwarehouseslist";
 
@@ -84,10 +83,11 @@ function shell(tabs: ThreadId[], views: [ThreadId, ReturnType<typeof view>][]): 
 
 // The profit thread with two children, one closed, and a card open beside the other.
 function fillProfit(write: Writer, projectId: ProjectId): ThreadId {
+  const { title, messages } = seedThread("profit");
   const profit = addThread(write, {
     place: main(projectId),
-    title: threads.profit.title,
-    messages: threads.profit.messages,
+    title,
+    messages,
     created: 2 * DAY,
     updated: 80,
   });
@@ -128,10 +128,11 @@ function fillDemo(write: Writer): void {
     created: DAY,
     updated: 30,
   });
+  const trendSeed = seedThread("trend");
   const trend = addThread(write, {
     place: main(desk),
-    title: threads.trend.title,
-    messages: threads.trend.messages,
+    title: trendSeed.title,
+    messages: trendSeed.messages,
     created: 2 * DAY - 60,
     updated: 45,
   });
@@ -164,24 +165,40 @@ function manyTurns(write: Writer, count: number): ThreadMessage[] {
   });
 }
 
+// Region `n`, from 1: a project with an 80-character name, and its main thread with another.
+function addRegion(write: Writer, n: number, messages: ThreadMessage[]): ThreadId {
+  const name =
+    n === 12
+      ? `${LONG_WORD} for the month close`
+      : `Region ${two(n)}: supplier invoices matched to deliveries across the northern warehouse`;
+  const projectId = addProject(write, name, (13 - n) * DAY);
+  const created = (13 - n) * DAY - 60;
+  return addThread(write, {
+    place: main(projectId),
+    title: `Week ${two(n)} review: supplier invoices checked against deliveries in northern stores.`,
+    messages,
+    created,
+    updated: messages.length > 0 ? 1 : created,
+  });
+}
+
+// The pane the long scenario's tabs show, in turn.
+function paneFor(tab: number): Pane {
+  switch (tab % 3) {
+    case 0:
+      return "thread";
+    case 1:
+      return "browser";
+    default:
+      return "canvas";
+  }
+}
+
 // Twelve projects and twelve tabs, 80-character names, one 60-character word, a main with nine
 // children, a 120-turn thread, and twelve notifications.
 function fillLong(write: Writer): void {
-  const mains = Array.from({ length: 12 }, (_, i) => {
-    const name =
-      i === 11
-        ? `${LONG_WORD} for the month close`
-        : `Region ${two(i + 1)}: supplier invoices matched to deliveries across the northern warehouse`;
-    const projectId = addProject(write, name, (12 - i) * DAY);
-    return addThread(write, {
-      place: main(projectId),
-      title: `Week ${two(i + 1)} review: supplier invoices checked against deliveries in northern stores.`,
-      messages: i === 0 ? manyTurns(write, 120) : [],
-      created: (12 - i) * DAY - 60,
-      updated: i === 0 ? 1 : (12 - i) * DAY - 60,
-    });
-  });
-  const first = mains[0];
+  const first = addRegion(write, 1, manyTurns(write, 120));
+  const mains = [first, ...Array.from({ length: 11 }, (_, i) => addRegion(write, i + 2, []))];
   const children = Array.from({ length: 9 }, (_, i) =>
     addThread(write, {
       place: child(first),
@@ -196,17 +213,12 @@ function fillLong(write: Writer): void {
   write.store.saveShell(
     shell(
       mains,
-      mains.map((id, i) => [id, view(PANES[i % PANES.length])]),
+      mains.map((id, i) => [id, view(paneFor(i))]),
     ),
   );
   for (const [i, id] of mains.entries()) {
-    notify(
-      write,
-      i + 1,
-      id,
-      `Region ${two(i + 1)}: the weekly close is ready for review.`,
-      5 * (i + 1),
-    );
+    const text = `Region ${two(i + 1)}: the weekly close is ready for review.`;
+    notify(write, i + 1, id, text, 5 * (i + 1));
   }
 }
 
