@@ -9,7 +9,7 @@ import {
 } from "react";
 import { trackHintLine } from "./divider";
 
-// The widths the gap sets (ADR-116): never narrower than a readable measure for the thread
+// The widths the gap sets (ADR-117): never narrower than a readable measure for the thread
 // inside, and never wider than the widest canvas a 2560px screen lays out.
 const LANE_MIN_PX = 320;
 const LANE_MAX_PX = 1800;

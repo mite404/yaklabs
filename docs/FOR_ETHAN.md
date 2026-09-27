@@ -637,7 +637,7 @@ The first entries are ideas from before any code existed; the rest are parts of 
   first tab let go at the wrong moment, everything went. Fix, twice over: every tab queues on a
   browser lock before it touches the database, so a second tab waits and says "Your threads are
   open in another tab"; and the worker keeps a file of its own open inside the library's folder,
-  so the delete is refused whatever happens (ADR-117). Lesson: read what a library does when it
+  so the delete is refused whatever happens (ADR-118). Lesson: read what a library does when it
   fails, not only when it works. The stunt looked safe until someone read the insurance terms.
 - **Two agents, one stash.** Two fixers worked in separate folders of the same repository. One
   set a change aside with `git stash` to show a test failing first; the stash list is shared by

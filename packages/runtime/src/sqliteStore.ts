@@ -70,7 +70,7 @@ function reasonOf(error: unknown): string {
 }
 
 // sqlite-wasm answers any failed install by deleting the pool's directory, every database in
-// it included, and only an open handle inside stops that delete (ADR-117). So this opens a file
+// it included, and only an open handle inside stops that delete (ADR-118). So this opens a file
 // in a subdirectory of the pool, where the pool never looks for its own files. Without access
 // handles the installer refuses before it touches anything, so there is nothing to guard.
 async function guardPool(directory: string): Promise<FileSystemSyncAccessHandle | undefined> {
