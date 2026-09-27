@@ -1028,3 +1028,63 @@ Proof: all 42 stories shot in light before and after, byte-identical or matching
 a rerun; all 42 shot in dark through the screenshot lever's new `--theme` option and read by eye;
 and the browser lever measures that the page, the paper and the ink all change when the toggle is
 used, instead of trusting the attribute.
+
+## ADR-091 - A carried card or highlight is pointer-driven, not an HTML5 drag
+
+2026-09-27 - Accepted (Ethan); amends ADR-089.
+During a native HTML5 drag the operating system draws the cursor and the browser ignores every CSS
+`cursor` rule until release, so the closed hand shown on press could never survive the drag:
+measured on `main`, one `dragstart` fired and the element under the pointer read `cursor: auto`, and
+the only drop feedback lived on the open space at the far end of the row, off-screen once a lane
+existed.
+Cards and highlights therefore travel by a pointer-driven carry the page draws itself, which keeps
+the closed hand from lift to release, lights the whole canvas, lands the drop in the gap under the
+pointer and lets Escape cancel.
+Ethan accepted losing drags out to other apps, which only ever received the card's title as plain
+text, because the arrow reappearing mid-drag reads as unpolished; the Share link stays the way to
+take a card elsewhere.
+
+## ADR-092 - Threads started on the canvas are sub-threads of the main thread
+
+2026-09-27 - Accepted (Ethan); extends ADR-089.
+A project holds any number of main threads, and a thread started on a main thread's canvas is that
+thread's child, one level deep, listed under it in the sidebar as a "↳" row.
+Opening a main thread or any of its children loads the same whole view, the main thread beside its
+canvas, with the child's lane brought into view.
+
+## ADR-093 - The sidebar is shadcn's Sidebar, with Conductor's project rows
+
+2026-09-27 - Accepted (Ethan); carries out ADR-082.
+Navigation becomes shadcn's `Sidebar` with `collapsible="icon"`, whose collapsed state is today's
+56px rail, instead of a hand-made tree; it already brings the toggle, the keyboard shortcut,
+skeleton rows, row actions and nested sub-rows.
+A project row reads "name >" when folded, shows no chevron while open until the pointer is on the
+name, and carries a "+" that starts a new thread in that project, after Ethan's Conductor
+screenshots.
+
+## ADR-094 - The web app draws itself as a desktop window with a tabbed title bar
+
+2026-09-27 - Proposed (Ethan's brief; the design is being settled).
+Following Kay's desktop app without changing our look, the app is a window inside the viewport with
+decorative traffic lights and one title bar across its full width: the sidebar toggle at the far
+left, tabs in the middle, and at the far right the notifications bell and then the account avatar,
+which takes the corner because the signed-in account matters more.
+Each tab restores one of three layouts, a thread alone, a thread beside a simulated browser, or a
+thread beside the compose canvas, and the rail keeps the Kay mark with a documentation link beneath
+it.
+
+## ADR-095 - The Kay mark is the vector Kay's site declares
+
+2026-09-27 - Accepted.
+meetkay.ai declares its mark as one SVG polygon (`viewBox="0 0 78.59 78.54"`,
+`fill="currentColor"`), so the rail draws that polygon instead of a trace of a screenshot, the same
+rule ADR-051 set for colours: brand assets come from what the brand declares, never from pixels.
+
+## ADR-096 - Mock scenarios never touch device data, and the app says which is which
+
+2026-09-27 - Proposed (Ethan's brief; the design is being settled).
+Deterministic scenarios for long content, loading, failure and empty states run on a store built in
+memory from fixed fixtures and never open the device's database, so a demo can never overwrite or
+read real conversations.
+The app states plainly whether an action is mock, kept on this device, or live with a real model:
+"Live data can follow, with a clear indication when actions have real effects."
