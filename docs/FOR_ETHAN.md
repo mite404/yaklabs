@@ -671,9 +671,16 @@ The first entries are ideas from before any code existed; the rest are parts of 
   address, the tabs and the marker blinked out a moment after load. The runtime was keyed on the
   whole query string, and the first redirect keeps only `?scenario=`, so it saw a "new" address
   and started the worker again. It had always done this for any extra parameter, a tracking tag
-  included; nothing had carried one until now. Fix: key it on the scenario alone,
-  `scenarioQuery()`, with a table test. Lesson: key a memo on what it actually depends on, not on
-  the envelope that happens to carry it.
+  included; nothing had carried one until now. Fix: key it on the scenario alone, with a table
+  test. The base then landed the same fix on its own (`useWanted()`), so the merge took theirs
+  and dropped ours: two crews had found one bug, and the set only needs one repair. Lesson: key a
+  memo on what it actually depends on, not on the envelope that happens to carry it.
+- **The 44px rule that met a phone.** The polish promised the bar stays 44px tall at every
+  width. Then the base gave phones a second row for the tabs, and the check failed at 80px with
+  no polish change at all. The promise was really "the polish does not change the bar's height",
+  so the check now records the base's height at each width in the baseline and compares against
+  it, and still demands 44px from 768px up. Lesson: write a check against the intent, not
+  against the number that happened to express it on the day.
 - **The avatar that decided how every letter was drawn.** Making the avatar's ring blend the same
   in both themes (`mix-blend-mode: normal`) changed 35,000 pixels in a panel it is nowhere near.
   Every glyph in the app had switched from greyscale to coloured subpixel smoothing. Chromium only
