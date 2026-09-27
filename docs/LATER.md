@@ -58,6 +58,21 @@ this list when it ships.
   `source: null` and the title bar shows no marker. The contract says a held start still shows its
   source (`docs/trail/evidence/projects-sidebar/contract.md`). Waits on the store reporting its
   storage kind before it migrates, so `opening` can go out first.
+- **A blank moment leaving a thread.** Going from a thread to the Lab, following the Kay link, or
+  closing the last tab shows an empty workspace for a few frames (5 to 16 measured) while the next
+  route loads. Holding the old tab on screen until the route commits would bring a just-closed tab
+  back through the visit, so it needs its own design; pointing the Kay link straight at the tab it
+  returns to would remove one case.
+- **One bad view resets every tab.** `parseShell` falls back to the first-run document when any
+  view fails its schema, and the next save writes that over the user's tabs. The known way to
+  write a bad view is fixed (an address is capped by its canonical length), but the fallback
+  could keep the good tabs and drop only the bad view.
+- **Focus after a failed start's Try again.** A restart remounts the whole window, so the button
+  that was pressed is gone and the focus goes back to the page. Restarting below the window, or
+  handing the focus to the tree, would keep it.
+- **The contract's second-tab line.** `docs/trail/evidence/projects-sidebar/contract.md` still says
+  a second tab falls back to memory; ADR-117 replaced that with the held state, and the contract
+  snapshot should say so.
 - **Run `auth-check.mjs` again.** `apps/web/scripts/auth-check.mjs` has only been syntax-checked
   since its browser setup moved into `harness.mjs`. Running it needs a web build with WorkOS
   turned on (`VITE_AUTH=workos` and a client id).
