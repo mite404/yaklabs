@@ -56,13 +56,14 @@
   text-decoration: underline dotted var(--rule);
   text-underline-offset: 4px;
 }
+/* No rule under the field (ADR-089): the title reads the same, in the same box, the moment
+   editing starts, rather than jumping a pixel to make room for an underline. */
 .thread-rename {
   display: block;
   width: 100%;
   margin: 0;
   padding: 0;
   border: 0;
-  border-bottom: 1px solid var(--rule);
   border-radius: 0;
   background: transparent;
   color: var(--ink);
@@ -73,8 +74,6 @@
   outline: none;
 }
 
-/* The scroll area is the size container for embedded cards (ADR-023).
-   A stable scrollbar gutter keeps content from shifting when the bar appears (ADR-003). */
 /* A highlight is something to pick up (ADR-089): an open hand over it, a closed one while it
    is held; the thread sets data-grab from the pointer (grabbable.ts). */
 .thread-scroll[data-grab="ready"] {
@@ -83,9 +82,14 @@
 .thread-scroll[data-grab="held"] {
   cursor: grabbing;
 }
+/* The scroll area is the size container for embedded cards (ADR-023).
+   A stable scrollbar gutter keeps content from shifting when the bar appears (ADR-003).
+   The thread steers its own scroll (threadReveal.ts), so the browser's scroll anchoring, which
+   would shift it to hold a paragraph in place as content sizes, stays off (ADR-103). */
 .thread-scroll {
   container: thread / inline-size;
   overflow-y: auto;
+  overflow-anchor: none;
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
   /* The bottom padding lands the last card --rest-gap above the compose box or the dock
@@ -402,11 +406,8 @@
   padding-bottom: 4px;
 }
 /* The fold (Disclosure) spans the card, so its line is flush with the card's edges; the
-   header sits 4px in, so its 8px padding puts the label on the same 12px inset as the body. */
-.awaiting .disclosure-header {
-  width: calc(100% - 8px);
-  margin: 0 4px;
-}
+   header's own 4px inset plus its 8px padding puts the label on the same 12px inset as
+   the body below. */
 .awaiting .disclosure-body {
   padding: 0 12px;
 }

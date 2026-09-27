@@ -119,7 +119,7 @@ function Chart({ selection }: { selection: Selection }) {
  * @param context Host-owned placement, never part of the agent payload: "page" for the
  * evaluation workbench, "thread" for a card inside a chat thread (ADR-023).
  * @param shareable Show the share button (ADR-064); off on the public page itself.
- * @param draggable Let the header drag the card out, as onto the compose canvas (ADR-089).
+ * @param draggable Let the header carry the card out, as onto the compose canvas (ADR-089).
  */
 export function CatalogCard({
   payload,

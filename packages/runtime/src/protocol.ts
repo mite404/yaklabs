@@ -1,11 +1,20 @@
 import type { AgentEvent, SharedFile } from "@yaklabs/catalog/agent";
 import type { CardAttachment } from "@yaklabs/catalog/interactive";
-import type { Thread, ThreadMessage } from "@yaklabs/catalog/thread";
+import type { ThreadMessage } from "@yaklabs/catalog/thread";
 import { z } from "zod";
+import {
+  laneIdSchema,
+  laneSchema,
+  projectIdSchema,
+  shellStateSchema,
+  threadIdSchema,
+  workspaceSchema,
+} from "./workspace";
 
 // The catalog owns these shapes. Each schema is typed against the catalog's own type, so a
 // field the catalog adds or retypes fails to compile here until the schema learns it.
 const idSchema = z.string().min(1);
+const nameSchema = z.string().min(1);
 
 const cardAttachmentSchema: z.ZodType<CardAttachment> = z.object({
   turnId: z.string(),
@@ -19,8 +28,8 @@ const sharedFileSchema: z.ZodType<SharedFile> = z.object({
   size: z.number().nonnegative(),
 });
 
-/** What the thread tells the agent (ADR-041), checked where it crosses into the worker. */
-export const agentEventSchema: z.ZodType<AgentEvent> = z.discriminatedUnion("kind", [
+// What the thread tells the agent (ADR-041), checked where it crosses into the worker.
+const agentEventSchema: z.ZodType<AgentEvent> = z.discriminatedUnion("kind", [
   z.object({
     kind: z.literal("message"),
     text: z.string(),
@@ -52,73 +61,133 @@ export const threadMessageSchema: z.ZodType<ThreadMessage> = z.discriminatedUnio
   }),
 ]);
 
-/** A seed thread the page can hand over when it opens a conversation for the first time. */
-export const threadSchema: z.ZodType<Thread> = z.object({
-  title: z.string(),
-  messages: z.array(threadMessageSchema),
-  recap: z.array(z.object({ text: z.string(), turnId: z.string() })).optional(),
-  awaiting: z.unknown().optional(),
-});
-
-/** A conversation as the worker stores it (ADR-081). `updatedAt` is an ISO 8601 instant. */
-export const conversationSchema = z.object({
-  id: idSchema,
-  title: z.string(),
-  messages: z.array(threadMessageSchema),
-  updatedAt: z.iso.datetime(),
-});
-
-/** One row of the conversation list: enough to draw it without loading every message. */
-export const conversationSummarySchema = z.object({
-  id: idSchema,
-  title: z.string(),
-  updatedAt: z.iso.datetime(),
-  preview: z.string(),
-});
-
-/** Which agent answers: the scripted lab stand-in, or the model behind the gateway (ADR-085). */
-export const agentSpecSchema = z.discriminatedUnion("kind", [
+// Which agent answers: the scripted lab stand-in, or the model behind the gateway (ADR-085).
+const agentSpecSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("lab") }),
   // Absolute, because the worker resolves it; the page passes its own origin (ADR-086).
   z.object({ kind: z.literal("gateway"), baseUrl: z.url() }),
 ]);
 
-/** Everything the page may ask of the worker (ADR-076, ADR-086). */
+// The v1 canvas's two localStorage keys, which only the 1 → 2 migration reads.
+const legacyCanvasSchema = z.object({
+  hidden: z.array(z.string()),
+  order: z.array(z.string()),
+});
+
+/** The mock scenarios a page may ask for (ADR-096); each loads the same every time. */
+export const scenarioNames = [
+  "demo",
+  "empty",
+  "long",
+  "loading",
+  "failure",
+  "thread-fails",
+] as const;
+const scenarioNameSchema = z.enum(scenarioNames);
+
+// Where the worker's data lives: the device's store, in the private file system or, when the
+// browser refuses it, in memory for this tab; or a scenario, which never touches the device.
+const sourceSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("device"), storage: z.enum(["opfs", "memory"]) }),
+  z.object({ kind: z.literal("scenario"), name: scenarioNameSchema }),
+]);
+
+// What the page asks the worker to open.
+const runtimeDataSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("device"), legacy: legacyCanvasSchema.optional() }),
+  z.object({ kind: z.literal("scenario"), name: scenarioNameSchema }),
+]);
+
+// Something new: a project, a main thread in one ("New thread" when untitled), or a child
+// started from a highlight, its lane at `at` on its parent's canvas.
+const newItemSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("project"), name: nameSchema }),
+  z.object({ kind: z.literal("main"), projectId: projectIdSchema, title: nameSchema.optional() }),
+  z.object({
+    kind: z.literal("child"),
+    parentId: threadIdSchema,
+    at: z.int(),
+    title: nameSchema,
+    draft: z.string(),
+  }),
+]);
+
+const renameTargetSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("project"), id: projectIdSchema }),
+  z.object({ kind: z.literal("thread"), id: threadIdSchema }),
+]);
+
+/** Everything the page may ask of the worker (ADR-076, ADR-086); all but `init` name a request. */
 export const commandSchema = z.discriminatedUnion("kind", [
-  z.object({ kind: z.literal("init"), agent: agentSpecSchema }),
-  z.object({ kind: z.literal("open"), conversationId: idSchema, seed: threadSchema.optional() }),
+  z.object({ kind: z.literal("init"), agent: agentSpecSchema, data: runtimeDataSchema }),
+  z.object({ kind: z.literal("open"), requestId: idSchema, threadId: threadIdSchema }),
+  z.object({ kind: z.literal("create"), requestId: idSchema, item: newItemSchema }),
+  z.object({
+    kind: z.literal("rename"),
+    requestId: idSchema,
+    target: renameTargetSchema,
+    name: nameSchema,
+  }),
+  // `base` is the lane ids `lanes` was edited from, so a lane added since is kept, not dropped.
+  z.object({
+    kind: z.literal("arrange"),
+    requestId: idSchema,
+    mainId: threadIdSchema,
+    lanes: z.array(laneSchema),
+    base: z.array(laneIdSchema),
+  }),
+  z.object({ kind: z.literal("saveShell"), requestId: idSchema, shell: shellStateSchema }),
   z.object({
     kind: z.literal("send"),
     requestId: idSchema,
-    conversationId: idSchema,
+    threadId: threadIdSchema,
     event: agentEventSchema,
     accessToken: z.string().min(1).optional(),
   }),
   z.object({ kind: z.literal("abort"), requestId: idSchema }),
-  z.object({ kind: z.literal("list") }),
-  z.object({ kind: z.literal("rename"), conversationId: idSchema, title: z.string().min(1) }),
 ]);
 
-/** Everything the worker may tell the page. Replies stream as `chunk`s keyed by request. */
+/**
+ * Everything the worker may tell the page. `held` says another tab has the device's database
+ * and this worker waits for it; `state` is pushed after every write, before that write's
+ * answer; the other answers name their request; `broken` is what no request caused.
+ */
 export const noticeSchema = z.discriminatedUnion("kind", [
-  z.object({ kind: z.literal("ready"), storage: z.enum(["opfs", "memory"]) }),
-  z.object({ kind: z.literal("opened"), conversation: conversationSchema }),
-  z.object({ kind: z.literal("chunk"), requestId: idSchema, text: z.string() }),
+  z.object({ kind: z.literal("held") }),
+  z.object({ kind: z.literal("opening"), source: sourceSchema }),
+  z.object({
+    kind: z.literal("state"),
+    source: sourceSchema,
+    workspace: workspaceSchema,
+    replying: z.array(threadIdSchema),
+  }),
+  z.object({
+    kind: z.literal("opened"),
+    requestId: idSchema,
+    messages: z.array(threadMessageSchema),
+  }),
+  z.object({ kind: z.literal("created"), requestId: idSchema, id: idSchema }),
   z.object({ kind: z.literal("done"), requestId: idSchema }),
   z.object({ kind: z.literal("failed"), requestId: idSchema, reason: z.string() }),
-  z.object({ kind: z.literal("listed"), conversations: z.array(conversationSummarySchema) }),
-  z.object({ kind: z.literal("error"), reason: z.string() }),
+  z.object({ kind: z.literal("chunk"), requestId: idSchema, text: z.string() }),
+  z.object({ kind: z.literal("broken"), reason: z.string() }),
 ]);
 
 /** A message from the page to the worker. */
 export type Command = z.infer<typeof commandSchema>;
 /** A message from the worker to the page. */
 export type Notice = z.infer<typeof noticeSchema>;
-/** A stored conversation: the thread's turns plus what the list needs. */
-export type Conversation = z.infer<typeof conversationSchema>;
-/** A conversation in the list, newest first. */
-export type ConversationSummary = z.infer<typeof conversationSummarySchema>;
 /** The agent the worker runs, chosen once at `init`. */
 export type AgentSpec = z.infer<typeof agentSpecSchema>;
-/** Where the worker keeps conversations: the browser's private file system, or memory. */
-export type StorageKind = Extract<Notice, { kind: "ready" }>["storage"];
+/** The v1 canvas's hidden lanes and lane order, as the page read them from localStorage. */
+export type LegacyCanvas = z.infer<typeof legacyCanvasSchema>;
+/** A mock scenario's name. */
+export type ScenarioName = z.infer<typeof scenarioNameSchema>;
+/** Where the worker's data lives, so the page can say whether anything is kept. */
+export type Source = z.infer<typeof sourceSchema>;
+/** What the page asks the worker to open at start. */
+export type RuntimeData = z.infer<typeof runtimeDataSchema>;
+/** Something the page asks the worker to create; the worker mints its id. */
+export type NewItem = z.infer<typeof newItemSchema>;
+/** What a rename names: a project or a thread. */
+export type RenameTarget = z.infer<typeof renameTargetSchema>;

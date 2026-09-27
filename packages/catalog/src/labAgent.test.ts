@@ -23,8 +23,17 @@ it("streams a reply in chunks that join into whole sentences", async () => {
   expect(chunks.join("")).toBe('Got it: "4 weeks". Carrying on from there.');
 });
 
-it("stays quiet when a message carries no card choices", async () => {
-  expect(await reply({ kind: "message", text: "thanks", attachments: [] })).toBe("");
+it("answers a plain message with a scripted line instead of silence", async () => {
+  expect(await reply({ kind: "message", text: "thanks", attachments: [] })).toBe(
+    "Noted. In the lab I answer from a script, so a real agent would take it from here.",
+  );
+});
+
+it("says what it can do with files sent without card choices", async () => {
+  const files = [{ name: "till-roll.png", type: "image/png", size: 2048 }];
+  expect(await reply({ kind: "message", text: "", attachments: [], files })).toMatch(
+    /^Got till-roll\.png\. In the lab I can't look inside files/,
+  );
 });
 
 it("asks in plain words when its question was rejected, reusing the sound part", async () => {

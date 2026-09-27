@@ -103,54 +103,92 @@ export function centerInScroller(scroller: HTMLElement, element: HTMLElement): v
   scroller.scrollTo({ top, behavior: prefersReducedMotion() ? "auto" : "smooth" });
 }
 
+/** Where a thread's scroll stands: `reach` is the furthest `scrollTop` it can scroll to. */
+export type ScrollStand = { reach: number; scrollTop: number };
+
+/**
+ * Whether a thread follows its end after a resize moved that end `moved` px further away (turns
+ * growing, the view getting shorter): whether it rested at its end before the move. With scroll
+ * anchoring off (thread.css), a resize moves the end but not the scroll, short of clamping it
+ * to a nearer end, so the gap before was the gap now less `moved`. A reader who scrolled up,
+ * even in the frame a streaming reply grew, left a gap the resize does not account for.
+ */
+export function restedAtEnd(now: ScrollStand, moved: number): boolean {
+  return now.reach - now.scrollTop - moved < 2;
+}
+
+function standOf(scroller: HTMLElement): ScrollStand {
+  return { reach: scroller.scrollHeight - scroller.clientHeight, scrollTop: scroller.scrollTop };
+}
+
+// What a batch of resizes did to the thread: how far it moved the end away from the scroll
+// (turns growing, the view getting shorter) and which turns grew. Records each box's new height;
+// a box's first measure moves nothing.
+function measureResizes(
+  scroller: HTMLElement,
+  entries: ResizeObserverEntry[],
+  heights: WeakMap<Element, number>,
+): { moved: number; grown: HTMLElement[] } {
+  let moved = 0;
+  const grown: HTMLElement[] = [];
+  for (const entry of entries) {
+    const box = entry.target; // → Element; the thread itself or one of its `.turn`s
+    if (!(box instanceof HTMLElement)) continue;
+    const before = heights.get(box);
+    const after = entry.borderBoxSize[0]?.blockSize ?? box.offsetHeight;
+    heights.set(box, after);
+    if (before === undefined) continue;
+    if (box === scroller) moved += Math.max(before - after, 0);
+    else if (after > before) {
+      moved += after - before;
+      grown.push(box);
+    }
+  }
+  return { moved, grown };
+}
+
 /**
  * Enforces ADR-038 for every component in the thread, without each one opting in: when a turn
  * grows right after the user clicked or pressed a key inside it (a table, "Show my work", a
  * longer description), the card that grew is nudged clear of the compose box.
- * Growth nobody asked for (charts sizing, fonts loading) keeps a thread that was at its end
- * at its end, so the last card rests exactly where the gap says, not a few pixels short.
+ * Growth nobody asked for (charts sizing, fonts loading, a reply streaming in) keeps a thread
+ * that was at its end at its end, so the last card rests exactly where the gap says, not a few
+ * pixels short; so does the view getting shorter as the compose box grows (ADR-103).
  * @returns A cleanup function that stops watching.
  */
 export function keepExpansionsInView(scroller: HTMLElement): () => void {
   let interaction: Interaction | undefined;
   const heights = new WeakMap<Element, number>();
-  const atEnd = () => scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 2;
-  let pinned = atEnd();
 
   const remember = (event: Event) => {
     if (event.target instanceof HTMLElement)
       interaction = { target: event.target, at: performance.now() };
   };
-  const track = () => {
-    pinned = atEnd();
-  };
 
   const resized = new ResizeObserver((entries) => {
-    for (const entry of entries) {
-      const turn = entry.target; // → Element; only `.turn` elements are observed
-      if (!(turn instanceof HTMLElement)) continue;
-      const before = heights.get(turn);
-      const after = entry.borderBoxSize[0]?.blockSize ?? turn.offsetHeight;
-      heights.set(turn, after);
-      if (before === undefined || after <= before) continue;
-      const asked = askedToReveal(turn, interaction, performance.now()); // → HTMLElement | undefined
-      if (asked !== undefined) nudgeInScroller(scroller, [asked]);
-      else if (pinned) scroller.scrollTop = scroller.scrollHeight;
-    }
+    const { moved, grown } = measureResizes(scroller, entries, heights); // → px, HTMLElement[]
+    const now = performance.now();
+    const asked = grown
+      .map((turn) => askedToReveal(turn, interaction, now)) // → (HTMLElement | undefined)[]
+      .filter((card) => card !== undefined); // → HTMLElement[]
+    if (asked.length > 0) nudgeInScroller(scroller, asked);
+    else if (moved > 0 && restedAtEnd(standOf(scroller), moved))
+      scroller.scrollTop = scroller.scrollHeight;
   });
 
   const watchTurns = () => {
-    scroller.querySelectorAll(":scope > .turn").forEach((turn) => resized.observe(turn));
+    scroller.querySelectorAll(":scope > .turn").forEach((turn) => {
+      resized.observe(turn);
+    });
   };
   const added = new MutationObserver(watchTurns);
 
+  resized.observe(scroller, { box: "border-box" });
   watchTurns();
   added.observe(scroller, { childList: true });
   scroller.addEventListener("pointerdown", remember, true);
   scroller.addEventListener("keydown", remember, true);
-  scroller.addEventListener("scroll", track, { passive: true });
   return () => {
-    scroller.removeEventListener("scroll", track);
     resized.disconnect();
     added.disconnect();
     scroller.removeEventListener("pointerdown", remember, true);

@@ -1,198 +1,253 @@
 import sqlite3InitModule, {
   type BindingSpec,
   type Database,
-  type SqlValue,
   type Sqlite3Static,
 } from "@sqlite.org/sqlite-wasm";
 import type { ThreadMessage } from "@yaklabs/catalog/thread";
-import { z } from "zod";
-import { threadMessageSchema, type Conversation, type ConversationSummary } from "./protocol";
-import { foldWords, newestFirst, toSummary, type ConversationStore } from "./store";
+import type { Transcript } from "./conversation";
+import type { LegacyCanvas, RenameTarget } from "./protocol";
+import { migrate, writeLanes } from "./schema";
+import { matchQuery, newestFirst } from "./search";
+import { readTranscript, readWorkspace } from "./sqliteRead";
+import type { NewThread, Store } from "./store";
+import {
+  insertLane,
+  lanesOf,
+  threadLane,
+  type Lane,
+  type ThreadId,
+  type ThreadSummary,
+} from "./workspace";
 
 /**
  * Where the database lives: a named file in the browser's private file system (ADR-081; only
- * inside a Worker), or memory (node and tests).
+ * inside a Worker), or memory (node, tests, scenarios, and the fallback when OPFS is refused).
  */
 export type StoreLocation = { kind: "opfs"; name: string } | { kind: "memory" };
 
-/** A SQLite-backed store; close it before opening the same file again elsewhere. */
-export type SqliteStore = ConversationStore & { close(): void };
+/**
+ * The browser refused the private file system: outside a Worker, with no Web Locks to share it
+ * by, or another worker holds its access handles. The one failure a device may answer by keeping
+ * its threads in memory.
+ */
+export class StorageUnavailableError extends Error {}
 
 // Names become an OPFS directory and a file, so they stay plain.
 const NAME = /^[a-z0-9][a-z0-9-]{0,39}$/;
 
-// Rows hold what every turn has; `extra_json` holds the rest (its id, chips, files and cards).
-// The full-text index is an external-content FTS5 table kept in step by triggers, so it can
-// never disagree with the rows it indexes.
-const SCHEMA = `
-  pragma foreign_keys = on;
-  create table if not exists conversations (
-    id text primary key,
-    title text not null,
-    updated_at text not null
-  );
-  create table if not exists messages (
-    conversation_id text not null references conversations (id) on delete cascade,
-    seq integer not null,
-    role text not null check (role in ('user', 'agent')),
-    text text not null,
-    time text not null,
-    extra_json text not null,
-    primary key (conversation_id, seq)
-  );
-  create virtual table if not exists messages_fts using fts5 (
-    text, content = 'messages', content_rowid = 'rowid'
-  );
-  create trigger if not exists messages_fts_insert after insert on messages begin
-    insert into messages_fts (rowid, text) values (new.rowid, new.text);
-  end;
-  create trigger if not exists messages_fts_delete after delete on messages begin
-    insert into messages_fts (messages_fts, rowid, text) values ('delete', old.rowid, old.text);
-  end;
-  create trigger if not exists messages_fts_update after update on messages begin
-    insert into messages_fts (messages_fts, rowid, text) values ('delete', old.rowid, old.text);
-    insert into messages_fts (rowid, text) values (new.rowid, new.text);
-  end;
-  pragma user_version = 1;
+const MATCHING = `
+  select distinct m.conversation_id from messages_fts f join messages m on m.rowid = f.rowid
+  where messages_fts match ?
 `;
-
-const UPSERT_CONVERSATION = `
-  insert into conversations (id, title, updated_at) values (?, ?, ?)
-  on conflict (id) do update set title = excluded.title, updated_at = excluded.updated_at
+const INSERT_THREAD = `
+  insert into conversations (id, title, created_at, updated_at, project_id, parent_id, draft)
+  values (?, ?, ?, ?, ?, ?, ?)
 `;
 const INSERT_MESSAGE = `
   insert into messages (conversation_id, seq, role, text, time, extra_json)
   values (?, ?, ?, ?, ?, ?)
 `;
-// One row per conversation, with the text of its latest message for the preview.
-const SUMMARIES = `
-  select c.id, c.title, c.updated_at,
-    coalesce((select m.text from messages m where m.conversation_id = c.id
-              order by m.seq desc limit 1), '') as last_text
-  from conversations c
-`;
-const MATCHING = `
-  where c.id in (select m.conversation_id from messages_fts f
-                 join messages m on m.rowid = f.rowid
-                 where messages_fts match ?)
+const RENAME: Record<RenameTarget["kind"], string> = {
+  project: "update projects set name = ? where id = ?",
+  thread: "update conversations set title = ? where id = ?",
+};
+const SAVE_SHELL = `
+  insert into shell (id, json) values (1, ?) on conflict (id) do update set json = excluded.json
 `;
 
-// What SQLite hands back, checked before it becomes a domain type.
-const conversationRowSchema = z.object({
-  id: z.string(),
-  title: z.string(),
-  updated_at: z.string(),
-});
-const summaryRowSchema = conversationRowSchema.extend({ last_text: z.string() });
-const messageRowSchema = z.object({
-  role: z.string(),
-  text: z.string(),
-  time: z.string(),
-  extra_json: z.string(),
-});
-const extraSchema = z.record(z.string(), z.unknown());
+// The directory sqlite-wasm keeps a pool's files in, inside the pool's own. Its name is fixed:
+// the library warns that changing it orphans every pool already on disk.
+const POOL_FILES = ".opaque";
 
 // The wasm module loads once per worker; later stores reuse it and its registered VFS.
 let sqlite3: Promise<Sqlite3Static> | undefined;
+// Each pool directory's guard, taken once per worker; kept here, so it stays open (and is never
+// collected) until the worker ends.
+const guards = new Map<string, Promise<FileSystemSyncAccessHandle | undefined>>();
 
-// SQLite's calls are synchronous; this keeps a thrown error a rejection, as a caller expects.
-function settle<T>(work: () => T): Promise<T> {
-  return new Promise((resolve) => {
-    resolve(work());
-  });
+function reasonOf(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
 
-function toMessageRow(conversationId: string, seq: number, message: ThreadMessage): BindingSpec {
+// sqlite-wasm answers any failed install by deleting the pool's directory, every database in
+// it included, and only an open handle inside stops that delete (ADR-118). So this opens a file
+// in a subdirectory of the pool, where the pool never looks for its own files. Without access
+// handles the installer refuses before it touches anything, so there is nothing to guard.
+async function guardPool(directory: string): Promise<FileSystemSyncAccessHandle | undefined> {
+  if (!("createSyncAccessHandle" in FileSystemFileHandle.prototype)) return undefined;
+  const root = await navigator.storage.getDirectory();
+  const pool = await root.getDirectoryHandle(directory, { create: true });
+  const files = await pool.getDirectoryHandle(POOL_FILES, { create: true });
+  const guard = await files.getDirectoryHandle(".guard", { create: true });
+  const file = await guard.getFileHandle("held", { create: true });
+  return file.createSyncAccessHandle();
+}
+
+// The pool directory's guard, taken on the first open in this worker.
+function guarded(directory: string): Promise<FileSystemSyncAccessHandle | undefined> {
+  const taken = guards.get(directory) ?? guardPool(directory);
+  guards.set(directory, taken);
+  return taken;
+}
+
+function toMessageRow(threadId: ThreadId, seq: number, message: ThreadMessage): BindingSpec {
   const { role, text, time, ...extra } = message;
-  return [conversationId, seq, role, text, time, JSON.stringify(extra)];
+  return [threadId, seq, role, text, time, JSON.stringify(extra)];
 }
 
-function fromMessageRow(row: Record<string, SqlValue>): ThreadMessage {
-  const { role, text, time, extra_json } = messageRowSchema.parse(row);
-  const extra = extraSchema.parse(JSON.parse(extra_json)); // → Record<string, unknown>
-  return threadMessageSchema.parse({ ...extra, role, text, time });
-}
-
-function fromSummaryRow(row: Record<string, SqlValue>): ConversationSummary {
-  const { id, title, updated_at, last_text } = summaryRowSchema.parse(row);
-  return toSummary({ id, title, updatedAt: updated_at }, last_text);
-}
-
-// ["sat", "net"] → `"sat"* "net"*`: every word, as a prefix. Folded words hold only letters
-// and digits, so quoting them needs no escaping.
-function toMatchQuery(terms: string[]): string {
-  return terms.map((term) => `"${term}"*`).join(" ");
-}
-
-function writeConversation(db: Database, conversation: Conversation): void {
-  const { id, title, updatedAt, messages } = conversation;
-  db.transaction((tx) => {
-    tx.exec({ sql: UPSERT_CONVERSATION, bind: [id, title, updatedAt] });
-    tx.exec({ sql: "delete from messages where conversation_id = ?", bind: [id] });
-    const insert = tx.prepare(INSERT_MESSAGE);
-    try {
-      for (const [seq, message] of messages.entries()) {
-        insert.bind(toMessageRow(id, seq, message)).stepReset();
-      }
-    } finally {
-      insert.finalize();
+function writeMessages(db: Database, id: ThreadId, messages: ThreadMessage[]): void {
+  db.exec({ sql: "delete from messages where conversation_id = ?", bind: [id] });
+  const insert = db.prepare(INSERT_MESSAGE);
+  try {
+    for (const [seq, message] of messages.entries()) {
+      insert.bind(toMessageRow(id, seq, message)).stepReset();
     }
+  } finally {
+    insert.finalize();
+  }
+}
+
+function addThread(db: Database, thread: NewThread, laneAt: number | undefined): void {
+  const { id, title, place, createdAt, updatedAt, draft, messages } = thread;
+  const projectId = place.kind === "main" ? place.projectId : null;
+  const parentId = place.kind === "child" ? place.parentId : null;
+  db.exec({
+    sql: INSERT_THREAD,
+    bind: [id, title, createdAt, updatedAt, projectId, parentId, draft],
   });
+  writeMessages(db, id, messages);
+  if (laneAt === undefined) return;
+  if (parentId === null) throw new Error(`${id} is a main thread, so it has no lane`);
+  const lanes = lanesOf(readWorkspace(db), parentId);
+  writeLanes(db, parentId, insertLane(lanes, laneAt, threadLane(id)));
 }
 
-function readConversation(db: Database, id: string): Conversation | undefined {
-  const row = db.selectObject("select id, title, updated_at from conversations where id = ?", [id]);
-  if (row === undefined) return undefined;
-  const { title, updated_at } = conversationRowSchema.parse(row);
-  const messages = db
-    .selectObjects(
-      "select role, text, time, extra_json from messages where conversation_id = ? order by seq",
-      [id],
-    )
-    .map((message) => fromMessageRow(message)); // → ThreadMessage[]
-  return { id, title, updatedAt: updated_at, messages };
+function changeTranscript(
+  db: Database,
+  id: ThreadId,
+  change: (transcript: Transcript) => Transcript,
+): void {
+  const current = readTranscript(db, id);
+  if (current === undefined) throw new Error(`No thread ${id}`);
+  const { messages, draft, updatedAt } = change(current);
+  db.exec({
+    sql: "update conversations set updated_at = ?, draft = ? where id = ?",
+    bind: [updatedAt, draft, id],
+  });
+  writeMessages(db, id, messages);
 }
 
-function readSummaries(db: Database, query?: string): ConversationSummary[] {
-  const rows =
-    query === undefined
-      ? db.selectObjects(SUMMARIES)
-      : db.selectObjects(`${SUMMARIES} ${MATCHING}`, [query]); // → Record<string, SqlValue>[]
-  return rows.map((row) => fromSummaryRow(row)).toSorted(newestFirst);
+function rename(db: Database, target: RenameTarget, name: string): void {
+  db.exec({ sql: RENAME[target.kind], bind: [name, target.id] });
+  if (db.changes() === 0) throw new Error(`No ${target.kind} ${target.id}`);
 }
 
-async function openDatabase(location: StoreLocation): Promise<Database> {
-  const api = await (sqlite3 ??= sqlite3InitModule()); // → Sqlite3Static
-  if (location.kind === "memory") return new api.oo1.DB(":memory:", "c");
-  if (!NAME.test(location.name)) throw new Error(`Unusable store name: ${location.name}`);
-  // One pool per database, so two databases (or two test files) never share a directory.
-  const pool = await api.installOpfsSAHPoolVfs({ name: `opfs-sahpool-${location.name}` });
-  return new pool.OpfsSAHPoolDb(`/${location.name}.sqlite3`);
+function arrange(db: Database, mainId: ThreadId, lanes: Lane[]): void {
+  const row = db.selectObject("select parent_id from conversations where id = ?", [mainId]);
+  if (row === undefined) throw new Error(`No thread ${mainId}`);
+  if (row.parent_id !== null) throw new Error(`${mainId} is a sub-thread, so it has no canvas`);
+  writeLanes(db, mainId, lanes);
+}
+
+function search(db: Database, query: string): ThreadSummary[] {
+  const match = matchQuery(query); // → FTS5 query, or undefined with no words
+  if (match === undefined) return [];
+  const hits = new Set(db.selectValues(MATCHING, [match]));
+  return readWorkspace(db)
+    .threads.filter((thread) => hits.has(thread.id))
+    .toSorted(newestFirst);
 }
 
 /**
- * Opens (creating when new) a conversation store in SQLite (ADR-081). In the browser it uses
- * the `opfs-sahpool` VFS, which needs no cross-origin isolation headers but works only inside
- * a Worker; in node only `memory` works.
+ * Opens the database file itself, with no schema applied: a named file in the private file
+ * system (only inside a Worker), or memory.
  *
- * @throws When the name is not lowercase letters, digits and dashes, when the private file
- *   system or its access handles are unavailable (outside a Worker, or another worker holds
- *   the pool), or when the database cannot be opened.
+ * @throws A `StorageUnavailableError` when the private file system is refused; an `Error` when
+ *   the name is not lowercase letters, digits and dashes, or SQLite itself cannot load.
  */
-export async function openSqliteStore(location: StoreLocation): Promise<SqliteStore> {
+export async function openDatabase(location: StoreLocation): Promise<Database> {
+  const api = await (sqlite3 ??= sqlite3InitModule()); // → Sqlite3Static
+  if (location.kind === "memory") return new api.oo1.DB(":memory:", "c");
+  if (!NAME.test(location.name)) throw new Error(`Unusable store name: ${location.name}`);
+  // One pool per database, so two databases (or two test files) never share a directory; the
+  // directory is the library's default for this name, spelled out so the guard shares it.
+  const name = `opfs-sahpool-${location.name}`;
+  const directory = `.${name}`;
+  try {
+    await guarded(directory);
+    const pool = await api.installOpfsSAHPoolVfs({ name, directory });
+    return new pool.OpfsSAHPoolDb(`/${location.name}.sqlite3`);
+  } catch (error) {
+    const reason = `The private file system is unavailable: ${reasonOf(error)}`;
+    throw new StorageUnavailableError(reason, { cause: error });
+  }
+}
+
+// The database at the newest schema; one that cannot be read or brought there is closed again.
+async function openMigrated(location: StoreLocation, legacy?: LegacyCanvas): Promise<Database> {
   const db = await openDatabase(location);
-  db.exec(SCHEMA);
+  try {
+    db.exec("pragma foreign_keys = on");
+    migrate(db, legacy);
+  } catch (error) {
+    db.close();
+    const reason = `The saved threads could not be brought up to date: ${reasonOf(error)}`;
+    throw new Error(reason, { cause: error });
+  }
+  return db;
+}
+
+/**
+ * Opens (creating when new) the store in SQLite (ADR-081) and migrates it to the newest schema,
+ * reading `legacy` only in the step from version 1. In the browser it uses the `opfs-sahpool`
+ * VFS, which needs no cross-origin isolation headers but works only inside a Worker; in node
+ * only `memory` works.
+ *
+ * @throws As `openDatabase` does; and, having closed the database again, when it cannot be
+ *   read or brought up to date (a failed step, or a version newer than this build).
+ */
+export async function openSqliteStore(
+  location: StoreLocation,
+  legacy?: LegacyCanvas,
+): Promise<Store> {
+  const db = await openMigrated(location, legacy);
 
   return {
-    open: (id) => settle(() => readConversation(db, id)),
-    save: (conversation) =>
-      settle(() => {
-        writeConversation(db, conversation);
-      }),
-    list: () => settle(() => readSummaries(db)),
-    search: (query) => {
-      const terms = foldWords(query); // → string[]
-      return settle(() => (terms.length === 0 ? [] : readSummaries(db, toMatchQuery(terms))));
+    workspace: () => readWorkspace(db),
+    transcript: (id) => readTranscript(db, id),
+    search: (query) => search(db, query),
+    addProject: ({ id, name, createdAt }) => {
+      db.exec({
+        sql: "insert into projects (id, name, created_at) values (?, ?, ?)",
+        bind: [id, name, createdAt],
+      });
+    },
+    addThread: (thread, laneAt) => {
+      db.transaction(() => {
+        addThread(db, thread, laneAt);
+      });
+    },
+    changeTranscript: (id, change) => {
+      db.transaction(() => {
+        changeTranscript(db, id, change);
+      });
+    },
+    rename: (target, name) => {
+      rename(db, target, name);
+    },
+    arrange: (mainId, lanes) => {
+      db.transaction(() => {
+        arrange(db, mainId, lanes);
+      });
+    },
+    saveShell: (shell) => {
+      db.exec({ sql: SAVE_SHELL, bind: [JSON.stringify(shell)] });
+    },
+    addNotification: ({ id, threadId, text, at }) => {
+      db.exec({
+        sql: "insert into notifications (id, thread_id, text, at) values (?, ?, ?, ?)",
+        bind: [id, threadId, text, at],
+      });
     },
     close: () => {
       db.close();

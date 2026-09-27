@@ -2,7 +2,6 @@ import type { AgentEvent } from "@yaklabs/catalog/agent";
 import type { CardAttachment } from "@yaklabs/catalog/interactive";
 import type { ThreadMessage } from "@yaklabs/catalog/thread";
 import type { GatewayRequest } from "gateway/contract";
-import type { Conversation } from "./protocol";
 
 type Turn = GatewayRequest["messages"][number];
 
@@ -102,16 +101,14 @@ function recentTurns(history: Turn[]): Turn[] {
 
 /**
  * Builds what the gateway sends the model (ADR-085): the system prompt, every stored turn in
- * order, then the incoming event as the last user turn. `conversation` is the thread as it
- * stood before the event. A user turn carries one `[Card view: …]` line per card choice and one
- * `[Attached file: …]` line per file; an agent turn carries the cards it showed as JSON.
+ * order, then the incoming event as the last user turn. `messages` are the thread's turns as
+ * they stood before the event. A user turn carries one `[Card view: …]` line per card choice and
+ * one `[Attached file: …]` line per file; an agent turn carries the cards it showed as JSON.
  *
  * @throws When the event carries nothing to answer: no text, card choice or file.
  */
-export function toModelRequest(conversation: Conversation, event: AgentEvent): GatewayRequest {
-  const history = conversation.messages
-    .map((message) => toTurn(message))
-    .filter((turn) => turn.content !== ""); // → Turn[]
+export function toModelRequest(messages: ThreadMessage[], event: AgentEvent): GatewayRequest {
+  const history = messages.map((message) => toTurn(message)).filter((turn) => turn.content !== ""); // → Turn[]
   const content = eventContent(event);
   if (content === "") throw new Error("The message is empty, so there is nothing to answer");
   return { system: SYSTEM_PROMPT, messages: [...recentTurns(history), { role: "user", content }] };

@@ -90,9 +90,11 @@
   }
 }
 
-/* Disclosure: a header that folds the body below it. */
+/* Disclosure: a header that folds the body below it. Inset 4px from the host's edges, so the
+   hover fill never runs flush with a card's own edge. */
 .disclosure-header {
-  width: 100%;
+  width: calc(100% - 8px);
+  margin: 0 4px;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -161,16 +163,59 @@
 }
 
 /* Card header: title left, actions right, and a flush line under it, edge to edge. */
-/* A header that is a drag handle (ADR-089) says so with the cursor. */
-.card-heading[draggable="true"] {
+/* A header that carries its card (ADR-089) says so with the cursor. A finger on it carries the
+   card too, so the browser leaves its moves to the carry instead of panning the page. */
+.card-heading[data-carry] {
   cursor: grab;
+  touch-action: none;
 }
-.card-heading[draggable="true"]:active {
+.card-heading[data-carry]:active {
   cursor: grabbing;
 }
 /* The card left behind while its picture rides the pointer (ADR-089). */
 .card[data-lifted] {
   opacity: 0.35;
+}
+
+/* A carry (carry.ts): from the lift to the end the closed hand holds over everything, as the
+   browser's own drag cursor does, whatever cursor an element under it asks for. */
+html[data-carrying],
+html[data-carrying] * {
+  cursor: grabbing !important;
+}
+/* The picture that rides the pointer: a clone of what was lifted, or a quote chip for text.
+   It is never hit by the pointer, so the target under it is what the carry finds. */
+.carry-ghost {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 100;
+  opacity: 0.85;
+  pointer-events: none;
+  will-change: transform;
+}
+.carry-ghost [data-carry-picture] {
+  width: var(--carry-width, auto);
+  margin: 0;
+  box-shadow: 0 18px 48px var(--shadow-strong);
+}
+/* A clone starts its animations over, so a value that flashed in once would flash again on the
+   picture: the picture holds still, as the card stands. */
+.carry-ghost * {
+  animation: none !important;
+}
+/* A highlight in flight: one line of it, cut short with an ellipsis. */
+.carry-quote {
+  max-width: 320px;
+  overflow: hidden;
+  padding: 3px 9px;
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  background: var(--paper-deep);
+  color: var(--ink);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .card-heading {
   align-items: flex-start;

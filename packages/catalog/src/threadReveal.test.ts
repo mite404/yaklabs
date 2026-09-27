@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { centerScrollTop, nudgeScrollTop, type Viewport } from "./threadReveal";
+import { centerScrollTop, nudgeScrollTop, restedAtEnd, type Viewport } from "./threadReveal";
 
 // A 600px thread scrolled to 400, with the thread's 20px padding at both ends.
 const view: Viewport = {
@@ -50,5 +50,36 @@ describe("centerScrollTop", () => {
 
   it("never scrolls above the start of the thread", () => {
     expect(centerScrollTop({ top: 40, bottom: 140 }, view)).toBe(0);
+  });
+});
+
+describe("restedAtEnd", () => {
+  it("follows a thread that rested at its end as a turn grows", () => {
+    // A chunk grew the last turn 29px: the reach went 463 → 492, the scroll stayed at 463.
+    expect(restedAtEnd({ reach: 492, scrollTop: 463 }, 29)).toBe(true);
+  });
+
+  it("follows a thread a rounding pixel short of its end", () => {
+    expect(restedAtEnd({ reach: 492, scrollTop: 462 }, 29)).toBe(true);
+  });
+
+  it("leaves a thread that rested 2px short of its end", () => {
+    expect(restedAtEnd({ reach: 492, scrollTop: 461 }, 29)).toBe(false);
+  });
+
+  it("unpins a reader who scrolls up in the same frame a streaming reply grows", () => {
+    // The wheel moved scrollTop 463 → 300 as a chunk grew the reach to 492: the resize sees
+    // both, and only 29px of the 192px gap is the chunk's.
+    expect(restedAtEnd({ reach: 492, scrollTop: 300 }, 29)).toBe(false);
+  });
+
+  it("follows a thread the browser clamped to its end as a turn above shrank", () => {
+    // One turn shrank 20px and another grew 4px: the reach fell 433 → 417, clamping the scroll.
+    expect(restedAtEnd({ reach: 417, scrollTop: 417 }, 4)).toBe(true);
+  });
+
+  it("follows a thread whose view got shorter as the compose box grew", () => {
+    // The view lost 24px, so the reach went 463 → 487 with the scroll still at 463.
+    expect(restedAtEnd({ reach: 487, scrollTop: 463 }, 24)).toBe(true);
   });
 });

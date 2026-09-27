@@ -5,12 +5,123 @@
 @import "@yaklabs/ui/globals.css";
 @import "@yaklabs/catalog/tokens.css" layer(catalog);
 
+/* A loading row holds still under reduced motion. Outside every layer on purpose: shadcn's
+   skeleton pulses by a utility class, which a rule in the components layer cannot outrank. */
+@media (prefers-reduced-motion: reduce) {
+  [data-slot="skeleton"] {
+    animation: none;
+  }
+}
+
+/* A lane's title clips with an ellipsis where it outgrows its bar (ADR-097). The rename button
+   holds the text, and the heading cannot put an ellipsis inside a button, which lays out as one
+   unbreakable box, so the button clips as a block of its own, held to the heading's width
+   since a button shrinks to its text even as a block. Outside every layer on purpose: the
+   catalog's thread.css resets the button with `all: unset` outside every layer too, which no
+   layered rule can outrank. */
+.lane .thread-header .thread-title {
+  display: block;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* The window's decorative traffic lights (ADR-094): a desktop window's own colours, the one
+   place the app draws something that is not Kay's; the same in either theme, as the OS's are. */
+:root {
+  --traffic-close: #ff5f57;
+  --traffic-minimise: #febc2e;
+  --traffic-zoom: #28c840;
+}
+
+/* The tab strip's fade (tab-strip.tsx): registered so the scroll can animate the lengths. */
+@property --fade-start {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+@property --fade-end {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+
 @layer components {
+  /* shadcn draws its controls with utilities on top of Tailwind's preflight, and the catalog
+     styles bare elements over that preflight (tokens.css): a button gets a paper fill, a
+     hairline border, 7px corners and padding, and a link turns olive. For an element shadcn
+     renders, which carries a data-slot, this puts preflight's values back, so it shows only
+     what its own classes say: a ghost button no box, a toggle no border of its own, a sidebar
+     link the sidebar's ink. This layer outranks the catalog's and yields to every utility. */
+  :where(button[data-slot]) {
+    border: 0 solid;
+    border-radius: 0;
+    background-color: transparent;
+    padding: 0;
+    color: inherit;
+    font-size: inherit;
+  }
+  :where(a[data-slot]) {
+    color: inherit;
+  }
+
+  /* A thread narrower than its widest line lays out at its width instead of spilling past its
+     own border: the panel's one grid column may shrink below its content's longest line, so
+     a chart, a card and the compose hint fit the column. thread.css leaves the column's floor
+     at its content, which a pane beside an open sidebar at 1024px is narrower than. */
+  .thread-panel {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  /* An edge of the tab strip with tabs past it fades out, so the tab the edge cuts reads as
+     one more to scroll to rather than a clipped label. The fade follows the scroll; a strip
+     whose tabs fit has no scroll timeline, so the animation is idle and nothing fades. */
+  .tab-scroller {
+    scroll-padding-inline: 32px;
+    mask-image: linear-gradient(
+      to right,
+      transparent,
+      #000 var(--fade-start),
+      #000 calc(100% - var(--fade-end)),
+      transparent
+    );
+    animation: tab-fade linear both;
+    animation-timeline: scroll(self inline);
+  }
+  @keyframes tab-fade {
+    from {
+      --fade-start: 0px;
+      --fade-end: 32px;
+    }
+    10%,
+    90% {
+      --fade-start: 32px;
+      --fade-end: 32px;
+    }
+    to {
+      --fade-start: 32px;
+      --fade-end: 0px;
+    }
+  }
+
+  /* A tab, or a pane inside one, that is kept but not shown (the deck, which makes it inert):
+     it skips rendering and keeps its layout and scroll, which display: none would drop. */
+  [data-retain][inert] {
+    content-visibility: hidden;
+  }
+
   /* The canvas is a dotted field (ADR-089): open ground that invites something to be put down. */
   .canvas {
     background-color: var(--bg);
     background-image: radial-gradient(var(--hairline) 1px, transparent 1px);
     background-size: 18px 18px;
+    /* The canvas fills the window's bottom right corner, which the window rounds at 12px
+       inside its 1px border from md up (window.tsx), so the canvas rounds that corner the same
+       way, and a carry's ring below follows the curve rather than being cut off by it. */
+    @variant md {
+      border-bottom-right-radius: calc(12px - 1px);
+    }
   }
   /* The row's scrollbar stays in view, thin, in the site's rule colour: the ground runs on past
      the last lane, and the bar is how the eye knows. */
@@ -33,6 +144,24 @@
   html[data-dragging="ground"],
   html[data-dragging="ground"] .canvas {
     cursor: grabbing;
+  }
+  /* A carry over the canvas (ADR-091) shows on the whole pane, where the eye is, not only on
+     the open space at the far end: a ring in the hover green and the ground a shade deeper. */
+  .canvas[data-drop] {
+    background-color: color-mix(in srgb, var(--paper-deep) 55%, var(--bg));
+    box-shadow: inset 0 0 0 2px var(--olive);
+  }
+  /* A focused child's lane says where it is once, as it comes into view. */
+  .lane[data-flash] :is(.thread-panel, .card) {
+    animation: lane-flash 1.2s ease-out;
+  }
+  @keyframes lane-flash {
+    from {
+      box-shadow: 0 0 0 3px var(--olive);
+    }
+    to {
+      box-shadow: 0 0 0 3px transparent;
+    }
   }
 
   /* A divider that drags shows a hint of a line while the pointer is on it (ADR-089): full ink
@@ -79,32 +208,57 @@
     cursor: default;
   }
   /* The grip: six dots that fade up in the middle of the bar while the pointer is on the part
-     of it that drags, and stay away while it is on the title, which renames. In a lane the
-     title keeps to its own half of the bar so the two never meet. */
+     of it that drags, and stay away while it is on the title, which renames. Beneath the dots a
+     veil in the bar's own paper fades out the stretch of title they sit on, so the whole title
+     shows at rest and only yields its middle to the grip on hover. The veil is the grip's hit
+     area too: a press on it lands on the bar, never on the title under it. */
+  .lane :is(.thread-header, .card-heading)::before,
   .lane :is(.thread-header, .card-heading)::after {
     content: "";
     position: absolute;
+    opacity: 0;
+    transition: opacity 150ms ease;
+  }
+  .lane :is(.thread-header, .card-heading)::before {
+    inset: 0 auto 0 50%;
+    width: 46px;
+    transform: translateX(-50%);
+    background: linear-gradient(
+      to right,
+      transparent,
+      var(--paper) 30%,
+      var(--paper) 70%,
+      transparent
+    );
+  }
+  .lane :is(.thread-header, .card-heading)::after {
     top: 50%;
     left: 50%;
     width: 15px;
     height: 10px;
     transform: translate(-50%, -50%);
     background: radial-gradient(circle, var(--soft-ink) 1.25px, transparent 1.75px) 0 0 / 5px 5px;
-    opacity: 0;
-    transition: opacity 150ms ease;
     pointer-events: none;
   }
+  .lane :is(.thread-header, .card-heading):hover::before,
   .lane :is(.thread-header, .card-heading):hover::after {
     opacity: 1;
   }
   .lane
     :is(.thread-header, .card-heading):has(
       :is(h2, .card-heading-text, .thread-rename):hover
+    )::before,
+  .lane
+    :is(.thread-header, .card-heading):has(
+      :is(h2, .card-heading-text, .thread-rename):hover
     )::after {
     opacity: 0;
   }
+  /* The title hugs its text so the whole thing shows at rest; it only clips with an ellipsis
+     once it outgrows the bar itself (the rename button's own clip is at the top of this file). */
   .lane .thread-header h2 {
-    max-width: calc(50% - 20px);
+    width: fit-content;
+    max-width: 100%;
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
@@ -129,6 +283,7 @@
   @media (prefers-reduced-motion: reduce) {
     .drag-hint::before,
     .lane-shift,
+    .lane :is(.thread-header, .card-heading)::before,
     .lane :is(.thread-header, .card-heading)::after {
       transition: none;
     }

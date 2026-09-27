@@ -8,7 +8,10 @@ const WORD_MS = 45;
 // Resolves after `ms`, or early and silently if the reply is abandoned.
 function wait(ms: number, signal: AbortSignal): Promise<void> {
   return new Promise((resolve) => {
-    if (ms <= 0 || signal.aborted) return resolve();
+    if (ms <= 0 || signal.aborted) {
+      resolve();
+      return;
+    }
     const id = setTimeout(resolve, ms);
     signal.addEventListener("abort", () => (clearTimeout(id), resolve()), { once: true });
   });
@@ -24,15 +27,16 @@ function rejectedWording(question: unknown): string | undefined {
   return wording.trim();
 }
 
-// What the stand-in says for each event; `undefined` means it stays quiet.
-function replyText(event: AgentEvent): string | undefined {
+// What the stand-in says for each event.
+function replyText(event: AgentEvent): string {
   switch (event.kind) {
     case "message": {
       if (event.attachments.length === 0 && event.files?.length) {
         const names = event.files.map((file) => file.name).join(", ");
         return `Got ${names}. In the lab I can't look inside files, but a real agent would read it with your message.`;
       }
-      if (event.attachments.length === 0) return undefined;
+      if (event.attachments.length === 0)
+        return "Noted. In the lab I answer from a script, so a real agent would take it from here.";
       const views = event.attachments.map((item) => item.label).join(" and ");
       return `Answering about ${views}, the view you set on the card. Saturday leads at every level, so the weekend carries the week.`;
     }
@@ -66,7 +70,6 @@ export function createLabAgent({
       if (event.kind === "question-rejected")
         console.info(`[lab agent] question rejected: ${event.reason}`);
       const text = replyText(event);
-      if (text === undefined) return;
       await wait(replyDelayMs, signal);
       const words = text.split(" ");
       for (let i = 0; i < words.length && !signal.aborted; i++) {

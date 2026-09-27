@@ -1,230 +1,217 @@
 import type { Agent } from "@yaklabs/catalog/agent";
-import type { Thread } from "@yaklabs/catalog/thread";
+import type { ThreadMessage } from "@yaklabs/catalog/thread";
 import { z } from "zod";
 import {
   commandSchema,
   noticeSchema,
   type AgentSpec,
   type Command,
-  type Conversation,
-  type ConversationSummary,
-  type Notice,
-  type StorageKind,
+  type NewItem,
+  type RenameTarget,
+  type RuntimeData,
 } from "./protocol";
+import { arranged, renamed, withShell, type Edit } from "./edits";
+import { createInbox } from "./inbox";
+import {
+  breakDown,
+  createHandle,
+  receive,
+  show,
+  type Answer,
+  type Handle,
+  type RuntimeState,
+} from "./handle";
 import { untilAborted } from "./untilAborted";
+import { lanesOf, type Lane, type LaneId, type ShellState, type ThreadId } from "./workspace";
+
+export type { RuntimeState } from "./handle";
 
 /** How the page reaches the signed-in user's token, e.g. AuthKit's `getAccessToken` (ADR-084). */
 export type Session = { getAccessToken(): Promise<string> };
 
-/** The page's handle on the worker that runs the agent loop and keeps the conversations. */
+/** What the page starts the runtime with: which agent answers, and which data to open. */
+export type RuntimeConfig = { agent: AgentSpec; data: RuntimeData };
+
+/** The page's only door to the worker: one observable state, and the verbs that change it. */
 export type Runtime = {
-  /** Settles once the worker has opened its store; says whether it is on disk or in memory. */
-  ready: Promise<{ storage: StorageKind }>;
-  /** Reads a conversation; a new id starts from `seed` when given, else empty. */
-  open(conversationId: string, seed?: Thread): Promise<Conversation>;
-  /** Every stored conversation, newest first. */
-  list(): Promise<ConversationSummary[]>;
-  /** Gives a conversation a new title; resolves to the conversation as it now is. */
-  rename(conversationId: string, title: string): Promise<Conversation>;
-  /** The thread's `Agent` for one conversation (ADR-041); replies stream from the worker. */
-  agent(conversationId: string, session?: Session): Agent;
-  /** Stops the worker; anything still waiting on it fails. */
+  /** Calls `listener` after every change to `state()`; returns the unsubscribe. */
+  subscribe(listener: () => void): () => void;
+  /** The current state; the same object until something changes (useSyncExternalStore). */
+  state(): RuntimeState;
+  /** One thread's turns. @throws When the thread is unknown, or the runtime is broken. */
+  open(id: ThreadId): Promise<ThreadMessage[]>;
+  /**
+   * Makes a project, a main thread or a child with its lane, and resolves to the new id once
+   * `state()` already lists it.
+   * @throws When the worker refuses it (say, an unknown parent), or the runtime is broken.
+   */
+  create(item: NewItem): Promise<string>;
+  /** Renames in `state()` at once, then in the worker; a refusal rolls it back and throws. */
+  rename(target: RenameTarget, name: string): Promise<void>;
+  /**
+   * Sets a main thread's lanes in `state()` at once, then in the worker, like `rename`. A lane
+   * `state()` did not show yet (a child whose create is still in flight) stays beside its
+   * neighbour rather than being dropped.
+   */
+  arrange(mainId: ThreadId, lanes: Lane[]): Promise<void>;
+  /** Keeps the page's shell whole, in `state()` at once, then in the worker, like `rename`. */
+  saveShell(shell: ShellState): Promise<void>;
+  /** The thread's `Agent` (ADR-041); replies stream from the worker. */
+  agent(id: ThreadId, session?: Session): Agent;
+  /** Stops the worker; everything still waiting fails, and the state is broken. */
   dispose(): void;
 };
 
-type ReplyNotice = Extract<Notice, { kind: "chunk" | "done" | "failed" }>;
-// A reply's notices, pushed in by the router and pulled out by `respond`.
-type Inbox = AsyncIterable<ReplyNotice> & { push(notice: ReplyNotice): void };
-type Deferred<T> = Pick<PromiseWithResolvers<T>, "resolve" | "reject">;
+// What a request settles with, and how the page sends a command.
+type Settled = Exclude<Answer, { kind: "failed" | "chunk" }>;
+type Post = (command: Command) => void;
+// A command the page waits on for one answer.
+type Asked = Exclude<Command, { kind: "init" | "send" | "abort" }>;
 
-// Everything waiting on the worker, so each notice finds its caller and a failure reaches all.
-type Waiting = {
-  ready: PromiseWithResolvers<{ storage: StorageKind }>;
-  opens: Map<string, Deferred<Conversation>[]>; // conversationId → callers
-  lists: Deferred<ConversationSummary[]>[]; // oldest first; the worker answers in order
-  replies: Map<string, Inbox>; // requestId → its inbox
-  broken?: Error;
-};
+// The lane ids the page sees on a main now: what its `arrange` was edited from.
+function baseOf(state: RuntimeState, mainId: ThreadId): LaneId[] {
+  return state.kind === "ready" ? lanesOf(state.workspace, mainId).map((lane) => lane.id) : [];
+}
 
-function createInbox(): Inbox {
-  const queued: ReplyNotice[] = [];
-  const takers: ((notice: ReplyNotice) => void)[] = [];
-  const next = (): Promise<IteratorResult<ReplyNotice>> => {
-    const notice = queued.shift();
-    if (notice !== undefined) return Promise.resolve({ done: false, value: notice });
-    return new Promise((resolve) => {
-      takers.push((value) => {
-        resolve({ done: false, value });
-      });
+const newId = () => crypto.randomUUID();
+
+function asError(error: unknown): Error {
+  return error instanceof Error ? error : new Error(String(error));
+}
+
+// Sends one command and settles with its answer. The edit, if any, shows at once and goes when
+// the answer comes: by then a `state` holding the write has arrived, or the write was refused.
+function ask(handle: Handle, post: Post, command: Asked, edit?: Edit): Promise<Settled> {
+  if (handle.confirmed.kind === "broken") return Promise.reject(new Error(handle.confirmed.reason));
+  const { requestId } = command;
+  try {
+    post(command); // throws when the command fails its own check
+  } catch (error) {
+    return Promise.reject(asError(error));
+  }
+  return new Promise((resolve, reject) => {
+    handle.sinks.set(requestId, (answer) => {
+      if (answer.kind === "chunk") return;
+      handle.sinks.delete(requestId);
+      if (handle.edits.delete(requestId)) show(handle);
+      if (answer.kind === "failed") reject(new Error(answer.reason));
+      else resolve(answer);
     });
-  };
-  return {
-    push: (notice) => {
-      const take = takers.shift();
-      if (take === undefined) queued.push(notice);
-      else take(notice);
-    },
-    [Symbol.asyncIterator]: () => ({ next }),
-  };
-}
-
-// Fails everyone waiting. An `error` notice fails the calls it cannot be told apart from
-// (opens, lists, start-up); a broken worker fails replies too, and every later call.
-function failAll(waiting: Waiting, error: Error, { fatal }: { fatal: boolean }): void {
-  waiting.ready.reject(error);
-  for (const callers of waiting.opens.values()) for (const caller of callers) caller.reject(error);
-  waiting.opens.clear();
-  for (const caller of waiting.lists.splice(0)) caller.reject(error);
-  if (!fatal) return;
-  waiting.broken = error;
-  for (const [requestId, inbox] of waiting.replies) {
-    inbox.push({ kind: "failed", requestId, reason: error.message });
-  }
-}
-
-// Hands the worker's answer to a call to whoever made it.
-function deliverAnswer(waiting: Waiting, notice: Exclude<Notice, ReplyNotice>): void {
-  switch (notice.kind) {
-    case "ready":
-      waiting.ready.resolve({ storage: notice.storage });
-      return;
-    case "opened": {
-      const { id } = notice.conversation;
-      for (const caller of waiting.opens.get(id) ?? []) caller.resolve(notice.conversation);
-      waiting.opens.delete(id);
-      return;
+    if (edit !== undefined) {
+      handle.edits.set(requestId, edit);
+      show(handle);
     }
-    case "listed":
-      waiting.lists.shift()?.resolve(notice.conversations);
-      return;
-    case "error":
-      failAll(waiting, new Error(notice.reason), { fatal: false });
-      return;
-    default: {
-      const unhandled: never = notice;
-      return unhandled;
-    }
-  }
-}
-
-// Hands a notice to whoever waits for it: a reply's to its inbox, anything else to its caller.
-function deliver(waiting: Waiting, notice: Notice): void {
-  if ("requestId" in notice) waiting.replies.get(notice.requestId)?.push(notice);
-  else deliverAnswer(waiting, notice);
-}
-
-// Sends a command and waits for the worker's answer. A command that fails its own check
-// rejects here and never reaches the worker; a broken worker rejects at once.
-function ask<T>(
-  waiting: Waiting,
-  post: (command: Command) => void,
-  command: Command,
-  register: (caller: Deferred<T>) => void,
-): Promise<T> {
-  if (waiting.broken !== undefined) return Promise.reject(waiting.broken);
-  return new Promise<T>((resolve, reject) => {
-    post(command);
-    register({ resolve, reject });
   });
 }
 
-// Routes the worker's notices, and turns its failures into failures of everything waiting.
-function listen(worker: Worker, waiting: Waiting): void {
-  const breakDown = (reason: string) => {
-    failAll(waiting, new Error(reason), { fatal: true });
-  };
-  worker.addEventListener("message", (event) => {
-    const parsed = noticeSchema.safeParse(event.data); // → { success, data } | { success, error }
-    if (parsed.success) deliver(waiting, parsed.data);
-    else breakDown(`The runtime worker sent a malformed notice: ${z.prettifyError(parsed.error)}`);
-  });
-  // A worker that fails to load fires a plain Event; one that throws fires an ErrorEvent.
-  worker.addEventListener("error", (event: Event) => {
-    const detail = event instanceof ErrorEvent ? event.message : "it could not start";
-    breakDown(`The runtime worker failed: ${detail}`);
-  });
-  worker.addEventListener("messageerror", () => {
-    breakDown("The runtime worker sent a message the page could not read");
-  });
+function unexpected(answer: Settled): Error {
+  return new Error(`The runtime worker answered ${answer.requestId} with ${answer.kind}`);
 }
 
-function createAgentFor(
-  waiting: Waiting,
-  post: (command: Command) => void,
-  conversationId: string,
-  session?: Session,
-): Agent {
+function agentFor(handle: Handle, post: Post, threadId: ThreadId, session?: Session): Agent {
   return {
     async *respond(event, signal) {
-      if (waiting.broken !== undefined) throw waiting.broken;
       const accessToken = await session?.getAccessToken(); // → string | undefined
       if (signal.aborted) return;
-      const requestId = crypto.randomUUID();
-      const inbox = createInbox();
-      post({ kind: "send", requestId, conversationId, event, accessToken }); // throws if malformed
-      waiting.replies.set(requestId, inbox);
+      // After the wait for the token: a runtime that broke meanwhile answers nothing more.
+      if (handle.confirmed.kind === "broken") throw new Error(handle.confirmed.reason);
+      const requestId = newId();
+      const inbox = createInbox<Answer>(); // a reply's answers, pushed by `receive`
+      post({ kind: "send", requestId, threadId, event, accessToken }); // throws if malformed
+      handle.sinks.set(requestId, inbox.push);
       let finished = false;
       try {
-        for await (const notice of untilAborted(inbox, signal)) {
-          if (notice.kind === "chunk") {
-            yield notice.text;
+        for await (const answer of untilAborted(inbox, signal)) {
+          if (answer.kind === "chunk") {
+            yield answer.text;
             continue;
           }
           finished = true;
-          if (notice.kind === "failed") throw new Error(notice.reason);
+          if (answer.kind === "failed") throw new Error(answer.reason);
           return;
         }
       } finally {
-        waiting.replies.delete(requestId);
+        handle.sinks.delete(requestId);
         if (!finished) post({ kind: "abort", requestId });
       }
     },
   };
 }
 
+// Routes the worker's notices, and turns its failures into a broken runtime.
+function listen(worker: Worker, handle: Handle): void {
+  worker.addEventListener("message", (event) => {
+    const parsed = noticeSchema.safeParse(event.data); // → { success, data } | { success, error }
+    if (parsed.success) receive(handle, parsed.data);
+    else
+      breakDown(
+        handle,
+        `The runtime worker sent a malformed notice: ${z.prettifyError(parsed.error)}`,
+      );
+  });
+  // A worker that fails to load fires a plain Event; one that throws fires an ErrorEvent.
+  worker.addEventListener("error", (event: Event) => {
+    const detail = event instanceof ErrorEvent ? event.message : "it could not start";
+    breakDown(handle, `The runtime worker failed: ${detail}`);
+  });
+  worker.addEventListener("messageerror", () => {
+    breakDown(handle, "The runtime worker sent a message the page could not read");
+  });
+}
+
 /**
  * Starts the worker that stands in for Kay's daemon (ADR-076, ADR-083) and returns the page's
  * handle on it. The page and the worker talk only through messages, each checked on arrival
- * (ADR-086); a malformed notice or a crashed worker fails everything waiting on it.
+ * (ADR-086); a malformed notice or a crashed worker breaks the runtime and fails every call
+ * still waiting.
  *
- * @throws From `open`, `list` and `respond`: when a command fails its own check (say, an
- *   empty token), when the worker reports an error or breaks, or after `dispose`.
+ * @throws When `config` fails the protocol's check.
  */
-export function startRuntime(config: { agent: AgentSpec }): Runtime {
+export function startRuntime(config: RuntimeConfig): Runtime {
   const worker = new Worker(new URL("./worker.ts", import.meta.url), { type: "module" });
-  const waiting: Waiting = {
-    ready: Promise.withResolvers(),
-    opens: new Map(),
-    lists: [],
-    replies: new Map(),
-  };
-  const post = (command: Command) => {
+  const handle = createHandle();
+  const post: Post = (command) => {
     // oxlint-disable-next-line unicorn/require-post-message-target-origin -- workers have none
     worker.postMessage(commandSchema.parse(command)); // the worker checks again on arrival
   };
-  listen(worker, waiting);
-  // Every call below rejects with the same failure; this keeps an unwatched `ready` quiet.
-  waiting.ready.promise.catch(() => {});
-  post({ kind: "init", agent: config.agent });
+  listen(worker, handle);
+  post({ kind: "init", agent: config.agent, data: config.data });
 
   return {
-    ready: waiting.ready.promise,
-    open: (conversationId, seed) =>
-      ask<Conversation>(waiting, post, { kind: "open", conversationId, seed }, (caller) => {
-        waiting.opens.set(conversationId, [...(waiting.opens.get(conversationId) ?? []), caller]);
-      }),
-    list: () =>
-      ask<ConversationSummary[]>(waiting, post, { kind: "list" }, (caller) => {
-        waiting.lists.push(caller);
-      }),
-    rename: (conversationId, title) =>
-      ask<Conversation>(waiting, post, { kind: "rename", conversationId, title }, (caller) => {
-        waiting.opens.set(conversationId, [...(waiting.opens.get(conversationId) ?? []), caller]);
-      }),
-    agent: (conversationId, session) => createAgentFor(waiting, post, conversationId, session),
+    subscribe: (listener) => {
+      handle.listeners.add(listener);
+      return () => {
+        handle.listeners.delete(listener);
+      };
+    },
+    state: () => handle.shown,
+    open: async (threadId) => {
+      const answer = await ask(handle, post, { kind: "open", requestId: newId(), threadId });
+      if (answer.kind !== "opened") throw unexpected(answer);
+      return answer.messages;
+    },
+    create: async (item) => {
+      const answer = await ask(handle, post, { kind: "create", requestId: newId(), item });
+      if (answer.kind !== "created") throw unexpected(answer);
+      return answer.id;
+    },
+    rename: async (target, name) => {
+      const command: Command = { kind: "rename", requestId: newId(), target, name };
+      await ask(handle, post, command, renamed(target, name));
+    },
+    arrange: async (mainId, lanes) => {
+      const base = baseOf(handle.shown, mainId);
+      const command: Command = { kind: "arrange", requestId: newId(), mainId, lanes, base };
+      await ask(handle, post, command, arranged(mainId, lanes, base));
+    },
+    saveShell: async (shell) => {
+      const command: Command = { kind: "saveShell", requestId: newId(), shell };
+      await ask(handle, post, command, withShell(shell));
+    },
+    agent: (threadId, session) => agentFor(handle, post, threadId, session),
     dispose: () => {
       worker.terminate();
-      failAll(waiting, new Error("The runtime was stopped"), { fatal: true });
+      breakDown(handle, "The runtime was stopped");
     },
   };
 }

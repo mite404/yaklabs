@@ -5,17 +5,9 @@
 //   pnpm dev:web                                   # in one terminal
 //   node apps/web/scripts/web-check.mjs [--base http://127.0.0.1:5173] [--out dir]
 import { mkdirSync, writeFileSync } from "node:fs";
-import { createRequire } from "node:module";
 import path from "node:path";
+import { arg, chromium, ROOT } from "./harness.mjs";
 
-const ROOT = path.resolve(import.meta.dirname, "../../..");
-const playwright = await import(
-  createRequire(path.join(ROOT, "apps/storybook/package.json")).resolve("playwright")
-);
-const { chromium } = playwright.default ?? playwright;
-
-const argv = process.argv.slice(2);
-const arg = (name, fallback) => (argv.includes(name) ? argv[argv.indexOf(name) + 1] : fallback);
 const BASE = arg("--base", "http://127.0.0.1:5173");
 const OUT = arg(
   "--out",
@@ -42,6 +34,123 @@ page.on("response", (response) => {
   if (response.status() >= 500) errors.push(`${response.status()} ${response.url()}`);
 });
 const shot = (name) => page.screenshot({ path: path.join(OUT, `${name}.png`), fullPage: false });
+
+// Selects the first `count` characters of the main thread's first agent turn, scrolled into
+// view as a person would: a highlight a press can then carry. Returns where to press and what
+// was selected.
+function highlight(count) {
+  return page.evaluate((length) => {
+    const paragraph = document.querySelector('[role="tabpanel"]:not([inert]) .turn-agent p');
+    paragraph.scrollIntoView({ block: "center" });
+    const range = document.createRange();
+    range.setStart(paragraph.firstChild, 0);
+    range.setEnd(paragraph.firstChild, length);
+    getSelection().removeAllRanges();
+    getSelection().addRange(range);
+    const box = range.getClientRects()[0];
+    return { x: box.left + 12, y: box.top + box.height / 2, text: range.toString() };
+  }, count);
+}
+
+// Presses at `from`, lifts past the carry's dead zone and lets go at `to` (ADR-091).
+async function carryTo(from, to) {
+  await page.mouse.move(from.x, from.y);
+  await page.mouse.down();
+  await page.mouse.move(from.x + 12, from.y + 8, { steps: 3 });
+  await page.mouse.move(to.x, to.y, { steps: 8 });
+  await page.waitForTimeout(150);
+  await page.mouse.up();
+}
+
+// The main threads a tab's sidebar lists, top to bottom.
+const mainTitles = (tab) => tab.locator('[data-thread="main"]').allTextContents();
+
+// The theme lives in the account menu, in the title bar's corner.
+async function chooseTheme(name) {
+  await page.getByRole("button", { name: "Account" }).click();
+  await page.getByRole("menuitemradio", { name }).click();
+  await page.keyboard.press("Escape");
+}
+
+// A page of its own at `address` (a mock scenario's, ADR-096), with its console errors counted
+// among the rest, once a thread is on screen.
+async function pageAt(address) {
+  const opened = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  opened.on("console", (message) => {
+    if (message.type() === "error") errors.push(message.text());
+  });
+  opened.on("pageerror", (error) => errors.push(String(error)));
+  await opened.goto(`${BASE}${address}`, { waitUntil: "load" });
+  await opened
+    .locator('[role="tabpanel"]:not([inert]) .thread-panel')
+    .first()
+    .waitFor({ timeout: 20_000 });
+  return opened;
+}
+
+const tabNames = (on) =>
+  on.getByRole("tablist", { name: "Open threads" }).getByRole("tab").allInnerTexts();
+const shownPanel = (on) => on.locator('[role="tabpanel"]:not([inert])');
+
+// Clicks a thread's row in the sidebar and waits for its tab to be the one on screen.
+async function openRow(on, title) {
+  await on.locator('[data-slot="sidebar"]').getByRole("link", { name: title, exact: true }).click();
+  await on
+    .locator(`[role="tabpanel"]:not([inert])[aria-label="${title}"] .thread-panel`)
+    .first()
+    .waitFor({ timeout: 10_000 });
+}
+
+// A page of its own on a mock scenario (ADR-096), once `ready` is on screen in the tab shown,
+// or in `within` on a page with no tab; its console errors count with the rest.
+async function openScenario(address, ready, within = '[role="tabpanel"]:not([inert])') {
+  const view = await browser.newPage({
+    viewport: { width: 1440, height: 900 },
+    reducedMotion: "reduce",
+  });
+  view.on("console", (message) => {
+    if (message.type() === "error") errors.push(message.text());
+  });
+  view.on("pageerror", (error) => errors.push(String(error)));
+  await view.goto(`${BASE}${address}`, { waitUntil: "load" });
+  await view.locator(`${within} ${ready}`).first().waitFor({ timeout: 15_000 });
+  return view;
+}
+
+// A step on a page of its own at `address`, a mock scenario, so no device data is touched. A
+// throw fails that step alone, and the steps after it still run.
+async function onOwnPage(step, address, options, measure) {
+  const own = await browser.newPage({ viewport: { width: 1280, height: 900 }, ...options });
+  own.on("console", (message) => {
+    if (message.type() === "error") errors.push(message.text());
+  });
+  own.on("pageerror", (error) => errors.push(String(error)));
+  try {
+    await own.goto(`${BASE}${address}`, { waitUntil: "load" });
+    const { ok, detail } = await measure(own);
+    record(step, ok, detail);
+  } catch (error) {
+    record(step, false, String(error).split("\n")[0]);
+  } finally {
+    await own.close();
+  }
+}
+
+// Whether only `wide` of a workspace's panes is on screen, across most of the width.
+const paneAlone = (shown, wide) =>
+  Object.entries(shown).every(([name, value]) => (name === wide ? value >= 85 : value === 0));
+
+// The open threads, by the tablist the title bar names.
+const tabsOf = (own) => own.getByRole("tablist", { name: "Open threads" }).getByRole("tab");
+
+// The element with focus, as a screen reader would name it: its role, then its name.
+const focusOn = (own) =>
+  own.evaluate(() => {
+    const at = document.activeElement;
+    if (at === null || at === document.body) return "body";
+    const role = at.getAttribute("role") ?? at.tagName.toLowerCase();
+    return `${role} ${at.getAttribute("aria-label") ?? at.textContent.trim()}`;
+  });
 
 try {
   await page.goto(`${BASE}/`, { waitUntil: "load" });
@@ -104,12 +213,11 @@ try {
       turns.some((t) => t.includes("Answering about Net profit")),
     `${turns.length} turns after reload`,
   );
+  const marker = (await page.locator('[data-slot="data-marker"]').innerText()).trim();
   record(
-    "no memory-only warning",
-    !(await page
-      .getByText("cannot keep conversations")
-      .isVisible()
-      .catch(() => false)),
+    "the marker says the threads are kept on this device, not in memory",
+    marker === "On this device",
+    marker,
   );
 
   // The look is measured, not the attribute: the page, the paper and the ink must all move.
@@ -123,8 +231,7 @@ try {
       };
     });
   const light = await surface();
-  await page.getByRole("button", { name: "Toggle theme" }).click();
-  await page.getByRole("menuitem", { name: "Dark" }).click();
+  await chooseTheme("Dark");
   await page.waitForFunction(() => document.documentElement.dataset.theme === "dark");
   await page.waitForTimeout(300);
   await shot("thread-dark");
@@ -134,39 +241,35 @@ try {
     light.page !== dark.page && light.paper !== dark.paper && light.ink !== dark.ink,
     `paper ${light.paper} → ${dark.paper}`,
   );
-  await page.getByRole("button", { name: "Toggle theme" }).click();
-  await page.getByRole("menuitem", { name: "Light" }).click();
+  await chooseTheme("Light");
   await page.waitForFunction(() => document.documentElement.dataset.theme === "light");
 
-  const rail = page.getByRole("navigation", { name: "Main" });
+  const rail = page.locator('[data-slot="sidebar"]');
   record(
-    "the rail shows Thread and Lab",
-    (await rail.getByRole("link", { name: "Thread" }).isVisible()) &&
+    "the sidebar shows Kay, Documentation and Lab",
+    (await rail.getByRole("link", { name: "Kay", exact: true }).isVisible()) &&
+      (await rail.getByRole("link", { name: "Documentation" }).isVisible()) &&
       (await rail.getByRole("link", { name: "Lab" }).isVisible()),
   );
 
-  const canvas = page.getByRole("region", { name: "Compose canvas" });
+  const canvas = page
+    .locator('[role="tabpanel"]:not([inert])')
+    .getByRole("region", { name: "Compose canvas" });
   record(
     "the canvas opens empty and invites a drop",
     await canvas.getByText("Drag a text selection or card").isVisible(),
   );
 
-  // A highlight dragged out of the thread arrives as plain text on the drop.
-  await page.evaluate(() => {
-    const target = document.querySelector('[aria-label="Compose canvas"]');
-    const data = new DataTransfer();
-    data.setData("text/plain", "Saturday leads at every level");
-    for (const type of ["dragover", "drop"])
-      target.dispatchEvent(
-        new DragEvent(type, { bubbles: true, cancelable: true, dataTransfer: data }),
-      );
-  });
+  // A highlight carried out of the thread starts a thread where it lands.
+  const picked = await highlight(18);
+  const empty = await canvas.getByText("Drag a text selection or card").boundingBox();
+  await carryTo(picked, { x: empty.x + empty.width / 2, y: empty.y - 40 });
   const lane = canvas.locator("article").first();
   await lane.locator(".thread-panel").waitFor({ timeout: 10_000 });
   const laneDraft = await lane.locator("textarea").inputValue();
   record(
     "a dropped highlight starts a thread lane with the quote as its draft",
-    laneDraft.startsWith("> Saturday leads at every level"),
+    laneDraft.startsWith(`> ${picked.text}`),
     laneDraft.split("\n")[0],
   );
 
@@ -308,15 +411,10 @@ try {
   // A third lane, then the first one taken by its title bar and carried to the end of the
   // row: a copy of it floats under the pointer, the lane itself waits dimmed and slides to the
   // slot it would take, and the drop lands it there.
-  await page.evaluate(() => {
-    const target = document.querySelector('[aria-label="Compose canvas"]');
-    const data = new DataTransfer();
-    data.setData("text/plain", "Sunday holds the margin");
-    for (const type of ["dragover", "drop"])
-      target.dispatchEvent(
-        new DragEvent(type, { bubbles: true, cancelable: true, dataTransfer: data }),
-      );
-  });
+  await openSpace.scrollIntoViewIfNeeded();
+  const third = await highlight(20);
+  const end = await openSpace.boundingBox();
+  await carryTo(third, { x: end.x + end.width / 2, y: end.y - 40 });
   await canvas.locator("article").nth(2).locator(".thread-panel").waitFor({ timeout: 10_000 });
   const labelsBefore = await canvas
     .locator("article")
@@ -398,6 +496,60 @@ try {
     labelsAfter.map((label) => label.slice(0, 12)).join(" → "),
   );
 
+  const threadLanes = canvas.locator("article").filter({ has: page.locator(".thread-header") });
+  await threadLanes.first().scrollIntoViewIfNeeded();
+  const firstBar = await threadLanes.first().locator(".thread-header").boundingBox();
+  // The bar's far end, past any title however long.
+  const firstGrip = { x: firstBar.x + firstBar.width - 12, y: firstBar.y + firstBar.height / 2 };
+  await page.mouse.move(firstGrip.x, firstGrip.y);
+  await page.mouse.down();
+  await page.mouse.move(firstGrip.x - 200, firstGrip.y + 30, { steps: 8 });
+  await page.waitForTimeout(250);
+  const liftedBeforeEscape = await page.locator("[data-lifted]").count();
+  await page.keyboard.press("Escape");
+  await page.waitForTimeout(100);
+  const heldAfterEscape = await page.locator("[data-ghost], [data-lifted]").count();
+  await page.mouse.up();
+  await page.waitForTimeout(250);
+  const labelsEscaped = await canvas
+    .locator("article")
+    .evaluateAll((els) => els.map((el) => el.getAttribute("aria-label")));
+  record(
+    "Escape puts a lifted lane back while the button is still down, and letting go moves nothing",
+    liftedBeforeEscape === 1 &&
+      heldAfterEscape === 0 &&
+      labelsEscaped.join("|") === labelsAfter.join("|"),
+    `lifted ${liftedBeforeEscape}, still up after Escape ${heldAfterEscape}; ${labelsEscaped.map((label) => label.slice(0, 12)).join(" → ")}`,
+  );
+
+  // A card's header inside a thread lane arms a carry, which claims its press with
+  // preventDefault and lets it travel on. A stand-in header that claims its press the same way
+  // shows whether the lane leaves a claimed press alone, as it must for the card to go alone.
+  const claimed = threadLanes.first().locator(".thread-panel");
+  await claimed.evaluate((panel) => {
+    const standIn = document.createElement("header");
+    standIn.className = "card-heading";
+    standIn.dataset.claims = "";
+    standIn.style.height = "40px";
+    standIn.addEventListener("pointerdown", (event) => {
+      event.preventDefault();
+    });
+    panel.prepend(standIn);
+  });
+  const claimBox = await page.locator("[data-claims]").boundingBox();
+  await page.mouse.move(claimBox.x + 40, claimBox.y + 20);
+  await page.mouse.down();
+  await page.mouse.move(claimBox.x + 200, claimBox.y + 40, { steps: 6 });
+  await page.waitForTimeout(250);
+  const liftedByClaim = await page.locator("[data-lifted]").count();
+  await page.mouse.up();
+  await page.locator("[data-claims]").evaluate((el) => el.remove());
+  record(
+    "a press something in a lane has claimed, as a card's header does, never lifts the lane",
+    liftedByClaim === 0,
+    `${liftedByClaim} lifted`,
+  );
+
   const handle = page.locator('[data-slot="resizable-handle"]');
   const handleBox = await handle.boundingBox();
   const panel = page.locator('[data-slot="resizable-panel"]').first();
@@ -436,12 +588,13 @@ try {
     .locator("article")
     .evaluateAll((els) => els.map((el) => el.getAttribute("aria-label")));
   record(
-    "thread lanes survive a reload in the order they were left, and card lanes do not",
-    labelsReloaded.join("|") === [labelsBefore[2], labelsBefore[0]].join("|"),
+    "lanes survive a reload in the order they were left, card lanes too",
+    labelsReloaded.join("|") === labelsAfter.join("|"),
     labelsReloaded.map((label) => label.slice(0, 12)).join(" → "),
   );
   // A lane's title, and the main thread's, rename in place and keep the new name.
-  await canvas.locator("article").first().locator(".thread-title").click();
+  const threadLane = canvas.locator("article").filter({ has: page.locator(".thread-title") });
+  await threadLane.first().locator(".thread-title").click();
   await page.keyboard.press("ControlOrMeta+a");
   await page.keyboard.type("Weekend margins");
   await page.keyboard.press("Enter");
@@ -454,7 +607,7 @@ try {
   await page.reload({ waitUntil: "load" });
   await canvas.locator("article .thread-panel").first().waitFor({ timeout: 15_000 });
   await page.waitForTimeout(500);
-  const laneTitle = await canvas.locator("article").first().locator(".thread-header").innerText();
+  const laneTitle = await threadLane.first().locator(".thread-header").innerText();
   const mainTitle = await mainPanel.locator(".thread-header").innerText();
   record(
     "a lane's title and the main thread's rename in place and survive a reload",
@@ -462,6 +615,7 @@ try {
     `${laneTitle} / ${mainTitle}`,
   );
 
+  const open = await canvas.locator("article").count();
   await canvas
     .getByRole("button", { name: /^Close / })
     .first()
@@ -469,11 +623,14 @@ try {
   await page.reload({ waitUntil: "load" });
   await canvas.locator("article .thread-panel").first().waitFor({ timeout: 15_000 });
   await page.waitForTimeout(500);
-  const closedOnce = (await canvas.locator("article").count()) === 1;
-  await canvas
-    .getByRole("button", { name: /^Close / })
-    .first()
-    .click();
+  const closedOnce = (await canvas.locator("article").count()) === open - 1;
+  for (let left = open - 1; left > 0; left--) {
+    // oxlint-disable-next-line no-await-in-loop -- each close changes the row the next one reads
+    await canvas
+      .getByRole("button", { name: /^Close / })
+      .first()
+      .click();
+  }
   await page.reload({ waitUntil: "load" });
   await canvas.getByText("Drag a text selection or card").waitFor({ timeout: 15_000 });
   record(
@@ -485,13 +642,11 @@ try {
   await page.getByText("Useful answers.").waitFor({ timeout: 10_000 });
   await shot("lab");
   record("lab route renders the workbench", true);
-  await page.getByRole("button", { name: "Toggle theme" }).click();
-  await page.getByRole("menuitem", { name: "Dark" }).click();
+  await chooseTheme("Dark");
   await page.waitForFunction(() => document.documentElement.dataset.theme === "dark");
   await page.waitForTimeout(300);
   await shot("lab-dark");
-  await page.getByRole("button", { name: "Toggle theme" }).click();
-  await page.getByRole("menuitem", { name: "Light" }).click();
+  await chooseTheme("Light");
 
   // The dev server serves the catalog's own modules, so the fragment comes from the real encoder.
   const fragment = await page.evaluate(async (root) => {
@@ -519,6 +674,1158 @@ try {
   record(
     "unknown path shows the not-found page",
     await page.getByText("Page not found").isVisible(),
+  );
+
+  // A device file that opens but cannot be read ends the start broken with its reason, never a
+  // fresh starter over threads that are there. A page of its own, so its device is its own;
+  // the pool keeps a 4096-byte header of its own before the database's bytes.
+  const device = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  await device.goto(`${BASE}/`, { waitUntil: "load" });
+  await device.locator(".thread-panel").first().waitFor({ timeout: 20_000 });
+  await device.goto(`${BASE}/share.html`, { waitUntil: "load" });
+  const spoiled = await device.evaluate(async () => {
+    const names = [];
+    async function spoil(dir, at) {
+      for await (const [name, entry] of dir.entries()) {
+        if (entry.kind === "directory") {
+          await spoil(entry, `${at}/${name}`);
+          continue;
+        }
+        if ((await entry.getFile()).size <= 8192) continue;
+        const writable = await entry.createWritable({ keepExistingData: true });
+        await writable.seek(4096);
+        await writable.write(new Uint8Array(4096).fill(0x5a));
+        await writable.close();
+        names.push(`${at}/${name}`);
+      }
+    }
+    await spoil(await navigator.storage.getDirectory(), "");
+    return names;
+  });
+  await device.goto(`${BASE}/`, { waitUntil: "load" });
+  const notice = device.getByText("Your threads could not be opened", { exact: true });
+  await notice.waitFor({ timeout: 20_000 });
+  const reason = await notice.locator("xpath=..").innerText();
+  await device.getByRole("main").getByRole("button", { name: "Try again" }).click();
+  await notice.waitFor({ timeout: 20_000 });
+  await device.screenshot({ path: path.join(OUT, "device-broken.png") });
+  record(
+    "a device file that cannot be read says why and offers Try again, which tries again",
+    spoiled.length === 1 && reason.includes("could not be brought up to date"),
+    `${spoiled.length} file spoiled; ${reason.replaceAll(/\s+/g, " ").slice(0, 140)}`,
+  );
+  await device.close();
+
+  // A tab a visit opened is kept like any other (ADR-105): a switch away neither closes it nor
+  // unmounts its draft, and each New thread keeps a tab of its own.
+  const visited = await pageAt("/t/t-001?scenario=demo");
+  await openRow(visited, "Refund audit");
+  const refundDraft = shownPanel(visited)
+    .locator('[data-slot="resizable-panel"]')
+    .first()
+    .getByRole("textbox", { name: "Message" });
+  await refundDraft.fill("half-written question");
+  await openRow(visited, "Last week's sales");
+  await openRow(visited, "Refund audit");
+  const keptDraft = await refundDraft.inputValue();
+  const newThread = visited
+    .locator('header[data-slot="title-bar"]')
+    .getByRole("button", { name: "New thread", exact: true });
+  for (let made = 0; made < 2; made++) {
+    const from = visited.url();
+    // oxlint-disable-next-line no-await-in-loop -- the second thread starts from the first one's page
+    await newThread.click();
+    // oxlint-disable-next-line no-await-in-loop -- as above
+    await visited.waitForURL((url) => url.href !== from, { timeout: 10_000 });
+  }
+  await openRow(visited, "Last week's sales");
+  const visitedTabs = await tabNames(visited);
+  record(
+    "a tab opened from the sidebar or New thread stays open, draft and all, after a switch",
+    keptDraft === "half-written question" &&
+      visitedTabs.join("|") ===
+        "Last week's sales|Service desk weekly review|Refund audit|New thread|New thread",
+    `draft ${JSON.stringify(keptDraft)}; tabs ${visitedTabs.join(" | ")}`,
+  );
+  await visited.close();
+
+  // Leaving a thread never says it is gone while the next page loads; the notice is for an
+  // address no thread has. Each way out starts on a fresh page, so its route is not loaded yet.
+  const leaving = {
+    "the Lab link": (on) =>
+      on
+        .locator('[data-slot="sidebar"]')
+        .getByRole("link", { name: "Lab", exact: true })
+        .click()
+        .then(() => on.getByText("Useful answers.").waitFor({ timeout: 10_000 })),
+    "the Kay link": (on) =>
+      on
+        .locator('[data-slot="sidebar"]')
+        .getByRole("link", { name: "Kay", exact: true })
+        .click()
+        .then(() => shownPanel(on).locator(".thread-panel").first().waitFor({ timeout: 10_000 })),
+    "closing the last tab": async (on) => {
+      for (const closing of ["Service desk weekly review", "Last week's sales"]) {
+        // oxlint-disable-next-line no-await-in-loop -- each close changes the strip the next one reads
+        await on.getByRole("button", { name: `Close ${closing}`, exact: true }).click();
+      }
+      await on.getByText("Nothing open").waitFor({ timeout: 10_000 });
+    },
+  };
+  const falseNotices = [];
+  for (const [way, leave] of Object.entries(leaving)) {
+    // oxlint-disable-next-line no-await-in-loop -- one fresh page at a time
+    const on = await pageAt("/t/t-001?scenario=demo");
+    // oxlint-disable-next-line no-await-in-loop -- as above
+    await on.evaluate(() => {
+      window.goneFrames = 0;
+      requestAnimationFrame(function tick() {
+        if (document.body.innerText.includes("This thread is gone")) window.goneFrames += 1;
+        requestAnimationFrame(tick);
+      });
+    });
+    // oxlint-disable-next-line no-await-in-loop -- as above
+    await leave(on);
+    // oxlint-disable-next-line no-await-in-loop -- as above
+    await on.waitForTimeout(300);
+    // oxlint-disable-next-line no-await-in-loop -- as above
+    falseNotices.push(`${way} ${await on.evaluate(() => window.goneFrames)}`);
+    // oxlint-disable-next-line no-await-in-loop -- as above
+    await on.close();
+  }
+  const nowhere = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  await nowhere.goto(`${BASE}/t/t-999?scenario=demo`, { waitUntil: "load" });
+  const goneShown = await nowhere
+    .getByText("This thread is gone")
+    .waitFor({ timeout: 20_000 })
+    .then(() => true)
+    .catch(() => false);
+  await nowhere.close();
+  record(
+    "leaving a thread never flashes 'This thread is gone', which an unknown thread still shows",
+    falseNotices.every((each) => each.endsWith(" 0")) && goneShown,
+    `frames with the notice: ${falseNotices.join(", ")}; unknown thread shows it: ${goneShown}`,
+  );
+
+  // Opening a child whose lane was closed appends the lane again, even when the address
+  // already names it: a second click on its row opens it as the first did.
+  const reopening = await pageAt("/t/t-001?scenario=demo");
+  const reopeningCanvas = shownPanel(reopening).getByRole("region", { name: "Compose canvas" });
+  const childTitle = "Saturday leads at every level";
+  const childRow = reopening
+    .locator('[data-slot="sidebar"]')
+    .getByRole("link", { name: childTitle, exact: true });
+  const childLane = reopeningCanvas.locator(`:scope > article[aria-label="${childTitle}"]`);
+  await childRow.click();
+  await childLane.waitFor({ timeout: 10_000 });
+  await reopeningCanvas.getByRole("button", { name: `Close ${childTitle}`, exact: true }).click();
+  await childLane.waitFor({ state: "detached", timeout: 10_000 });
+  await childRow.click();
+  const laneBack = await childLane.waitFor({ timeout: 5_000 }).then(
+    () => true,
+    () => false,
+  );
+  // The lane slides into view before it is measured.
+  await reopening.waitForTimeout(800);
+  const laneInView =
+    laneBack === true &&
+    (await childLane.evaluate((reopened) => {
+      const edges = reopened.getBoundingClientRect();
+      const pane = reopened.parentElement.getBoundingClientRect();
+      return edges.left >= pane.left - 1 && edges.right <= pane.right + 1;
+    })) === true;
+  record(
+    "a second click on a child's row brings back the lane closed since, in view",
+    laneInView,
+    `lane back ${laneBack}, in view ${laneInView}, at ${new URL(reopening.url()).pathname}`,
+  );
+  await reopening.close();
+
+  // Another query parameter asks for the same data, so the first link, which keeps only
+  // ?scenario=, starts no second runtime: a closed tab stays closed and a draft stays typed.
+  const tagged = await pageAt("/t/t-001?scenario=demo&ref=mail");
+  let started = 0;
+  tagged.on("worker", () => {
+    started += 1;
+  });
+  await tagged
+    .getByRole("button", { name: "Close Service desk weekly review", exact: true })
+    .click();
+  const taggedDraft = shownPanel(tagged)
+    .locator('[data-slot="resizable-panel"]')
+    .first()
+    .getByRole("textbox", { name: "Message" });
+  await taggedDraft.fill("kept draft");
+  await openRow(tagged, "Last week's sales");
+  await tagged.waitForTimeout(500);
+  const taggedTabs = await tabNames(tagged);
+  const taggedKept = await taggedDraft.inputValue();
+  record(
+    "a query parameter besides ?scenario= never restarts the runtime on the first link",
+    started === 0 && taggedTabs.join("|") === "Last week's sales" && taggedKept === "kept draft",
+    `${started} workers started; tabs ${taggedTabs.join(" | ")}; draft ${JSON.stringify(taggedKept)}`,
+  );
+  await tagged.close();
+
+  // A lane title longer than its bar ends in an ellipsis, not a letter cut in half: the box
+  // that holds the text is the one that clips it, since only a block draws the ellipsis.
+  const long = await openScenario("/t/t-013?scenario=long", "article .thread-title");
+  const laneTitles = await long
+    .locator('[role="tabpanel"]:not([inert]) article .thread-title')
+    .evaluateAll((els) =>
+      els.map((el) => {
+        const bar = el.closest(".thread-header").getBoundingClientRect();
+        return {
+          inBar: el.getBoundingClientRect().right <= bar.right,
+          cut: el.scrollWidth > el.clientWidth,
+          ellipsis: getComputedStyle(el).textOverflow === "ellipsis",
+        };
+      }),
+    );
+  await long
+    .locator('[role="tabpanel"]:not([inert]) article .thread-header')
+    .first()
+    .screenshot({ path: path.join(OUT, "lane-title-long.png") });
+  await long.close();
+  const inBar = laneTitles.filter((each) => each.inBar);
+  const cutTitles = laneTitles.filter((each) => each.cut);
+  const withEllipsis = cutTitles.filter((each) => each.ellipsis);
+  record(
+    "a lane title too long for its bar stays in the bar and ends in an ellipsis",
+    cutTitles.length > 0 &&
+      inBar.length === laneTitles.length &&
+      withEllipsis.length === cutTitles.length,
+    `${laneTitles.length} titles, ${inBar.length} in their bar, ${cutTitles.length} cut, ${withEllipsis.length} with an ellipsis`,
+  );
+
+  // A lane's gap takes the focus, so it says how wide its lane is, as a window splitter does:
+  // a value inside its range that follows the lane when an arrow key resizes it.
+  const demo = await openScenario("/t/t-001?scenario=demo", "article .thread-panel");
+  const gaps = demo
+    .locator('[role="tabpanel"]:not([inert])')
+    .getByRole("region", { name: "Compose canvas" })
+    .getByRole("separator");
+  const readGaps = () =>
+    gaps.evaluateAll((els) =>
+      els.map((el) => {
+        const value = (name) => Number(el.getAttribute(`aria-${name}`));
+        const width = Math.round(el.previousElementSibling.getBoundingClientRect().width);
+        return {
+          now: value("valuenow"),
+          width,
+          ok:
+            el.getAttribute("aria-valuenow") !== null &&
+            value("valuenow") === width &&
+            value("valuemin") <= width &&
+            width <= value("valuemax") &&
+            el.getAttribute("aria-valuetext") === `${width} pixels wide`,
+        };
+      }),
+    );
+  const gapsAtRest = await readGaps();
+  await gaps.first().focus();
+  await demo.keyboard.press("ArrowRight");
+  await demo.waitForTimeout(300);
+  const gapsResized = await readGaps();
+  await demo.close();
+  record(
+    "a lane's gap says the lane's width in pixels, within its range, and follows an arrow key",
+    gapsAtRest.length > 0 &&
+      gapsAtRest.every((gap) => gap.ok) === true &&
+      gapsResized.every((gap) => gap.ok) === true &&
+      gapsResized[0].now === gapsAtRest[0].width + 24,
+    `${gapsAtRest.map((gap) => `${gap.now}/${gap.width}`).join(" ")} → ${gapsResized.map((gap) => `${gap.now}/${gap.width}`).join(" ")}`,
+  );
+
+  // Closing a lane from the keyboard hands the focus on rather than dropping it to the page:
+  // to the next lane's close, else the one before's, else Create blank thread.
+  const focusAfterClosing = async (which) => {
+    const view = await openScenario("/t/t-001?scenario=demo", "article .thread-panel");
+    const closes = view
+      .locator('[role="tabpanel"]:not([inert])')
+      .getByRole("region", { name: "Compose canvas" })
+      .getByRole("button", { name: /^Close / });
+    const landed = [];
+    for (const pick of which) {
+      // oxlint-disable-next-line no-await-in-loop -- each close changes the row the next one reads
+      await (pick === "first" ? closes.first() : closes.last()).focus();
+      // oxlint-disable-next-line no-await-in-loop -- as above
+      await view.keyboard.press("Enter");
+      // oxlint-disable-next-line no-await-in-loop -- as above
+      await view.waitForTimeout(300);
+      // oxlint-disable-next-line no-await-in-loop -- as above
+      const name = await view.evaluate(() => {
+        const at = document.activeElement;
+        if (at === null || at === document.body) return "the page";
+        return at.getAttribute("aria-label") ?? at.textContent.trim();
+      });
+      landed.push(name);
+    }
+    await view.close();
+    return landed;
+  };
+  const forward = await focusAfterClosing(["first", "first"]);
+  const back = await focusAfterClosing(["last"]);
+  record(
+    "closing a lane from the keyboard moves the focus to the next lane, the one before, or Create blank thread",
+    forward.join("|") === "Close Saturday leads at every level|Create blank thread" &&
+      back.join("|") === "Close Last week's profit by day",
+    `${forward.join(" → ")}; from the end: ${back.join("")}`,
+  );
+
+  // A thread that cannot be opened keeps the frame an open one has, in the main pane and in a
+  // lane: the paper, the border and the title bar, with the reason and Try again inside it.
+  // The title bar is what takes hold of a lane, so the failed lane still moves along the row.
+  const fails = await openScenario("/t/t-002?scenario=thread-fails", 'button:text-is("Try again")');
+  const failedTab = fails.locator('[role="tabpanel"]:not([inert])');
+  const frames = await failedTab.evaluate((tab) =>
+    [...tab.querySelectorAll("button")]
+      .filter((button) => button.textContent === "Try again")
+      .map((button) => {
+        const frame = button.closest(".thread-panel");
+        return {
+          place: button.closest("article")?.getAttribute("aria-label") ?? "main",
+          named: frame?.getAttribute("aria-label") ?? null,
+          title: frame?.querySelector(".thread-header h2")?.textContent ?? null,
+          paper: frame !== null && getComputedStyle(frame).backgroundColor !== "rgba(0, 0, 0, 0)",
+        };
+      }),
+  );
+  await failedTab.screenshot({ path: path.join(OUT, "thread-fails-framed.png") });
+  const failedCanvas = failedTab.getByRole("region", { name: "Compose canvas" });
+  const failedLanes = () =>
+    failedCanvas
+      .locator(":scope > article")
+      .evaluateAll((els) => els.map((el) => el.getAttribute("aria-label")));
+  const lanesBefore = await failedLanes();
+  const failedBar = failedCanvas.locator("article .thread-header").last();
+  const failedBox = (await failedBar.count()) === 0 ? null : await failedBar.boundingBox();
+  if (failedBox !== null) {
+    await fails.mouse.move(failedBox.x + failedBox.width - 16, failedBox.y + failedBox.height / 2);
+    await fails.mouse.down();
+    await fails.mouse.move(failedBox.x + failedBox.width - 40, failedBox.y + failedBox.height / 2, {
+      steps: 4,
+    });
+    await fails.mouse.move(failedBox.x - 400, failedBox.y + failedBox.height / 2, { steps: 12 });
+    await fails.mouse.up();
+    await fails.waitForTimeout(400);
+  }
+  const lanesAfter = await failedLanes();
+  await fails.close();
+  const framed = frames.filter(
+    (frame) =>
+      frame.paper === true &&
+      frame.named === frame.title &&
+      (frame.place === "main" || frame.place === frame.title),
+  );
+  record(
+    "a thread that cannot be opened keeps its frame and title bar, and its lane still moves",
+    frames.length === 2 &&
+      framed.length === frames.length &&
+      lanesBefore.length === 2 &&
+      lanesAfter.join("|") === lanesBefore.toReversed().join("|"),
+    `${framed.length} of ${frames.length} framed (${frames.map((frame) => `${frame.place}: ${frame.title}`).join("; ")}); lanes ${lanesBefore.join(" | ")} → ${lanesAfter.join(" | ")}`,
+  );
+
+  // Try again keeps the focus in its thread rather than dropping it to the page with the
+  // button: when the thread fails again, the focus is on its Try again, in a lane as in the
+  // main pane.
+  const retried = await openScenario(
+    "/t/t-002?scenario=thread-fails",
+    'button:text-is("Try again")',
+  );
+  const retryTab = retried.locator('[role="tabpanel"]:not([inert])');
+  const afterRetry = [];
+  for (const thread of ["Last week's sales", "Saturday leads at every level"]) {
+    // oxlint-disable-next-line no-await-in-loop -- one thread at a time, each read after its retry
+    await retryTab
+      .getByRole("region", { name: thread, exact: true })
+      .getByRole("button", { name: "Try again" })
+      .focus();
+    // oxlint-disable-next-line no-await-in-loop -- as above
+    await retried.keyboard.press("Enter");
+    // oxlint-disable-next-line no-await-in-loop -- as above
+    await retried.waitForTimeout(400);
+    // oxlint-disable-next-line no-await-in-loop -- as above
+    const at = await retried.evaluate(() => {
+      const focused = document.activeElement;
+      if (focused === null || focused === document.body) return "the page";
+      const frame = focused.closest(".thread-panel")?.getAttribute("aria-label");
+      return `${focused.textContent.trim()} in ${frame}`;
+    });
+    afterRetry.push(at);
+  }
+  await retried.close();
+  record(
+    "Try again keeps the focus in its thread, on Try again when it fails again",
+    afterRetry.join("|") ===
+      "Try again in Last week's sales|Try again in Saturday leads at every level",
+    afterRetry.join("; "),
+  );
+
+  // Start a thread leaves with the notice it sits in, and hands the focus to the thread it
+  // starts rather than dropping it to the page: on the thread's compose box once it opens.
+  const home = await openScenario(
+    "/?scenario=empty",
+    'button:text-is("Start a thread")',
+    '[role="main"]',
+  );
+  await home.getByRole("button", { name: "Start a thread" }).focus();
+  await home.keyboard.press("Enter");
+  await home.locator('[role="tabpanel"]:not([inert]) .compose-box textarea').waitFor();
+  await home.waitForTimeout(300);
+  const afterStart = await home.evaluate(() => {
+    const focused = document.activeElement;
+    if (focused === null || focused === document.body) return "the page";
+    const tab = focused.closest('[role="tabpanel"]')?.getAttribute("aria-label");
+    return `${focused.getAttribute("aria-label") ?? focused.textContent.trim()} in ${tab}`;
+  });
+  await home.close();
+  record(
+    "Start a thread puts the focus on the compose box of the thread it starts",
+    afterStart === "Message in New thread",
+    afterStart,
+  );
+
+  // A carry over the canvas rings it in olive all the way round. The canvas fills the window's
+  // rounded corner at the bottom right, so the ring has to follow that curve or be cut off by
+  // it: some pixel on the corner's diagonal is the ring's olive, as the straight edge is.
+  const ringed = await openScenario("/t/t-001?scenario=demo", "article .thread-panel");
+  const ringTab = ringed.locator('[role="tabpanel"]:not([inert])');
+  const cardBar = await ringTab
+    .locator(".thread-panel")
+    .first()
+    .locator(".card-heading")
+    .last()
+    .boundingBox();
+  const ringCanvas = await ringTab.getByRole("region", { name: "Compose canvas" }).boundingBox();
+  await ringed.mouse.move(cardBar.x + 20, cardBar.y + cardBar.height / 2);
+  await ringed.mouse.down();
+  await ringed.mouse.move(cardBar.x + 40, cardBar.y + cardBar.height / 2 + 5, { steps: 5 });
+  await ringed.mouse.move(ringCanvas.x + 120, ringCanvas.y + 200, { steps: 15 });
+  await ringed.waitForTimeout(300);
+  const frame = await ringed.locator('[data-slot="window"]').first().boundingBox();
+  const cornerClip = { x: frame.x + frame.width - 16, y: frame.y + frame.height - 16 };
+  const corner = await ringed.screenshot({ clip: { ...cornerClip, width: 16, height: 16 } });
+  await ringed.screenshot({
+    path: path.join(OUT, "canvas-ring-corner.png"),
+    clip: { x: cornerClip.x - 24, y: cornerClip.y - 24, width: 40, height: 40 },
+  });
+  // How far each pixel on the diagonal, and one on the bottom edge, is from the olive.
+  const fromOlive = await ringed.evaluate(async (b64) => {
+    const bitmap = await createImageBitmap(
+      await (await fetch(`data:image/png;base64,${b64}`)).blob(),
+    );
+    const context = new OffscreenCanvas(bitmap.width, bitmap.height).getContext("2d");
+    context.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--olive");
+    context.fillRect(0, 0, 1, 1);
+    const olive = context.getImageData(0, 0, 1, 1).data;
+    context.drawImage(bitmap, 0, 0);
+    const distance = (x, y) => {
+      const pixel = context.getImageData(x, y, 1, 1).data;
+      return Math.max(...[0, 1, 2].map((i) => Math.abs(pixel[i] - olive[i])));
+    };
+    return {
+      diagonal: Array.from({ length: bitmap.width }, (_, i) => distance(i, i)),
+      edge: distance(0, bitmap.height - 2),
+    };
+  }, corner.toString("base64"));
+  await ringed.keyboard.press("Escape");
+  await ringed.mouse.up();
+  await ringed.close();
+  record(
+    "a carry's ring over the canvas follows the window's rounded corner",
+    fromOlive.edge <= 8 && Math.min(...fromOlive.diagonal) <= 40,
+    `edge ${fromOlive.edge} from the olive; the corner's diagonal ${fromOlive.diagonal.join(" ")}`,
+  );
+
+  await onOwnPage(
+    "the tab strip holds only tabs, and a tab's close button still closes it",
+    "/t/t-005?scenario=demo",
+    {},
+    async (own) => {
+      const strip = own.getByRole("tablist", { name: "Open threads" });
+      await tabsOf(own).first().waitFor({ timeout: 15_000 });
+      const strays = await strip.getByRole("button").count();
+      await strip.getByRole("tab", { name: "Last week's sales" }).hover();
+      await own.waitForTimeout(100);
+      const closer = own.getByRole("button", { name: "Close Last week's sales" });
+      const shown = await closer.evaluate((el) => getComputedStyle(el).opacity);
+      await closer.click();
+      await own.waitForTimeout(300);
+      const left = await tabsOf(own).allInnerTexts();
+      return {
+        ok: strays === 0 && shown === "1" && left.join() === "Service desk weekly review",
+        detail: `${strays} buttons in the tablist; close shown on hover ${shown}; tabs left ${left.join(", ")}`,
+      };
+    },
+  );
+
+  await onOwnPage(
+    "closing a focused tab by key hands focus to the tab that takes its place, then to New thread",
+    "/t/t-005?scenario=demo",
+    {},
+    async (own) => {
+      await tabsOf(own).first().waitFor({ timeout: 15_000 });
+      await tabsOf(own).filter({ hasText: "Service desk weekly review" }).focus();
+      await own.keyboard.press("Delete");
+      await own.waitForURL(/\/t\/t-001/);
+      const next = await focusOn(own);
+      if (next.startsWith("tab ") === true) {
+        await own.keyboard.press("Delete");
+        await own.getByText("Nothing open").waitFor();
+      }
+      const none = await focusOn(own);
+      return {
+        ok: next === "tab Last week's sales" && none === "button New thread",
+        detail: `focus after closing the selected tab: ${next}; after closing the last: ${none}`,
+      };
+    },
+  );
+
+  await onOwnPage(
+    "at phone width every tab, New thread and Account stay on screen, and New thread takes a tap",
+    "/t/t-005?scenario=demo",
+    { viewport: { width: 390, height: 844 } },
+    async (own) => {
+      await tabsOf(own).first().waitFor({ timeout: 15_000 });
+      const look = await own.evaluate(() => {
+        const bar = document.querySelector('header[data-slot="title-bar"]');
+        // On screen, and a tap at its centre lands on it: nothing clips or covers it.
+        const [plus, account, ...tabs] = [
+          bar.querySelector('[aria-label="New thread"]'),
+          bar.querySelector('[aria-label="Account"]'),
+          ...bar.querySelectorAll('[role="tab"]'),
+        ].map((el) => {
+          const rect = el.getBoundingClientRect();
+          const hit = document.elementFromPoint(
+            rect.left + rect.width / 2,
+            rect.top + rect.height / 2,
+          );
+          return rect.width > 0 && rect.left >= 0 && rect.right <= innerWidth && el.contains(hit);
+        });
+        return { tabs, plus, account, spill: bar.scrollWidth - bar.clientWidth };
+      });
+      await own.screenshot({ path: path.join(OUT, "title-bar-phone.png") });
+      return {
+        ok:
+          look.tabs.length === 2 &&
+          look.tabs.every(Boolean) === true &&
+          look.plus === true &&
+          look.account === true &&
+          look.spill <= 0,
+        detail: JSON.stringify(look),
+      };
+    },
+  );
+
+  await onOwnPage(
+    "the sidebar is a navigation landmark holding the rail and the projects",
+    "/t/t-005?scenario=demo",
+    {},
+    async (own) => {
+      await tabsOf(own).first().waitFor({ timeout: 15_000 });
+      const nav = own.getByRole("navigation", { name: "Sidebar" });
+      const held = {
+        kay: await nav.getByRole("link", { name: "Kay", exact: true }).count(),
+        lab: await nav.getByRole("link", { name: "Lab", exact: true }).count(),
+        project: await nav.getByRole("button", { name: "Demo store", exact: true }).count(),
+      };
+      return { ok: Object.values(held).every((n) => n === 1), detail: JSON.stringify(held) };
+    },
+  );
+
+  await onOwnPage(
+    "Toggle sidebar says whether the sidebar is expanded, and names what it controls",
+    "/t/t-005?scenario=demo",
+    {},
+    async (own) => {
+      await tabsOf(own).first().waitFor({ timeout: 15_000 });
+      const toggle = own.getByRole("button", { name: "Toggle sidebar" });
+      const state = () =>
+        toggle.evaluate((el) => ({
+          expanded: el.getAttribute("aria-expanded"),
+          controls:
+            document
+              .querySelector(`#${CSS.escape(el.getAttribute("aria-controls"))}`)
+              ?.getAttribute("aria-label") ?? null,
+        }));
+      const before = await state();
+      await toggle.click();
+      const after = await state();
+      return {
+        ok:
+          before.expanded === "true" && after.expanded === "false" && before.controls === "Sidebar",
+        detail: `before ${JSON.stringify(before)}, after ${JSON.stringify(after)}`,
+      };
+    },
+  );
+
+  await onOwnPage(
+    "on a phone, choosing a thread in the sidebar sheet closes the sheet",
+    "/t/t-005?scenario=demo",
+    { viewport: { width: 390, height: 844 } },
+    async (own) => {
+      await tabsOf(own).first().waitFor({ timeout: 15_000 });
+      await own.getByRole("button", { name: "Toggle sidebar" }).click();
+      await own.getByRole("dialog").getByRole("link", { name: "Last week's sales" }).click();
+      await own.waitForURL(/\/t\/t-001/);
+      await own.waitForTimeout(600);
+      const sheets = await own.getByRole("dialog").count();
+      return { ok: sheets === 0, detail: `${sheets} sheet open after choosing a thread` };
+    },
+  );
+
+  await onOwnPage(
+    "the collapsed rail's icons sit centred in their squares",
+    "/t/t-005?scenario=demo",
+    { viewport: { width: 1024, height: 768 } },
+    async (own) => {
+      await tabsOf(own).first().waitFor({ timeout: 15_000 });
+      const offsets = await own.locator('[data-slot="sidebar"]').evaluate((side) =>
+        ["Kay", "Documentation", "Lab"].map((name) => {
+          const link = [...side.querySelectorAll("a")].find(
+            (a) => (a.getAttribute("aria-label") ?? a.textContent.trim()) === name,
+          );
+          const square = link.getBoundingClientRect();
+          const glyph = link.querySelector("svg").getBoundingClientRect();
+          return [
+            glyph.left + glyph.width / 2 - (square.left + square.width / 2),
+            glyph.top + glyph.height / 2 - (square.top + square.height / 2),
+          ];
+        }),
+      );
+      return {
+        ok: offsets.flat().every((offset) => Math.abs(offset) < 0.5),
+        detail: `icon centre minus square centre (x, y): ${offsets.map((pair) => pair.join(", ")).join("; ")}`,
+      };
+    },
+  );
+
+  await onOwnPage(
+    "Toggle sidebar looks the same at rest whether the sidebar is open or not",
+    "/t/t-005?scenario=demo",
+    {},
+    async (own) => {
+      await tabsOf(own).first().waitFor({ timeout: 15_000 });
+      const toggle = own.getByRole("button", { name: "Toggle sidebar" });
+      const look = async () => {
+        await own.mouse.move(900, 600);
+        await own.waitForTimeout(250);
+        return toggle.evaluate((el) => {
+          const style = getComputedStyle(el);
+          return `${style.backgroundColor} ${style.color}`;
+        });
+      };
+      const expanded = await look();
+      await toggle.click();
+      const collapsed = await look();
+      return {
+        ok: expanded === collapsed,
+        detail: `expanded ${expanded}; collapsed ${collapsed}`,
+      };
+    },
+  );
+
+  await onOwnPage(
+    "a cut sidebar row shows its whole name on the first hover and on keyboard focus",
+    "/t/t-001?scenario=long",
+    {},
+    async (own) => {
+      const rows = own.locator('[data-slot="sidebar"] [data-thread="main"]');
+      await rows.first().waitFor({ timeout: 15_000 });
+      const tips = own.locator('[data-slot="tooltip-content"]');
+      const cut = await rows.evaluateAll((els) =>
+        els.slice(0, 2).map((el) => {
+          const label = el.querySelector("[data-label]");
+          return label.scrollWidth > label.clientWidth;
+        }),
+      );
+      const [first, second] = [await rows.nth(0).innerText(), await rows.nth(1).innerText()];
+      await rows.nth(0).hover();
+      await own.waitForTimeout(600);
+      const onHover = await tips.allInnerTexts();
+      await own.mouse.move(900, 450);
+      await own.waitForTimeout(400);
+      await rows.nth(1).focus();
+      await own.keyboard.press("Shift+Tab");
+      await own.keyboard.press("Tab");
+      await own.waitForTimeout(600);
+      const onFocus = await tips.allInnerTexts();
+      return {
+        ok:
+          cut.every(Boolean) === true &&
+          onHover.includes(first) === true &&
+          onFocus.includes(second) === true,
+        detail: `rows cut ${cut.join()}; tooltips on the first hover ${JSON.stringify(onHover)}, on focus ${JSON.stringify(onFocus)}`,
+      };
+    },
+  );
+
+  await onOwnPage(
+    "a project name with an unbroken word wraps inside its tooltip",
+    "/t/t-001?scenario=long",
+    {},
+    async (own) => {
+      const row = own
+        .locator('[data-slot="sidebar"] button[aria-expanded]')
+        .filter({ hasText: "Supplierinvoice" })
+        .first();
+      await row.waitFor({ timeout: 15_000 });
+      await row.scrollIntoViewIfNeeded();
+      await row.hover();
+      const tip = own
+        .locator('[data-slot="tooltip-content"]')
+        .filter({ hasText: "Supplierinvoice" });
+      await tip.waitFor({ timeout: 3000 });
+      const fit = await tip.evaluate((el) => ({ client: el.clientWidth, scroll: el.scrollWidth }));
+      await own.screenshot({ path: path.join(OUT, "tooltip-unbroken.png") });
+      return { ok: fit.scroll <= fit.client, detail: JSON.stringify(fit) };
+    },
+  );
+
+  await onOwnPage(
+    "New project hands focus to the new thread's row in the sidebar",
+    "/?scenario=empty",
+    {},
+    async (own) => {
+      await own.getByRole("button", { name: "New project" }).focus();
+      await own.keyboard.press("Enter");
+      await own.waitForURL(/\/t\//);
+      await own.waitForTimeout(500);
+      const at = await own.evaluate(() => ({
+        current: document.activeElement.getAttribute("aria-current"),
+        sidebar: document.activeElement.closest('[data-slot="sidebar"]') !== null,
+      }));
+      return {
+        ok: at.current === "page" && at.sidebar,
+        detail: `focus on ${await focusOn(own)}, current ${at.current}, in the sidebar ${at.sidebar}`,
+      };
+    },
+  );
+
+  await onOwnPage(
+    "the data marker is a button whose accessible description is its hint",
+    "/t/t-005?scenario=demo",
+    {},
+    async (own) => {
+      await tabsOf(own).first().waitFor({ timeout: 15_000 });
+      const cdp = await own.context().newCDPSession(own);
+      const { root } = await cdp.send("DOM.getDocument");
+      const { nodeId } = await cdp.send("DOM.querySelector", {
+        nodeId: root.nodeId,
+        selector: ':has(> [data-slot="data-marker"])',
+      });
+      const [node] = (await cdp.send("Accessibility.getPartialAXTree", { nodeId })).nodes;
+      const read = {
+        role: node.role?.value,
+        name: node.name?.value,
+        description: node.description?.value ?? "",
+      };
+      return {
+        ok:
+          read.role === "button" &&
+          read.name === "Mock: demo" &&
+          read.description.includes("Nothing here is saved"),
+        detail: JSON.stringify(read),
+      };
+    },
+  );
+
+  await onOwnPage(
+    "a thread page and /lab each have exactly one main landmark",
+    "/t/t-005?scenario=demo",
+    {},
+    async (own) => {
+      await tabsOf(own).first().waitFor({ timeout: 15_000 });
+      const onThread = await own.getByRole("main").count();
+      await own.goto(`${BASE}/lab?scenario=demo`, { waitUntil: "load" });
+      await own.getByText("Useful answers.").waitFor({ timeout: 10_000 });
+      const onLab = await own.getByRole("main").count();
+      return {
+        ok: onThread === 1 && onLab === 1,
+        detail: `${onThread} on a thread, ${onLab} on /lab`,
+      };
+    },
+  );
+
+  await onOwnPage(
+    "the browser's Simulated badge clears 4.5:1 on the address field, light and dark",
+    "/t/t-005?scenario=demo",
+    {},
+    async (own) => {
+      const badge = own
+        .locator('[role="tabpanel"]:not([inert])')
+        .getByRole("region", { name: "Browser" })
+        .getByText("Simulated", { exact: true });
+      const ratio = async (colorScheme) => {
+        await own.emulateMedia({ colorScheme });
+        await own.reload({ waitUntil: "load" });
+        await badge.waitFor({ timeout: 15_000 });
+        return badge.evaluate((el) => {
+          // Every fill under the badge's centre, painted bottom up onto one pixel, gives the
+          // colour its text is read against.
+          const rect = el.getBoundingClientRect();
+          const under = document.elementsFromPoint(
+            rect.left + rect.width / 2,
+            rect.top + rect.height / 2,
+          );
+          const pixel = document.createElement("canvas").getContext("2d");
+          const paint = (color) => {
+            pixel.fillStyle = color;
+            pixel.fillRect(0, 0, 1, 1);
+            return [...pixel.getImageData(0, 0, 1, 1).data];
+          };
+          for (const node of [...under.toReversed(), el]) {
+            paint(getComputedStyle(node).backgroundColor);
+          }
+          const ground = paint("transparent");
+          const ink = paint(getComputedStyle(el).color);
+          const [bright, deep] = [ink, ground]
+            .map((rgba) => {
+              const [r, g, b] = rgba.slice(0, 3).map((c) => {
+                const s = c / 255;
+                return s <= 0.04045 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+              });
+              return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+            })
+            .toSorted((a, b) => b - a);
+          return Math.round(((bright + 0.05) / (deep + 0.05)) * 100) / 100;
+        });
+      };
+      const onLight = await ratio("light");
+      const onDark = await ratio("dark");
+      return {
+        ok: onLight >= 4.5 && onDark >= 4.5,
+        detail: `light ${onLight}:1, dark ${onDark}:1`,
+      };
+    },
+  );
+
+  await onOwnPage(
+    "a refused address says why in text the field is described by and a screen reader hears",
+    "/t/t-005?scenario=demo",
+    {},
+    async (own) => {
+      const bar = own
+        .locator('[role="tabpanel"]:not([inert])')
+        .getByRole("region", { name: "Browser" })
+        .locator("header");
+      const field = bar.getByRole("textbox", { name: "Address" });
+      await field.waitFor({ timeout: 15_000 });
+      await field.fill("two words");
+      await field.press("Enter");
+      const said = () =>
+        field.evaluate((el) => {
+          const notes = (el.getAttribute("aria-describedby") ?? "")
+            .split(" ")
+            .filter((id) => id !== "")
+            .map((id) => document.querySelector(`#${CSS.escape(id)}`))
+            .filter((note) => note !== null);
+          return {
+            invalid: el.getAttribute("aria-invalid"),
+            says: notes.map((note) => note.textContent.trim()).join(" "),
+            seen: notes.some((note) => note.checkVisibility() === true && note.offsetWidth > 0),
+            heard: notes.some((note) => note.closest('[role="alert"], [aria-live]') !== null),
+            kept: el.value,
+          };
+        });
+      const refused = await said();
+      const strip = await bar.boundingBox();
+      await own.screenshot({
+        path: path.join(OUT, "address-refused.png"),
+        clip: { ...strip, height: strip.height + 40 },
+      });
+      await field.press("End");
+      await own.keyboard.type("s");
+      const typing = await said();
+      return {
+        ok:
+          refused.invalid === "true" &&
+          refused.says !== "" &&
+          refused.seen === true &&
+          refused.heard === true &&
+          refused.kept === "two words" &&
+          typing.says === "",
+        detail: `refused ${JSON.stringify(refused)}; typing again ${JSON.stringify(typing)}`,
+      };
+    },
+  );
+
+  await onOwnPage(
+    "a long address on the simulated page wraps inside a narrow browser pane",
+    "/t/t-005?scenario=demo",
+    { viewport: { width: 1024, height: 768 } },
+    async (own) => {
+      const pane = own
+        .locator('[role="tabpanel"]:not([inert])')
+        .getByRole("region", { name: "Browser" });
+      const field = pane.getByRole("textbox", { name: "Address" });
+      await field.waitFor({ timeout: 15_000 });
+      await own.getByRole("button", { name: "Toggle sidebar" }).click();
+      await field.fill("https://example.com/some/really/long/path/that/goes/on/and/on/forever");
+      await field.press("Enter");
+      await pane.getByRole("heading", { name: "This page is simulated" }).waitFor();
+      const fit = await pane.evaluate((region) => {
+        const body = region.querySelector("article").parentElement;
+        const text = [...region.querySelectorAll("article *")].map((el) =>
+          Math.round(el.getBoundingClientRect().right),
+        );
+        return {
+          scroll: body.scrollWidth,
+          client: body.clientWidth,
+          right: Math.max(...text),
+          edge: Math.round(body.getBoundingClientRect().right),
+        };
+      });
+      await own.screenshot({ path: path.join(OUT, "browser-long-address.png") });
+      return {
+        ok: fit.scroll <= fit.client && fit.right <= fit.edge,
+        detail: JSON.stringify(fit),
+      };
+    },
+  );
+
+  // A second tab on the same device waits for the first rather than open the pool beside it,
+  // which sqlite-wasm answers by trying to delete the pool; it says why, and opens the same
+  // threads once the first tab closes.
+  const tabs = await browser.newContext({ viewport: { width: 1280, height: 900 } });
+  const firstTab = await tabs.newPage();
+  const secondTab = await tabs.newPage();
+  for (const tab of [firstTab, secondTab]) {
+    tab.on("console", (message) => {
+      if (message.type() === "error") errors.push(message.text());
+    });
+  }
+  await firstTab.goto(`${BASE}/`, { waitUntil: "load" });
+  await firstTab.locator(".thread-panel").first().waitFor({ timeout: 20_000 });
+  await firstTab.getByRole("button", { name: "New thread", exact: true }).click();
+  await firstTab.waitForFunction(
+    () => document.querySelectorAll('[data-thread="main"]').length === 2,
+  );
+  const kept = await mainTitles(firstTab);
+  await secondTab.goto(`${BASE}/`, { waitUntil: "load" });
+  const heldNotice = secondTab.getByText("Your threads are open in another tab", { exact: true });
+  const heldShown = await heldNotice
+    .waitFor({ timeout: 10_000 })
+    .then(() => true)
+    .catch(() => false);
+  await secondTab.screenshot({ path: path.join(OUT, "device-held.png") });
+  await firstTab.close();
+  await secondTab
+    .waitForFunction(
+      (count) => document.querySelectorAll('[data-thread="main"]').length === count,
+      kept.length,
+      { timeout: 20_000 },
+    )
+    .catch(() => {});
+  const handedOver = await mainTitles(secondTab);
+  record(
+    "a second tab says the threads are open in another tab, and opens them once it closes",
+    heldShown === true && handedOver.join("|") === kept.join("|"),
+    `held notice ${heldShown}; ${handedOver.join(", ")}`,
+  );
+  await tabs.close();
+
+  // The lab's brand link keeps the scenario the lab was opened on, as every link the app builds
+  // does, so a mock visit never drifts onto the device's threads (ADR-096).
+  const mock = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  await mock.goto(`${BASE}/lab?scenario=demo`, { waitUntil: "load" });
+  await mock.getByText("Useful answers.").waitFor({ timeout: 10_000 });
+  await mock.getByRole("link", { name: /Fieldnotes/ }).click();
+  await mock.locator('[data-thread="main"]').first().waitFor({ timeout: 20_000 });
+  const landed = new URL(mock.url());
+  const mockMarker = (await mock.locator('[data-slot="data-marker"]').innerText()).trim();
+  record(
+    "the lab's brand link keeps the scenario, so a mock visit stays on mock data",
+    landed.searchParams.get("scenario") === "demo" && mockMarker === "Mock: demo",
+    `${landed.pathname}${landed.search} · ${mockMarker}`,
+  );
+  await mock.close();
+
+  await onOwnPage(
+    "a tab closed under the pointer comes back at rest: no close and no cut title once inactive",
+    "/t/t-001?scenario=demo",
+    {},
+    async (own) => {
+      const reopened = "Service desk weekly review";
+      const tab = tabsOf(own).filter({ hasText: reopened });
+      const closer = own.getByRole("button", { name: `Close ${reopened}`, exact: true });
+      await tab.waitFor({ timeout: 15_000 });
+      // Closes the tab under the pointer, leaves the strip straight down so the pointer crosses
+      // no other tab, opens the thread again from the sidebar, then goes back to the first tab
+      // by keyboard, and reads the reopened tab.
+      const cycle = async (close) => {
+        await tab.hover();
+        const at = await close(); // → the box the pointer closed it from
+        await tab.waitFor({ state: "detached" });
+        await own.mouse.move(at.x + at.width / 2, 600, { steps: 4 });
+        await openRow(own, reopened);
+        await tab.focus();
+        await own.keyboard.press("ArrowLeft");
+        await own.keyboard.press("Enter");
+        await own.waitForURL(/\/t\/t-001\?/);
+        const hovered = await tab.evaluate((el) => el.dataset.hovered !== undefined);
+        const shown = await closer.evaluate((el) => getComputedStyle(el).opacity);
+        return `hovered ${hovered}, close ${shown}`;
+      };
+      const byClose = await cycle(async () => {
+        const from = await closer.boundingBox();
+        await closer.click();
+        return from;
+      });
+      const byMiddle = await cycle(async () => {
+        const from = await tab.boundingBox();
+        await tab.click({ button: "middle" });
+        return from;
+      });
+      const rest = "hovered false, close 0";
+      return {
+        ok: byClose === rest && byMiddle === rest,
+        detail: `after its close: ${byClose}; after a middle click: ${byMiddle}`,
+      };
+    },
+  );
+
+  await onOwnPage(
+    "a thread opened from the Lab never draws over it, and a tab click still shows its tab at once",
+    "/lab?scenario=demo",
+    {},
+    async (own) => {
+      await own.getByText("Useful answers.").waitFor({ timeout: 15_000 });
+      await own.evaluate(() => {
+        window.painted = [];
+        document.addEventListener(
+          "pointerdown",
+          () => {
+            window.pressedAt = window.painted.length;
+          },
+          { capture: true },
+        );
+        requestAnimationFrame(function tick() {
+          window.painted.push({
+            lab: document.body.innerText.includes("Useful answers."),
+            tab:
+              document
+                .querySelector('[role="tabpanel"]:not([inert])')
+                ?.getAttribute("aria-label") ?? null,
+          });
+          requestAnimationFrame(tick);
+        });
+      });
+      const sincePress = () => own.evaluate(() => window.painted.slice(window.pressedAt));
+      await openRow(own, "Refund audit");
+      await own.waitForTimeout(300);
+      const fromLab = await sincePress();
+      await tabsOf(own).filter({ hasText: "Last week's sales" }).click();
+      await own.waitForTimeout(300);
+      const fromTab = await sincePress();
+      const overLab = fromLab.filter((paint) => paint.lab === true && paint.tab !== null).length;
+      const tabAfter = fromTab.findIndex((paint) => paint.tab === "Last week's sales");
+      return {
+        ok:
+          overLab === 0 && fromLab.at(-1)?.tab === "Refund audit" && tabAfter >= 0 && tabAfter <= 1,
+        detail: `${overLab} frames drew the thread over the Lab; the tab clicked showed ${tabAfter} frames after the press`,
+      };
+    },
+  );
+
+  await onOwnPage(
+    "each visit to a child brings its lane into view and flashes it once, panned away or closed",
+    "/t/t-002?scenario=demo",
+    {},
+    async (own) => {
+      const saturday = "Saturday leads at every level";
+      const region = own
+        .locator('[role="tabpanel"]:not([inert])')
+        .getByRole("region", { name: "Compose canvas" });
+      const saturdayLane = region.locator(`:scope > article[aria-label="${saturday}"]`);
+      const saturdayRow = own
+        .locator('[data-slot="sidebar"]')
+        .getByRole("link", { name: saturday, exact: true });
+      await saturdayLane.waitFor({ timeout: 15_000 });
+      // The arrival's own flash ends before the count starts.
+      await own.waitForTimeout(1500);
+      await region.evaluate((row) => {
+        window.flashes = 0;
+        new MutationObserver((records) => {
+          window.flashes += records.filter(
+            (each) => each.target.dataset.flash !== undefined,
+          ).length;
+        }).observe(row, { subtree: true, attributeFilter: ["data-flash"] });
+      });
+      // Clicks the child's row, lets the lane slide in and its flash end, then reads whether the
+      // lane sits whole in the canvas and how often a lane flashed since the last visit.
+      const visit = async () => {
+        await saturdayRow.click();
+        await saturdayLane.waitFor({ timeout: 5_000 });
+        await own.waitForTimeout(1500);
+        return region.evaluate((row, name) => {
+          const edges = row
+            .querySelector(`:scope > article[aria-label="${name}"]`)
+            .getBoundingClientRect();
+          const pane = row.getBoundingClientRect();
+          const inView = edges.left >= pane.left - 1 && edges.right <= pane.right + 1;
+          const seen = `in view ${inView}, flashed ${window.flashes}`;
+          window.flashes = 0;
+          return seen;
+        }, saturday);
+      };
+      await region.evaluate((row) => {
+        row.scrollLeft = row.scrollWidth;
+      });
+      const pannedAway = await visit();
+      await region.getByRole("button", { name: `Close ${saturday}`, exact: true }).click();
+      await saturdayLane.waitFor({ state: "detached", timeout: 10_000 });
+      const closed = await visit();
+      const once = "in view true, flashed 1";
+      return {
+        ok: pannedAway === once && closed === once,
+        detail: `after panning it away: ${pannedAway}; after closing it: ${closed}`,
+      };
+    },
+  );
+
+  // On a phone the workspace shows one pane at a time, the one the Layout switch names, across
+  // the whole width; the others stay mounted but inert, so a draft or a reply survives a switch.
+  await onOwnPage(
+    "on a phone the Layout switch shows one pane at a time, across the whole width",
+    "/t/t-001?scenario=demo",
+    { viewport: { width: 390, height: 844 } },
+    async (own) => {
+      await own.locator('[role="tabpanel"]:not([inert]) [aria-label="Compose canvas"]').waitFor();
+      const shares = () =>
+        own.evaluate(() => {
+          const width = document.documentElement.clientWidth;
+          const onTab = document.querySelector('[role="tabpanel"]:not([inert])');
+          const share = (el) => {
+            if (el === null || el.closest("[inert]") !== null) return 0;
+            const rect = el.getBoundingClientRect();
+            const seen = Math.min(rect.right, width) - Math.max(rect.left, 0);
+            return Math.round((Math.max(seen, 0) / width) * 100);
+          };
+          return {
+            thread: share(onTab.querySelector(".thread-panel")),
+            browser: share(onTab.querySelector('[aria-label="Browser"]')),
+            canvas: share(onTab.querySelector('[aria-label="Compose canvas"]')),
+          };
+        });
+      const layout = own.getByRole("group", { name: "Layout" });
+      const seen = {};
+      for (const pane of ["Canvas", "Thread", "Browser"]) {
+        await layout.getByRole("button", { name: pane }).click();
+        await own.waitForTimeout(400);
+        seen[pane] = await shares();
+      }
+      await own.screenshot({ path: path.join(OUT, "phone-browser.png") });
+      return {
+        ok:
+          paneAlone(seen.Canvas, "canvas") &&
+          paneAlone(seen.Thread, "thread") &&
+          paneAlone(seen.Browser, "browser"),
+        detail: JSON.stringify(seen),
+      };
+    },
   );
 } catch (error) {
   record("run", false, String(error));

@@ -22,25 +22,57 @@ this list when it ships.
   (ADR-055, ADR-058).
 - **Show my work as numbered steps.** Adopt the numbered-circle step list from the "Application
   simulator" screenshot, which fits the legibility story (ADR-036).
-- **A drop between two lanes.** The canvas appends; dropping a highlight or a card between two
-  lanes should open the new lane there (ADR-089). Lanes already reorder by their grip.
 - **The row follows a carried lane.** A lane dragged to the pane's edge should scroll the row along,
-  and a wheel mid-drag should move the drop slot with the row; today the slot is measured when the
-  lane lifts (ADR-089). Escape should put a carried lane back, too.
+  and a wheel mid-drag should move the drop slot with the row; today `lane-reorder.ts` measures
+  every slot once, when the lane lifts (ADR-089). A carried card or highlight measures its landing
+  on every move instead, but it does not scroll the row at the edge either.
+- **A project name cut 22px early.** At rest an open project's row keeps room for its hidden
+  chevron (14px plus the row's 8px gap), so nothing shifts when the pointer arrives and the chevron
+  fades in; a long name meets its ellipsis that much before the row's end. The chevron could
+  overlay the end of the name on hover instead. Waits on Ethan's call.
+- **Try again, twice.** A failed start shows Try again in the sidebar, under "Your threads could
+  not be opened.", and again in the body beside the reason. The sidebar could keep only its line
+  of text and leave the button to the body. Waits on Ethan's call.
+- **The active tab shows less of its title.** At a tab's 112px minimum the title is cut, and the
+  active tab keeps 28px on its right for its close button while an inactive one gives that room
+  back until the pointer is on it, so the tab you are on shows the least of its name. Waits on a
+  design call: a wider minimum for the active tab, or a close that overlays the title's end.
 
 ## Engineering
 
 - **Replies that produce cards.** The `Agent` seam still yields text only, so today's cards come
-  from the seed thread. Next: the seam carries a card chunk, the worker declares the catalog as a
-  tool, validates each `tool_use` with the catalog's schemas, and loops until the reply ends.
-- **Card lanes that persist.** A card opened large on the canvas lasts the visit; keeping it means
-  storing its envelope beside the hidden-lane list (ADR-089).
-- **A keyboard path onto the canvas.** Drag and drop has none; the Create blank thread button is
-  the only keyboard route, and a "send highlight to canvas" action on the selection would give it
-  one. Lane widths and order do have one: arrow keys on a gap resize the lane before it, and with
+  from the seed thread and the scenarios' fixtures, and the lab stand-in answers a plain message
+  with one scripted line (ADR-104). Next: the seam carries a card chunk, the worker declares the
+  catalog as a tool, validates each `tool_use` with the catalog's schemas, and loops until the
+  reply ends.
+- **A keyboard path onto the canvas.** The carry has none; the Create blank thread button is the
+  only keyboard route, and a "send highlight to canvas" action on the selection would give it one.
+  Lane widths and order do have one: arrow keys on a gap resize the lane before it, and with
   Shift they move it.
-- **A name of the lane's own for a card.** A card's title comes from its payload and cannot be
-  renamed; a lane could keep a name for it beside the order.
+- **A name of the lane's own for a card.** A card lane already stores a `title` beside its card in
+  the `lanes` table, copied from the card when it lands, but `rename` takes only a project or a
+  thread, and the card's header still shows its payload's title. Renaming it needs a lane target
+  for `rename` and a header that shows the lane's title.
+- **The data marker on a failed migration.** When the device's file opens but cannot be read or
+  migrated, the start ends `broken` before the worker posts `opening`, so the runtime reports
+  `source: null` and the title bar shows no marker. The contract says a held start still shows its
+  source (`docs/trail/evidence/projects-sidebar/contract.md`). Waits on the store reporting its
+  storage kind before it migrates, so `opening` can go out first.
+- **A blank moment leaving a thread.** Going from a thread to the Lab, following the Kay link, or
+  closing the last tab shows an empty workspace for a few frames (5 to 16 measured) while the next
+  route loads. Holding the old tab on screen until the route commits would bring a just-closed tab
+  back through the visit, so it needs its own design; pointing the Kay link straight at the tab it
+  returns to would remove one case.
+- **One bad view resets every tab.** `parseShell` falls back to the first-run document when any
+  view fails its schema, and the next save writes that over the user's tabs. The known way to
+  write a bad view is fixed (an address is capped by its canonical length), but the fallback
+  could keep the good tabs and drop only the bad view.
+- **Focus after a failed start's Try again.** A restart remounts the whole window, so the button
+  that was pressed is gone and the focus goes back to the page. Restarting below the window, or
+  handing the focus to the tree, would keep it.
+- **Run `auth-check.mjs` again.** `apps/web/scripts/auth-check.mjs` has only been syntax-checked
+  since its browser setup moved into `harness.mjs`. Running it needs a web build with WorkOS
+  turned on (`VITE_AUTH=workos` and a client id).
 - **Make the catalog pass `noUncheckedIndexedAccess`.** Eight index reads in `interactive.ts` and
   `thread.ts` fail it, so `packages/runtime` keeps the flag off; the catalog should pass the
   shared base config.

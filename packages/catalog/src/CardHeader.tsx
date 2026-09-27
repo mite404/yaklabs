@@ -1,28 +1,21 @@
-import type { DragEvent, ReactNode } from "react";
-import { startCardDrag, type SharedCard } from "./share";
+import type { PointerEvent, ReactNode } from "react";
+import { armCarry } from "./carry";
+import type { SharedCard } from "./share";
 
-// The card the header belongs to.
-function cardOf(header: HTMLElement): HTMLElement | undefined {
-  const card = header.closest(".card");
-  return card instanceof HTMLElement ? card : undefined;
-}
+// A press on a control inside the header, such as the share button and its menu, stays theirs.
+const CONTROLS = "a, button, input, select, textarea, [role='menu']";
 
-// The whole card rides the pointer, not just its handle (ADR-089): the drag image is the card,
-// and the card itself dims once the browser has taken its picture, which it does after this
-// handler returns.
-function liftCard(event: DragEvent<HTMLElement>): void {
-  const card = cardOf(event.currentTarget);
-  if (!card) return;
-  const box = card.getBoundingClientRect();
-  event.dataTransfer.setDragImage(card, event.clientX - box.left, event.clientY - box.top);
-  window.setTimeout(() => {
-    card.dataset.lifted = "";
-  }, 0);
-}
-
-function settleCard(event: DragEvent<HTMLElement>): void {
-  const card = cardOf(event.currentTarget);
-  if (card) delete card.dataset.lifted;
+// The whole card rides the pointer, not just its handle (ADR-089): the card is both the
+// picture and what dims while it is carried.
+function carryCard(event: PointerEvent<HTMLElement>, card: SharedCard, title: string): void {
+  const { target, currentTarget } = event;
+  const control = target instanceof Element ? target.closest(CONTROLS) : null;
+  if (control !== null && currentTarget.contains(control)) return;
+  const lift = currentTarget.closest(".card");
+  armCarry(event, {
+    carried: { kind: "card", card, title },
+    lift: lift instanceof HTMLElement ? lift : undefined,
+  });
 }
 
 /**
@@ -31,9 +24,9 @@ function settleCard(event: DragEvent<HTMLElement>): void {
  * header from the card's body, edge to edge.
  * @param eyebrow A small line above the title (page context only).
  * @param actions Right-aligned controls, e.g. <ShareButton />.
- * @param drag When set, the header is the handle that drags the whole card out of its
- * thread (ADR-089), carrying the same envelope a share link does; the whole card is what
- * rides the pointer, and the card left behind dims until the drag ends.
+ * @param drag When set, the header is the handle that carries the whole card out of its
+ * thread (ADR-089), with the same envelope a share link holds; the card rides the pointer,
+ * and the card left behind dims until the carry ends.
  */
 export function CardHeader({
   title,
@@ -49,15 +42,14 @@ export function CardHeader({
   return (
     <header
       className="card-heading"
-      draggable={drag !== undefined}
-      onDragStart={
-        drag &&
-        ((event) => {
-          startCardDrag(event.dataTransfer, drag.card, drag.title);
-          liftCard(event);
-        })
+      data-carry={drag === undefined ? undefined : ""}
+      onPointerDown={
+        drag === undefined
+          ? undefined
+          : (event) => {
+              carryCard(event, drag.card, drag.title);
+            }
       }
-      onDragEnd={drag && settleCard}
     >
       <div className="card-heading-text">
         {eyebrow && <p className="eyebrow">{eyebrow}</p>}

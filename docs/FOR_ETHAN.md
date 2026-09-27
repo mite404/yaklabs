@@ -48,10 +48,28 @@ a field. The name is kept in the vault, so the worker learned one more word, `re
 lost its right edge along the way: the ground runs a pane past the last lane, a thin scrollbar
 admits it, and the ground drags to pan. And a card pulled out of the thread now rides whole, the
 one left behind dimmed, the same pattern as a lane.
+Then the app took Kay's shape. The grip no longer cuts a lane's title in half, and the rename field
+lost its rule (ADR-097). A card or a highlight now travels by a carry the page draws itself instead
+of the browser's drag, so the closed hand holds from lift to release, the canvas lights up, and an
+ink line stands in the gap where the drop will land (ADR-091, ADR-102). A thread started on the
+canvas is a sub-thread of the main thread beside it, and the sidebar, now shadcn's, lists each
+project, its main threads, and every main's sub-threads under a "↳" (ADR-092, ADR-093).
+Underneath, the worker owns the whole workspace in SQLite and pushes one snapshot of it after every
+write, and the first build's data migrates into schema v2 as a project called "Demo store"
+(ADR-099, ADR-100).
+Six mock scenarios (`demo`, `empty`, `long`, `loading`, `failure`, `thread-fails`) open from the
+address, load the same bytes every time and never touch the device's data, and the title bar says
+which one is on screen (ADR-096, ADR-101). And the app draws itself as a desktop window: traffic
+lights, one title bar of tabs, and each tab shows its thread alone, beside a simulated browser, or
+beside its canvas. A tab you leave keeps its scroll, its draft and its running reply until you
+close it (ADR-094, ADR-105). Three package workers and one web integrator built it against one
+written contract, a review of the package diffs confirmed twenty findings that were fixed before
+the merge, and every lever predicate, P1 to P12, failed on `main` before the work began and passes
+now, beside 419 tests.
 
 ## 2. Cast & Crew
 
-Nothing is built yet, so the cast is the set of ideas the prototypes will be made of.
+The first entries are ideas from before any code existed; the rest are parts of the running app.
 
 - **The compose box** is the teleprompter: it never moves while the anchor reads (ADR-003).
 - **The skill chip** is the slate clapped at the top of a take: proof of what is rolling before
@@ -78,14 +96,39 @@ Nothing is built yet, so the cast is the set of ideas the prototypes will be mad
   alone, under the same lights, before it goes on stage.
 - **The ui package** (`packages/ui`) is the paint shop: shadcn primitives mixed only from Kay's
   tokens, so anything an agent builds comes out in the house colours (ADR-082).
-- **The rail** is the corridor outside the theatre: the mark on the door, one icon per room, and at
-  the far end the light switch and the cloakroom.
+- **The rail** was the corridor outside the theatre: the mark on the door, one icon per room, and
+  at the far end the light switch and the cloakroom. It is now the sidebar folded to 56px, and it
+  keeps only the rooms: the Kay mark, drawn from the polygon meetkay.ai declares (ADR-095),
+  Documentation and Lab. The light switch and the cloakroom moved into the account menu at the
+  title bar's far right.
 - **The compose canvas** is the cutting-room wall: pull a line out of the thread and pin it up to
   start a new cut, drag a card over to see it at size, and there is always bare wall to the right
   for the next idea (ADR-089). The pins move: take a lane by its grip and the others shuffle
   along, and the gaps between them are handles that set each lane's width. The canvas model
   (`apps/web/src/canvas.ts`) does the arithmetic of where a carried lane lands, and the surface
   (`components/canvas.tsx`) only measures, listens and draws.
+- **The workspace snapshot** is the call sheet. After every write the production office (the
+  worker) prints one fresh sheet with every project, thread, lane and open tab on it, and the stage
+  reads only the latest one (ADR-099). The sheet carries no dialogue. A pane asks for its thread's
+  turns with `open` when it shows them. Every note the stage sends carries a ticket number (a
+  `requestId`), and the office answers by that number, so one refused note never voids anyone
+  else's.
+- **The carry** (`packages/catalog/src/carry.ts`) is the props runner. It picks a piece up, walks
+  it across the set plainly in hand, and sets it down on its spike mark. The closed hand is the
+  "in hand" signal and holds the whole way; the canvas lighting up is the marked floor, and the ink
+  line in the gap is the spike tape (ADR-091). Escape, the window losing focus, or a lost pointer
+  puts the piece back on the prop table, and nothing lands.
+- **The shell** (`apps/web/src/shell/`) is the edit suite. The rounded window with its traffic
+  lights is the monitor (ADR-094). Its tabs are sequences open in an editing app. Switch away and
+  the other sequence keeps its playhead, because every tab stays mounted, hidden with `inert`,
+  until you close it (ADR-105). The layout switch (Thread, Browser, Canvas) is a workspace preset.
+  The sidebar is the bin panel. Projects are bins, main threads are sequences, and sub-threads sit
+  indented under their main like subclips (ADR-092, ADR-093).
+- **The scenarios** (`packages/runtime/src/scenarios.ts`) are test reels. Each one plays on a
+  spare projector (a SQLite store in memory), never from the vault's masters (the device's
+  database), with a burned-in timecode (a stopped clock and ids that count up), so every screening
+  is frame-identical. The marker in the title bar is the slate that says what you are watching:
+  "Mock: demo", "On this device", or a live model (ADR-096, ADR-101).
 
 ## 3. Behind the Scenes
 
@@ -207,6 +250,37 @@ Nothing is built yet, so the cast is the set of ideas the prototypes will be mad
   loop and SQLite in the browser's private file system (ADR-081), WorkOS at the door (ADR-084), and
   one Hono Worker on Cloudflare as the gateway that holds the keys and keeps nothing (ADR-085,
   ADR-086). Every piece maps to a part of Kay, so moving to their stack is recasting, not rewriting.
+
+- **A hand that never lets go, at the price of other apps.** In an HTML5 drag the operating system
+  draws the cursor and the browser ignores every CSS `cursor` rule until release, so no stylesheet
+  could keep the closed hand. The page now draws its own carry. The cost is that a card can no
+  longer be dropped into another app, which only ever received its title as plain text. Ethan
+  took that trade, because an arrow that comes back mid-drag reads as unfinished in a design
+  engineering interview, and the Share link stays the way to take a card elsewhere (ADR-091).
+- **One writer, one snapshot.** Four runtime designs were drafted side by side. The judge picked
+  the one with the smallest surface, though another scored a point higher (ADR-099). The page sees
+  one state and five verbs (`open`, `create`, `rename`, `arrange`, `agent`), plus `saveShell` for
+  the tabs, and the worker pushes the whole workspace after each write, skipping a push that
+  changes nothing. The old runtime matched answers to calls by kind and order, so one `error`
+  notice failed every open and every list still waiting. Now each command carries a `requestId`
+  and only its caller hears the answer. And because the pushed snapshot is the truth, a rename or
+  an arrange can show at once as an overlay; the next push replaces it, so a refused edit rolls
+  back with no undo code at all.
+- **shadcn's Sidebar, not a hand-made tree.** It arrived with the icon rail (its
+  `collapsible="icon"` state is the old 56px rail), the toggle with its ⌘B or Ctrl+B shortcut,
+  skeleton rows, row actions and nested sub-menus. The first four are in use as they came. The
+  loading scenario's rows are `SidebarMenuSkeleton` at fixed widths, and the "+" beside a project
+  is a `SidebarMenuAction`. Each would otherwise have been a primitive to build, style and make
+  accessible by hand, and AGENTS.md already says new components come from shadcn. The project rows
+  follow Conductor's: "name >" when folded, and no chevron on an open one until the pointer is on
+  it (ADR-093).
+- **Scenarios write through the store, never around it.** A fixture poured straight into the
+  page's state could show something the app can never reach, such as a grandchild thread or a lane
+  on another main's canvas. Each scenario fills a fresh in-memory SQLite through the store's own
+  calls instead, so the checks and triggers that guard the device refuse a bad fixture at load
+  (ADR-100, ADR-101). The clock is stopped, ids count up and turn times are in UTC, so two loads
+  are the same bytes. Loading and failure are data too, `start: "hold"` or `{ fail }`, never a
+  timer, so a screenshot of the loading state never catches it halfway.
 
 ## 4. Bloopers
 
@@ -476,6 +550,106 @@ Nothing is built yet, so the cast is the set of ideas the prototypes will be mad
   render can leave the screen behind the data. The measurement moved into state beside the move it
   serves, which is also more honest, since the render does depend on it. Lesson: if the picture
   needs it, it is state.
+- **The title that stopped at the middle.** ADR-089 kept a lane's title to the left half of its
+  bar so the six-dot grip in the middle never touched it. The grip only shows on hover, so at rest
+  every longer title was cut short to make room for something that was not there. The fix started
+  from a reproduction in headless Chromium, and the workspace lever's P1 failed on `main` before
+  any CSS changed. Now the title hugs its text and runs the whole bar. On hover the grip fades up
+  over a veil in the bar's own paper that fades out the stretch of title beneath it, and the veil
+  is the grip's hit area, so a press there drags and never renames. P1 reads the darkest pixel
+  beside the grip: 37 at rest, which is the title's ink, and 162 on hover, the veil (ADR-097).
+  Lesson: do not hold space at rest for something only a hover brings, like a lower third that
+  keeps a blank box for a logo that animates in on cue. The sidebar's project rows still make this
+  trade, and `docs/LATER.md` has it.
+- **The hand that turned back into an arrow.** Press a card's header and the hand closed; move,
+  and an arrow came back until release. The header and a highlight both started an HTML5 drag, and
+  during one the operating system draws the cursor and the browser ignores CSS. The lever measured
+  it on `main`: one native `dragstart`, and `cursor: auto` under the pointer (P3h). The obvious
+  repair was cancelling `dragstart`, and it was measured before anything was built on it. It
+  failed. The pointer events kept coming, but a highlight collapsed on the first move, so there
+  was nothing left to carry. `preventDefault` on `pointerdown` stops the native drag and keeps the
+  highlight through the whole gesture. So the carry claims the press there, `html[data-carrying]`
+  holds `cursor: grabbing` on every element, and a `dragstart` inside the thread is still refused
+  as a backstop (ADR-091, ADR-102). Lesson: when the platform owns a behaviour, no CSS will win;
+  find the earliest event you can own, and measure it before building on it.
+- **A fifth of the tab left blank.** Switching a tab to the Thread layout should give the thread
+  the whole tab. It got 932px and left 233px beside it empty, a fifth of the tab. The side pane was
+  made collapsible in the same render that asked it to collapse, and `react-resizable-panels`
+  applies a panel's new limits one render late, so the pane still had its old limits when asked
+  to close, and refused. P9 now asks how much of its tab the thread fills: 80% on the old code,
+  100% after. Fix: the side pane is collapsible all the time with fixed limits, and a drag that
+  reaches the far edge closes it only until release, so the layout switch stays the one control
+  that decides what sits beside the thread (ADR-106). Lesson: when a library applies a prop a render
+  late, do
+  not change the prop and lean on it in the same render. The lens was swapped as action was
+  called, and the focus puller was still on the old marks.
+- **Two loads, two pictures.** P7 loads each scenario twice and compares the screenshots byte for
+  byte, and `demo` and `long` failed. The two loads drew the same paint commands, yet the pixels
+  differed by one to four colour levels at a few anti-aliased edges: the window's corner, the
+  inset's hairline, a tab's edge. Chromium's partial raster redraws only the part of a tile that
+  changed, so an edge that straddled an earlier change kept a trace of the order the page loaded
+  in. The app was the same both times, so the check was wrong. Fix: the levers launch Chromium
+  with `--disable-partial-raster`, and the comparison stays byte-exact, with 24 of 24 loads
+  identical (ADR-107). Lesson: when the scanner adds grain, fix the scanner. Loosening the
+  comparison to hide the grain would have hidden real changes with it.
+- **The card that took its lane with it.** Pressing a card's header inside a thread lane lifted
+  the card and the whole lane together. The contract had the carry claim its press with
+  `stopPropagation`, so the innermost handle won by silencing everything outside it. A review fix
+  took that out so an open share menu, which listens on the document for a press outside it, would
+  hear the press and close. The carry's own state still refused a second carry, but the lane's
+  reorder in `apps/web` is not a carry and never asked. Fix: the carry's claim is `preventDefault`,
+  and the lane takes only a press where `event.isDefaultPrevented()` is false. web-check proves it
+  with a stand-in header that claims its press the same way, because the lab agent never answers
+  with a card (ADR-108). Lesson: when you change how a signal travels, list everyone who listens
+  for it, not only the listeners in your own package.
+- **The thread that rested two pixels short.** Some thread stories came to rest a pixel or two
+  above their end: 2 of 15 fresh loads of the dictation story, 7 of 15 of its narrow version.
+  While a chart above sized itself, Chromium's scroll anchoring moved the thread's `scrollTop` to
+  hold its place in the text, and the scroll event it fired arrived with the thread just short of
+  its end. The thread read that as a reader scrolling away and unpinned itself. The story runner's
+  viewport never hit the race, so no play function could catch it; loading each story fifteen
+  times and measuring the gap did. Fix: only a reader's scroll unpins. A scroll that arrives with a
+  change in how far the thread can scroll is the layout's, and keeps the pin. The rule is now a
+  pure step, `pinnedAfterScroll`, with a table test that fails under the old rule, and none of 90
+  loads across six stories rested short (ADR-103).
+  That fix had a second act. A reader who scrolled up in the same frame a streaming reply grew was
+  snapped back to the end, in all four thread stories a probe tried. A scroll event reads the
+  layout when it is delivered, not when the scroll happened, so by the time it arrives the reply
+  has grown and the reader's own scroll looks like the layout's. Two more rules over scroll events
+  were measured and failed (23 and 12 of 360 loads rested short). So the thread stopped listening
+  to scroll events. Scroll anchoring is off, and the thread decides when it resizes: it follows
+  its end only if the gap before the growth was under 2px. The reader's scroll-up now holds in
+  all four stories, and 0 of 360 loads rest short (ADR-109). Lesson: a scroll event does not say
+  who scrolled, and it arrives late. Decide at the moment you know what changed, which here is the
+  resize. It is "The 20px that was really 16", two levels deeper.
+- **The tab that was never saved.** Open a thread from the sidebar, switch to another tab, and the
+  new tab was gone, with its draft. The page drew the tab from the address, so it looked open,
+  but the save step compared the change against a copy that already held the visit, saw no
+  difference, and never wrote it. Every check that opened a tab happened to run another verb
+  first, which saved the tab by accident, so the levers never saw it. An independent review with
+  four lenses did, and three of the four reported it. Fix: a change is weighed against the
+  document the worker holds, never against the one the screen shows. Lesson: when the screen and
+  the store can disagree, test what the store kept, not what the screen drew. A continuity report
+  that only reads the monitor misses the take that was never recorded.
+- **The second tab that could delete the first.** The database library answers a failed start by
+  deleting its whole folder, every saved thread in it. A second browser tab always failed to
+  start, because the first held the files, and only those open files stopped the delete. If the
+  first tab let go at the wrong moment, everything went. Fix, twice over: every tab queues on a
+  browser lock before it touches the database, so a second tab waits and says "Your threads are
+  open in another tab"; and the worker keeps a file of its own open inside the library's folder,
+  so the delete is refused whatever happens (ADR-118). Lesson: read what a library does when it
+  fails, not only when it works. The stunt looked safe until someone read the insurance terms.
+- **Two agents, one stash.** Two fixers worked in separate folders of the same repository. One
+  set a change aside with `git stash` to show a test failing first; the stash list is shared by
+  every folder, so the other fixer's `stash pop` picked it up and landed it in the wrong place. The
+  stray edit matched a commit that already existed, so nothing was lost, and the briefs now forbid
+  `git stash`. Lesson: separate rooms are not separate if they share one shelf.
+- **Green here, red in CI.** A fix read the thread's id through types React Router generates. My
+  machine had them from an earlier typecheck; CI lints before it generates them, so there the id
+  was an error type and lint failed twice. Fix: read the id with `useParams`, which needs no
+  generated file, and lint the way CI does, with the generated folder moved aside. Lesson: a local
+  run proves the local machine. Match the order of the real pipeline, like grading a shot on the
+  monitor the client will watch.
 
 ## 5. Director's Commentary
 
@@ -570,7 +744,7 @@ flowchart LR
   C -->|any move| G[a copy of the lane<br/>floats under the pointer]
   C -->|to = from| K[the lane waits dimmed<br/>where it was]
   C -->|to differs| S["the lane slides to slotLeft(to)<br/>neighbours shiftFor(i)"]
-  U[pointerup] -->|to differs| R[onMove: moveItem + saveOrder]
+  U[pointerup] -->|to differs| R[onMove: moveLane, then arrange]
 ```
 
 The film version: a dolly grip marks the track before the take. Once the marks are down, the
@@ -583,9 +757,9 @@ hand. The dimmed lane slides to its slot by a transform, and the real move happe
 Moving the pressed element in the DOM would release its pointer capture mid-drag, so the
 choreography that looks like a live reorder is drawn, not done, until the hand opens.
 
-Senior-engineer takeaway: the pure functions are the ones with unit tests (twenty now in
-`canvas.test.ts`), the browser lever proves the measuring and the drawing, and the two never have
-to be debugged at the same time.
+Senior-engineer takeaway: the pure functions are the ones with unit tests (`canvas.test.ts` for
+the landing arithmetic, the runtime's `workspace.test.ts` for the lane edits), the browser lever
+proves the measuring and the drawing, and the two never have to be debugged at the same time.
 
 ### Test screenings, not beauty contests
 
@@ -965,3 +1139,161 @@ flowchart LR
 
 Senior-engineer takeaway: capture the baseline before you touch anything, and capture its noise
 too, so "different" has a meaning when the comparison runs.
+
+### The carry: a script on paper, a thin crew on set
+
+A carry can end in half a dozen ways: a release over a target that accepts, a release anywhere
+else, Escape, the window losing focus, a `pointercancel`, a lost pointer capture. Written as event
+handlers, each ending would need its own cleanup and its own browser test. Instead the rules are
+one pure function, `stepCarry`, which takes the state and what just happened and returns the next
+state plus a list of effects. The DOM shell around it only reports what happened and performs
+what it is told.
+
+```ts
+// packages/catalog/src/carry.ts: the rules, with no DOM. A move past LIFT_PX turns an armed
+// press into a carry and names what the page must do, in order; nothing is done here.
+function stepArmed(state: Armed, input: CarryInput): [CarryState, CarryEffect[]] {
+  switch (input.kind) {
+    case "move": {
+      if (travelled(state.from, input.at) < LIFT_PX) return [state, []]; // still a click
+      const { pointerId, carried } = state;
+      const lifted: Carrying = { phase: "carrying", pointerId, carried, hover: null };
+      const [next, hover] = hoverOver(lifted, input.target, input.at); // → leave / over effects
+      return [next, [{ kind: "lift" }, { kind: "follow", at: input.at }, ...hover]];
+    }
+    // ...a release or a cancel before the lift ends it as a click
+  }
+}
+
+// The thin shell: step, perform, and take the picture down last, even when a target's `drop`
+// throws.
+function dispatch(press: Press, input: CarryInput): void {
+  const [next, effects] = stepCarry(carry, input); // → [CarryState, CarryEffect[]]
+  carry = next;
+  try {
+    for (const effect of effects) if (effect.kind !== "end") perform(press, effect);
+  } finally {
+    for (const effect of effects) if (effect.kind === "end") perform(press, effect);
+  }
+}
+```
+
+```mermaid
+stateDiagram-v2
+  [*] --> idle
+  idle --> armed: press on a handle
+  armed --> idle: release or cancel within 6px, a click
+  armed --> carrying: move past 6px, then lift and follow
+  carrying --> carrying: move, then follow, leave and over
+  carrying --> idle: release over a target that said yes, then drop and end
+  carrying --> idle: release elsewhere, Escape, blur or pointercancel, then leave and end
+```
+
+The film version: the rules are the shooting script, and `carry.test.ts` is the table read, where
+every phase meets every input on paper before any set is built. The DOM shell is the crew, who
+perform what the script calls for. The `finally` is the wrap call. Whatever went wrong in the
+take, the set gets struck. The review found the take that needed it. A target whose `drop` threw
+used to leave the picture on screen and the hand closed for good; now the error still reaches the
+page, and the ghost, the hand and the listeners go regardless.
+
+Senior-engineer takeaway: put the decisions where a test needs no browser, keep the part that
+touches the browser too thin to hold a decision, and make the cleanup unconditional.
+
+### One writer, one call sheet
+
+The page never writes the workspace. It asks the worker, and for a write the worker answers
+twice, first with the whole workspace as it now stands, then with a note that names the request.
+The order is the point. By the time `create` resolves with a new thread's id, that thread is
+already in the page's snapshot, so the page never looks up an id it cannot find.
+
+```ts
+// packages/runtime/src/agentLoop.ts: every write ends the same way, snapshot first.
+async function write(
+  loop: Loop,
+  apply: (session: Session) => Extract<Notice, { kind: "created" | "done" }>,
+): Promise<void> {
+  const session = await started(loop);
+  const answer = apply(session); // → { kind: "created" | "done", requestId, ... }
+  pushState(loop, session); // the whole workspace, unless the page already has it
+  loop.host.post(answer); // after the snapshot, so any id it names is already there
+}
+
+function pushState(loop: Loop, { store, source }: Session): void {
+  const notice: Notice = {
+    kind: "state",
+    source,
+    workspace: store.workspace(), // → Workspace: projects, threads, lanes, shell, no messages
+    replying: replying(loop),
+  };
+  const serialized = JSON.stringify(notice); // → string, compared with the last push
+  if (serialized === loop.lastState) return;
+  loop.lastState = serialized;
+  loop.host.post(notice);
+}
+```
+
+```mermaid
+sequenceDiagram
+  participant P as Page (runtime.ts)
+  participant W as Worker (agentLoop.ts)
+  participant S as SQLite in OPFS
+  P->>P: the new name shows at once, an overlay kept under r7
+  P->>W: rename, requestId r7
+  W->>S: store.rename(target, name)
+  W-->>P: state with the whole workspace, skipped if nothing changed
+  W-->>P: done, requestId r7
+  P->>P: overlay r7 goes, the snapshot is the truth
+  Note over P,W: if refused, failed with requestId r7, and only r7's overlay goes
+```
+
+The film version: the production office prints one call sheet after every change, and the set
+reads only the latest. Every note sent to the office carries a ticket number, and the reply
+quotes it. The old office answered runners in the order they queued, so when one note came back
+refused, every runner still waiting was told no.
+
+Senior-engineer takeaway: let one place write, push whole state, and match answers by id. Then an
+optimistic edit is only an overlay on the last truth, and rollback is free, because the next truth
+replaces it.
+
+### A check that has never failed has proven nothing
+
+Every predicate in `apps/web/scripts/workspace-check.mjs` was run on `main` before the work it
+checks began, and recorded failing with a number: the title clipped at half the bar, a 1px rule
+under the rename field, one native drag with `cursor: auto`, a card appended at the end of the
+row, a 0px inset. A check that passes on the old code cannot see the bug, however green it looks.
+
+```js
+// apps/web/scripts/shell-checks.mjs, P9: once the layout is Thread, how much of its tab does
+// the thread fill? Run first on the code before ADR-106, it read 80.
+await layoutButton(page, "Thread").click();
+await page.waitForTimeout(300);
+const alone = await page.locator('[role="tabpanel"]:not([inert])').evaluate((tab) => {
+  const thread = tab.querySelector('[data-slot="resizable-panel"]');
+  const share = thread.getBoundingClientRect().width / tab.getBoundingClientRect().width;
+  return Math.round(share * 100); // → 80 before the fix, 100 after
+});
+```
+
+```mermaid
+flowchart LR
+  B[Bug report or brief] --> W[Write the predicate<br/>P1 to P12]
+  W --> O{Run on the old code}
+  O -->|FAIL, with a number| R[Baseline in results.json]
+  O -->|PASS| X[The check cannot see the bug:<br/>fix the check first]
+  R --> F[Build the fix]
+  F --> N{Run again}
+  N -->|PASS| D[Done: old value, new value]
+  N -->|FAIL| L{The app or the camera?}
+  L -->|the app| F
+  L -->|the camera, as partial raster was| C[Fix the lever, keep it strict]
+```
+
+The film version: before a shoot, the camera team puts a test chart in front of the old lens and
+the new one. If the chart looks the same through both, the test cannot show the difference you
+are paying for. The lever is the chart. P7 taught the other half. A failing lever still needs
+reading, because its two loads differed at a few corners from how Chromium rastered them, not
+from any change in the app (ADR-107).
+
+Senior-engineer takeaway: write the check, watch it fail on the old code with a number, then
+build, and report old value against new value. When it fails after the fix, ask whether the app
+or the camera is wrong before touching either.

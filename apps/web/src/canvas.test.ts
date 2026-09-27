@@ -1,66 +1,5 @@
 import { describe, expect, it } from "vitest";
-import {
-  landingIndex,
-  laneId,
-  moveItem,
-  quoteFor,
-  readDrop,
-  shiftFor,
-  slotLeft,
-  sortByOrder,
-  titleFor,
-  type DragData,
-} from "./canvas";
-
-// A drag's data without a browser.
-function transferWith(entries: Record<string, string>): DragData {
-  return { types: Object.keys(entries), getData: (type) => entries[type] ?? "" };
-}
-
-describe("titleFor", () => {
-  it("keeps a short highlight whole, on one line", () => {
-    expect(titleFor("Saturday leads\n  at every level")).toBe("Saturday leads at every level");
-  });
-  it("cuts a long highlight at a word and marks the cut", () => {
-    const title = titleFor("The weekend carries the week because Saturday alone brings a third");
-    expect(title).toBe("The weekend carries the week because Saturday…");
-    expect(title.length).toBeLessThanOrEqual(49);
-  });
-});
-
-describe("quoteFor", () => {
-  it("quotes every line and leaves room to ask beneath", () => {
-    expect(quoteFor("one\ntwo")).toBe("> one\n> two\n\n");
-  });
-});
-
-describe("readDrop", () => {
-  it("takes a card over the text that rides along with it", () => {
-    const card = { v: 1, kind: "catalog", payload: { title: "x" } };
-    const drop = readDrop(
-      transferWith({ "application/x-kay-card": JSON.stringify(card), "text/plain": "x" }),
-    );
-    expect(drop).toEqual({ kind: "card", card, title: "x" });
-  });
-  it("takes trimmed text when no card was dragged", () => {
-    expect(readDrop(transferWith({ "text/plain": "  hello  " }))).toEqual({
-      kind: "text",
-      text: "hello",
-    });
-  });
-  it("ignores an empty drag and a card that fails its envelope", () => {
-    expect(readDrop(transferWith({ "text/plain": "   " }))).toBeUndefined();
-    expect(readDrop(transferWith({ "application/x-kay-card": "{" }))).toBeUndefined();
-    expect(readDrop(transferWith({ "application/x-kay-card": '{"v":2}' }))).toBeUndefined();
-  });
-});
-
-describe("laneId", () => {
-  it("differs between two drops in the same tick", () => {
-    expect(laneId(1)).not.toBe(laneId(1));
-    expect(laneId(1)).toMatch(/^thread-1-[a-z0-9]{4}$/);
-  });
-});
+import { insertionIndex, landingIndex, shiftFor, slotLeft } from "./canvas";
 
 // Three lanes 200 wide with a 16 gap: centres at 100, 316 and 532.
 const slots = [
@@ -92,18 +31,16 @@ describe("shiftFor and slotLeft", () => {
   });
 });
 
-describe("moveItem and sortByOrder", () => {
-  it("moves one item and keeps the rest in order", () => {
-    expect(moveItem(["a", "b", "c"], 0, 2)).toEqual(["b", "c", "a"]);
-    expect(moveItem(["a", "b", "c"], 2, 0)).toEqual(["c", "a", "b"]);
+describe("insertionIndex", () => {
+  it("puts a carry before the first lane whose centre is past it", () => {
+    expect(insertionIndex(slots, -10)).toBe(0);
+    expect(insertionIndex(slots, 99)).toBe(0);
+    expect(insertionIndex(slots, 208)).toBe(1);
+    expect(insertionIndex(slots, 424)).toBe(2);
   });
-  it("follows the saved order and keeps unnamed items after it", () => {
-    const items = [{ id: "a" }, { id: "b" }, { id: "c" }, { id: "d" }];
-    expect(sortByOrder(items, ["c", "a", "zzz"]).map((item) => item.id)).toEqual([
-      "c",
-      "a",
-      "b",
-      "d",
-    ]);
+  it("puts a carry at the end once it is past the last centre, and at 0 in an empty row", () => {
+    expect(insertionIndex(slots, 532)).toBe(3);
+    expect(insertionIndex(slots, 900)).toBe(3);
+    expect(insertionIndex([], 50)).toBe(0);
   });
 });

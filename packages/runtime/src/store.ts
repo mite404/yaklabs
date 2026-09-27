@@ -1,101 +1,93 @@
-import type { Conversation, ConversationSummary } from "./protocol";
+import { threads, type Thread, type ThreadMessage } from "@yaklabs/catalog/thread";
+import type { Transcript } from "./conversation";
+import type { RenameTarget } from "./protocol";
+import { DEMO_PROJECT, PROFIT } from "./schema";
+import type {
+  Lane,
+  Notification,
+  Place,
+  Project,
+  ShellState,
+  ThreadId,
+  ThreadSummary,
+  Workspace,
+} from "./workspace";
+
+/** A thread as it is first written. */
+export type NewThread = {
+  id: ThreadId;
+  title: string;
+  place: Place;
+  createdAt: string;
+  updatedAt: string;
+  draft: string;
+  messages: ThreadMessage[];
+};
 
 /**
- * Where the worker keeps conversations (ADR-086: save, list, search, read). The browser build
- * uses SQLite in the private file system; a desktop build adds one adapter for native SQLite.
+ * The worker's one store (ADR-081, ADR-086). Its calls are synchronous, as SQLite's are, so a
+ * read-modify-write can never interleave with another; each write is one transaction, and the
+ * schema refuses what the workspace's rules forbid.
  */
-export interface ConversationStore {
-  /** Reads one conversation, or `undefined` when the id has never been saved. */
-  open(id: string): Promise<Conversation | undefined>;
-  /** Writes the whole conversation over any earlier copy, so saving twice changes nothing. */
-  save(conversation: Conversation): Promise<void>;
-  /** Every conversation, newest first. */
-  list(): Promise<ConversationSummary[]>;
+export type Store = {
+  /** The whole snapshot the page draws from. */
+  workspace(): Workspace;
+  /** A thread's turns and draft; undefined for an id it has never held. */
+  transcript(id: ThreadId): Transcript | undefined;
   /**
-   * Conversations holding a message that contains every word of `query`, newest first.
-   * Words match as prefixes, ignoring case and accents; a query with no words finds nothing.
+   * Threads with a message holding every word of `query`, newest first. Words match as
+   * prefixes, ignoring case and accents; a query with no words finds nothing.
    */
-  search(query: string): Promise<ConversationSummary[]>;
-}
+  search(query: string): ThreadSummary[];
+  /** @throws When the id is taken. */
+  addProject(project: Project): void;
+  /**
+   * Adds a thread in its place and, for a child given `laneAt`, its lane at that index on its
+   * parent's canvas, in one transaction.
+   * @throws When the id is taken, the place breaks a rule (say, a child of a child), or a main
+   *   is given a lane.
+   */
+  addThread(thread: NewThread, laneAt?: number): void;
+  /** Rewrites a thread's turns, draft and `updatedAt` from what they are now. @throws For an unknown thread. */
+  changeTranscript(id: ThreadId, change: (transcript: Transcript) => Transcript): void;
+  /** @throws For an unknown project or thread. */
+  rename(target: RenameTarget, name: string): void;
+  /**
+   * Sets a main thread's canvas to exactly `lanes`, left to right.
+   * @throws When `mainId` is not a main, or a thread lane is not one of its own children.
+   */
+  arrange(mainId: ThreadId, lanes: Lane[]): void;
+  /** Keeps the page's shell whole, over any earlier one. */
+  saveShell(shell: ShellState): void;
+  /** @throws When the id is taken or the thread is unknown. */
+  addNotification(notification: Notification): void;
+  /** Closes the file; open it again elsewhere only after this. */
+  close(): void;
+};
 
-// The list shows one line of the latest message, cut at a word-ish length.
-const PREVIEW_LENGTH = 80;
-
-// A word is a run of letters and digits, the same split SQLite's unicode61 tokenizer makes.
-const WORD_BREAK = /[^\p{L}\p{N}]+/u;
-const ACCENT = /\p{M}/gu;
-
-/** "Café, Sat." → ["cafe", "sat"]: words folded the way the full-text index folds its text. */
-export function foldWords(text: string): string[] {
-  return text
-    .normalize("NFKD")
-    .replace(ACCENT, "")
-    .toLowerCase()
-    .split(WORD_BREAK)
-    .filter((word) => word !== "");
-}
-
-// The last message's text on one line, shortened with an ellipsis when it runs long.
-function toPreview(text: string): string {
-  const line = text.replaceAll(/\s+/g, " ").trim();
-  return line.length <= PREVIEW_LENGTH ? line : `${line.slice(0, PREVIEW_LENGTH - 1).trimEnd()}…`;
-}
-
-/** The list row for a conversation, given its latest message text (empty when it has none). */
-export function toSummary(
-  conversation: Pick<Conversation, "id" | "title" | "updatedAt">,
-  lastText: string,
-): ConversationSummary {
-  const { id, title, updatedAt } = conversation;
-  return { id, title, updatedAt, preview: toPreview(lastText) };
-}
-
-/** Newest first; the id breaks ties so the order never depends on insertion. */
-export function newestFirst(a: ConversationSummary, b: ConversationSummary): number {
-  return b.updatedAt.localeCompare(a.updatedAt) || a.id.localeCompare(b.id);
-}
-
-// True when every term starts some word of the text: the in-memory twin of an FTS5 prefix query.
-function matchesAll(text: string, terms: string[]): boolean {
-  const textWords = foldWords(text);
-  return terms.every((term) => textWords.some((word) => word.startsWith(term)));
-}
-
-function summarize(conversation: Conversation): ConversationSummary {
-  return toSummary(conversation, conversation.messages.at(-1)?.text ?? "");
+/**
+ * One of the catalog's seed threads by name.
+ * @throws When the catalog has no thread by that name.
+ */
+export function seedThread(name: string): Thread {
+  const thread = new Map(Object.entries(threads)).get(name); // → Thread | undefined
+  if (thread === undefined) throw new Error(`The catalog has no seed thread named ${name}`);
+  return thread;
 }
 
 /**
- * A store that lives only as long as the worker: for tests, and the fallback when the
- * browser's private file system is unavailable. It hands out copies, as a database would.
+ * Gives an empty device store the Demo store project and its `profit` main thread, seeded from
+ * the catalog's profit thread, as the page used to. A store with any thread is left alone, so
+ * running it again changes nothing.
+ * @throws When the catalog has no profit thread, or the store refuses the project or thread.
  */
-export function createMemoryStore(): ConversationStore {
-  const conversations = new Map<string, Conversation>();
-  const all = () => [...conversations.values()]; // → Conversation[]
-
-  return {
-    open: (id) => {
-      const stored = conversations.get(id); // → Conversation | undefined
-      return Promise.resolve(stored && structuredClone(stored));
-    },
-    save: (conversation) => {
-      conversations.set(conversation.id, structuredClone(conversation));
-      return Promise.resolve();
-    },
-    list: () =>
-      Promise.resolve(
-        all()
-          .map((each) => summarize(each))
-          .toSorted(newestFirst),
-      ),
-    search: (query) => {
-      const terms = foldWords(query); // → string[]
-      const hits = all().filter(
-        (conversation) =>
-          terms.length > 0 &&
-          conversation.messages.some((message) => matchesAll(message.text, terms)),
-      );
-      return Promise.resolve(hits.map((hit) => summarize(hit)).toSorted(newestFirst));
-    },
-  };
+export function ensureStarter(store: Store, at: string): void {
+  const { projects, threads: existing } = store.workspace();
+  if (existing.length > 0) return;
+  if (!projects.some((project) => project.id === DEMO_PROJECT.id)) {
+    store.addProject({ ...DEMO_PROJECT, createdAt: at });
+  }
+  const { title, messages } = seedThread("profit");
+  const place = { kind: "main", projectId: DEMO_PROJECT.id } as const;
+  store.addThread({ id: PROFIT, title, place, createdAt: at, updatedAt: at, draft: "", messages });
 }

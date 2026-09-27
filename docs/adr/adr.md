@@ -1028,3 +1028,248 @@ Proof: all 42 stories shot in light before and after, byte-identical or matching
 a rerun; all 42 shot in dark through the screenshot lever's new `--theme` option and read by eye;
 and the browser lever measures that the page, the paper and the ink all change when the toggle is
 used, instead of trusting the attribute.
+
+## ADR-091 - A carried card or highlight is pointer-driven, not an HTML5 drag
+
+2026-09-27 - Accepted (Ethan); amends ADR-089.
+During a native HTML5 drag the operating system draws the cursor and the browser ignores every CSS
+`cursor` rule until release, so the closed hand shown on press could never survive the drag:
+measured on `main`, one `dragstart` fired and the element under the pointer read `cursor: auto`, and
+the only drop feedback lived on the open space at the far end of the row, off-screen once a lane
+existed.
+Cards and highlights therefore travel by a pointer-driven carry the page draws itself, which keeps
+the closed hand from lift to release, lights the whole canvas, lands the drop in the gap under the
+pointer and lets Escape cancel.
+Ethan accepted losing drags out to other apps, which only ever received the card's title as plain
+text, because the arrow reappearing mid-drag reads as unpolished; the Share link stays the way to
+take a card elsewhere.
+
+## ADR-092 - Threads started on the canvas are sub-threads of the main thread
+
+2026-09-27 - Accepted (Ethan); extends ADR-089.
+A project holds any number of main threads, and a thread started on a main thread's canvas is that
+thread's child, one level deep, listed under it in the sidebar as a "↳" row.
+Opening a main thread or any of its children loads the same whole view, the main thread beside its
+canvas, with the child's lane brought into view.
+
+## ADR-093 - The sidebar is shadcn's Sidebar, with Conductor's project rows
+
+2026-09-27 - Accepted (Ethan); carries out ADR-082.
+Navigation becomes shadcn's `Sidebar` with `collapsible="icon"`, whose collapsed state is today's
+56px rail, instead of a hand-made tree; it already brings the toggle, the keyboard shortcut,
+skeleton rows, row actions and nested sub-rows.
+A project row reads "name >" when folded, shows no chevron while open until the pointer is on the
+name, and carries a "+" that starts a new thread in that project, after Ethan's Conductor
+screenshots.
+
+## ADR-094 - The web app draws itself as a desktop window with a tabbed title bar
+
+2026-09-27 - Accepted (Ethan's brief; built and proven by the workspace lever's P9 to P11).
+Following Kay's desktop app without changing our look, the app is a window inside the viewport with
+decorative traffic lights and one title bar across its full width: the sidebar toggle at the far
+left, tabs in the middle, and at the far right the notifications bell and then the account avatar,
+which takes the corner because the signed-in account matters more.
+Each tab restores one of three layouts, a thread alone, a thread beside a simulated browser, or a
+thread beside the compose canvas, and the rail keeps the Kay mark with a documentation link beneath
+it.
+
+## ADR-095 - The Kay mark is the vector Kay's site declares
+
+2026-09-27 - Accepted.
+meetkay.ai declares its mark as one SVG polygon (`viewBox="0 0 78.59 78.54"`,
+`fill="currentColor"`), so the rail draws that polygon instead of a trace of a screenshot, the same
+rule ADR-051 set for colours: brand assets come from what the brand declares, never from pixels.
+
+## ADR-096 - Mock scenarios never touch device data, and the app says which is which
+
+2026-09-27 - Accepted (Ethan's brief; P7 loads every scenario twice and compares bytes).
+Deterministic scenarios for long content, loading, failure and empty states run on a store built in
+memory from fixed fixtures and never open the device's database, so a demo can never overwrite or
+read real conversations.
+The app states plainly whether an action is mock, kept on this device, or live with a real model:
+"Live data can follow, with a clear indication when actions have real effects."
+
+## ADR-097 - A lane's title runs the whole bar, and the grip veils it only on hover
+
+2026-09-27 - Accepted (Ethan); amends ADR-089.
+ADR-089 kept a lane's title to half its bar so the six-dot grip never met it, which cut every
+longer title in half at rest. The title now hugs its text and runs the whole bar; while the pointer
+is on the bar's drag area the grip fades up over a veil in the bar's own paper that fades out the
+stretch of title beneath it, and the veil is the grip's hit area, so a press there drags the lane
+and never renames. The rename field draws no rule while editing, so the title reads the same in
+the same box the moment it opens.
+Proof: the workspace lever measures the whole title at rest, the ink beside the grip going from 37
+at rest to 162 on hover, and a 0px rule in the field (`docs/trail/evidence/projects-sidebar/css`).
+
+## ADR-098 - The Disclosure's hover fill sits 4px inside its host
+
+2026-09-27 - Accepted (Ethan).
+The inset the Awaiting card gave its fold by hand now belongs to the Disclosure primitive, so the
+"How I got this" story and every later host get a hover fill that stops short of the card's edges;
+the Awaiting stories render byte-identical in light and dark after the move.
+
+## ADR-099 - The worker owns the workspace and pushes one snapshot
+
+2026-09-27 - Accepted; carries out ADR-092 and ADR-076.
+Of four designs put side by side, the one with the smallest surface won: the page sees one
+observable state and five verbs (`open`, `create`, `rename`, `arrange`, `agent`, plus `saveShell`
+for the tabs), and the worker pushes the whole workspace (projects, threads, lanes, the shell, no
+messages) after every write, skipping a push that would change nothing. Every command carries a
+request id and every answer names it, so one failed call no longer fails every call in flight,
+and a write's snapshot always arrives before its answer. A closed lane is an absent lane,
+`arrange` sets a main thread's whole lane list (move, close, reopen, resize and a card drop are
+all one verb), and renames, arranges and shell saves show at once and roll back if refused.
+Proof: 137 runtime tests, among them the ordering, attribution and dedup cases in
+`packages/runtime/src/agentLoop.test.ts`.
+
+## ADR-100 - Schema v2 carries the first build's data over, and converges
+
+2026-09-27 - Accepted; extends ADR-081.
+SQLite gains projects, a parent link on conversations, lanes, the shell document and
+notifications, with checks and triggers that refuse a grandchild, a lane on the wrong canvas and a
+card lane that names a thread. The upgrade is a list of steps keyed by `user_version`, each one
+transaction; the first build's data becomes project "Demo store" with `profit` as its main
+thread and every other conversation its child, the two localStorage lists deciding which lanes
+stay open and in what order. The page clears those lists only after the device store opens on
+the private file system, so a second tab on memory can never lose them.
+Proof: a browser test writes the first build's exact schema with rows shaped like Ethan's,
+migrates twice and once more after a crash inside the step, and gets identical rows each time with
+an empty foreign key check (`packages/runtime/src/sqliteStore.browser.test.ts`).
+
+## ADR-101 - Scenarios load through the store's own writes, with faults as data
+
+2026-09-27 - Accepted for the runtime; extends ADR-096.
+Each scenario (demo, empty, long, loading, failure, thread-fails) fills a fresh in-memory SQLite
+through the same writes the app uses, so a fixture cannot hold a state the schema refuses; the
+clock is fixed, ids count up and turn times are in UTC, so every load is byte-identical. Loading
+and failure are data on the fixture (hold forever, or fail with a fixed reason), never timers, so a
+screenshot of a loading state is stable. A scenario always answers with the lab stand-in.
+Proof: `packages/runtime/src/scenarios.test.ts` and `agentLoop.faults.test.ts`.
+
+## ADR-102 - A carry claims its press on pointerdown
+
+2026-09-27 - Accepted; amends ADR-091.
+Measured in Chromium before building: cancelling `dragstart` keeps the pointer events coming but
+collapses the highlight on the first move, while `preventDefault` on `pointerdown` stops the
+native drag and keeps the highlight through press, moves and release. The carry therefore claims
+the press on `pointerdown` and still refuses `dragstart` inside the thread as a backstop; it
+swallows the click that follows a lifted carry, as a native drag does, and a click on a highlight
+without a lift still clears it. The carry is a pure state machine (idle, armed, carrying) behind a
+thin DOM shell, cancelled by Escape, the window's own blur, `pointercancel` or lost capture.
+
+## ADR-103 - A pinned thread stays pinned through the layout's own scrolls
+
+2026-09-27 - Superseded by ADR-109.
+Chromium's scroll anchoring moves a thread's `scrollTop` while a chart above sizes itself, and the
+scroll event it fires landed with the thread a pixel or two short of its end, so the thread
+unpinned itself and rested short (2 of 15 fresh loads of one dictation story, 7 of 15 of another).
+Only a reader's scroll unpins now; a scroll the layout caused keeps the pin. After the change, none
+of 90 loads across six thread stories rested short. The rule is a pure step with a table test.
+
+## ADR-104 - The lab stand-in answers every message
+
+2026-09-27 - Accepted (Ethan's screenshot).
+The scripted agent stayed silent on a message with no card choice and no file, which in a demo
+reads as a broken thread. It now answers a plain message with one scripted line that says it is
+the lab's stand-in.
+
+## ADR-105 - An open tab stays mounted until it closes
+
+2026-09-27 - Accepted; extends ADR-094.
+A tab is an open main thread, and the address `/t/:threadId` picks which one is on screen. Every
+tab visited stays mounted, stacked in one grid cell: a hidden one is `inert` and skips rendering
+through `content-visibility: hidden`, which keeps its scroll, draft and running reply where
+`display: none` would drop the scroll. Only closing a tab unmounts it.
+
+## ADR-106 - The pane beside the thread keeps fixed limits
+
+2026-09-27 - Accepted.
+The panel library applies a panel's new size limits one render late, so a pane made collapsible
+in the render that collapses it refused to close, and the Thread layout left a fifth of the tab
+blank (measured 932 and 233 px). The side pane is now always collapsible with fixed limits. A drag
+that reaches the far edge closes it only until release, when the saved layout comes back, so the
+layout switch stays the one control that decides what sits beside the thread.
+
+## ADR-107 - Screenshot levers run Chromium without partial raster
+
+2026-09-27 - Accepted.
+With partial raster on, Chromium redrew only part of a tile, so two loads of the same page
+differed by 1 to 4 colour levels at a few rounded corners, depending on load order. The app was
+the same both times, so the check was wrong. The levers launch with `--disable-partial-raster`, and
+the byte-exact comparison of two loads stays strict (24 of 24 loads identical).
+
+## ADR-108 - A press already claimed never lifts its lane
+
+2026-09-27 - Accepted; follows ADR-102.
+A carry claims its press with `preventDefault`, not `stopPropagation`, so the press still bubbles
+to the lane around it. A lane's reorder therefore takes only a press nobody claimed, or a card
+header inside a thread lane would lift the card and its lane together.
+
+## ADR-109 - A thread decides whether to follow its end when it resizes
+
+2026-09-27 - Accepted; supersedes ADR-103.
+ADR-103 judged the pin from scroll events, but a scroll event reads the layout when it is
+delivered, not when the scroll happened. A reader who scrolled up in the frame a streaming reply
+grew therefore looked like a layout scroll, and the thread snapped back to its end. Two rules over
+scroll events were measured and failed (23 and 12 of 360 loads rested short).
+Browser scroll anchoring is now off on the thread (`overflow-anchor: none`). The thread decides
+when it resizes: it follows its end only if the gap before the resize (the gap now, less what the
+resize added) was under 2px. A view that gets shorter, such as the compose box growing, counts as
+the end moving away.
+Measured in a real browser, a reader's scroll-up during streaming is now kept in all four thread
+stories, and 0 of 360 fresh loads rest short. The cost is that when content above a reader who
+scrolled up grows, it now pushes their view down, where anchoring used to hold it in place.
+
+## ADR-117 - A lane's gap reports the lane's width, and a lane is 320 to 1800px wide
+
+2026-09-27 - Accepted; amends ADR-089.
+The gap after a lane takes the focus and resizes by arrow key, so ARIA requires it to carry a
+value, and axe failed every gap for lacking one. It now reports the lane's width in pixels, read
+aloud as "480 pixels wide", within a range that a drag and the arrow keys both keep to: 320px, as
+before, up to 1800px, which fills the widest canvas a 2560px screen lays out. A default column in
+a pane too narrow for 320px widens the range to hold its width rather than report a value outside
+it.
+
+## ADR-118 - One tab at a time opens the device's threads, and a failed open cannot delete them
+
+2026-09-27 - Accepted for the guard against the delete; the held second tab is Proposed until Ethan
+decides whether a blocked second tab is the experience he wants. Extends ADR-081 and ADR-100.
+sqlite-wasm's `opfs-sahpool` installer answers any failure by deleting the pool's directory,
+every database in it included (`removeVfs`, recursive). A second tab always failed, since the
+first holds the pool's access handles, so it tried that delete on every open, and only the first
+tab's handles stopped it; a first tab letting go in the gap lost every thread (3 of 15 trials in
+the review's harness, and every time in a browser test that lets go at that moment).
+Two guards now close it. The worker takes the Web Lock `yaklabs-database` before it opens the
+database and keeps it for its life, so a second tab never touches the pool: it says "Your threads
+are open in another tab" and opens them once the first tab closes. It no longer falls back to
+memory, where a fresh starter labelled "Not saved" stood over the real threads; memory stays for
+a browser that refuses the file system or has no Web Locks. And the store holds a file in a
+subdirectory of the pool's own, where the pool never looks, for as long as its worker lives:
+Chromium refuses a recursive delete while any file under it is open, and refuses it whole, so
+the installer's clean-up cannot delete the pool whatever made the open fail and whoever lets go.
+Measured before choosing: 0 of 60 ended lock holders left a handle busy for the next holder, 0 of
+45 reloads heard the held notice, and a holder that ignores the lock (an older build) lost
+nothing in 15 trials, against 3 before. The guard leans on the library's `.opaque` directory,
+whose name the library itself says never changes; the browser test fails if it stops guarding.
+Reloading the tab that has the threads while another waits hands them to the waiting tab, and
+the reloaded tab then waits in turn and says so; nothing is lost.
+
+## ADR-119 - On a phone the workspace shows one pane at a time
+
+2026-09-27 - Accepted (Ethan).
+Below 768px, a thread beside the canvas or the browser left each about 185px, so the chart's
+labels overlapped and its buttons were cut off. On a phone the Layout switch now picks the one
+pane that fills the width (Thread, Browser or Canvas), and the others collapse. They stay mounted
+and inert, so a draft or a streaming reply survives a switch. The panel group and its fixed
+limits stay the same on every screen (ADR-106): the thread's panel is now collapsible too, so a
+phone and a wide screen differ only in the layout the switch asks for, and crossing the
+breakpoint remounts nothing.
+
+## ADR-120 - On a phone the title bar puts the tabs on a row of their own
+
+2026-09-27 - Accepted (Ethan, relayed by the PR #13 session).
+At 390px the one-row title bar squeezed the tab strip to nothing and slid New thread under the
+data marker. Below 768px the tabs now take a row of their own under the controls, 80px in all,
+so every tab stays whole and tappable. A one-row, 44px bar that hid the Layout switch behind a
+button was tried in #14 and withdrawn: Ethan wants two rows on a phone and one on a wide screen.
+With ADR-119, a phone shows the controls, then the tabs, then one pane.

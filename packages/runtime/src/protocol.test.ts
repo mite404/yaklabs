@@ -1,4 +1,3 @@
-import { threads } from "@yaklabs/catalog/thread";
 import { describe, expect, it } from "vitest";
 import { commandSchema, noticeSchema } from "./protocol";
 
@@ -7,67 +6,93 @@ const attachment = {
   label: "Net profit · Sep 14–20",
   state: { measure: "Net profit" },
 };
-const gatewayInit = (baseUrl: string) => ({ kind: "init", agent: { kind: "gateway", baseUrl } });
+const init = (agent: unknown) => ({ kind: "init", agent, data: { kind: "device" } });
+const gatewayInit = (baseUrl: string) => init({ kind: "gateway", baseUrl });
 const send = {
   kind: "send",
   requestId: "r1",
-  conversationId: "demo",
+  threadId: "profit",
   event: { kind: "message", text: "Why is Saturday high?", attachments: [attachment] },
 };
+const child = { kind: "child", parentId: "profit", at: 1, title: "Saturday", draft: "> Sat\n\n" };
+const accepts = (command: unknown) => commandSchema.safeParse(command).success;
+const saveShell = (shell: unknown) => ({ kind: "saveShell", requestId: "r1", shell });
 
-describe("commandSchema", () => {
+describe("commandSchema checks what crosses into the worker", () => {
   it("accepts a send whose card choice rides along", () => {
-    const parsed = commandSchema.parse(send); // → Command
-    expect(parsed).toEqual(send);
+    expect(commandSchema.parse(send)).toEqual(send);
   });
 
   it("rejects a command whose kind it does not know", () => {
-    expect(commandSchema.safeParse({ kind: "delete", conversationId: "demo" }).success).toBe(false);
+    expect(accepts({ kind: "delete", requestId: "r1", threadId: "profit" })).toBe(false);
   });
 
   it("rejects a send whose event is malformed", () => {
-    const missingAttachments = { ...send, event: { kind: "message", text: "Hi" } };
-    const unknownEvent = { ...send, event: { kind: "shout", text: "Hi" } };
-    expect(commandSchema.safeParse(missingAttachments).success).toBe(false);
-    expect(commandSchema.safeParse(unknownEvent).success).toBe(false);
+    expect(accepts({ ...send, event: { kind: "message", text: "Hi" } })).toBe(false);
+    expect(accepts({ ...send, event: { kind: "shout", text: "Hi" } })).toBe(false);
   });
 
   it("accepts a rejected question even when the question itself was missing", () => {
     const event = { kind: "question-rejected", reason: "no options", question: undefined };
-    expect(commandSchema.safeParse({ ...send, event }).success).toBe(true);
+    expect(accepts({ ...send, event })).toBe(true);
   });
 
-  it("opens a conversation from a seed thread with an interactive card", () => {
-    const open = { kind: "open", conversationId: "demo", seed: threads.profit };
-    expect(commandSchema.parse(open)).toEqual(open);
-  });
-
-  it("renames only to a title with something in it", () => {
-    const rename = { kind: "rename", conversationId: "demo", title: "Weekend margins" };
-    expect(commandSchema.parse(rename)).toEqual(rename);
-    expect(commandSchema.safeParse({ ...rename, title: "" }).success).toBe(false);
+  it("renames only to a name with something in it", () => {
+    const rename = { kind: "rename", requestId: "r1", target: { kind: "thread", id: "profit" } };
+    expect(accepts({ ...rename, name: "Weekend margins" })).toBe(true);
+    expect(accepts({ ...rename, name: "" })).toBe(false);
   });
 
   it("only takes an absolute gateway address", () => {
-    expect(commandSchema.safeParse(gatewayInit("http://localhost:5173")).success).toBe(true);
-    expect(commandSchema.safeParse(gatewayInit("/api")).success).toBe(false);
+    expect(accepts(gatewayInit("http://localhost:5173"))).toBe(true);
+    expect(accepts(gatewayInit("/api"))).toBe(false);
+  });
+});
+
+describe("commandSchema checks the workspace's writes", () => {
+  it("carries the v1 canvas keys in a device start", () => {
+    const legacy = { hidden: ["thread-a"], order: ["thread-b"] };
+    expect(accepts({ ...init({ kind: "lab" }), data: { kind: "device", legacy } })).toBe(true);
+  });
+
+  it("creates a child only at a whole index and with a title", () => {
+    expect(accepts({ kind: "create", requestId: "r1", item: child })).toBe(true);
+    expect(accepts({ kind: "create", requestId: "r1", item: { ...child, at: 1.5 } })).toBe(false);
+    expect(accepts({ kind: "create", requestId: "r1", item: { ...child, title: "" } })).toBe(false);
+  });
+
+  it("refuses a thread lane whose id is not l-<threadId>", () => {
+    const lane = { id: "l-other", width: null, kind: "thread", threadId: "thread-a" };
+    const arrange = { kind: "arrange", requestId: "r1", mainId: "profit", base: [] };
+    expect(accepts({ ...arrange, lanes: [{ ...lane, id: "l-thread-a" }] })).toBe(true);
+    expect(accepts({ ...arrange, lanes: [lane] })).toBe(false);
+  });
+
+  it("keeps a shell only when it is a JSON object", () => {
+    expect(accepts(saveShell({ version: 1, tabs: ["profit"] }))).toBe(true);
+    expect(accepts(saveShell(["profit"]))).toBe(false);
+    expect(accepts(saveShell({ opened: new Date(0) }))).toBe(false);
   });
 });
 
 describe("noticeSchema", () => {
-  it("rejects a conversation whose update time is not an instant", () => {
-    const conversation = { id: "demo", title: "Demo", messages: [], updatedAt: "yesterday" };
-    expect(noticeSchema.safeParse({ kind: "opened", conversation }).success).toBe(false);
-  });
-
   it("rejects a stored turn with an unknown role", () => {
     const messages = [{ id: "s1", role: "system", text: "Hi", time: "9:00" }];
-    const conversation = {
-      id: "demo",
-      title: "Demo",
-      messages,
-      updatedAt: new Date(0).toISOString(),
+    expect(noticeSchema.safeParse({ kind: "opened", requestId: "r1", messages }).success).toBe(
+      false,
+    );
+  });
+
+  it("rejects a state whose times are not instants", () => {
+    const workspace = {
+      projects: [{ id: "p", name: "P", createdAt: "yesterday" }],
+      threads: [],
+      lanes: {},
+      shell: null,
+      notifications: [],
     };
-    expect(noticeSchema.safeParse({ kind: "opened", conversation }).success).toBe(false);
+    const source = { kind: "device", storage: "opfs" };
+    const state = { kind: "state", source, workspace, replying: [] };
+    expect(noticeSchema.safeParse(state).success).toBe(false);
   });
 });
