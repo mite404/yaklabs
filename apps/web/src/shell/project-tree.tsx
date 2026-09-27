@@ -120,7 +120,7 @@ function MainRows({
           <SidebarMenuAction
             aria-expanded={open}
             aria-label={`${open ? "Hide" : "Show"} the threads in ${main.title}`}
-            className="top-1.5 right-1 w-auto gap-0.5 rounded-[var(--radius)] bg-transparent px-1 text-xs text-soft-ink tabular-nums"
+            className="top-1.5 right-1 w-auto gap-0.5 rounded-[var(--radius)] px-1 text-xs text-soft-ink tabular-nums"
             onClick={() => {
               folds.toggle(main.id);
             }}
@@ -193,7 +193,7 @@ function ProjectRows({ node, shell, folds }: { node: ProjectNode; shell: Shell; 
       />
       <SidebarMenuAction
         aria-label={`New thread in ${project.name}`}
-        className="top-1.5 rounded-[var(--radius)] bg-transparent text-soft-ink hover:text-ink"
+        className="top-1.5 rounded-[var(--radius)] text-soft-ink hover:text-ink"
         onClick={() => {
           shell.newThread(project.id);
         }}

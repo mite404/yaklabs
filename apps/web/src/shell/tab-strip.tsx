@@ -86,7 +86,7 @@ export function TabStrip({ shell, starting }: { shell: Shell | null; starting: b
       <Button
         variant="ghost"
         size="icon-sm"
-        className="rounded-[var(--radius)] bg-transparent text-soft-ink"
+        className="rounded-[var(--radius)] text-soft-ink"
         aria-label="New thread"
         disabled={shell === null}
         onClick={() => {

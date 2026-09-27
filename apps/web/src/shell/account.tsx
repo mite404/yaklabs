@@ -57,12 +57,7 @@ function AccountMenu({ face, children }: { face: ReactNode; children: ReactNode 
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
-          <Button
-            variant="ghost"
-            size="icon"
-            className="rounded-full bg-transparent"
-            aria-label="Account"
-          />
+          <Button variant="ghost" size="icon" className="rounded-full" aria-label="Account" />
         }
       >
         <Avatar size="sm">{face}</Avatar>

@@ -41,7 +41,7 @@ export function TitleBar({ theme }: { theme: ThemeChoice }) {
       <TrafficLights />
       <SidebarTrigger
         aria-label="Toggle sidebar"
-        className="shrink-0 rounded-[var(--radius)] bg-transparent text-soft-ink hover:text-ink"
+        className="shrink-0 rounded-[var(--radius)] text-soft-ink hover:text-ink"
       />
       <TabStrip shell={shell} starting={starting} />
       <div className="flex shrink-0 items-center gap-2">

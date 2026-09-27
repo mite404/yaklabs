@@ -22,6 +22,20 @@
 }
 
 @layer components {
+  /* shadcn's controls draw themselves with utilities. The catalog styles bare buttons with a
+     paper fill and a hairline border (tokens.css); where a control sets no fill or border of
+     its own, such as a ghost button or a sidebar row, that look must not show through. This
+     layer outranks the catalog's and yields to every utility. */
+  :where(
+    [data-slot="button"],
+    [data-sidebar="menu-button"],
+    [data-sidebar="menu-action"],
+    [data-sidebar="trigger"]
+  ) {
+    border-width: 0;
+    background-color: transparent;
+  }
+
   /* A tab, or a pane inside one, that is kept but not shown (the deck): it skips rendering and
      keeps its layout and scroll, which display: none would drop. It is inert as well. */
   [data-retained] {

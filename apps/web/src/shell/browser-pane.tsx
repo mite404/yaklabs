@@ -25,7 +25,7 @@ function PaneButton({
     <Button
       variant="ghost"
       size="icon-sm"
-      className="rounded-[var(--radius)] bg-transparent"
+      className="rounded-[var(--radius)]"
       aria-label={label}
       disabled={disabled}
       onClick={onClick}

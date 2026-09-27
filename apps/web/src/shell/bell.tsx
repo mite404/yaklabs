@@ -46,7 +46,7 @@ function BellTrigger({ unread, disabled }: { unread: number; disabled: boolean }
         <Button
           variant="ghost"
           size="icon"
-          className="relative rounded-[var(--radius)] bg-transparent"
+          className="relative rounded-[var(--radius)]"
           aria-label={badge === null ? "Notifications" : `Notifications, ${unread} unread`}
         />
       }
