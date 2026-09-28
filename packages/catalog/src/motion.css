@@ -19,16 +19,24 @@
   grid-auto-rows: 5px;
   gap: 2px;
   /* One 12px footprint for every cell count, so swapping variants never shifts the layout. */
+  box-sizing: border-box;
   width: 12px;
   height: 12px;
   place-content: center;
   flex: none;
 }
-/* Six squares, two columns of three, in the same 12px height: 3px squares, 1.5px gaps. */
+/* Six squares, two columns of three, in the same 12px box. Every edge must land on a whole
+   pixel: with 1.5px gaps, or centred in the box, the rows sat at half pixels and the screen
+   rounded one gap up and the next down (2px, then 1px). So: 3px squares, 1px gaps, a 7x11
+   glyph pinned 2px in and 1px down, and a half-pixel corner, since 1px rounds a 3px square
+   into a plus sign. */
 .agent-working[data-cells="6"] {
   grid-template-columns: repeat(2, 3px);
   grid-auto-rows: 3px;
-  gap: 1.5px;
+  gap: 1px;
+  place-content: start;
+  padding: 1px 0 0 2px;
+  --working-radius: 0.5px;
 }
 /* Dark mode flips the ramp, so "solid" still means the most contrast against the paper. */
 :root[data-theme="dark"] .agent-working {
@@ -37,7 +45,7 @@
   --working-soft: var(--yak-green);
 }
 .agent-working-cell {
-  border-radius: 1px;
+  border-radius: var(--working-radius, 1px);
   background: var(--working-strong);
   opacity: 0;
   animation: agent-working-wave var(--working-duration) linear infinite;
