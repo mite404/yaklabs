@@ -125,10 +125,14 @@ export function focusThreadIn(within: ParentNode): void {
 function PendingFrame({
   thread,
   leading,
+  trailing,
+  bare,
   children,
 }: {
   thread: ThreadSummary;
   leading: ReactNode;
+  trailing: ReactNode;
+  bare: boolean;
   children: ReactNode;
 }) {
   return (
@@ -138,14 +142,18 @@ function PendingFrame({
       aria-label={thread.title}
       tabIndex={-1}
       data-pending=""
+      data-bare={bare ? "" : undefined}
     >
-      <header className="thread-header">
-        {leading !== undefined && <div className="header-leading">{leading}</div>}
-        <h2>{thread.title}</h2>
-        <div className="thread-header-actions">
-          <ThreadHeaderActions thread={thread} />
-        </div>
-      </header>
+      {!bare && (
+        <header className="thread-header">
+          {leading !== undefined && <div className="header-leading">{leading}</div>}
+          <h2>{thread.title}</h2>
+          <div className="thread-header-actions">
+            <ThreadHeaderActions thread={thread} />
+            {trailing}
+          </div>
+        </header>
+      )}
       <div
         className="flex flex-col items-start gap-2 px-(--thread-gutter) py-5 text-sm"
         data-pending-body=""
@@ -164,17 +172,25 @@ function PendingFrame({
  * come from the snapshot, so a rename shows everywhere at once.
  * @param leading A control before the title in the title bar, such as a lane's collapse
  * (ADR-134); in the frame too while the turns come.
+ * @param trailing A control at the title bar's far end, after the thread's own actions, such as
+ * a lane's close.
  * @param welcome What the thread shows while it has no turns (ADR-136); the main pane's
  * greeting, and nothing in a lane.
+ * @param bare A main thread's own pane: no window frame and no actions in the pane, since its
+ * tab carries the menu and the name. Only a lane on the canvas is a window.
  */
 export function ThreadPane({
   thread,
   leading,
+  trailing,
   welcome,
+  bare = false,
 }: {
   thread: ThreadSummary;
   leading?: ReactNode;
+  trailing?: ReactNode;
   welcome?: ReactNode;
+  bare?: boolean;
 }) {
   const runtime = useRuntime();
   const session = useSession();
@@ -195,13 +211,21 @@ export function ThreadPane({
             inBackground(runtime.rename({ kind: "thread", id: thread.id }, title), "Renaming");
           }}
           cardsCarry={!isMobile}
-          headerActions={<ThreadHeaderActions thread={thread} />}
+          headerActions={
+            bare ? undefined : (
+              <>
+                <ThreadHeaderActions thread={thread} />
+                {trailing}
+              </>
+            )
+          }
           hostAsk={snooze}
           leading={leading}
           empty={welcome}
+          bare={bare}
         />
       ) : (
-        <PendingFrame thread={thread} leading={leading}>
+        <PendingFrame thread={thread} leading={leading} trailing={trailing} bare={bare}>
           {turns.kind === "loading" ? (
             <p className="text-soft-ink">Opening {thread.title}…</p>
           ) : (

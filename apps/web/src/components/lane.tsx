@@ -7,14 +7,15 @@ import type { LaneHandlers } from "./lane-reorder";
 /**
  * One lane on the canvas: its name, the width it was left at (null: the default), whether it is
  * collapsed to a strip (ADR-133), and its content, drawn with the lane's collapse (`leading`)
- * before the title in its own title bar, or without it while the lane is collapsed.
+ * before the title and its close (`trailing`) at the far end of its own title bar, or without
+ * either while the lane is collapsed.
  */
 export type LaneView = {
   id: LaneId;
   title: string;
   width: number | null;
   collapsed: boolean;
-  render: (leading: ReactNode) => ReactNode;
+  render: (leading: ReactNode, trailing: ReactNode) => ReactNode;
 };
 
 /** What a lane reports: its collapse flipped, and its close. */
@@ -30,12 +31,14 @@ const LANE_WIDTH = "min(560px, calc(100% - 48px))";
 
 // The lane's collapse, in the container it folds (ADR-134): the thread's or the card's title
 // bar while it is open, the head of its strip while it is collapsed. It says what it will do.
+// In the strip it is 24px, so its hover fill sits 3px from the strip's inner edge on every side
+// (the strip is 30px inside its border), instead of nearly touching the sides.
 function CollapseToggle({ collapsed, onClick }: { collapsed: boolean; onClick: () => void }) {
   return (
     <Button
       variant="ghost"
       size="icon-sm"
-      className="rounded-[var(--radius)] text-soft-ink hover:text-ink"
+      className={`rounded-[var(--radius)] text-soft-ink hover:text-ink ${collapsed ? "size-6" : ""}`}
       aria-label={collapsed ? "Expand lane" : "Collapse lane"}
       data-lane-toggle=""
       onClick={onClick}
@@ -45,21 +48,20 @@ function CollapseToggle({ collapsed, onClick }: { collapsed: boolean; onClick: (
   );
 }
 
-// The row above an open lane: its close, at the far end.
-function LaneTop({ title, onClose }: { title: string; onClose: () => void }) {
+// The lane's close, last in its title bar whatever else the bar holds: the far end is where
+// a window's close is, so it never moves as a share or a menu comes and goes.
+function CloseButton({ title, onClick }: { title: string; onClick: () => void }) {
   return (
-    <div className="flex h-8 shrink-0 items-center justify-end">
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        className="rounded-[var(--radius)]"
-        aria-label={`Close ${title}`}
-        data-lane-close=""
-        onClick={onClose}
-      >
-        <X />
-      </Button>
-    </div>
+    <Button
+      variant="ghost"
+      size="icon-sm"
+      className="rounded-[var(--radius)] text-soft-ink hover:text-ink"
+      aria-label={`Close ${title}`}
+      data-lane-close=""
+      onClick={onClick}
+    >
+      <X />
+    </Button>
   );
 }
 
@@ -71,7 +73,7 @@ function LaneStrip({ title, toggle }: { title: string; toggle: ReactNode }) {
   return (
     <div
       data-lane-strip=""
-      className="lane-strip flex min-h-0 flex-1 flex-col items-center gap-2 rounded-[var(--radius-card)] border border-hairline bg-paper pt-0.5 pb-3"
+      className="lane-strip flex min-h-0 flex-1 flex-col items-center gap-2 rounded-[var(--radius-card)] border border-hairline bg-paper pt-[3px] pb-3"
     >
       {toggle}
       <span data-lane-strip-grip="" aria-hidden="true" className="lane-strip-grip" />
@@ -118,40 +120,26 @@ function useCollapseToggle(
   );
 }
 
-// What the lane shows, the thread or the card, filling the rest of its height, with the
-// toggle in its title bar. Collapsed, it is kept, only hidden and without the toggle, so a
-// draft or a scroll inside survives the fold.
-function LaneBody({ lane, toggle }: { lane: LaneView; toggle: ReactNode }) {
+// What the lane shows, the thread or the card, filling its whole height, with the toggle and
+// the close in its title bar. Collapsed, it is kept, only hidden and without either, so a draft
+// or a scroll inside survives the fold.
+function LaneBody({
+  lane,
+  toggle,
+  close,
+}: {
+  lane: LaneView;
+  toggle: ReactNode;
+  close: ReactNode;
+}) {
   return (
     <div
       hidden={lane.collapsed}
       className="min-h-0 flex-1"
       style={{ ["--thread-height" as string]: "100%" }}
     >
-      {lane.render(lane.collapsed ? undefined : toggle)}
+      {lane.render(lane.collapsed ? undefined : toggle, lane.collapsed ? undefined : close)}
     </div>
-  );
-}
-
-// The head of the lane: the strip, toggle and all, while it is collapsed, else the row with its
-// close above its content.
-function LaneHead({
-  lane,
-  toggle,
-  onClose,
-}: {
-  lane: LaneView;
-  toggle: ReactNode;
-  onClose: LaneReports["onClose"];
-}) {
-  if (lane.collapsed) return <LaneStrip title={lane.title} toggle={toggle} />;
-  return (
-    <LaneTop
-      title={lane.title}
-      onClose={() => {
-        onClose(lane.id);
-      }}
-    />
   );
 }
 
@@ -185,8 +173,19 @@ export function Lane({
       aria-label={lane.title}
       {...handlers}
     >
-      <LaneHead lane={lane} toggle={toggle} onClose={reports.onClose} />
-      <LaneBody lane={lane} toggle={toggle} />
+      {lane.collapsed && <LaneStrip title={lane.title} toggle={toggle} />}
+      <LaneBody
+        lane={lane}
+        toggle={toggle}
+        close={
+          <CloseButton
+            title={lane.title}
+            onClick={() => {
+              reports.onClose(lane.id);
+            }}
+          />
+        }
+      />
     </article>
   );
 }

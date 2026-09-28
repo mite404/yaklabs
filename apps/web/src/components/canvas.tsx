@@ -114,7 +114,7 @@ function focusAfter(row: HTMLElement, lanes: LaneView[], id: LaneId): Element | 
   const at = lanes.findIndex((lane) => lane.id === id);
   const neighbour = lanes.slice(at + 1).at(0) ?? lanes.slice(0, at).at(-1);
   if (neighbour === undefined) return row.querySelector("[data-blank]");
-  // The close comes first in an open lane; a collapsed one has only its expand.
+  // An open lane has its close, at its title bar's far end; a collapsed one has only its expand.
   return laneIn(row, neighbour.id)?.querySelector("[data-lane-close], [data-lane-toggle]") ?? null;
 }
 
