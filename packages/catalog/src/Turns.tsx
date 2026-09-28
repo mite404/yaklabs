@@ -18,7 +18,7 @@ export function UserTurn({ message, ref }: { message: UserMessage; ref?: Ref<HTM
       aria-label={`You, ${message.time}`}
     >
       <p>{message.text}</p>
-      {message.attachments && message.attachments.length > 0 && (
+      {message.attachments !== undefined && message.attachments.length > 0 && (
         <ul className="sent-context" aria-label="Sent with this message">
           {message.attachments.map((item) => (
             <li key={item.turnId} className="context-chip">
@@ -28,7 +28,7 @@ export function UserTurn({ message, ref }: { message: UserMessage; ref?: Ref<HTM
           ))}
         </ul>
       )}
-      {message.files && message.files.length > 0 && (
+      {message.files !== undefined && message.files.length > 0 && (
         <ul className="sent-context" aria-label="Files sent with this message">
           {message.files.map((item) => (
             <li key={item.id} className="context-chip">
@@ -69,7 +69,7 @@ export function AgentTurn({
       className="turn turn-agent"
       data-turn-id={message.id}
       aria-label={`Agent, ${message.time}`}
-      aria-busy={message.streaming || undefined}
+      aria-busy={message.streaming === true ? true : undefined}
     >
       <p>{message.text}</p>
       {message.payload !== undefined && (

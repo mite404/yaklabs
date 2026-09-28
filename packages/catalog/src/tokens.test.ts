@@ -150,10 +150,6 @@ describe("the window chrome's tokens", () => {
     expect([...misses(LIGHT, THEMES.light), ...misses(DARK, THEMES.dark)]).toEqual([]);
   });
 
-  it("dim an archived thread and keep it readable in either theme", () => {
-    expect([...misses(FAINT.light, THEMES.light), ...misses(FAINT.dark, THEMES.dark)]).toEqual([]);
-  });
-
   it("lay their translucent fills over the bar where they show, and the inks on them", () => {
     const washes = WASHES.flatMap(([fill, ground, written, floor]) =>
       misses([[fill, ground, written, floor]], THEMES.light, ground),
@@ -190,5 +186,11 @@ describe("the window chrome's tokens", () => {
       return [name, Math.round(contrast(luminance(line), luminance(field)) * 100) / 100];
     });
     expect(Object.fromEntries(measured)).toEqual(SPLASH);
+  });
+});
+
+describe("the faint ink (ADR-127)", () => {
+  it("dim an archived thread and keep it readable in either theme", () => {
+    expect([...misses(FAINT.light, THEMES.light), ...misses(FAINT.dark, THEMES.dark)]).toEqual([]);
   });
 });
