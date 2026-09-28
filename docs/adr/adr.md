@@ -1633,3 +1633,8 @@ The coloured trim around the window's body (ADR-112) was an artefact of a select
 Figma screenshot, never a design: it is gone, with its token and its predicate, in both themes.
 Not yet: projects as a real grouping ("we'll deal with that later"), a file and a terminal for
 the two waiting actions, and the pictures' origin and licence (Q11).
+Amended the same day (Ethan): the greeting follows the theme, not the clock, "Good morning" in
+the light theme and "Good evening" in the dark, both in the DOM with the theme's one shown; the
+construction lines fade to nothing towards the surface's edges and sit under the clearing, so
+their meeting point never fights the words; and both paintings share one `--splash-wash` and one
+clearing, so the abstract strokes read exactly as the landscape does.
