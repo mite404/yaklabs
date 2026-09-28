@@ -1496,6 +1496,189 @@ try {
   );
 
   await onOwnPage(
+    "a project's + for a new thread sits at the row's right edge, folded or open",
+    "/?scenario=demo",
+    {},
+    async (own) => {
+      const side = own.locator('[data-slot="sidebar"]');
+      const project = side.getByRole("button", { name: "Demo store", exact: true });
+      await project.waitFor({ timeout: 15_000 });
+      const plus = side.getByRole("button", { name: "New thread in Demo store" });
+      const look = async () => {
+        const [projectBox, plusBox] = await Promise.all([
+          project.boundingBox(),
+          plus.boundingBox(),
+        ]);
+        const right = projectBox.x + projectBox.width;
+        return {
+          visible: Boolean(await plus.isVisible()),
+          atRight:
+            plusBox.x + plusBox.width <= right + 1 && right - (plusBox.x + plusBox.width) <= 24,
+        };
+      };
+      const openLook = await look();
+      await project.click();
+      await own.waitForTimeout(200);
+      const foldedLook = await look();
+      return {
+        ok: openLook.visible && openLook.atRight && foldedLook.visible && foldedLook.atRight,
+        detail: `open ${JSON.stringify(openLook)}; folded ${JSON.stringify(foldedLook)}`,
+      };
+    },
+  );
+
+  await onOwnPage(
+    "a main row with children keeps its fold arrow beside the name and its count at the far right",
+    "/?scenario=demo",
+    {},
+    async (own) => {
+      const row = own.locator('[data-slot="sidebar"] [data-slot="thread-row"]').first();
+      await row.waitFor({ timeout: 15_000 });
+      const label = row.locator("[data-label]");
+      const arrow = row.locator("button[aria-expanded]");
+      const chevron = row.locator('[data-slot="fold-chevron"]');
+      const count = row.locator('[data-slot="thread-count"]');
+      const [labelBox, arrowBox, countBox, rowBox] = await Promise.all(
+        [label, arrow, count, row].map((each) => each.boundingBox()),
+      );
+      const gap = arrowBox.x - (labelBox.x + labelBox.width);
+      const countRight = rowBox.x + rowBox.width - (countBox.x + countBox.width); // → px
+      const countText = await count.innerText();
+      await own.mouse.move(900, 450);
+      await own.waitForTimeout(200);
+      const restOpacity = await chevron.evaluate((el) => getComputedStyle(el).opacity);
+      const plain = own
+        .locator('[data-slot="sidebar"] a[data-thread="main"]:not([aria-current]) [data-label]')
+        .first();
+      const [ink, plainInk] = await Promise.all(
+        [label, plain].map((each) => each.evaluate((el) => getComputedStyle(el).color)),
+      );
+      await row.hover();
+      await own.waitForTimeout(200);
+      const hoverOpacity = await chevron.evaluate((el) => getComputedStyle(el).opacity);
+      await arrow.click();
+      await own.waitForTimeout(200);
+      const foldedExpanded = await arrow.getAttribute("aria-expanded");
+      const foldedOpacity = await chevron.evaluate((el) => getComputedStyle(el).opacity);
+      // Opened again by a click, which leaves focus on the button: the "v" still fades once the
+      // pointer leaves, since only keyboard focus holds it up.
+      await arrow.click();
+      await own.mouse.move(900, 450);
+      await own.waitForTimeout(400);
+      const leftOpacity = await chevron.evaluate((el) => getComputedStyle(el).opacity);
+      return {
+        ok:
+          gap >= 0 &&
+          gap <= 12 &&
+          countText === "2" &&
+          countRight === 8 &&
+          leftOpacity === "0" &&
+          ink === plainInk &&
+          restOpacity === "0" &&
+          hoverOpacity === "1" &&
+          foldedExpanded === "false" &&
+          foldedOpacity === "1",
+        detail: `gap ${gap.toFixed(1)}px; count ${countText}, ${countRight}px from the right; opacity after a click and leaving ${leftOpacity}; title ${ink} vs a plain row ${plainInk}; chevron opacity at rest ${restOpacity}, on hover ${hoverOpacity}, folded ${foldedOpacity} (expanded ${foldedExpanded})`,
+      };
+    },
+  );
+
+  await onOwnPage(
+    "every thread row keeps only 8px at its right, not the room shadcn keeps for an action",
+    "/?scenario=demo",
+    {},
+    async (own) => {
+      const side = own.locator('[data-slot="sidebar"]');
+      await side.locator('[data-slot="thread-row"]').first().waitFor({ timeout: 15_000 });
+      // The element that paints each row's fill: the foldable main's wrapper, else the link.
+      const rows = await side
+        .locator('[data-slot="thread-row"], a[data-thread]:not([data-slot="thread-row"] a)')
+        .evaluateAll((all) =>
+          all.map((row) => `${row.textContent.trim()} ${getComputedStyle(row).paddingRight}`),
+        ); // → string[]
+      return {
+        ok: rows.length > 2 && rows.every((row) => row.endsWith(" 8px")),
+        detail: rows.join("; "),
+      };
+    },
+  );
+
+  await onOwnPage(
+    "a child row stays under the pointer when a click reopens its closed lane",
+    "/?scenario=demo",
+    {},
+    async (own) => {
+      const side = own.locator('[data-slot="sidebar"]');
+      const children = () => side.locator('a[data-thread="child"] [data-label]').allInnerTexts(); // → string[]
+      const composeCanvas = shownPanel(own).getByRole("region", { name: "Compose canvas" });
+      // Newest first, as the sidebar lists them.
+      const titles = ["Why is Tuesday quiet?", "Saturday leads at every level"];
+      // Opens each child's lane from its row, then closes it from the canvas, so both rows sit
+      // among the closed children, where a lane-ordered list once reshuffled them on a click.
+      for (const kidTitle of titles) {
+        const kidLane = composeCanvas.locator(`:scope > article[aria-label="${kidTitle}"]`);
+        // oxlint-disable-next-line no-await-in-loop -- one lane at a time, in order
+        await side.getByRole("link", { name: kidTitle, exact: true }).click();
+        // oxlint-disable-next-line no-await-in-loop -- as above
+        await kidLane.waitFor({ timeout: 10_000 });
+        // oxlint-disable-next-line no-await-in-loop -- as above
+        await composeCanvas.getByRole("button", { name: `Close ${kidTitle}`, exact: true }).click();
+        // oxlint-disable-next-line no-await-in-loop -- as above
+        await kidLane.waitFor({ state: "detached", timeout: 10_000 });
+      }
+      const before = await children();
+      const row = side.getByRole("link", { name: titles[1], exact: true });
+      const yBefore = (await row.boundingBox()).y;
+      await row.click();
+      await own.waitForTimeout(600);
+      const yAfter = (await row.boundingBox()).y;
+      const after = await children();
+      return {
+        ok: yAfter === yBefore && after.join() === before.join() && before.join() === titles.join(),
+        detail: `row y ${yBefore} → ${yAfter}; children ${before.join(" | ")} → ${after.join(" | ")}`,
+      };
+    },
+  );
+
+  await onOwnPage(
+    "clicking a main row's empty space opens it, and its arrow only folds",
+    "/?scenario=demo",
+    {},
+    async (own) => {
+      const side = own.locator('[data-slot="sidebar"]');
+      const row = side.locator('[data-slot="thread-row"]').first();
+      await row.waitFor({ timeout: 15_000 });
+      await side.getByRole("link", { name: "Refund audit", exact: true }).click();
+      await own.waitForTimeout(300);
+      const away = own.url();
+      const rowBox = await row.boundingBox();
+      await own.mouse.click(rowBox.x + rowBox.width - 4, rowBox.y + rowBox.height / 2);
+      await own.waitForTimeout(300);
+      const opened = own.url();
+      const arrow = row.locator("button[aria-expanded]");
+      const beforeToggle = await arrow.getAttribute("aria-expanded");
+      const child = side.getByRole("link", { name: "Saturday leads at every level" });
+      const shownBefore = Boolean(await child.isVisible());
+      await arrow.click();
+      await own.waitForTimeout(200);
+      const afterToggle = await arrow.getAttribute("aria-expanded");
+      const shownAfter = Boolean(await child.isVisible());
+      const stillOpened = own.url();
+      return {
+        ok:
+          opened !== away &&
+          /\/t\//.test(opened) &&
+          beforeToggle === "true" &&
+          shownBefore &&
+          afterToggle === "false" &&
+          !shownAfter &&
+          stillOpened === opened,
+        detail: `left ${away} for ${opened} on a click at the row's right edge; fold ${beforeToggle}→${afterToggle} ${stillOpened === opened ? "kept the address" : `moved to ${stillOpened}`}; child shown before ${shownBefore}, after ${shownAfter}`,
+      };
+    },
+  );
+
+  await onOwnPage(
     "a project name with an unbroken word wraps inside its tooltip",
     "/t/t-001?scenario=long",
     {},
@@ -1946,6 +2129,30 @@ try {
 
   // On a phone the workspace shows one pane at a time, the one the Layout switch names, across
   // the whole width; the others stay mounted but inert, so a draft or a reply survives a switch.
+  await onOwnPage(
+    "on a touch screen an open fold shows its arrow with no hover, a project's and a main's",
+    "/t/t-001?scenario=demo",
+    { viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true },
+    async (own) => {
+      const noHover = await own.evaluate(() => matchMedia("(hover: none)").matches);
+      await own.getByRole("button", { name: "Toggle sidebar" }).first().tap();
+      const side = own.locator('[data-slot="sidebar"]');
+      const project = side.getByRole("button", { name: "Demo store", exact: true });
+      const main = side.locator('[data-slot="thread-row"]').first();
+      await main.waitFor({ timeout: 15_000 });
+      await own.waitForTimeout(300);
+      const [projectArrow, mainArrow] = await Promise.all(
+        [project, main].map((row) =>
+          row.locator('[data-slot="fold-chevron"]').evaluate((el) => getComputedStyle(el).opacity),
+        ),
+      ); // → string[]
+      return {
+        ok: noHover && projectArrow === "1" && mainArrow === "1",
+        detail: `hover: none ${noHover}; project arrow ${projectArrow}, main arrow ${mainArrow}`,
+      };
+    },
+  );
+
   await onOwnPage(
     "on a phone the Layout switch shows one pane at a time, across the whole width",
     "/t/t-001?scenario=demo",

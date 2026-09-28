@@ -12,7 +12,7 @@ import { useEffect, useRef, useState, type RefObject } from "react";
 import { QuietButton } from "../components/quiet-button";
 import { useRestart, useRuntimeState } from "../runtime";
 import { useShell, type Shell } from "./model";
-import { CountToggle, ProjectButton, ThreadRow } from "./tree-rows";
+import { ProjectButton, ThreadRow } from "./tree-rows";
 
 // Fixed widths, so a loading screenshot is the same every time.
 const SKELETON_WIDTHS = [168, 132, 150];
@@ -56,8 +56,8 @@ function useHandOff(tree: RefObject<HTMLElement | null>, shell: Shell | null): (
   };
 }
 
-// A main thread, the count that folds its children, and the children below it. `at` is the
-// thread the address names, which is marked.
+// A main thread and the children below it, folded by its own row's arrow when it has any. `at`
+// is the thread the address names, which is marked.
 function MainRows({
   node,
   at,
@@ -69,26 +69,31 @@ function MainRows({
 }) {
   const { main, children } = node;
   const open = !folds.folded.has(main.id);
-  const counted = children.length > 0;
+  const hasChildren = children.length > 0;
   return (
     <>
       <SidebarMenuItem>
-        <ThreadRow thread={main} active={at === main.id} kind="main" counted={counted} />
-        {counted && (
-          <CountToggle
-            open={open}
-            count={children.length}
-            title={main.title}
-            onToggle={() => {
-              folds.toggle(main.id);
-            }}
-          />
-        )}
+        <ThreadRow
+          thread={main}
+          active={at === main.id}
+          kind="main"
+          fold={
+            hasChildren
+              ? {
+                  open,
+                  count: children.length,
+                  onToggle: () => {
+                    folds.toggle(main.id);
+                  },
+                }
+              : undefined
+          }
+        />
       </SidebarMenuItem>
       {open &&
         children.map((thread) => (
           <SidebarMenuItem key={thread.id}>
-            <ThreadRow thread={thread} active={at === thread.id} kind="child" counted={false} />
+            <ThreadRow thread={thread} active={at === thread.id} kind="child" />
           </SidebarMenuItem>
         ))}
     </>
@@ -167,7 +172,7 @@ function TreeState({ shell, onNewProject }: { shell: Shell | null; onNewProject:
 
 /**
  * The projects, their main threads and each main's children (ADR-092, ADR-093), newest main
- * first and children in lane order. Rows open threads by address; the URL's thread is marked.
+ * first and each main's children newest first, both by creation (ADR-125). Rows open threads by address; the URL's thread is marked.
  * Hidden in the collapsed rail, where only places show.
  */
 export function ProjectTree() {

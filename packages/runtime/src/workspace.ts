@@ -137,6 +137,11 @@ function byCreated(a: { createdAt: string; id: string }, b: { createdAt: string;
   return a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id);
 }
 
+// Newest first, the reverse of `byCreated`.
+function newestCreated(a: { createdAt: string; id: string }, b: { createdAt: string; id: string }) {
+  return byCreated(b, a);
+}
+
 // An index in 0..length; one off either end lands at that end, and NaN lands at the end.
 function clampIndex(at: number, length: number): number {
   if (Number.isNaN(at)) return length;
@@ -237,24 +242,20 @@ export function resizeLane(lanes: Lane[], id: LaneId, width: number | null): Lan
 
 /**
  * The sidebar's tree: projects oldest first, each with its mains newest created first, and each
- * main's children in lane order, then the closed children oldest first. In each list the
- * pinned lead and the archived settle to the bottom, keeping that order among themselves; a
- * snoozed thread stays where it is.
+ * main's children newest created first too. Only creation orders it, never the canvas or
+ * activity, so a row stays under the pointer that opens it (ADR-125). In each list the pinned
+ * lead and the archived settle to the bottom, keeping that order among themselves; a snoozed
+ * thread stays where it is (ADR-127, ADR-129).
  */
 export function sidebarTree(ws: Workspace): ProjectNode[] {
-  const children = (main: ThreadSummary): ThreadSummary[] => {
-    const own = ws.threads.filter((thread) => parentOf(thread) === main.id).toSorted(byCreated);
-    const open = lanesOf(ws, main.id).flatMap((lane) =>
-      lane.kind === "thread" ? own.filter((child) => child.id === lane.threadId) : [],
-    );
-    return markOrder([...open, ...own.filter((child) => !open.includes(child))]);
-  };
+  const children = (main: ThreadSummary): ThreadSummary[] =>
+    markOrder(ws.threads.filter((thread) => parentOf(thread) === main.id).toSorted(newestCreated));
   return ws.projects.toSorted(byCreated).map((project) => ({
     project,
     mains: markOrder(
       ws.threads
         .filter((thread) => thread.place.kind === "main" && thread.place.projectId === project.id)
-        .toSorted((a, b) => byCreated(b, a)),
+        .toSorted(newestCreated),
     ).map((main) => ({ main, children: children(main) })),
   }));
 }

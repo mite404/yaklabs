@@ -92,6 +92,15 @@ The title bar's pill is gone. It once said "Mock: demo", "On this device" or "No
 plan behind it yet, so it and the logic behind it are deleted outright, not just hidden
 (ADR-123, amending ADR-096 and ADR-116). He may ask for a delineation again once there is
 something worth delineating.
+A main thread's fold arrow then moved to sit beside its own name, matching the project row's. The
+count of sub-threads ("^ 2") went too, then came back at Ethan's word as a plain number at the
+row's far right: a caption, not a second fold control. An open fold's "v" now fades the moment
+the pointer leaves, since a clicked button keeping focus had held it up. A phone, with no hover,
+always shows an open fold's "v". And the sidebar lists threads by when they were made, newest
+first, children too, so opening one never moves it (ADR-125).
+The row keeps a stretched link (Bootstrap's own pattern) so a click anywhere on it still opens the
+thread, with the fold button lifted above that layer so it still catches its own clicks (ADR-093,
+amended by ADR-124).
 
 ## 2. Cast & Crew
 
@@ -343,6 +352,22 @@ The first entries are ideas from before any code existed; the rest are parts of 
 
 ## 4. Bloopers
 
+- **The row that ran from the cursor.** A main's children were listed in the canvas's lane
+  order, open lanes first. Clicking a closed child's row reopened its lane, which promoted it to
+  the open group, so the row slid up one slot the instant it was clicked, and the pointer was
+  left over its neighbour. Opening a thread by a plain click never showed it; only a child whose
+  lane had been closed did. Fix: the sidebar orders by creation alone (ADR-125), and web-check
+  closes both lanes, clicks the second row and checks it has not moved a pixel. Lesson: a list
+  people click must not be sorted by anything the click itself changes, like a shot list that
+  reshuffles whenever you call "action".
+- **The empty seat saved for a count.** Dropping the "^ 2" count from a main thread's row left
+  the chair it sat in. shadcn pads a row 32px at its right whenever its list item holds an action,
+  and the project's "+" shares its item with every thread below it, so each thread row kept a
+  32px gap for a count that no longer existed. "Service desk weekly review" cut to "...revi..."
+  with room to spare. Every test passed; only comparing screenshots with main's showed the titles
+  ending early. Fix: each thread row takes that room back, and web-check reads every row's right
+  padding. Lesson: when you strike a prop from a scene, check the blocking tape it left on the
+  floor.
 - **The `false` that still said yes.** The phone's canvas hid its drag grip behind a
   `[data-reorder]` selector, and the row set `data-reorder={reorderable}`. React writes a `false`
   data attribute out as the string `"false"`, so the attribute was present on a phone too, and a

@@ -1,31 +1,24 @@
 import type { ThreadSummary } from "@yaklabs/runtime";
-import { SidebarMenuAction, SidebarMenuButton } from "@yaklabs/ui/components/sidebar";
+import { SidebarMenuButton } from "@yaklabs/ui/components/sidebar";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@yaklabs/ui/components/tooltip";
-import {
-  AlarmClock,
-  Archive,
-  ChevronDown,
-  ChevronRight,
-  ChevronUp,
-  Pin,
-  type LucideIcon,
-} from "lucide-react";
+import { AlarmClock, Archive, ChevronDown, ChevronRight, Pin, type LucideIcon } from "lucide-react";
 import { useState, type ReactElement } from "react";
 import { Link } from "react-router";
 import { usePaths } from "../runtime";
-import { rowLook, type Mark } from "./row-marks";
+import { rowLook, type Mark, type RowLook } from "./row-marks";
 
 // A row: the hover fill stays inside the sidebar's padding, with the site's 4px corners.
 const ROW = "h-8 rounded-[var(--radius)] text-sm";
 
 // A project's threads sit one step in under its name, so the name reads as the label of the
 // group below it. The fill still spans the row; only the words move in. A child's "↳" stands
-// where its main's title starts, and its own title one step further in.
-const THREAD_ROW = `${ROW} pl-6`;
+// where its main's title starts, and its own title one step further in. The right keeps the
+// 8px every row has, so a long title or a fold arrow stops short of the fill's edge.
+const THREAD_ROW = `${ROW} pl-6 pr-2`;
 
 // shadcn leaves room at a row's right end when its item holds an action. The project's "+"
-// shares its item with the project's threads, so that room reaches every thread row; a row
-// with no count of its own takes it back for its title.
+// shares its item with the project's threads, so that room reaches every thread row, though
+// none of them holds an action of its own; each takes it back for its title.
 const NO_ACTION = "group-has-data-[sidebar=menu-action]/menu-item:pr-2";
 
 // Each mark's icon: a pin, a clock, a closed filebox.
@@ -43,6 +36,13 @@ function Marks({ marks }: { marks: Mark[] }) {
     return <Icon key={mark} aria-hidden="true" data-mark={mark} className="size-3.5! shrink-0" />;
   });
 }
+
+// How many threads a fold holds, as its button names them: "2 threads", "1 thread".
+const threadCount = (count: number): string => `${count} ${count === 1 ? "thread" : "threads"}`;
+
+// A row's own title, truncated to whatever room its row leaves it. `block` matters here: as a
+// flex item's child it would otherwise stay inline and ignore that width.
+const LABEL = "block truncate";
 
 // Whether the row's label is cut short, so its tooltip has something to add.
 function isCut(row: Element | undefined): boolean {
@@ -78,25 +78,151 @@ function Named({
   );
 }
 
+// The fold arrow a project's row and a main thread's fold button share: ">" while folded, and
+// open, a "v" that fades in while the pointer is on the row and fades out once it leaves - each
+// wraps this in its own `group/fold`, whether that group is the whole row (a project) or just
+// spans it (a thread row's stretched link and separate button both sit inside one). Keyboard
+// focus shows it too, but only `:focus-visible`: a click also leaves focus on the button, and
+// plain `:focus-within` would then hold the "v" up after the pointer has gone.
+// A touch screen, with no hover to reveal it, shows the "v" whenever the fold is open.
+function FoldChevron({ open }: { open: boolean }): ReactElement {
+  const common = "size-3.5! shrink-0 text-soft-ink";
+  return open ? (
+    <ChevronDown
+      data-slot="fold-chevron"
+      aria-hidden="true"
+      className={`${common} opacity-0 transition-opacity group-hover/fold:opacity-100 group-has-focus-visible/fold:opacity-100 [@media(hover:none)]:opacity-100 motion-reduce:transition-none`}
+    />
+  ) : (
+    <ChevronRight data-slot="fold-chevron" aria-hidden="true" className={common} />
+  );
+}
+
+// A row's words after any "↳": its marks, its title, and the marks as a screen reader hears them.
+function RowWords({ thread, look }: { thread: ThreadSummary; look: RowLook }): ReactElement {
+  return (
+    <>
+      <Marks marks={look.marks} />
+      <span data-label="" className={LABEL}>
+        {thread.title}
+      </span>
+      <span className="sr-only">{look.spoken}</span>
+    </>
+  );
+}
+
+// The fold arrow's own button on a main's row, named by how many threads it hides or shows.
+// `relative z-10` lifts it over the row's stretched link, so it still receives its own clicks.
+function FoldButton({
+  open,
+  count,
+  title,
+  onToggle,
+}: {
+  open: boolean;
+  count: number;
+  title: string;
+  onToggle: () => void;
+}): ReactElement {
+  return (
+    <button
+      type="button"
+      aria-expanded={open}
+      aria-label={`${open ? "Hide" : "Show"} the ${threadCount(count)} in ${title}`}
+      onClick={onToggle}
+      className="relative z-10 flex h-5 w-5 shrink-0 items-center justify-center rounded-[var(--radius)] border-0 bg-transparent p-0 text-soft-ink outline-hidden ring-sidebar-ring hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2"
+    >
+      <FoldChevron open={open} />
+    </button>
+  );
+}
+
 /**
- * A thread row: a link named by its title, indented under its project. A child reads
- * "↳ title", one step further in than its main. A pin, a clock or a closed filebox stands
- * before the title of a pinned, snoozed or archived thread, and an archived one is dimmed
- * until it is the one open (ADR-127 to ADR-129).
- * @param counted Whether the row's item holds the count that folds its children.
+ * A main thread with sub-threads: the stretched-link pattern (Bootstrap's recipe), so a click
+ * anywhere on the row still opens the thread while a separate button folds the children, and
+ * the number of children sits at the row's far right, read only, since the button names it. The
+ * link stays un-positioned and sized to its title; its `::after` is what stretches, to the
+ * row's own edges, since that is the nearest positioned ancestor. The button sits after the
+ * title in flow, lifted above that layer by its own stacking context (`relative z-10`) so it
+ * still receives its own clicks.
+ */
+function FoldableMainRow({
+  thread,
+  active,
+  open,
+  count,
+  onToggle,
+}: {
+  thread: ThreadSummary;
+  active: boolean;
+  open: boolean;
+  count: number;
+  onToggle: () => void;
+}): ReactElement {
+  const { pathTo } = usePaths();
+  const look = rowLook(thread);
+  return (
+    <Named
+      name={look.tooltip}
+      always={look.alwaysTip}
+      row={
+        <div
+          data-slot="thread-row"
+          data-active={active || undefined}
+          className={`${THREAD_ROW} group/fold relative flex items-center gap-2 ${look.ink} hover:bg-sidebar-accent hover:text-sidebar-accent-foreground active:bg-sidebar-accent active:text-sidebar-accent-foreground data-active:bg-sidebar-accent data-active:font-medium data-active:text-ink`}
+        >
+          <Link
+            to={pathTo(thread.id)}
+            aria-current={active ? "page" : undefined}
+            data-thread="main"
+            className="flex min-w-0 items-center gap-2 text-inherit outline-hidden after:absolute after:inset-0 after:rounded-[var(--radius)] focus-visible:after:ring-2 focus-visible:after:ring-sidebar-ring"
+          >
+            <RowWords thread={thread} look={look} />
+          </Link>
+          <FoldButton open={open} count={count} title={thread.title} onToggle={onToggle} />
+          <span
+            data-slot="thread-count"
+            aria-hidden="true"
+            className="ml-auto shrink-0 text-xs text-soft-ink tabular-nums"
+          >
+            {count}
+          </span>
+        </div>
+      }
+    />
+  );
+}
+
+/**
+ * A thread row: a link named by its title, indented under its project. A main with sub-threads
+ * takes `fold`, with how many it holds, and becomes a {@link FoldableMainRow} instead; a child
+ * reads "↳ title", one step further in than its main. A pin, a clock or a closed filebox stands
+ * before the title of a pinned, snoozed or archived thread, and an archived one is dimmed until
+ * it is the one open (ADR-127 to ADR-129).
  */
 export function ThreadRow({
   thread,
   active,
   kind,
-  counted,
+  fold,
 }: {
   thread: ThreadSummary;
   active: boolean;
   kind: "main" | "child";
-  counted: boolean;
-}) {
+  fold?: { open: boolean; count: number; onToggle: () => void };
+}): ReactElement {
   const { pathTo } = usePaths();
+  if (fold) {
+    return (
+      <FoldableMainRow
+        thread={thread}
+        active={active}
+        open={fold.open}
+        count={fold.count}
+        onToggle={fold.onToggle}
+      />
+    );
+  }
   const look = rowLook(thread);
   return (
     <Named
@@ -108,46 +234,17 @@ export function ThreadRow({
           isActive={active}
           aria-current={active ? "page" : undefined}
           data-thread={kind}
-          className={`${THREAD_ROW} ${counted ? "" : NO_ACTION} ${look.ink} data-active:text-ink`}
+          className={`${THREAD_ROW} ${NO_ACTION} ${look.ink} data-active:text-ink`}
         >
           {kind === "child" && (
             <span aria-hidden="true" className="shrink-0">
               ↳
             </span>
           )}
-          <Marks marks={look.marks} />
-          <span data-label="" className="truncate">
-            {thread.title}
-          </span>
-          <span className="sr-only">{look.spoken}</span>
+          <RowWords thread={thread} look={look} />
         </SidebarMenuButton>
       }
     />
-  );
-}
-
-/** The small count beside a main ("^ 2") that folds its children and shows them again. */
-export function CountToggle({
-  open,
-  count,
-  title,
-  onToggle,
-}: {
-  open: boolean;
-  count: number;
-  title: string;
-  onToggle: () => void;
-}) {
-  return (
-    <SidebarMenuAction
-      aria-expanded={open}
-      aria-label={`${open ? "Hide" : "Show"} the threads in ${title}`}
-      className="top-1.5 right-1 aspect-auto h-5 w-auto gap-0.5 rounded-[var(--radius)] px-1 text-xs text-soft-ink tabular-nums"
-      onClick={onToggle}
-    >
-      {open ? <ChevronUp className="size-3.5!" /> : <ChevronDown className="size-3.5!" />}
-      {count}
-    </SidebarMenuAction>
   );
 }
 
@@ -163,28 +260,20 @@ export function ProjectButton({
   name: string;
   open: boolean;
   onToggle: () => void;
-}) {
+}): ReactElement {
   return (
     <Named
       name={name}
       row={
         <SidebarMenuButton
           aria-expanded={open}
-          className={`${ROW} group/project text-ink`}
+          className={`${ROW} group/fold text-ink`}
           onClick={onToggle}
         >
           <span data-label="" className="min-w-0 truncate">
             {name}
           </span>
-          <span
-            data-slot="project-chevron"
-            aria-hidden="true"
-            className={`flex shrink-0 text-soft-ink transition-opacity motion-reduce:transition-none ${
-              open ? "opacity-0 group-hover/project:opacity-100" : "opacity-100"
-            }`}
-          >
-            {open ? <ChevronDown className="size-3.5!" /> : <ChevronRight className="size-3.5!" />}
-          </span>
+          <FoldChevron open={open} />
         </SidebarMenuButton>
       }
     />
