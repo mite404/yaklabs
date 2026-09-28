@@ -1,4 +1,4 @@
-import { useId, useState } from "react";
+import { useId, useState, type ReactNode } from "react";
 import {
   ResponsiveContainer,
   LineChart as RechartsLineChart,
@@ -120,23 +120,28 @@ function Chart({ selection }: { selection: Selection }) {
  * evaluation workbench, "thread" for a card inside a chat thread (ADR-023).
  * @param shareable Show the share button (ADR-064); off on the public page itself.
  * @param draggable Let the header carry the card out, as onto the compose canvas (ADR-089).
+ * @param leading A host's control before the title, such as a lane's collapse (ADR-124); a
+ * card with no header shows it at its top.
  */
 export function CatalogCard({
   payload,
   context = "page",
   shareable = true,
   draggable = false,
+  leading,
 }: {
   payload: unknown;
   context?: "page" | "thread";
   shareable?: boolean;
   draggable?: boolean;
+  leading?: ReactNode;
 }) {
   const result = resolve(payload);
   const [showTable, setShowTable] = useState(false);
   if (result.kind === "rejected")
     return (
       <section className="card state" data-context={context}>
+        {leading !== undefined && <div className="header-leading">{leading}</div>}
         <span className="state-symbol">↗</span>
         <p className="eyebrow">CATALOG LIMIT</p>
         <h2>We don’t have a safe view for this yet.</h2>
@@ -150,6 +155,7 @@ export function CatalogCard({
   if (result.kind === "empty")
     return (
       <section className="card state" data-context={context}>
+        {leading !== undefined && <div className="header-leading">{leading}</div>}
         <span className="state-symbol">∅</span>
         <p className="eyebrow">NO DATA</p>
         <h2>{result.title}</h2>
@@ -163,6 +169,7 @@ export function CatalogCard({
       <CardHeader
         eyebrow={`${selection.component} / ${props.variant}`}
         title={props.title}
+        leading={leading}
         drag={
           draggable ? { card: { v: 1, kind: "catalog", payload }, title: props.title } : undefined
         }

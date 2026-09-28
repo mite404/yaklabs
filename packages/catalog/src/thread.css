@@ -35,6 +35,21 @@
   padding: 14px var(--thread-gutter);
   border-bottom: 1px solid var(--hairline);
 }
+/* A host's control before the title (ADR-124), such as a lane's collapse: the bar lays out in
+   a row, the control first, its glyph pulled back onto the text column's edge. */
+.thread-header:has(> .header-leading) {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.thread-header > .header-leading {
+  display: flex;
+  flex-shrink: 0;
+  margin: -4px 0 -4px -7px;
+}
+.thread-header:has(> .header-leading) h2 {
+  min-width: 0;
+}
 /* The thread title is a display moment: brand serif (Newsreader). */
 .thread-header h2 {
   margin: 0;

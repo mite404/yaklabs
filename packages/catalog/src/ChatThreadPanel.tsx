@@ -5,6 +5,7 @@ import {
   useRef,
   useState,
   type Dispatch,
+  type ReactNode,
   type Ref,
   type RefObject,
   type SetStateAction,
@@ -80,15 +81,45 @@ function reserveDockSpace(thread: HTMLElement, slot: HTMLElement): () => void {
   };
 }
 
+// The title in place, being renamed: Enter or leaving keeps what was typed through `commit`,
+// Escape puts the old title back first.
+function RenameField({
+  title,
+  field,
+  commit,
+}: {
+  title: string;
+  field: RefObject<HTMLInputElement | null>;
+  commit: (typed: string) => void;
+}) {
+  return (
+    <input
+      className="thread-rename"
+      aria-label="Thread title"
+      defaultValue={title}
+      ref={field}
+      onBlur={(event) => {
+        commit(event.currentTarget.value);
+      }}
+      onKeyDown={(event) => {
+        if (event.key === "Escape") event.currentTarget.value = title;
+        if (event.key === "Enter" || event.key === "Escape") event.currentTarget.blur();
+      }}
+    />
+  );
+}
+
 // The title bar. With `onRename` the title is a button that becomes a field on click: Enter or
 // leaving the field keeps the new name, Escape or an empty name keeps the old one (ADR-089).
 // Every way out goes through the field's blur, so the field is never torn down inside the key
 // event that closed it.
 function ThreadHeader({
   title,
+  leading,
   onRename,
 }: {
   title: string;
+  leading: ReactNode;
   onRename: ((title: string) => void) | undefined;
 }) {
   const [editing, setEditing] = useState(false);
@@ -103,20 +134,9 @@ function ThreadHeader({
   };
   return (
     <header className="thread-header">
+      {leading !== undefined && <div className="header-leading">{leading}</div>}
       {editing ? (
-        <input
-          className="thread-rename"
-          aria-label="Thread title"
-          defaultValue={title}
-          ref={field}
-          onBlur={(event) => {
-            commit(event.currentTarget.value);
-          }}
-          onKeyDown={(event) => {
-            if (event.key === "Escape") event.currentTarget.value = title;
-            if (event.key === "Enter" || event.key === "Escape") event.currentTarget.blur();
-          }}
-        />
+        <RenameField title={title} field={field} commit={commit} />
       ) : (
         <h2>
           {onRename ? (
@@ -566,6 +586,8 @@ function focusComposeIn(scroller: HTMLElement | null): void {
  * @param cardsCarry Let a card's header carry it out onto the compose canvas (ADR-089). On by
  * default; off where the host has no canvas to drop it on, such as a phone (ADR-122). The
  * catalog cannot see the host's layout, so the host decides.
+ * @param leading A host's control before the title in the title bar, such as a lane's collapse
+ * on the compose canvas (ADR-124).
  */
 // fallow scores each prop as cognitive load: the ninth host knob tips 15 to 16 with no branch.
 // fallow-ignore-next-line complexity
@@ -579,6 +601,7 @@ export function ChatThreadPanel({
   initialDraft = "",
   onRename,
   cardsCarry,
+  leading,
 }: {
   thread: Thread;
   width?: number;
@@ -589,6 +612,7 @@ export function ChatThreadPanel({
   initialDraft?: string;
   onRename?: (title: string) => void;
   cardsCarry?: boolean;
+  leading?: ReactNode;
 }) {
   const { source, open } = dictationSetup(dictation);
   const [messages, setMessages] = useState(thread.messages);
@@ -648,7 +672,7 @@ export function ChatThreadPanel({
 
   return (
     <section className="thread-panel" style={{ width }} aria-label={thread.title}>
-      <ThreadHeader title={thread.title} onRename={onRename} />
+      <ThreadHeader title={thread.title} leading={leading} onRename={onRename} />
       <div className="thread-scroll" ref={scroller}>
         {messages.map((message) => (
           <Turn
