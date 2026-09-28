@@ -250,7 +250,7 @@
     box-shadow: inset 0 0 0 2px var(--olive);
   }
   /* A focused child's lane says where it is once, as it comes into view. */
-  .lane[data-flash] :is(.thread-panel, .card) {
+  .lane[data-flash] :is(.thread-panel, .card, .lane-strip) {
     animation: lane-flash 1.2s ease-out;
   }
   @keyframes lane-flash {
@@ -364,6 +364,38 @@
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
+  }
+  /* A collapsed lane (ADR-124) is a strip, GitButler's collapsed stack: the grip always shows
+     at its head, the same six dots as the bar's, and the title reads top to bottom beneath,
+     clipped with an ellipsis where it outruns the strip. The whole strip takes hold of the lane,
+     so a hand shows over all of it but its expand. As with the bar, the grip is only drawn on a
+     row that still reorders (ADR-122). */
+  [data-reorder="true"] .lane[data-collapsed] {
+    cursor: grab;
+  }
+  .lane-strip-grip {
+    display: none;
+    flex-shrink: 0;
+    width: 15px;
+    height: 10px;
+    background: radial-gradient(circle, var(--soft-ink) 1.25px, transparent 1.75px) 0 0 / 5px 5px;
+  }
+  /* The floating copy of a lifted strip hangs off the body, outside the row, and keeps its grip:
+     a lane only lifts on a row that reorders. */
+  [data-reorder="true"] .lane-strip-grip,
+  .lane-ghost .lane-strip-grip {
+    display: block;
+  }
+  .lane-strip-title {
+    writing-mode: vertical-rl;
+    min-height: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1;
+    color: var(--ink);
   }
   html[data-dragging="lane"],
   html[data-dragging="lane"] .lane {

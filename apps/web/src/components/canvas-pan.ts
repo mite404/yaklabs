@@ -38,11 +38,17 @@ export function usePan(): {
   };
 }
 
-// Whether a wheel landed on a lane, which scrolls itself, rather than on the ground.
+// Whether a wheel landed on an open lane, which scrolls itself, rather than on the ground. A
+// collapsed lane's strip has nothing to scroll, so a wheel there pans like the ground.
 function onLane(event: WheelEvent<HTMLElement>): boolean {
   return event.nativeEvent
     .composedPath()
-    .some((node) => node instanceof HTMLElement && node.tagName === "ARTICLE");
+    .some(
+      (node) =>
+        node instanceof HTMLElement &&
+        node.tagName === "ARTICLE" &&
+        !Object.hasOwn(node.dataset, "collapsed"),
+    );
 }
 
 /** A wheel over the ground pans the row, the way a trackpad's sideways swipe does. */

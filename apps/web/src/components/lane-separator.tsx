@@ -35,12 +35,12 @@ function clampWidth(px: number): number {
 
 // The gap's value, as ARIA's window splitter gives one: the lane's width, inside the range the
 // gap sets, widened to hold a width the lane has from elsewhere (a default column in a pane
-// narrower than the minimum).
-function splitterValue(width: number) {
+// narrower than the minimum). A lane it cannot resize has a range of just its width.
+function splitterValue(width: number, resizable: boolean) {
   return {
     "aria-valuenow": width,
-    "aria-valuemin": Math.min(LANE_MIN_PX, width),
-    "aria-valuemax": Math.max(LANE_MAX_PX, width),
+    "aria-valuemin": resizable ? Math.min(LANE_MIN_PX, width) : width,
+    "aria-valuemax": resizable ? Math.max(LANE_MAX_PX, width) : width,
     "aria-valuetext": `${width} pixels wide`,
   };
 }
@@ -105,14 +105,17 @@ function keyName(event: KeyboardEvent<HTMLDivElement>): string {
 }
 
 // Arrows resize the lane before the gap, kept at once; with Shift they move it a slot instead.
+// A lane that cannot be resized, a collapsed one, only moves.
 function keyOn(
   event: KeyboardEvent<HTMLDivElement>,
+  resizable: boolean,
   onResize: (px: number, kept: boolean) => void,
   onMove: (step: number) => void,
 ): void {
   const action = KEYS[keyName(event)];
   const lane = laneBefore(event.currentTarget);
   if (action === undefined || lane === undefined) return;
+  if (action.kind === "resize" && !resizable) return;
   event.preventDefault();
   if (action.kind === "move") onMove(action.step);
   else onResize(clampWidth(lane.getBoundingClientRect().width + action.by), true);
@@ -123,15 +126,19 @@ function keyOn(
  * the pointer is on it; pointer capture keeps the drag alive once the pointer outruns the gap.
  * The width follows the pointer and is kept when it lets go (`kept`); an arrow key keeps its
  * step at once, and with Shift moves the lane a slot instead. Focused, it says the lane's
- * width, as a window splitter does.
+ * width, as a window splitter does. After a collapsed lane (ADR-124) it only moves the lane:
+ * a strip has no width to drag, so it says its fixed width and draws no hint.
  */
 export function LaneSeparator({
   title,
+  resizable,
   style,
   onResize,
   onMove,
 }: {
   title: string;
+  /** Whether the gap resizes the lane; false for a collapsed lane, which it only moves. */
+  resizable: boolean;
   style: CSSProperties;
   onResize: (px: number, kept: boolean) => void;
   onMove: (step: number) => void;
@@ -139,21 +146,22 @@ export function LaneSeparator({
   const { dragging, ...handlers } = useGapDrag(onResize);
   const gap = useRef<HTMLDivElement>(null);
   const width = useLaneWidth(gap);
+  const value = width === null ? {} : splitterValue(width, resizable);
   /* oxlint-disable jsx-a11y/prefer-tag-over-role -- a separator that takes focus and a drag is a widget; an hr can do neither */
   return (
     <div
       ref={gap}
       role="separator"
       aria-orientation="vertical"
-      aria-label={`Resize or move ${title}`}
-      {...(width === null ? {} : splitterValue(width))}
+      aria-label={resizable ? `Resize or move ${title}` : `Move ${title}`}
+      {...value}
       tabIndex={0}
       data-dragging={dragging || undefined}
-      className="drag-hint lane-shift relative w-4 shrink-0 cursor-col-resize outline-none"
+      className={`lane-shift relative w-4 shrink-0 outline-none${resizable ? " drag-hint cursor-col-resize" : ""}`}
       style={style}
-      {...handlers}
+      {...(resizable ? handlers : {})}
       onKeyDown={(event) => {
-        keyOn(event, onResize, onMove);
+        keyOn(event, resizable, onResize, onMove);
       }}
     />
   );
