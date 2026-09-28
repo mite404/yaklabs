@@ -46,7 +46,7 @@ export function randomToken(): string {
 }
 
 /**
- * Keeps a sealed thread for `ttl` seconds, one of `SHARE_TTLS` (ADR-129). The gateway never
+ * Keeps a sealed thread for `ttl` seconds, one of `SHARE_TTLS` (ADR-131). The gateway never
  * sees the key, so it keeps bytes it cannot read.
  */
 export async function createShare(

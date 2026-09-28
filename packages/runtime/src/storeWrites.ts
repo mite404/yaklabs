@@ -6,7 +6,7 @@ import type { Store } from "./store";
 
 /** What a write needs: the store, and the mint that names and stamps what it writes. */
 export type Writer = { store: Store; mint: Mint };
-// The thread menu's writes (ADR-124): each is one store call, answered with done.
+// The thread menu's writes (ADR-126): each is one store call, answered with done.
 const MENU_KINDS = ["mark", "delete", "restore", "share", "unshare"] as const;
 type MenuCommand = Extract<Command, { kind: (typeof MENU_KINDS)[number] }>;
 
@@ -51,7 +51,7 @@ export function isMenuWrite(command: Command): command is MenuCommand {
 }
 
 /**
- * Runs one of the thread menu's writes (ADR-124) on the store, stamped with the mint's time.
+ * Runs one of the thread menu's writes (ADR-126) on the store, stamped with the mint's time.
  * @throws When the store refuses it (say, an unknown thread, or a snooze that is not ahead).
  */
 export function menuWrite({ store, mint }: Writer, command: MenuCommand): void {

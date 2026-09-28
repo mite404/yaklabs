@@ -90,7 +90,7 @@ function reserveDockSpace(thread: HTMLElement, slot: HTMLElement): () => void {
 // The title bar. With `onRename` the title is a button that becomes a field on click: Enter or
 // leaving the field keeps the new name, Escape or an empty name keeps the old one (ADR-089).
 // Every way out goes through the field's blur, so the field is never torn down inside the key
-// event that closed it. The host's `actions` sit at the bar's end (ADR-124).
+// event that closed it. The host's `actions` sit at the bar's end (ADR-126).
 function ThreadHeader({
   title,
   onRename,
@@ -505,8 +505,8 @@ function focusComposeIn(scroller: HTMLElement | null): void {
  * default; off where the host has no canvas to drop it on, such as a phone (ADR-122). The
  * catalog cannot see the host's layout, so the host decides.
  * @param headerActions What the host puts at the end of the title bar, such as the thread's
- * menu (ADR-124); the catalog cannot import the host's components, so it takes them whole.
- * @param hostAsk A question of the host's own in the dock, such as when to snooze (ADR-126). It
+ * menu (ADR-126); the catalog cannot import the host's components, so it takes them whole.
+ * @param hostAsk A question of the host's own in the dock, such as when to snooze (ADR-128). It
  * stands over the agent's question while it is open, since the user just asked for it.
  */
 // fallow scores each prop as cognitive load: the ninth host knob tips 15 to 16 with no branch.

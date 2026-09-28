@@ -46,7 +46,7 @@ function SharedCardView({ hash }: { hash: string }) {
 /**
  * The public page for what someone shared from Kay: one card on its own (ADR-064), which rides
  * in the link's fragment and passes the same catalog check as in the thread, or a whole thread
- * made public for a while (ADR-129), fetched sealed and opened with the key in the fragment. A
+ * made public for a while (ADR-131), fetched sealed and opened with the key in the fragment. A
  * garbled or edited link shows an honest notice instead of a broken view. Interactive cards
  * stay interactive, since their data travels with them (ADR-029).
  * @param hash A fixed fragment (stories and tests); omit to follow the page's own link, which

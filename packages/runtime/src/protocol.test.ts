@@ -77,7 +77,7 @@ describe("commandSchema checks the workspace's writes", () => {
 
 const mark = (change: unknown) => ({ kind: "mark", requestId: "r1", threadId: "profit", change });
 
-describe("commandSchema checks the thread menu's writes (ADR-124)", () => {
+describe("commandSchema checks the thread menu's writes (ADR-126)", () => {
   const share = {
     id: "s1",
     threadId: "profit",

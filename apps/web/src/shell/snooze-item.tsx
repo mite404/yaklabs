@@ -6,7 +6,7 @@ import type { Shell } from "./model";
 import { wakeText } from "./wake-text";
 
 /**
- * The thread menu's Snooze item (ADR-126): it opens the snooze card, and a snoozed thread's
+ * The thread menu's Snooze item (ADR-128): it opens the snooze card, and a snoozed thread's
  * item says when it wakes.
  * @param before Runs before the card opens, to bring the thread into view.
  */

@@ -39,7 +39,7 @@ const sharedThread = sealThread({
   expiresAt: "2099-01-01T09:00:00.000Z",
 });
 
-/** A thread made public for a while (ADR-129): read-only, its end said beneath it. */
+/** A thread made public for a while (ADR-131): read-only, its end said beneath it. */
 export const SharedThread: Story = {
   loaders: [() => sharedThread],
   render: (_, { loaded }) => {

@@ -21,7 +21,7 @@ export type ShareClient = {
   fetch: typeof fetch;
 };
 
-/** The lifetimes the Share submenu offers (ADR-129), in its words, as the gateway takes them. */
+/** The lifetimes the Share submenu offers (ADR-131), in its words, as the gateway takes them. */
 export const LIFETIMES = ["1 hour", "3 hours", "1 day", "7 days"].map((label, i) => ({
   label,
   seconds: SHARE_TTLS[i] ?? SHARE_TTLS[0],
@@ -35,7 +35,7 @@ function refusal(status: number): Error {
 }
 
 /**
- * Makes a thread public for `seconds` (ADR-129): seals its turns under a fresh key on the page,
+ * Makes a thread public for `seconds` (ADR-131): seals its turns under a fresh key on the page,
  * sends the gateway only the sealed bytes, and keeps the link, which alone carries the key,
  * on the device with the revoke token.
  * @returns The share as the device now records it.
@@ -72,7 +72,7 @@ export async function publish(
 }
 
 /**
- * Takes a public share down with its revoke token (ADR-129); one the server has already let go
+ * Takes a public share down with its revoke token (ADR-131); one the server has already let go
  * counts as down.
  * @throws When the server keeps it.
  */

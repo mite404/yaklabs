@@ -10,7 +10,7 @@ const mark = (requestId: string, change: Extract<Command, { kind: "mark" }>["cha
 const profitIn = (notices: Parameters<typeof lastWorkspace>[0]) =>
   lastWorkspace(notices).threads.find((thread) => thread.id === profit);
 
-describe("the agent loop runs the thread menu's writes (ADR-124)", () => {
+describe("the agent loop runs the thread menu's writes (ADR-126)", () => {
   it("pins, pushing the state before it answers done", async () => {
     const { notices, run } = await startLoop();
     await run(init);
@@ -59,7 +59,7 @@ describe("the agent loop runs the thread menu's writes (ADR-124)", () => {
   });
 });
 
-describe("the agent loop settles on its own (ADR-126 to ADR-128)", () => {
+describe("the agent loop settles on its own (ADR-128 to ADR-130)", () => {
   it("wakes a snooze when its timer fires, with the bell's note in the pushed state", async () => {
     const { mint, clock } = movableMint();
     const { notices, run, timer } = await startLoop(undefined, mint);

@@ -12,7 +12,7 @@ const iso = (date: Date | undefined) => date?.toISOString();
 // The tiles' labels for a thread that says only `text`.
 const labels = (text: string) => snoozeChoices(says(text), NOW).map((each) => each.label);
 
-describe("snoozeChoices falls back to 1 hour, Tomorrow and Next week (ADR-126)", () => {
+describe("snoozeChoices falls back to 1 hour, Tomorrow and Next week (ADR-128)", () => {
   it("offers the three with nothing to go on", () => {
     expect(snoozeChoices(says("Why is Saturday high?", "Saturday leads."), NOW)).toEqual([
       { label: "In 1 hour", detail: "Today at 11:03", until: iso(on(9, 28, 11, 3)) },
@@ -22,7 +22,7 @@ describe("snoozeChoices falls back to 1 hour, Tomorrow and Next week (ADR-126)",
   });
 });
 
-describe("snoozeChoices leads with what the thread says (ADR-126)", () => {
+describe("snoozeChoices leads with what the thread says (ADR-128)", () => {
   it("offers a date the thread names, still ahead, before the fallbacks", () => {
     const choices = snoozeChoices(says("The supplier replies on October 3."), NOW);
     expect(choices.map((each) => each.label)).toEqual([
@@ -71,7 +71,7 @@ describe("snoozeChoices leads with what the thread says (ADR-126)", () => {
   });
 });
 
-describe("parseWhen reads a typed time (ADR-126)", () => {
+describe("parseWhen reads a typed time (ADR-128)", () => {
   it.each<[string, Date]>([
     ["in 3 hours", new Date(NOW.getTime() + 3 * 60 * 60 * 1000)],
     ["in 20 minutes", new Date(NOW.getTime() + 20 * 60 * 1000)],
@@ -106,7 +106,7 @@ describe("parseWhen reads a typed time (ADR-126)", () => {
   });
 });
 
-describe("snoozeQuestion asks in the agent's card, within its limits (ADR-039, ADR-126)", () => {
+describe("snoozeQuestion asks in the agent's card, within its limits (ADR-039, ADR-128)", () => {
   const choices = snoozeChoices([], NOW);
 
   it("asks when to come back, with a field for any time and a way out", () => {
@@ -129,7 +129,7 @@ describe("snoozeQuestion asks in the agent's card, within its limits (ADR-039, A
   });
 });
 
-describe("wakeFor turns the card's answer into a wake (ADR-126)", () => {
+describe("wakeFor turns the card's answer into a wake (ADR-128)", () => {
   const choices = snoozeChoices([], NOW);
 
   it.each<[string, string | null | undefined]>([

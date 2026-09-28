@@ -166,7 +166,7 @@ export function closeTab(
 }
 
 /**
- * Where the page goes when a thread it may show is deleted (ADR-128): a main's tab closes, and
+ * Where the page goes when a thread it may show is deleted (ADR-130): a main's tab closes, and
  * if it was on screen the page goes where `closeTab` says; a child in focus gives way to its
  * main; otherwise `next` is undefined and the page stays where it is.
  */
@@ -263,7 +263,7 @@ export function resume(
 export type OnScreen = { name: string | null; thread: ThreadSummary | null };
 
 /**
- * What the phone bar's "⋯" and project name act on (ADR-116, ADR-124): the thread the address
+ * What the phone bar's "⋯" and project name act on (ADR-116, ADR-126): the thread the address
  * names (a child in focus, else its main) and its main's project; nulls with nothing on screen
  * or a thread the workspace lacks.
  */

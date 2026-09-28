@@ -77,7 +77,7 @@ async function newChild(runtime: Runtime): Promise<ThreadId> {
   return threadIdSchema.parse(id);
 }
 
-describe("the runtime in a Web Worker runs the thread menu (ADR-124)", () => {
+describe("the runtime in a Web Worker runs the thread menu (ADR-126)", () => {
   it("shows a pin and a delete in the same frame as the call, and an undo once confirmed", async () => {
     const runtime = startLab();
     await ready(runtime);

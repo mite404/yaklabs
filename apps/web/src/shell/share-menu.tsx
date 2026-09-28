@@ -82,7 +82,7 @@ function LifetimeItems({ shell, thread, isPublic }: ShareProps & { isPublic: boo
 }
 
 /**
- * The thread menu's Share item (ADR-129): it says whether the thread is private or public
+ * The thread menu's Share item (ADR-131): it says whether the thread is private or public
  * until when, and opens how long to make it public (1 hour, 3 hours, 1 day, 7 days). A public
  * thread also offers its link, its page, and Stop sharing, so how long a page stays public is
  * never a guess.

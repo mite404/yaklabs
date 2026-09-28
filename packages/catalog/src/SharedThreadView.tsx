@@ -84,7 +84,7 @@ function OpenThread({ thread }: { thread: SharedThread }) {
 }
 
 /**
- * A thread made public for a while (ADR-129), read-only: its title and turns as the thread
+ * A thread made public for a while (ADR-131), read-only: its title and turns as the thread
  * showed them, its cards live but not shareable again, and a line that says until when the
  * link works. An ended, taken-down or garbled link says so honestly.
  * @param load Fetches the sealed bytes from the host's server; the key never leaves the page.

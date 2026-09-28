@@ -11,19 +11,19 @@ import { copyText } from "./share-verbs";
 import { wakeText } from "./wake-text";
 import { awayFrom, type ShellState } from "./state";
 
-/** What the thread's menu does (ADR-124), besides Share (see share-verbs.ts). */
+/** What the thread's menu does (ADR-126), besides Share (see share-verbs.ts). */
 export type ThreadVerbs = {
   /** Copies the thread's address, its scenario kept, and says so. */
   copyUrl(id: ThreadId): void;
-  /** Pins or unpins; the view stays where it is (ADR-125). */
+  /** Pins or unpins; the view stays where it is (ADR-127). */
   pin(id: ThreadId, pinned: boolean): void;
-  /** Opens the snooze card in the thread (ADR-126); null closes it. */
+  /** Opens the snooze card in the thread (ADR-128); null closes it. */
   askSnooze(id: ThreadId | null): void;
-  /** Snoozes until an instant, or wakes with null, and says when (ADR-126). */
+  /** Snoozes until an instant, or wakes with null, and says when (ADR-128). */
   snooze(id: ThreadId, until: string | null): void;
-  /** Archives or unarchives, with Undo; the view stays where it is (ADR-127). */
+  /** Archives or unarchives, with Undo; the view stays where it is (ADR-129). */
   archive(id: ThreadId, archived: boolean): void;
-  /** Deletes a thread and its sub-threads, with Undo while the worker keeps its tombstone (ADR-128). */
+  /** Deletes a thread and its sub-threads, with Undo while the worker keeps its tombstone (ADR-130). */
   remove(id: ThreadId): void;
 };
 
@@ -39,7 +39,7 @@ export type ThreadDeps = {
   /** Saves a change to the shell's document, as the shell's own verbs do. */
   change: (update: (doc: ShellState) => ShellState) => void;
   setSnoozing: (id: ThreadId | null) => void;
-  /** Takes down a thread's public pages, and its sub-threads', when it is deleted (ADR-129). */
+  /** Takes down a thread's public pages, and its sub-threads', when it is deleted (ADR-131). */
   takeDown: (id: ThreadId) => void;
 };
 
@@ -74,7 +74,7 @@ function removeWithUndo(deps: ThreadDeps, id: ThreadId): void {
   });
 }
 
-/** The thread menu's verbs over the runtime (ADR-124 to ADR-128). */
+/** The thread menu's verbs over the runtime (ADR-126 to ADR-130). */
 export function threadVerbs(deps: ThreadDeps): ThreadVerbs {
   const { runtime, threads, href, setSnoozing } = deps;
   return {

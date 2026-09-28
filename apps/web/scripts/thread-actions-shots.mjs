@@ -1,5 +1,5 @@
 // oxlint-disable no-await-in-loop -- pictures are taken one step at a time, in order
-// The thread menu's pictures (ADR-124 to ADR-129), light and dark, a desktop and a 390px phone.
+// The thread menu's pictures (ADR-126 to ADR-131), light and dark, a desktop and a 390px phone.
 // Each context first stages every mark the menu can leave: Refund audit archived, Last week's
 // sales pinned, the service desk review snoozed and then made public for a day, so the rows,
 // the title bar and the Share submenu all show them.

@@ -4,7 +4,7 @@ import { inBackground, reasonOf } from "../runtime";
 import { publish, unpublish, type ShareClient } from "./share-thread";
 import { wakeText } from "./wake-text";
 
-/** What the menu's Share submenu does (ADR-129). */
+/** What the menu's Share submenu does (ADR-131). */
 export type ShareVerbs = {
   /** Makes a thread public for `seconds`, in place of any link it had, and copies the link. */
   share(id: ThreadId, seconds: number): void;
@@ -66,7 +66,7 @@ async function shareFor(deps: ShareDeps, thread: ThreadSummary, seconds: number)
   if (old.length > 0) toast("The old link no longer works.");
 }
 
-/** The Share submenu's verbs over the gateway and the runtime (ADR-129). */
+/** The Share submenu's verbs over the gateway and the runtime (ADR-131). */
 export function shareVerbs(deps: ShareDeps): ShareVerbs {
   const { runtime, client, shares, threads } = deps;
   const byThread = (id: ThreadId) => threads.find((each) => each.id === id);

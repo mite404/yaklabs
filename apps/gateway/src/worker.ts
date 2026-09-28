@@ -6,7 +6,7 @@ import { randomToken, type ShareStore } from "./shares";
 
 // The Worker's bindings: `WORKOS_CLIENT_ID` is a var in wrangler.jsonc, `ANTHROPIC_API_KEY` a
 // secret (`wrangler secret put`); `.dev.vars` supplies both under `wrangler dev`. `SHARES` is
-// the KV namespace public threads live in (ADR-129).
+// the KV namespace public threads live in (ADR-131).
 type Env = { ANTHROPIC_API_KEY: string; WORKOS_CLIENT_ID: string; SHARES: KVNamespace };
 
 // Both must be set, and a WorkOS client id (not its API key) must go in the client id slot.
@@ -15,7 +15,7 @@ const envSchema = z.object({
   WORKOS_CLIENT_ID: z.string().startsWith("client_"),
 });
 
-// Shares in Cloudflare KV, which deletes each at its `expirationTtl` (ADR-129).
+// Shares in Cloudflare KV, which deletes each at its `expirationTtl` (ADR-131).
 function kvShares(kv: KVNamespace): ShareStore {
   type Meta = { expiresAt: string; revokeHash: string };
   return {

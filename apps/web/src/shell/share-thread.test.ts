@@ -58,7 +58,7 @@ function client(respond: (request: Request) => Response) {
   return { share, requests, kept };
 }
 
-describe("publish makes a thread public for a while (ADR-129)", () => {
+describe("publish makes a thread public for a while (ADR-131)", () => {
   it("offers 1 hour, 3 hours, 1 day and 7 days", () => {
     expect(LIFETIMES.map((each) => each.label)).toEqual(["1 hour", "3 hours", "1 day", "7 days"]);
   });
@@ -100,7 +100,7 @@ describe("publish makes a thread public for a while (ADR-129)", () => {
   });
 });
 
-describe("unpublish takes a share down (ADR-129)", () => {
+describe("unpublish takes a share down (ADR-131)", () => {
   const record: ThreadShare = {
     id: "abcdefghijklmnop",
     threadId: threadIdSchema.parse("t-1"),

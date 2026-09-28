@@ -17,7 +17,7 @@ export const gatewayRequestSchema = z.object({
 /** A validated gateway request. */
 export type GatewayRequest = z.infer<typeof gatewayRequestSchema>;
 
-/** How long a thread may stay public, in seconds: 1 hour, 3 hours, 1 day, 7 days (ADR-129). */
+/** How long a thread may stay public, in seconds: 1 hour, 3 hours, 1 day, 7 days (ADR-131). */
 export const SHARE_TTLS = [60 * 60, 3 * 60 * 60, 24 * 60 * 60, 7 * 24 * 60 * 60] as const;
 
 /** The most a sealed thread may weigh; a thread of a few hundred turns is well under it. */

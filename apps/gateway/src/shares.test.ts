@@ -42,7 +42,7 @@ function upload(app: ReturnType<typeof sharesApp>["app"], ttl: number, body = se
   return app.request(`/api/shares?ttl=${ttl}`, { method: "POST", headers: signedIn, body });
 }
 
-describe("POST /api/shares keeps a sealed thread for a while (ADR-129)", () => {
+describe("POST /api/shares keeps a sealed thread for a while (ADR-131)", () => {
   it("keeps it for the time asked, and names it, its end and its revoke token", async () => {
     const { app } = sharesApp();
     const response = await upload(app, HOUR);
@@ -74,7 +74,7 @@ describe("POST /api/shares keeps a sealed thread for a while (ADR-129)", () => {
   });
 });
 
-describe("GET /api/shares/:id hands the sealed bytes to anyone with the link (ADR-129)", () => {
+describe("GET /api/shares/:id hands the sealed bytes to anyone with the link (ADR-131)", () => {
   it("hands them back unread, never cached, with the moment they end", async () => {
     const { app } = sharesApp();
     const { id, expiresAt } = shareCreatedSchema.parse(await (await upload(app, HOUR)).json());
@@ -99,7 +99,7 @@ describe("GET /api/shares/:id hands the sealed bytes to anyone with the link (AD
   });
 });
 
-describe("DELETE /api/shares/:id takes a share down early (ADR-129)", () => {
+describe("DELETE /api/shares/:id takes a share down early (ADR-131)", () => {
   it("takes it down for whoever holds its revoke token, and only them", async () => {
     const { app } = sharesApp();
     const { id, revokeToken } = shareCreatedSchema.parse(await (await upload(app, HOUR)).json());

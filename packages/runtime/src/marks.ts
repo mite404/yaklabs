@@ -43,7 +43,7 @@ export function applyMark<T extends ThreadSummary>(thread: T, change: ThreadMark
 /**
  * A list in its usual order, with the pinned lifted to the top and the archived settled to the
  * bottom; each group keeps that order among itself, and a snoozed thread stays where it is
- * (ADR-125 to ADR-127).
+ * (ADR-127 to ADR-129).
  */
 export function markOrder<T extends ThreadSummary>(threads: T[]): T[] {
   const pinned = threads.filter((thread) => thread.pinnedAt !== null);

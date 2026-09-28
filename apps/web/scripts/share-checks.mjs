@@ -1,4 +1,4 @@
-// The Share submenu's checks (ADR-129) on the real app, against the real gateway's routes: its
+// The Share submenu's checks (ADR-131) on the real app, against the real gateway's routes: its
 // Hono app runs in this process with a memory store, loaded through Vite, and every request the
 // page makes to /api/shares is answered by it. The lab build has no sign-in, so the lever stands
 // in for WorkOS at the network edge, adding a token the test verifier knows; the gateway itself

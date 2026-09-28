@@ -57,7 +57,7 @@ const openReply = async (
 };
 
 // A share route's answer as a response. The sealed bytes are never cached anywhere, so a share
-// taken down or ended is gone from every copy at once (ADR-129).
+// taken down or ended is gone from every copy at once (ADR-131).
 function shareResponse(c: Context, answer: ShareAnswer): Response {
   if (answer.status === 200) {
     return c.body(answer.bytes, 200, {
@@ -74,7 +74,7 @@ function shareResponse(c: Context, answer: ShareAnswer): Response {
  * Builds the gateway (ADR-085): the one server in the slice. It checks the caller's WorkOS
  * token, forwards the turns to the model with the key it holds, and streams the reply back;
  * it stores no turn. The one thing it keeps is a thread made public, sealed with a key it never
- * sees, until the share ends (ADR-129). The route table is the contract the browser's typed client compiles against
+ * sees, until the share ends (ADR-131). The route table is the contract the browser's typed client compiles against
  * (ADR-086).
  */
 export const createApp = ({ verifyToken, anthropic, shares }: Dependencies) => {
@@ -86,7 +86,7 @@ export const createApp = ({ verifyToken, anthropic, shares }: Dependencies) => {
   return (
     new Hono()
       .get("/api/health", (c) => c.json({ ok: true }))
-      // A thread made public for a while (ADR-129): only a signed-in visitor may keep one, anyone
+      // A thread made public for a while (ADR-131): only a signed-in visitor may keep one, anyone
       // with the link may read it, and its revoke token takes it down early.
       .post("/api/shares", requireSession, async (c) =>
         shareResponse(c, await createShare(shares, c.req.query("ttl"), await c.req.arrayBuffer())),

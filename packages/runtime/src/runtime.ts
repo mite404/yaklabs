@@ -68,12 +68,12 @@ export type Runtime = {
   mark(id: ThreadId, change: ThreadMark): Promise<void>;
   /**
    * Deletes a thread and its sub-threads: gone from `state()` at once, and for good once the
-   * undo window (`UNDO_MS`) passes without a `restore` (ADR-128).
+   * undo window (`UNDO_MS`) passes without a `restore` (ADR-130).
    */
   delete(id: ThreadId): Promise<void>;
   /** Takes a delete back inside its window. @throws Once the worker has purged it. */
   restore(id: ThreadId): Promise<void>;
-  /** Records a thread made public, with its link and revoke token, on the device (ADR-129). */
+  /** Records a thread made public, with its link and revoke token, on the device (ADR-131). */
   share(share: ThreadShare): Promise<void>;
   /** Forgets a public share, once the page has taken it down or found it gone. */
   unshare(shareId: string): Promise<void>;
@@ -182,7 +182,7 @@ function listen(worker: Worker, handle: Handle): void {
   });
 }
 
-// The thread menu's verbs (ADR-124): a mark and a delete show at once, like `rename`; an undo,
+// The thread menu's verbs (ADR-126): a mark and a delete show at once, like `rename`; an undo,
 // a share and its end wait for the worker.
 function menuVerbs(handle: Handle, post: Post): Pick<Runtime, MenuVerb> {
   return {

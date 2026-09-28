@@ -55,7 +55,7 @@ export type Store = {
   addThread(thread: NewThread, laneAt?: number): void;
   /**
    * Rewrites a thread's turns, draft and `updatedAt` from what they are now. A thread that
-   * hears a message is live again: it and its main leave the archive (ADR-127).
+   * hears a message is live again: it and its main leave the archive (ADR-129).
    * @throws For an unknown thread.
    */
   changeTranscript(id: ThreadId, change: (transcript: Transcript) => Transcript): void;
@@ -67,7 +67,7 @@ export type Store = {
   mark(id: ThreadId, change: ThreadMark, now: string): void;
   /**
    * Deletes a thread, its sub-threads with it, behind a tombstone: gone from the workspace at
-   * once, and for good once `settle` passes the undo window (ADR-128).
+   * once, and for good once `settle` passes the undo window (ADR-130).
    * @throws For a thread it does not hold or that is deleted already.
    */
   remove(id: ThreadId, now: string): void;

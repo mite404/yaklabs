@@ -155,7 +155,7 @@ function fallbacks(now: Date): SnoozeChoice[] {
 }
 
 /**
- * The snooze card's tiles (ADR-126): dates the thread names that are still ahead, newest
+ * The snooze card's tiles (ADR-128): dates the thread names that are still ahead, newest
  * message first and each once, up to three; then In 1 hour, Tomorrow (9:00) and Next week
  * (seven days from now), to four tiles in all.
  */
@@ -233,7 +233,7 @@ function dayAndTime(text: string, now: Date): Date | undefined {
 }
 
 /**
- * Reads a time the user typed into the snooze card (ADR-126): "in 3 hours", "tomorrow 3pm",
+ * Reads a time the user typed into the snooze card (ADR-128): "in 3 hours", "tomorrow 3pm",
  * "friday", "Fri 9:30am", "oct 3", "3 October 14:00", "2026-10-06", "3pm", "next week". A day
  * with no time wakes at 9:00; a time alone is today's if still ahead, else tomorrow's.
  * @returns The instant, or undefined when the words are not a time or it is not ahead.
@@ -272,7 +272,7 @@ export function snoozeQuestion(choices: SnoozeChoice[], snoozedUntil: Date | nul
 }
 
 /**
- * When the card's answer wakes the thread (ADR-126): null for Wake it now, a tile's instant for
+ * When the card's answer wakes the thread (ADR-128): null for Wake it now, a tile's instant for
  * its label, or the typed time `parseWhen` reads.
  * @returns undefined when the words are not a time that is still ahead.
  */

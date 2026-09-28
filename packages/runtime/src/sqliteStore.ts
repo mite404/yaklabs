@@ -55,7 +55,7 @@ const RENAME: Record<RenameTarget["kind"], string> = {
   project: "update projects set name = ? where id = ?",
   thread: "update conversations set title = ? where id = ?",
 };
-// A message revives the thread and its main (ADR-127): neither stays archived.
+// A message revives the thread and its main (ADR-129): neither stays archived.
 const REVIVE = `
   update conversations set archived_at = null
   where id = ?1 or id = (select parent_id from conversations where id = ?1)
@@ -168,7 +168,7 @@ function search(db: Database, query: string): ThreadSummary[] {
     .toSorted(newestFirst);
 }
 
-// The thread menu's calls on the store (ADR-124), each in sqliteMarks.ts.
+// The thread menu's calls on the store (ADR-126), each in sqliteMarks.ts.
 function menuCalls(db: Database): Pick<Store, MenuCall> {
   return {
     mark: (id, change, now) => {

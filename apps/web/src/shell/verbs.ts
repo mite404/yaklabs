@@ -131,7 +131,7 @@ async function newProjectIn(runtime: Runtime): Promise<ProjectId> {
 // A change to the document the runtime holds, with the URL's thread visited (see `edit`).
 type Change = (update: (current: ShellState) => ShellState) => void;
 
-// The thread menu's verbs (ADR-124 to ADR-129), Share's included: a delete takes the thread's
+// The thread menu's verbs (ADR-126 to ADR-131), Share's included: a delete takes the thread's
 // public pages down with it.
 function menuVerbs(deps: Deps, doc: ShellState, change: Change): ThreadVerbs & ShareVerbs {
   const { runtime, workspace, active, go, href, setSnoozing, shareClient } = deps;

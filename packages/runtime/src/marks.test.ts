@@ -49,7 +49,7 @@ const CASES: [string, ThreadSummary, ThreadMark, Partial<ThreadSummary>][] = [
   ],
 ];
 
-describe("applyMark (ADR-125 to ADR-127)", () => {
+describe("applyMark (ADR-127 to ADR-129)", () => {
   it.each(CASES)("%s", (_, before, change, expected) => {
     expect(applyMark(before, change, now)).toEqual({ ...before, ...expected });
   });

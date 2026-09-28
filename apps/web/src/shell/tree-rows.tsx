@@ -82,7 +82,7 @@ function Named({
  * A thread row: a link named by its title, indented under its project. A child reads
  * "↳ title", one step further in than its main. A pin, a clock or a closed filebox stands
  * before the title of a pinned, snoozed or archived thread, and an archived one is dimmed
- * until it is the one open (ADR-125 to ADR-127).
+ * until it is the one open (ADR-127 to ADR-129).
  * @param counted Whether the row's item holds the count that folds its children.
  */
 export function ThreadRow({

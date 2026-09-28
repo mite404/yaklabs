@@ -1,12 +1,12 @@
 import type { ThreadSummary } from "@yaklabs/runtime";
 import { wakeText } from "./wake-text";
 
-/** A mark a thread row shows before its title (ADR-125 to ADR-127). */
+/** A mark a thread row shows before its title (ADR-127 to ADR-129). */
 export type Mark = "pinned" | "snoozed" | "archived";
 
 /** How a thread row reads, given its marks. */
 export type RowLook = {
-  /** The row's ink at rest: an archived thread is dimmed (ADR-127). */
+  /** The row's ink at rest: an archived thread is dimmed (ADR-129). */
   ink: "text-soft-ink" | "text-faint-ink";
   /** The marks before the title, left to right. */
   marks: Mark[];

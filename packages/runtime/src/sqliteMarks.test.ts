@@ -22,7 +22,7 @@ const share = (id: string, threadId: string, expiresAt: string) => ({
   expiresAt,
 });
 
-describe("the store keeps marks (ADR-125 to ADR-127)", () => {
+describe("the store keeps marks (ADR-127 to ADR-129)", () => {
   it("pins, snoozes and archives, each by the rules applyMark keeps", async () => {
     const store = await openStore();
     store.mark(main, { pinned: true }, at(10));
@@ -59,7 +59,7 @@ describe("the store keeps marks (ADR-125 to ADR-127)", () => {
   });
 });
 
-describe("the store deletes with a tombstone (ADR-128)", () => {
+describe("the store deletes with a tombstone (ADR-130)", () => {
   it("hides a deleted main with its children, lanes, bell and shares at once", async () => {
     const store = await openStore();
     addChild(store, "child", 0);
@@ -96,7 +96,7 @@ describe("the store deletes with a tombstone (ADR-128)", () => {
   });
 });
 
-describe("the store purges a tombstone (ADR-128)", () => {
+describe("the store purges a tombstone (ADR-130)", () => {
   it("purges a tombstone for good once its window has passed, sub-threads and all", async () => {
     const store = await openStore();
     addChild(store, "child", 0);
@@ -116,7 +116,7 @@ describe("the store purges a tombstone (ADR-128)", () => {
   });
 });
 
-describe("the store settles (ADR-126, ADR-127, ADR-129)", () => {
+describe("the store settles (ADR-128, ADR-129, ADR-131)", () => {
   it("wakes a due snooze with a note for the bell, and restarts its idle clock", async () => {
     const store = await openStore();
     store.mark(other, { snoozedUntil: day(2) }, at(10));
@@ -160,7 +160,7 @@ describe("the store settles (ADR-126, ADR-127, ADR-129)", () => {
   });
 });
 
-describe("the store keeps shares (ADR-129)", () => {
+describe("the store keeps shares (ADR-131)", () => {
   it("lists shares newest first, forgets one, and refuses one for a thread it lacks", async () => {
     const store = await openStore();
     store.addShare(share("s1", "main", day(2)));

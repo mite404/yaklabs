@@ -46,7 +46,7 @@ const ON_WASH: Pair[] = [
   ["--on-chrome", "--chrome-painting-hover", 10.12, 4.5],
   ["--on-chrome-painting-soft", "--chrome-painting-hover", 7.91, 4.5],
 ];
-// An archived thread's title and icon (ADR-127): dimmer than the soft ink, and still text on the
+// An archived thread's title and icon (ADR-129): dimmer than the soft ink, and still text on the
 // sidebar's paper and on its hover fill.
 const FAINT: Record<"light" | "dark", Pair[]> = {
   light: [
@@ -189,7 +189,7 @@ describe("the window chrome's tokens", () => {
   });
 });
 
-describe("the faint ink (ADR-127)", () => {
+describe("the faint ink (ADR-129)", () => {
   it("dim an archived thread and keep it readable in either theme", () => {
     expect([...misses(FAINT.light, THEMES.light), ...misses(FAINT.dark, THEMES.dark)]).toEqual([]);
   });

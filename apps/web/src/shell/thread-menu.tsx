@@ -37,7 +37,7 @@ function MoreTrigger({ disabled }: { disabled: boolean }) {
 }
 
 /**
- * The phone bar's "⋯" (ADR-116, ADR-124): the thread menu for the thread the address names,
+ * The phone bar's "⋯" (ADR-116, ADR-126): the thread menu for the thread the address names,
  * a child in focus or else its main. A desktop has it in each thread's own title bar instead.
  * Nothing on screen leaves it disabled. Snoozing a main that another view hides first shows
  * the thread, where the snooze card opens.

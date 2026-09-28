@@ -20,7 +20,7 @@ const at = {
   origin: "https://kay.example",
 };
 
-describe("sealThread and openSealedThread (ADR-129)", () => {
+describe("sealThread and openSealedThread (ADR-131)", () => {
   it("opens what it sealed, with the same key", async () => {
     const { sealed, key } = await sealThread(shared);
     expect(await openSealedThread(sealed, key)).toEqual(shared);
@@ -56,7 +56,7 @@ describe("sealThread and openSealedThread (ADR-129)", () => {
   });
 });
 
-describe("threadLink and readThreadLink (ADR-129)", () => {
+describe("threadLink and readThreadLink (ADR-131)", () => {
   it("points at the site's share page from any address, with the id and key in the fragment", () => {
     const link = threadLink("abc_123", "k-ey", at);
     expect(link).toBe("https://kay.example/share.html#t=abc_123.k-ey");

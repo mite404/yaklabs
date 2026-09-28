@@ -1,5 +1,5 @@
 // When a snoozed thread wakes, in words: the hour unpadded, as the thread's own turn times
-// are written, at the length each place has room for (ADR-126).
+// are written, at the length each place has room for (ADR-128).
 const dayFormat = new Intl.DateTimeFormat("en-GB", {
   weekday: "long",
   day: "numeric",

@@ -19,7 +19,7 @@ export type AuthSource =
 
 /**
  * The running build's configuration, with no half-set states. `shareBase` is where public
- * threads are kept: the gateway, on the site's own origin unless a URL is given (ADR-129).
+ * threads are kept: the gateway, on the site's own origin unless a URL is given (ADR-131).
  */
 export type Env = { agent: AgentSource; auth: AuthSource; shareBase: string };
 

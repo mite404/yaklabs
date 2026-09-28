@@ -10,7 +10,7 @@ describe("parseEnv", () => {
     });
   });
 
-  it("keeps public threads on the gateway, whichever agent answers (ADR-129)", () => {
+  it("keeps public threads on the gateway, whichever agent answers (ADR-131)", () => {
     expect(
       parseEnv({ VITE_GATEWAY_URL: "https://api.example" }, "https://kay.example").shareBase,
     ).toBe("https://api.example");

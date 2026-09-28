@@ -43,7 +43,7 @@ export type Shell = ShellVerbs & {
   /** Where "/" goes, or null when nothing is open. */
   resumeTo: ThreadId | null;
   unread: number;
-  /** The thread whose snooze card is open, if any (ADR-126). */
+  /** The thread whose snooze card is open, if any (ADR-128). */
   snoozing: ThreadId | null;
 };
 
@@ -67,7 +67,7 @@ type Parts = {
 
 const ShellContext = createContext<Shell | null>(null);
 
-// How the page makes a thread public (ADR-129): the gateway this build names, the visitor's
+// How the page makes a thread public (ADR-131): the gateway this build names, the visitor's
 // token when the build signs in, the worker's turns, and the device's record of each share.
 function shareClientFor(runtime: Runtime, session: Session | undefined): ShareClient {
   return {
@@ -138,7 +138,7 @@ function useGo(): Go {
   );
 }
 
-// A thread's address as a whole URL, its scenario kept, for Copy thread URL (ADR-124).
+// A thread's address as a whole URL, its scenario kept, for Copy thread URL (ADR-126).
 function useHref(): (id: ThreadId) => string {
   const { pathTo } = usePaths();
   return useCallback((id: ThreadId) => new URL(pathTo(id), window.location.href).href, [pathTo]);
