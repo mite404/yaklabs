@@ -1547,6 +1547,12 @@ try {
       await own.mouse.move(900, 450);
       await own.waitForTimeout(200);
       const restOpacity = await chevron.evaluate((el) => getComputedStyle(el).opacity);
+      const plain = own
+        .locator('[data-slot="sidebar"] a[data-thread="main"]:not([aria-current]) [data-label]')
+        .first();
+      const [ink, plainInk] = await Promise.all(
+        [label, plain].map((each) => each.evaluate((el) => getComputedStyle(el).color)),
+      );
       await row.hover();
       await own.waitForTimeout(200);
       const hoverOpacity = await chevron.evaluate((el) => getComputedStyle(el).opacity);
@@ -1559,11 +1565,12 @@ try {
           gap >= 0 &&
           gap <= 12 &&
           !/\d/.test(text) &&
+          ink === plainInk &&
           restOpacity === "0" &&
           hoverOpacity === "1" &&
           foldedExpanded === "false" &&
           foldedOpacity === "1",
-        detail: `gap ${gap.toFixed(1)}px; row text ${JSON.stringify(text)}; chevron opacity at rest ${restOpacity}, on hover ${hoverOpacity}, folded ${foldedOpacity} (expanded ${foldedExpanded})`,
+        detail: `gap ${gap.toFixed(1)}px; row text ${JSON.stringify(text)}; title ${ink} vs a plain row ${plainInk}; chevron opacity at rest ${restOpacity}, on hover ${hoverOpacity}, folded ${foldedOpacity} (expanded ${foldedExpanded})`,
       };
     },
   );

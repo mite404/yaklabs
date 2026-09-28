@@ -94,7 +94,7 @@ function FoldableMainRow({
             to={pathTo(thread.id)}
             aria-current={active ? "page" : undefined}
             data-thread="main"
-            className="min-w-0 outline-hidden after:absolute after:inset-0 after:rounded-[var(--radius)] focus-visible:after:ring-2 focus-visible:after:ring-sidebar-ring"
+            className="min-w-0 text-inherit outline-hidden after:absolute after:inset-0 after:rounded-[var(--radius)] focus-visible:after:ring-2 focus-visible:after:ring-sidebar-ring"
           >
             <span data-label="" className={LABEL}>
               {thread.title}
