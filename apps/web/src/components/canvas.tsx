@@ -101,14 +101,19 @@ function OpenSpace({
       className="open-space @container relative isolate flex h-full min-w-[320px] flex-1 flex-col items-center justify-center gap-4 rounded-[var(--radius-card)] border border-dashed border-hairline p-6 text-center transition-colors data-lit:border-olive"
     >
       {splash && <SplashDrawing />}
-      <p className="font-serif text-xl text-ink">
-        Drag a text selection or card
-        <br />
-        to start a new thread with context
-      </p>
-      <button type="button" className="btn btn-sm" data-blank="" onClick={onBlank}>
-        Create blank thread
-      </button>
+      <div
+        className="splash-plate flex flex-col items-center gap-4"
+        data-plate={splash || undefined}
+      >
+        <p className="font-serif text-xl text-ink">
+          Drag a text selection or card
+          <br />
+          to start a new thread with context
+        </p>
+        <button type="button" className="btn btn-sm" data-blank="" onClick={onBlank}>
+          Create blank thread
+        </button>
+      </div>
       {splash && <Kay />}
     </div>
   );

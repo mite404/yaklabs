@@ -168,17 +168,42 @@
       var(--chrome-painting);
   }
 
-  /* The empty canvas's splash (ADR-113): the drawing is a mask filled with --splash-line, so it
-     themes with the ink and shows only its strokes, never the bounds of an image. It sits
-     behind the words, and it and Kay fade in once, with no fade under reduced motion. */
+  /* The empty canvas's splash (ADR-113), under the dots: the open space is Ethan's landscape
+     washed towards the paper, with the field's dots drawn over it, so the painting reads as
+     lying beneath the dotted ground rather than on it. It is the ground, so it sits under the
+     carry's lit fill (::before, z-index -2), which tints it as it tints the dots. It and Kay
+     fade in once, with no fade under reduced motion. */
   .splash {
     position: absolute;
     inset: 0;
-    z-index: -1;
+    z-index: -3;
+    border-radius: inherit;
   }
+  /* The dots keep the field's phase: the canvas pads 16px and the open space's border is 1px,
+     so the tiles start 17px back. The wash sits between the dots and the painting. */
   .splash-drawing {
-    background-color: var(--splash-line);
-    mask: url("/splash/sphere.svg") center / contain no-repeat;
+    border-radius: inherit;
+    background:
+      radial-gradient(var(--hairline) 1px, transparent 1px) -17px -17px / 18px 18px,
+      linear-gradient(var(--splash-wash), var(--splash-wash)),
+      url("/splash/landscape.webp") center / cover no-repeat;
+  }
+  /* The words and the button sit on a paper plate over the painting, so the copy keeps its
+     ratio on plain paper: a card's corners, a hairline, no shadow, never wider than the open
+     space. The plate is only a wrapper beside lanes, so the slim column keeps its look. */
+  .splash-plate[data-plate] {
+    max-width: 100%;
+    padding: 28px 40px;
+    border: 1px solid var(--hairline);
+    border-radius: var(--radius-card);
+    background-color: var(--paper);
+  }
+  /* Where Kay hides (a content box under 430px), the plate draws in so the copy keeps its two
+     lines on a phone: 310px of content less the plate's 34px holds the longer line's 269px. */
+  @container (width < 430px) {
+    .splash-plate[data-plate] {
+      padding: 20px 16px;
+    }
   }
   .splash,
   .splash-in {

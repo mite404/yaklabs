@@ -175,4 +175,18 @@ describe("the window chrome's tokens", () => {
     });
     expect(Object.fromEntries(measured)).toEqual(SPLASH);
   });
+
+  // The wash over the splash's painting is the paper at a share over nothing: enough that the
+  // painting never carries text (at least 60%), never so much that it vanishes (at most 85%).
+  it("wash the splash's painting towards the paper in either theme, never away", () => {
+    for (const theme of Object.values(THEMES)) {
+      let value: string | undefined;
+      for (const each of theme) value = each.get("--splash-wash") ?? value;
+      const share = /^color-mix\(in srgb, var\(--paper\) (\d+)%, transparent\)$/.exec(
+        value ?? "",
+      )?.[1];
+      expect(Number(share)).toBeGreaterThanOrEqual(60);
+      expect(Number(share)).toBeLessThanOrEqual(85);
+    }
+  });
 });
