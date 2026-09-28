@@ -9,7 +9,7 @@
   --working-strong: var(--moss);
   --working-mid: var(--yak-green);
   --working-soft: var(--sage);
-  --working-duration: 150ms;
+  --working-duration: 1200ms;
   /* The right column runs 35% of a cycle behind, so it peaks as the left one starts to fade.
      Written as a head start of 65% (a negative delay), so no square waits blank on load. */
   --working-lag: calc(var(--working-duration) * -0.65);
@@ -36,13 +36,6 @@
 .agent-working-cell:nth-child(even) {
   --working-offset: var(--working-lag);
 }
-/* Freeze a phase for review: Storybook's frame strip sets --working-phase (0-1). */
-.agent-working[data-frozen] .agent-working-cell {
-  animation-play-state: paused;
-  animation-delay: calc(
-    var(--working-offset, 0ms) - var(--working-phase) * var(--working-duration)
-  );
-}
 @keyframes agent-working-wave {
   0% {
     opacity: 0;
@@ -62,15 +55,14 @@
     background: var(--working-soft);
   }
 }
-/* No wave under reduced motion: the glyph holds still, half lit, still reading as "busy".
-   A frozen review frame is already still, so it keeps its phase. */
+/* No wave under reduced motion: the glyph holds still, half lit, still reading as "busy". */
 @media (prefers-reduced-motion: reduce) {
-  .agent-working:not([data-frozen]) .agent-working-cell {
+  .agent-working-cell {
     animation: none;
     opacity: 0.55;
     background: var(--working-mid);
   }
-  .agent-working:not([data-frozen]) .agent-working-cell:nth-child(odd) {
+  .agent-working-cell:nth-child(odd) {
     opacity: 1;
     background: var(--working-strong);
   }
