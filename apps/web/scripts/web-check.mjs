@@ -623,14 +623,13 @@ try {
     labelsReloaded.join("|") === labelsAfter.join("|"),
     labelsReloaded.map((label) => label.slice(0, 12)).join(" → "),
   );
-  // A lane's title, and the main thread's, rename in place and keep the new name.
+  // A lane's title renames in place, and the main thread's from its tab (ADR-138); both keep the new name.
   const threadLane = canvas.locator("article").filter({ has: page.locator(".thread-title") });
   await threadLane.first().locator(".thread-title").click();
   await page.keyboard.press("ControlOrMeta+a");
   await page.keyboard.type("Weekend margins");
   await page.keyboard.press("Enter");
-  const mainPanel = page.locator('[data-slot="resizable-panel"]').first();
-  await mainPanel.locator(".thread-title").click();
+  await page.getByRole("tab", { name: "Last week's sales" }).dblclick();
   await page.keyboard.press("ControlOrMeta+a");
   await page.keyboard.type("Sales, last week");
   await page.keyboard.press("Enter");
@@ -639,7 +638,7 @@ try {
   await canvas.locator("article .thread-panel").first().waitFor({ timeout: 15_000 });
   await page.waitForTimeout(500);
   const laneTitle = await threadLane.first().locator(".thread-header").innerText();
-  const mainTitle = await mainPanel.locator(".thread-header").innerText();
+  const mainTitle = (await page.getByRole("tab", { selected: true }).innerText()).trim();
   record(
     "a lane's title and the main thread's rename in place and survive a reload",
     laneTitle === "Weekend margins" && mainTitle === "Sales, last week",
