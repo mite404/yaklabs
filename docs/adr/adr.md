@@ -1682,3 +1682,12 @@ The shadcn menu takes Kay's menu shape (8px popup, 4px items, 13px text) in the 
 `base-lyra` preset hard-codes `rounded-none` and `text-xs` in each file, so variables alone left
 the menu looking like a different app. Welcome actions use the app's 8px corners (`rounded-xl`).
 A strip's expand is 24px, so its hover fill sits 3px inside the strip on every side.
+Amended the same day (Ethan, after seeing it): a main thread has no title row at all, with turns
+or without, since the tab row already names it; renaming moved to the tab (a double click on its
+title, or Rename first in its menu). The thread's "⋯" shows only while the pointer is on its tab
+or on a lane thread's title bar, and while its menu is open or it holds focus: it is faded, not
+removed, so the keyboard still reaches it. A collapsed card is half the height of a collapsed
+thread's strip, top-aligned with the row, so the two kinds read apart at a glance. One glyph per
+action: Share, copy link and open page use the catalog's box-and-arrow, link and window icons
+(`@yaklabs/catalog/icons`) wherever they appear, and lucide keeps the actions the catalog has no
+icon for; the shell's Share2 (nodes) is gone.

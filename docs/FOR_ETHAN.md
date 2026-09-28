@@ -987,6 +987,17 @@ The first entries are ideas from before any code existed; the rest are parts of 
 - **The example that would not start.** Copying `.env.example` to `.env` left
   `VITE_GATEWAY_URL=` empty, and the env parser reads an empty string as a bad URL, so the app
   failed at start. The example now comments those lines out.
+- **Two icon sets for one action.** The card's share button was the catalog's hand-drawn box and
+  arrow, while the thread's was lucide's `Share2`, three linked nodes: the same action wore two
+  faces. The app is built on lucide and the catalog is deliberately dependency-free, so neither
+  can absorb the other. The rule now is one glyph per action: where the catalog draws it (Share,
+  copy link, open page) the app imports the catalog's, and lucide covers the rest. Lesson: when
+  two icon sets meet, decide per action which one owns it, not per screen.
+- **The check that read a title that was not there.** With the main thread's title row gone,
+  three levers that read the name from `.thread-header` timed out, and one asserted the tab
+  menu's items without the new Rename. They now read the panel's `aria-label` and the tab's
+  menu. Lesson: when a layout change removes an element, search the checks for its selector
+  before the run does it for you.
 
 ## 5. Director's Commentary
 
