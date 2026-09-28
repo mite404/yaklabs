@@ -108,17 +108,21 @@ function laneIn(row: HTMLElement | null, id: LaneId): HTMLElement | null {
   return lane instanceof HTMLElement ? lane : null;
 }
 
+// What a lane hands the focus to: an open lane's close, at its title bar's far end, where the
+// collapse comes first in the bar; a collapsed one has only its expand.
+function focusTargetIn(lane: HTMLElement | null): Element | null {
+  return (
+    lane?.querySelector("[data-lane-close]") ?? lane?.querySelector("[data-lane-toggle]") ?? null
+  );
+}
+
 // Where the focus goes when the lane `id` closes with it: the next lane's close (its expand,
 // when it is collapsed and has no close), else the one before's, else Create blank thread.
 function focusAfter(row: HTMLElement, lanes: LaneView[], id: LaneId): Element | null {
   const at = lanes.findIndex((lane) => lane.id === id);
   const neighbour = lanes.slice(at + 1).at(0) ?? lanes.slice(0, at).at(-1);
   if (neighbour === undefined) return row.querySelector("[data-blank]");
-  // An open lane has its close, at its title bar's far end; a collapsed one has only its expand.
-  const lane = laneIn(row, neighbour.id);
-  return (
-    lane?.querySelector("[data-lane-close]") ?? lane?.querySelector("[data-lane-toggle]") ?? null
-  );
+  return focusTargetIn(laneIn(row, neighbour.id));
 }
 
 // Before the lane `id` closes, hands on the focus it holds, which would otherwise fall back to
