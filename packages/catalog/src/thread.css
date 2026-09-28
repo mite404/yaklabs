@@ -38,10 +38,9 @@
   padding: 14px var(--thread-gutter);
   border-bottom: 1px solid var(--hairline);
 }
-/* The thread title is a display moment: brand serif (Newsreader). It takes the bar's width,
-   leaving the host's actions their own at the end. */
+/* The thread title is a display moment: brand serif (Newsreader). It keeps its own width, so a
+   lane's bar stays free around it to lift the lane by (ADR-089), and shrinks when crowded. */
 .thread-header h2 {
-  flex: 1;
   min-width: 0;
   margin: 0;
   font-family: var(--font-display);
@@ -62,9 +61,10 @@
   text-decoration: underline dotted var(--rule);
   text-underline-offset: 4px;
 }
-/* The host's actions at the bar's end (ADR-126): pulled into the bar's padding, so a button
-   taller than the title's line never makes the bar taller. */
+/* The host's actions at the bar's end (ADR-126): pushed there by their own margin, and pulled
+   into the bar's padding, so a button taller than the title's line never makes the bar taller. */
 .thread-header-actions {
+  margin-inline-start: auto;
   display: flex;
   flex-shrink: 0;
   align-items: center;
