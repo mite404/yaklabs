@@ -156,8 +156,9 @@
      on it, a clearing of plain paper behind the words that fades out in every direction, a
      sheet of construction lines and Atlas with his globe ringing the words. The surface's
      ground goes plain while the surface holds the dots, and the surface casts a shadow, so it
-     reads as raised above the thread. A :has() keeps the switch in CSS, off OpenSpace. The
-     splash fades in once, with no fade under reduced motion. */
+     reads as raised above the thread. Bottom to top: the paper, the lit fill, the dots, the
+     lines, the clearing, Atlas. A :has() keeps the switch in CSS, off OpenSpace. The splash
+     fades in once, with no fade under reduced motion. */
   .canvas:has(> .open-space > .splash) {
     background-image: none;
   }
@@ -195,25 +196,31 @@
     background: radial-gradient(var(--hairline) 1px, transparent 1px) calc(-1rem - 1px)
       calc(-1rem - 1px) / 18px 18px;
   }
-  /* The clearing: an ellipse of the surface's own proportions, solid paper to 25% of its half
-     width and height and gone by 75%, on a box floored at 36rem by 20rem so the two-line copy
-     always sits on plain paper. */
+  /* The clearing, over the dots and the lines: an ellipse of the surface's own proportions,
+     solid paper to 25% of its half width and height and gone by 75%, on a box floored at 36rem
+     by 20rem, so the two-line copy always sits on plain paper and the spokes' meeting point
+     never fights the words. */
   .splash-clearing {
     inset: 0;
     background: radial-gradient(ellipse 50% 50% at center, var(--clearing) 25%, transparent 75%)
       center / max(100%, 36rem) max(100%, 20rem) no-repeat;
   }
   /* The construction (draw-atlas-lines.mjs): circles concentric with the globe and spokes
-     through its centre, one screen pixel wide, in the splash line. A square 3.2 globe radii
-     wide, centred on the globe. */
+     through its centre, one screen pixel wide, in the splash line. The file is a square four
+     globes wide centred on the globe, which is the surface's centre, and a second mask fades the
+     lines out towards the surface's edges so they never meet a corner. */
   .splash-lines {
-    top: 50%;
-    left: 50%;
-    width: calc(var(--globe) * 1.6);
-    height: calc(var(--globe) * 1.6);
-    translate: -50% -50%;
+    inset: 0;
     background: var(--splash-line);
-    mask: url("/splash/atlas-lines.svg") center / contain no-repeat;
+    mask-image:
+      url("/splash/atlas-lines.svg"),
+      radial-gradient(ellipse 50% 50% at center, black 30%, transparent 100%);
+    mask-size:
+      calc(var(--globe) * 4) calc(var(--globe) * 4),
+      100% 100%;
+    mask-position: center;
+    mask-repeat: no-repeat;
+    mask-composite: intersect;
   }
   /* Atlas: a stencil (black strokes on alpha) as a mask filled with --splash-figure, so he
      themes with the ink and shows no bounds, centred with his globe's centre at the surface's
@@ -255,8 +262,10 @@
   }
 
   /* A new thread's welcome (ADR-136): Kay's own greeting over one of Ethan's paintings, the
-     landscape or the abstract strokes by <html data-splash> (splash.ts), under its paper wash,
-     with a clearing of plain paper behind the words that fades out in every direction. The
+     landscape or the abstract strokes by <html data-splash> (splash.ts), under the same paper
+     wash and the same clearing of plain paper behind the words, fading out in every direction,
+     so the two read as one treatment with a different picture. The greeting names the morning
+     in the light theme and the evening in the dark one, both in the DOM, one shown. The
      scroll area drops its gutters for it (thread.css, data-empty), and the welcome fills it to
      centre the words. */
   .welcome {
@@ -272,13 +281,17 @@
     inset: 0;
     z-index: -1;
     background:
-      linear-gradient(var(--splash-wash-landscape), var(--splash-wash-landscape)),
+      linear-gradient(var(--splash-wash), var(--splash-wash)),
       url("/splash/landscape.webp") center / cover no-repeat;
   }
   html[data-splash="abstract"] .welcome-art {
     background:
-      linear-gradient(var(--splash-wash-abstract), var(--splash-wash-abstract)),
+      linear-gradient(var(--splash-wash), var(--splash-wash)),
       url("/splash/abstract.webp") center / cover no-repeat;
+  }
+  html[data-theme="dark"] .welcome [data-part="morning"],
+  html:not([data-theme="dark"]) .welcome [data-part="evening"] {
+    display: none;
   }
   .welcome-art::after {
     content: "";

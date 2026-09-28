@@ -60,7 +60,7 @@ const FAINT: Record<"light" | "dark", Pair[]> = {
 // (ADR-135): a sketch behind the words, never competing with them.
 const SPLASH_FIGURE = { light: 1.84, dark: 2.21 };
 // The splash's paintings show through their paper wash at a share in this range: a picture
-// under the field, not a photograph on it, with the abstract strokes a step stronger.
+// under the field, not a photograph on it, the same for both.
 const SPLASH_PAINT = { min: 0.1, max: 0.3 };
 // No pixel of the decoded painting may be brighter than this (paint-chrome.mjs).
 const PAINTING_BOUND = 0.1;
@@ -200,13 +200,11 @@ describe("the window chrome's tokens", () => {
     expect(Object.fromEntries(measured)).toEqual(SPLASH_FIGURE);
   });
 
-  it("show the splash's paintings through their wash, the abstract a step more", () => {
+  it("show the splash's paintings through their one wash in either theme", () => {
     for (const theme of Object.values(THEMES)) {
-      const landscape = shown("--splash-wash-landscape", theme);
-      const abstract = shown("--splash-wash-abstract", theme);
-      expect(landscape).toBeGreaterThanOrEqual(SPLASH_PAINT.min);
-      expect(abstract).toBeLessThanOrEqual(SPLASH_PAINT.max);
-      expect(abstract).toBeGreaterThan(landscape);
+      const through = shown("--splash-wash", theme);
+      expect(through).toBeGreaterThanOrEqual(SPLASH_PAINT.min);
+      expect(through).toBeLessThanOrEqual(SPLASH_PAINT.max);
     }
   });
 });

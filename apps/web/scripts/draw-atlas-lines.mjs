@@ -10,13 +10,14 @@ import path from "node:path";
 import { ROOT } from "./harness.mjs";
 
 const OUT = path.join(ROOT, "apps/web/public/splash/atlas-lines.svg");
-// The box is 3.2 globe radii wide, centred on the globe, so the spokes end at 1.6 radii.
+// The box is eight globe radii wide, centred on the globe, so the spokes run four radii out,
+// past any surface's edge; index.css fades them out before they get there.
 const SIZE = 1000;
 const C = SIZE / 2;
-const R = SIZE / 3.2; // the globe's radius
+const R = SIZE / 8; // the globe's radius
 const DOTTED = 1.48 * R;
 const SMALL = 0.49 * R;
-const SPOKE = 1.6 * R;
+const SPOKE = 4 * R;
 // The spokes' angles from the horizontal, in degrees: three pairs, mirrored top and bottom.
 const ANGLES = [29, 45, 61, -29, -45, -61];
 

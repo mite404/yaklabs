@@ -7,16 +7,15 @@ import { env } from "../env";
 import { useShell } from "../shell/model";
 import { KayMark } from "../shell/sidebar";
 
-// The part of the day the greeting names, as Kay's own new tab does.
-type Part = "morning" | "afternoon" | "evening";
+// The part of the day the greeting names: the morning in the light theme, the evening in the
+// dark one (Ethan), rather than the clock. Both are in the DOM; index.css shows the theme's.
+type Part = "morning" | "evening";
+const PARTS: readonly Part[] = ["morning", "evening"];
 
 const DATE = new Intl.DateTimeFormat("en-US", { weekday: "long", month: "long", day: "numeric" });
 const NOT_HERE = "Not in the web build yet";
 
-const partOf = (hour: number): Part =>
-  hour < 12 ? "morning" : hour < 18 ? "afternoon" : "evening";
-
-// "Good afternoon, Ethan", or "Good afternoon" for a build with no sign-in.
+// "Good morning, Ethan", or "Good morning" for a build with no sign-in.
 const greetingFor = (part: Part, name: string | null): string =>
   `Good ${part}${name === null ? "" : `, ${name}`}`;
 
@@ -25,17 +24,19 @@ const lineFor = (part: Part): string => `Spend your ${part} on the thing that ma
 const LABEL = "text-[11px] font-medium tracking-[0.1em] text-soft-ink uppercase";
 
 function Greeting({ name }: { name: string | null }) {
-  const now = new Date();
-  const part = partOf(now.getHours());
   return (
     <div>
       <p className="text-xs font-medium tracking-[0.08em] text-soft-ink uppercase">
-        {DATE.format(now)}
+        {DATE.format(new Date())}
       </p>
-      <h1 className="mt-1 font-sans text-2xl font-semibold tracking-tight text-ink">
-        {greetingFor(part, name)}
-      </h1>
-      <p className="mt-1 text-soft-ink">{lineFor(part)}</p>
+      {PARTS.map((part) => (
+        <div key={part} data-part={part}>
+          <h1 className="mt-1 font-sans text-2xl font-semibold tracking-tight text-ink">
+            {greetingFor(part, name)}
+          </h1>
+          <p className="mt-1 text-soft-ink">{lineFor(part)}</p>
+        </div>
+      ))}
     </div>
   );
 }
@@ -54,7 +55,7 @@ const GreetingLine = env.auth.kind === "workos" ? WorkOsGreeting : LocalGreeting
 
 /**
  * A new thread's welcome (ADR-136), after Kay's own new tab: the mark, the date, a greeting for
- * the time of day, the projects, and the actions a thread can open with. It shows in the main
+ * the theme's time of day, the projects, and the actions a thread can open with. It shows in the main
  * pane while the thread has no turns, over the painting `<html data-splash>` names, and leaves
  * with the first turn. Open file and Open terminal are the desktop app's; here they wait.
  */
