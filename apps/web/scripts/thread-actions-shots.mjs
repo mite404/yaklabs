@@ -35,11 +35,23 @@ async function openThemed(browser, theme) {
 const quiet = (page) =>
   page.locator("[data-sonner-toast]").first().waitFor({ state: "detached", timeout: 20_000 });
 
+// Waits for the open menus' own animations to end, so a menu is shot opaque, not mid-fade. The
+// page's endless ones (the radar's sweep) are not the menus', so they are not waited on.
+const still = (page) =>
+  page.evaluate(() =>
+    Promise.all(
+      [...document.querySelectorAll('[role="menu"]')]
+        .flatMap((menu) => menu.getAnimations({ subtree: true }))
+        .map((each) => each.finished),
+    ),
+  );
+
 // Opens the shown thread's Share submenu.
 async function openShare(page) {
   await headerOf(page).getByRole("button", { name: "Thread actions" }).click();
   await page.getByRole("menuitem", { name: /^Share thread/ }).hover();
   await page.getByRole("menuitem", { name: "1 hour" }).waitFor();
+  await still(page);
 }
 
 // Archives, pins, snoozes (picturing the card on the way when `card` is given) and shares, the
@@ -82,6 +94,7 @@ async function desktop(browser, theme, file) {
   await headerOf(page).screenshot({ path: file(`desktop-header-${theme}`) });
   await headerOf(page).getByRole("button", { name: "Thread actions" }).click();
   await page.getByRole("menu").waitFor();
+  await still(page);
   await page.screenshot({ path: file(`desktop-menu-${theme}`) });
   await page.keyboard.press("Escape");
 
@@ -105,6 +118,7 @@ async function phone(browser, theme, file) {
     .getByRole("button", { name: "Thread actions" })
     .click();
   await page.getByRole("menu").waitFor();
+  await still(page);
   await page.screenshot({ path: file(`phone-menu-${theme}`) });
   await page.keyboard.press("Escape");
   await page.getByRole("button", { name: "Toggle sidebar" }).click();
