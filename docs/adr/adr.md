@@ -1436,6 +1436,8 @@ An open fold's "v" fades out as soon as the pointer leaves, on a project and a m
 "as soon as the mouse is off hover ... this icon should fade away"). Keyboard focus shows it too,
 but only `:focus-visible`: a click leaves focus on the button, and `:focus-within` would hold the
 "v" up until the next click elsewhere.
+A touch screen has no hover to reveal the "v", so there (`@media (hover: none)`) an open fold
+always shows it, on a project and a main alike (Ethan, asked whether it should: "yes").
 The row is a link, so its fold button cannot nest inside it; the row uses the stretched-link
 pattern instead (Bootstrap's recipe). The link stays sized to its title, with an `::after` that
 stretches to the row's edges since the row, not the link, is the nearest positioned ancestor, so
@@ -1450,6 +1452,6 @@ A main's children were listed in canvas lane order: open lanes first, then the c
 click on a closed child's row reopens its lane, so the row jumped up the list, out from under
 the pointer that had just clicked it. Ethan: "when a user interacts with the thread, by opening
 it in the side nav bar it should not be rearranged ... that's bad UI." The recency he asked for
-is creation order. Mains stay newest created first; children are now oldest created first, the
-order their lanes first appended to the canvas. Opening, closing or dragging a lane never moves
-a row, and nothing in the sidebar sorts by activity. The canvas keeps its own lane order.
+is creation order, newest first: mains stay newest created first, and at Ethan's word children
+now list the same way under their main. Opening, closing or dragging a lane never moves a row,
+and nothing in the sidebar sorts by activity. The canvas keeps its own lane order.
