@@ -2130,6 +2130,30 @@ try {
   // On a phone the workspace shows one pane at a time, the one the Layout switch names, across
   // the whole width; the others stay mounted but inert, so a draft or a reply survives a switch.
   await onOwnPage(
+    "on a touch screen an open fold shows its arrow with no hover, a project's and a main's",
+    "/t/t-001?scenario=demo",
+    { viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true },
+    async (own) => {
+      const noHover = await own.evaluate(() => matchMedia("(hover: none)").matches);
+      await own.getByRole("button", { name: "Toggle sidebar" }).first().tap();
+      const side = own.locator('[data-slot="sidebar"]');
+      const project = side.getByRole("button", { name: "Demo store", exact: true });
+      const main = side.locator('[data-slot="thread-row"]').first();
+      await main.waitFor({ timeout: 15_000 });
+      await own.waitForTimeout(300);
+      const [projectArrow, mainArrow] = await Promise.all(
+        [project, main].map((row) =>
+          row.locator('[data-slot="fold-chevron"]').evaluate((el) => getComputedStyle(el).opacity),
+        ),
+      ); // → string[]
+      return {
+        ok: noHover && projectArrow === "1" && mainArrow === "1",
+        detail: `hover: none ${noHover}; project arrow ${projectArrow}, main arrow ${mainArrow}`,
+      };
+    },
+  );
+
+  await onOwnPage(
     "on a phone the Layout switch shows one pane at a time, across the whole width",
     "/t/t-001?scenario=demo",
     { viewport: { width: 390, height: 844 } },

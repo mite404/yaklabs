@@ -59,13 +59,14 @@ function Named({ name, row }: { name: string; row: ReactElement }) {
 // spans it (a thread row's stretched link and separate button both sit inside one). Keyboard
 // focus shows it too, but only `:focus-visible`: a click also leaves focus on the button, and
 // plain `:focus-within` would then hold the "v" up after the pointer has gone.
+// A touch screen, with no hover to reveal it, shows the "v" whenever the fold is open.
 function FoldChevron({ open }: { open: boolean }): ReactElement {
   const common = "size-3.5! shrink-0 text-soft-ink";
   return open ? (
     <ChevronDown
       data-slot="fold-chevron"
       aria-hidden="true"
-      className={`${common} opacity-0 transition-opacity group-hover/fold:opacity-100 group-has-focus-visible/fold:opacity-100 motion-reduce:transition-none`}
+      className={`${common} opacity-0 transition-opacity group-hover/fold:opacity-100 group-has-focus-visible/fold:opacity-100 [@media(hover:none)]:opacity-100 motion-reduce:transition-none`}
     />
   ) : (
     <ChevronRight data-slot="fold-chevron" aria-hidden="true" className={common} />
