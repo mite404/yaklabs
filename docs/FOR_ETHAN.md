@@ -1884,16 +1884,16 @@ share one DOM and one stack; the attribute on `<html>` picks the plate, and noth
 
 The "agent working" glyph (Storybook: Motion/Agent working) is Kay's 2x2 task-size squares,
 animated so a band of green sweeps left to right. There is only one keyframe track. Every square
-plays it; the right column is simply started 35% of a cycle later, so it peaks just as the left
-column begins to fade. Colour rides on opacity inside that one track: solid is moss, half-faded
+plays it; the right column is simply started 25% of a cycle later, so it peaks while the left
+column fades. Colour rides on opacity inside that one track: solid is moss, half-faded
 is olive, nearly clear is sage.
 
 ```css
 /* packages/catalog/src/motion.css */
 .agent-working {
-  --working-duration: 1200ms; /* one knob; Storybook scrubs it */
-  /* a head start of 65% is the same as a lag of 35%, and never shows a blank first frame */
-  --working-lag: calc(var(--working-duration) * -0.65);
+  --working-duration: 1500ms; /* one knob; Storybook scrubs it */
+  /* a head start of 75% is the same as a lag of 25%, and never shows a blank first frame */
+  --working-lag: calc(var(--working-duration) * -0.75);
 }
 .agent-working-cell:nth-child(even) {
   --working-offset: var(--working-lag); /* right column: same track, shifted */
@@ -1904,13 +1904,14 @@ is olive, nearly clear is sage.
 sequenceDiagram
   participant L as Left column
   participant R as Right column
-  Note over L,R: one 1200ms cycle, same keyframes
-  L->>L: 0-35% fade in, sage → moss
-  R->>R: already fading out from last cycle
-  L->>L: 35-50% hold solid
-  R->>R: 0-35% fade in (35% behind)
-  L->>L: 50-100% fade out, moss → olive → sage
-  R->>R: holds solid while left fades
+  Note over L,R: one 1500ms cycle, same keyframes
+  L->>L: 0-25% fade in, sage → moss
+  R->>R: 25-50% fade in (25% behind)
+  L->>L: 25-35% hold solid, then 35-65% fade out
+  R->>R: 50-60% hold solid while left clears
+  L->>L: 65-100% rest, clear
+  R->>R: 60-90% fade out, moss → olive → sage
+  Note over L,R: 90-100% all four clear: the wave completes
 ```
 
 The film version: two dancers, one piece of music, the second one counting in late. You do not
@@ -1918,7 +1919,10 @@ choreograph a second routine, you cue the same one later. A canon in music works
 
 The first cut ran at 150ms: nearly seven loops a second, which the eye reads as flicker, not a
 travelling wave, and the fade through the greens lasted about 75ms, too short to register. It now
-ships at 1200ms. The Speeds story plays 650, 850, 1200, 1350 and 1500ms side by side, because
+ships at 1500ms, with a rest in each loop: the motion fits in the first 65% of a square's cycle
+and it sits clear for the rest, so the wave lands before the next one starts. A rest is what
+separates steady work from an alarm; an alarm never pauses. The Speeds story plays 650, 850, 1200,
+1350 and 1500ms side by side, because
 timing is a taste call that is easier to defend with the alternatives on screen than in words.
 
 Senior-engineer takeaway: when motion must stay in sync, derive every actor from one clock. A
