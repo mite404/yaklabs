@@ -1231,7 +1231,7 @@ try {
         const top = [
           '[aria-label="Toggle sidebar"]',
           '[aria-label^="Notifications"]',
-          '[aria-label="Thread and project actions"]',
+          '[aria-label="Thread actions"]',
         ].map((selector) => takesTap(bar.querySelector(selector)));
         const views = [...bar.querySelectorAll('[role="group"][aria-label="Layout"] button')].map(
           takesTap,

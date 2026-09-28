@@ -365,7 +365,7 @@
     white-space: nowrap;
     text-overflow: ellipsis;
   }
-  /* A collapsed lane (ADR-126) is a strip, GitButler's collapsed stack: the grip always shows
+  /* A collapsed lane (ADR-133) is a strip, GitButler's collapsed stack: the grip always shows
      at its head, the same six dots as the bar's, and the title reads top to bottom beneath,
      clipped with an ellipsis where it outruns the strip. The whole strip takes hold of the lane,
      so a hand shows over all of it but its expand. As with the bar, the grip is only drawn on a

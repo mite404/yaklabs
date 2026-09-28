@@ -21,6 +21,9 @@ function withLanes(collapsed: boolean[]): Workspace {
         updatedAt: AT,
         preview: "",
         draft: "",
+        pinnedAt: null,
+        snoozedUntil: null,
+        archivedAt: null,
       },
     ],
     lanes: {
@@ -35,6 +38,7 @@ function withLanes(collapsed: boolean[]): Workspace {
     },
     shell: null,
     notifications: [],
+    shares: [],
   };
 }
 

@@ -6,7 +6,7 @@ import type { LaneHandlers } from "./lane-reorder";
 
 /**
  * One lane on the canvas: its name, the width it was left at (null: the default), whether it is
- * collapsed to a strip (ADR-126), and its content, drawn with the lane's collapse (`leading`)
+ * collapsed to a strip (ADR-133), and its content, drawn with the lane's collapse (`leading`)
  * before the title in its own title bar, or without it while the lane is collapsed.
  */
 export type LaneView = {
@@ -28,7 +28,7 @@ export type LaneReports = {
 // is always on screen and the ground beside it says there is more row to the right.
 const LANE_WIDTH = "min(560px, calc(100% - 48px))";
 
-// The lane's collapse, in the container it folds (ADR-127): the thread's or the card's title
+// The lane's collapse, in the container it folds (ADR-134): the thread's or the card's title
 // bar while it is open, the head of its strip while it is collapsed. It says what it will do.
 function CollapseToggle({ collapsed, onClick }: { collapsed: boolean; onClick: () => void }) {
   return (
@@ -63,7 +63,7 @@ function LaneTop({ title, onClose }: { title: string; onClose: () => void }) {
   );
 }
 
-// A collapsed lane (ADR-126): a slim strip down the lane's whole height with its
+// A collapsed lane (ADR-133): a slim strip down the lane's whole height with its
 // expand at the head, the grip always shown beneath, and the title turned to read top to
 // bottom, clipped with an ellipsis. The whole strip but its expand takes hold of the lane
 // (lane-reorder.ts).
@@ -155,7 +155,7 @@ function LaneHead({
   );
 }
 
-/** One lane in the canvas's row: open at its width, or collapsed to a strip (ADR-126). */
+/** One lane in the canvas's row: open at its width, or collapsed to a strip (ADR-133). */
 export function Lane({
   lane,
   width,

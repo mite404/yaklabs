@@ -1,12 +1,14 @@
 import { APIError, type Anthropic } from "@anthropic-ai/sdk";
 import { Hono } from "hono";
+import type { Context } from "hono";
 import { createMiddleware } from "hono/factory";
 import { validator } from "hono/validator";
 import type { TokenVerifier } from "./auth";
 import { gatewayRequestSchema, type GatewayRequest } from "./contract";
+import { createShare, readShare, revokeShare, type ShareAnswer, type ShareDeps } from "./shares";
 
 // What the gateway needs from outside: the Worker passes the real ones, tests pass fakes.
-type Dependencies = { verifyToken: TokenVerifier; anthropic: Anthropic };
+type Dependencies = { verifyToken: TokenVerifier; anthropic: Anthropic; shares: ShareDeps };
 
 // The gateway owns the model and every request setting (ADR-085); the browser sends only turns.
 const MODEL = "claude-opus-5";
@@ -54,40 +56,71 @@ const openReply = async (
   return body;
 };
 
+// A share route's answer as a response. The sealed bytes are never cached anywhere, so a share
+// taken down or ended is gone from every copy at once (ADR-131).
+function shareResponse(c: Context, answer: ShareAnswer): Response {
+  if (answer.status === 200) {
+    return c.body(answer.bytes, 200, {
+      "Content-Type": "application/octet-stream",
+      "Cache-Control": "no-store",
+      "X-Expires-At": answer.expiresAt,
+    });
+  }
+  if (answer.status === 204) return c.body(null, 204);
+  return c.json(answer.json, answer.status);
+}
+
 /**
  * Builds the gateway (ADR-085): the one server in the slice. It checks the caller's WorkOS
- * token, forwards the turns to the model with the key it holds, streams the reply back and
- * stores nothing. The route table is the contract the browser's typed client compiles against
+ * token, forwards the turns to the model with the key it holds, and streams the reply back;
+ * it stores no turn. The one thing it keeps is a thread made public, sealed with a key it never
+ * sees, until the share ends (ADR-131). The route table is the contract the browser's typed client compiles against
  * (ADR-086).
  */
-export const createApp = ({ verifyToken, anthropic }: Dependencies) => {
+export const createApp = ({ verifyToken, anthropic, shares }: Dependencies) => {
   const requireSession = createMiddleware(async (c, next) => {
     if (await isAuthorized(verifyToken, c.req.header("Authorization"))) return next();
     return c.json({ error: "unauthorized" }, 401, { "WWW-Authenticate": "Bearer" });
   });
 
-  return new Hono()
-    .get("/api/health", (c) => c.json({ ok: true }))
-    .post(
-      "/api/messages",
-      requireSession,
-      validator("json", (value, c) => {
-        const parsed = gatewayRequestSchema.safeParse(value); // → { success, data | error }
-        return parsed.success ? parsed.data : c.json({ error: "invalid request" }, 400);
-      }),
-      async (c) => {
-        try {
-          const body = await openReply(anthropic, c.req.valid("json")); // → NDJSON stream
-          return c.body(body, 200, { "Content-Type": NDJSON });
-        } catch (error) {
-          if (!(error instanceof APIError)) throw error;
-          // The status alone: the upstream's body could echo the request, and the key stays
-          // here. A network failure has no status.
-          const status = typeof error.status === "number" ? error.status : null; // → number|null
-          return c.json({ error: "upstream", status }, 502);
-        }
-      },
-    );
+  return (
+    new Hono()
+      .get("/api/health", (c) => c.json({ ok: true }))
+      // A thread made public for a while (ADR-131): only a signed-in visitor may keep one, anyone
+      // with the link may read it, and its revoke token takes it down early.
+      .post("/api/shares", requireSession, async (c) =>
+        shareResponse(c, await createShare(shares, c.req.query("ttl"), await c.req.arrayBuffer())),
+      )
+      .get("/api/shares/:id", async (c) =>
+        shareResponse(c, await readShare(shares, c.req.param("id"))),
+      )
+      .delete("/api/shares/:id", async (c) =>
+        shareResponse(
+          c,
+          await revokeShare(shares, c.req.param("id"), c.req.header("X-Revoke-Token")),
+        ),
+      )
+      .post(
+        "/api/messages",
+        requireSession,
+        validator("json", (value, c) => {
+          const parsed = gatewayRequestSchema.safeParse(value); // → { success, data | error }
+          return parsed.success ? parsed.data : c.json({ error: "invalid request" }, 400);
+        }),
+        async (c) => {
+          try {
+            const body = await openReply(anthropic, c.req.valid("json")); // → NDJSON stream
+            return c.body(body, 200, { "Content-Type": NDJSON });
+          } catch (error) {
+            if (!(error instanceof APIError)) throw error;
+            // The status alone: the upstream's body could echo the request, and the key stays
+            // here. A network failure has no status.
+            const status = typeof error.status === "number" ? error.status : null; // → number|null
+            return c.json({ error: "upstream", status }, 502);
+          }
+        },
+      )
+  );
 };
 
 /** The route table, for Hono's typed client in the browser (ADR-086). */

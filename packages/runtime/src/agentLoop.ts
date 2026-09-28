@@ -3,17 +3,16 @@ import { createLabAgent } from "@yaklabs/catalog/labAgent";
 import { z } from "zod";
 import { withAgentReply, withUserTurn, type Stamp } from "./conversation";
 import { createGatewayAgent } from "./gatewayAgent";
-import type { Mint } from "./mint";
 import {
   commandSchema,
   type AgentSpec,
   type Command,
-  type NewItem,
   type Notice,
   type RuntimeData,
   type Source,
 } from "./protocol";
-import type { Store } from "./store";
+import { create, isMenuWrite, menuWrite, type Writer } from "./storeWrites";
+import { createSettler, timeoutSchedule, type Schedule, type Settler } from "./settler";
 import { lanesOf, mergeLanes, type ThreadId } from "./workspace";
 
 /** A deterministic stall or failure: `hold` never answers, `fail` answers with its reason. */
@@ -23,10 +22,10 @@ export type Fault = "hold" | { fail: string };
 export type Faults = { start?: Fault; open?: Fault; send?: Fault };
 
 /** What the worker opened for `init`: the store, where it lives, how it mints, what faults. */
-export type Opened = { store: Store; source: Source; mint: Mint; faults: Faults };
+export type Opened = Writer & { source: Source; faults: Faults };
 
 // What an agent may need to answer one message.
-type AgentContext = { store: Store; threadId: ThreadId; accessToken?: string };
+type AgentContext = { store: Writer["store"]; threadId: ThreadId; accessToken?: string };
 
 /** What the loop needs from where it runs: the worker entry gives the real ones, tests fakes. */
 export type LoopHost = {
@@ -36,10 +35,12 @@ export type LoopHost = {
   open: (data: RuntimeData) => Promise<Opened>;
   /** Builds the agent for one message; defaults to the lab stand-in or the gateway agent. */
   createAgent?: (spec: AgentSpec, context: AgentContext) => Agent;
+  /** How the settling timer waits (`Schedule`); defaults to `setTimeout`. */
+  schedule?: Schedule;
 };
 
 type CommandOf<K extends Command["kind"]> = Extract<Command, { kind: K }>;
-type Session = Opened & { agent: AgentSpec };
+type Session = Opened & { agent: AgentSpec; settler: Settler };
 
 // Everything the handlers share: the host, the session `init` started, the live replies, and
 // the last state pushed, so an unchanged one is not pushed again.
@@ -50,8 +51,6 @@ type Loop = {
   lastState?: string;
 };
 
-// What a main thread is called until someone names it.
-const NEW_THREAD = "New thread";
 const LAB: AgentSpec = { kind: "lab" };
 
 // The request a malformed command still names, so its failure reaches the right caller.
@@ -67,7 +66,7 @@ function reasonOf(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-function stampOf(mint: Mint): Stamp {
+function stampOf(mint: Writer["mint"]): Stamp {
   const now = mint.now();
   return { at: now.toISOString(), time: mint.turnTime(now) };
 }
@@ -102,35 +101,6 @@ function pushState(loop: Loop, { store, source }: Session): void {
   loop.host.post(notice);
 }
 
-// Makes the item with a freshly minted id; a child's lane lands at `at` in the same write.
-function create({ store, mint }: Session, item: NewItem): string {
-  const now = mint.now().toISOString();
-  const blank = { createdAt: now, updatedAt: now, messages: [] };
-  switch (item.kind) {
-    case "project": {
-      const id = mint.project();
-      store.addProject({ id, name: item.name, createdAt: now });
-      return id;
-    }
-    case "main": {
-      const id = mint.thread();
-      const place = { kind: "main", projectId: item.projectId } as const;
-      store.addThread({ ...blank, id, title: item.title ?? NEW_THREAD, place, draft: "" });
-      return id;
-    }
-    case "child": {
-      const id = mint.thread();
-      const place = { kind: "child", parentId: item.parentId } as const;
-      store.addThread({ ...blank, id, title: item.title, place, draft: item.draft }, item.at);
-      return id;
-    }
-    default: {
-      const unhandled: never = item;
-      return unhandled;
-    }
-  }
-}
-
 // Runs one write, then pushes the state it left before answering, so an id the answer names
 // is already in the page's snapshot.
 async function write(
@@ -139,6 +109,7 @@ async function write(
 ): Promise<void> {
   const session = await started(loop);
   const answer = apply(session);
+  session.settler.settle(false);
   pushState(loop, session);
   loop.host.post(answer);
 }
@@ -204,14 +175,35 @@ async function init(loop: Loop, { agent, data }: CommandOf<"init">): Promise<voi
   loop.session = loop.host.open(data).then(async (opened) => {
     if (early === undefined) loop.host.post({ kind: "opening", source: opened.source });
     await meet(opened.faults.start);
-    // A scenario always answers with the lab stand-in, so a mock never reaches a model.
-    return { ...opened, agent: opened.source.kind === "scenario" ? LAB : agent };
+    const { store, mint } = opened;
+    const session: Session = {
+      ...opened,
+      // A scenario always answers with the lab stand-in, so a mock never reaches a model.
+      agent: opened.source.kind === "scenario" ? LAB : agent,
+      settler: createSettler({
+        store,
+        mint,
+        schedule: loop.host.schedule,
+        onChange: () => {
+          pushState(loop, session);
+        },
+      }),
+    };
+    return session;
   });
-  pushState(loop, await loop.session);
+  const session = await loop.session;
+  session.settler.settle(true);
+  pushState(loop, session);
 }
 
 // Handles a command that names a request; whatever it throws fails that request alone.
 function handleRequest(loop: Loop, command: Exclude<Command, { kind: "init" }>): Promise<void> {
+  if (isMenuWrite(command)) {
+    return write(loop, (session) => {
+      menuWrite(session, command);
+      return { kind: "done", requestId: command.requestId };
+    });
+  }
   switch (command.kind) {
     case "open":
       return open(loop, command);
@@ -276,7 +268,11 @@ async function handle(loop: Loop, command: Command): Promise<void> {
  */
 export function createAgentLoop(host: LoopHost): (data: unknown) => Promise<void> {
   const loop: Loop = {
-    host: { ...host, createAgent: host.createAgent ?? defaultAgent },
+    host: {
+      ...host,
+      createAgent: host.createAgent ?? defaultAgent,
+      schedule: host.schedule ?? timeoutSchedule,
+    },
     replies: new Map(),
   };
 

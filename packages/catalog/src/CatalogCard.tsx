@@ -120,7 +120,7 @@ function Chart({ selection }: { selection: Selection }) {
  * evaluation workbench, "thread" for a card inside a chat thread (ADR-023).
  * @param shareable Show the share button (ADR-064); off on the public page itself.
  * @param draggable Let the header carry the card out, as onto the compose canvas (ADR-089).
- * @param leading A host's control before the title, such as a lane's collapse (ADR-127); a
+ * @param leading A host's control before the title, such as a lane's collapse (ADR-134); a
  * card with no header shows it at its top.
  */
 export function CatalogCard({

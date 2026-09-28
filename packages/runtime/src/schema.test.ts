@@ -110,33 +110,136 @@ describe("planV2", () => {
 });
 
 describe("migrate", () => {
-  it("brings a new database to version 3, and leaves it there on a second run", async () => {
+  it("brings a new database to version 4, and leaves it there on a second run", async () => {
     const db = await freshDatabase();
     migrate(db);
-    expect(db.selectValue("pragma user_version")).toBe(3);
+    expect(db.selectValue("pragma user_version")).toBe(4);
   });
 
   it("refuses a database newer than this build", async () => {
     const db = await freshDatabase();
-    db.exec("pragma user_version = 4");
+    db.exec("pragma user_version = 5");
     expect(() => {
       migrate(db);
-    }).toThrow("The database is at version 4, newer than this build");
+    }).toThrow("The database is at version 5, newer than this build");
   });
+});
 
-  it("keeps a v2 canvas's lanes, each expanded, on the way to v3", async () => {
+// A database stopped at version 2, holding a project, a main with a child, a lane and a turn.
+async function atVersion2(): Promise<Database> {
+  const db = await openDatabase({ kind: "memory" });
+  onTestFinished(() => {
+    db.close();
+  });
+  db.exec("pragma foreign_keys = on");
+  migrate(db, undefined, migrationSteps.slice(0, 2));
+  db.exec("insert into projects values ('p', 'P', '2026-09-26T10:00:00.000Z')");
+  insertThread(db, "main", "p", null);
+  insertThread(db, "kid", null, "main");
+  insertLane(db, "main", 0, "l-kid", "kid");
+  db.exec(`insert into messages values ('kid', 0, 'user', 'Why?', '10:00', '{"id":"u1"}')`);
+  return db;
+}
+
+// Every row of the tables v2 already had, so a step can be shown to leave them alone.
+const v2Rows = (db: Database) =>
+  ["projects", "lanes", "messages", "notifications"].map((table) =>
+    db.selectObjects(`select * from ${table} order by 1, 2`),
+  );
+const threadRows = (db: Database) =>
+  db.selectObjects(
+    "select id, title, created_at, updated_at, project_id, parent_id, draft from conversations order by id",
+  );
+
+describe("the 2 → 3 step (ADR-132)", () => {
+  it("adds the marks and the shares and leaves every v2 row as it was", async () => {
+    const db = await atVersion2();
+    const [before, threads] = [v2Rows(db), threadRows(db)];
+    migrate(db, undefined, migrationSteps.slice(0, 3));
+    expect(db.selectValue("pragma user_version")).toBe(3);
+    expect(v2Rows(db)).toEqual(before);
+    expect(threadRows(db)).toEqual(threads);
+    expect(
+      db.selectObjects(
+        "select pinned_at, snoozed_until, archived_at, deleted_at, touched_at from conversations",
+      ),
+    ).toEqual([
+      {
+        pinned_at: null,
+        snoozed_until: null,
+        archived_at: null,
+        deleted_at: null,
+        touched_at: null,
+      },
+      {
+        pinned_at: null,
+        snoozed_until: null,
+        archived_at: null,
+        deleted_at: null,
+        touched_at: null,
+      },
+    ]);
+    expect(db.selectValue("select count(*) from shares")).toBe(0);
+  });
+});
+
+describe("the 2 → 3 step survives a crash", () => {
+  it("rolls back a crash inside the step, then finishes on the next run", async () => {
+    const db = await atVersion2();
+    const before = [v2Rows(db), threadRows(db)];
+    const crashing = [
+      ...migrationSteps.slice(0, 2),
+      (tx: Database) => {
+        migrationSteps[2](tx);
+        throw new Error("The tab closed");
+      },
+    ];
+    expect(() => {
+      migrate(db, undefined, crashing);
+    }).toThrow("The tab closed");
+    expect(db.selectValue("pragma user_version")).toBe(2);
+    expect(db.selectValues("select name from pragma_table_info('conversations')")).not.toContain(
+      "pinned_at",
+    );
+    migrate(db, undefined, migrationSteps.slice(0, 3));
+    migrate(db, undefined, migrationSteps.slice(0, 3));
+    expect(db.selectValue("pragma user_version")).toBe(3);
+    expect([v2Rows(db), threadRows(db)]).toEqual(before);
+    expect(db.selectObjects("pragma foreign_key_check")).toEqual([]);
+  });
+});
+
+describe("the v3 schema keeps shares on their thread", () => {
+  it("keeps a share only for a thread that exists", async () => {
+    const db = await freshDatabase();
+    const share = (thread: string) => {
+      db.exec({
+        sql: `insert into shares (id, thread_id, link, revoke_token, created_at, expires_at)
+              values ('s-' || ?, ?, 'https://kay.example/share.html#t=x', 'r', ?, ?)`,
+        bind: [thread, thread, "2026-09-26T10:00:00.000Z", "2026-09-26T11:00:00.000Z"],
+      });
+    };
+    share("main");
+    expect(() => {
+      share("nowhere");
+    }).toThrow(/FOREIGN KEY constraint failed/);
+  });
+});
+
+describe("the 3 → 4 step (ADR-133)", () => {
+  it("keeps a v3 canvas's lanes, each expanded", async () => {
     const db = await openDatabase({ kind: "memory" });
     onTestFinished(() => {
       db.close();
     });
-    migrate(db, undefined, migrationSteps.slice(0, 2));
+    migrate(db, undefined, migrationSteps.slice(0, 3));
     db.exec("insert into projects values ('p', 'P', '2026-09-26T10:00:00.000Z')");
     insertThread(db, "main", "p", null);
     insertThread(db, "kid", null, "main");
     insertLane(db, "main", 0, "l-kid", "kid");
     insertLane(db, "main", 1, "c-1");
     migrate(db);
-    expect(db.selectValue("pragma user_version")).toBe(3);
+    expect(db.selectValue("pragma user_version")).toBe(4);
     expect(db.selectObjects("select id, width, collapsed from lanes order by seq")).toEqual([
       { id: "l-kid", width: null, collapsed: 0 },
       { id: "c-1", width: null, collapsed: 0 },

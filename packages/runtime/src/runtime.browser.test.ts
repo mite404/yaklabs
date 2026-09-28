@@ -58,6 +58,12 @@ function titleOf(state: RuntimeState, id: ThreadId): string | undefined {
   return state.workspace.threads.find((thread) => thread.id === id)?.title;
 }
 
+// A thread's pin as `state()` shows it; nothing before the workspace arrives.
+function pinnedAtOf(state: RuntimeState, id: ThreadId): string | null | undefined {
+  if (state.kind !== "ready") return undefined;
+  return state.workspace.threads.find((thread) => thread.id === id)?.pinnedAt;
+}
+
 // A fresh child of the profit thread, so a rerun in the same browser profile never collides.
 async function newChild(runtime: Runtime): Promise<ThreadId> {
   const draft = "> Saturday leads\n\n";
@@ -70,6 +76,26 @@ async function newChild(runtime: Runtime): Promise<ThreadId> {
   });
   return threadIdSchema.parse(id);
 }
+
+describe("the runtime in a Web Worker runs the thread menu (ADR-126)", () => {
+  it("shows a pin and a delete in the same frame as the call, and an undo once confirmed", async () => {
+    const runtime = startLab();
+    await ready(runtime);
+    const id = await newChild(runtime);
+    const pinning = runtime.mark(id, { pinned: true });
+    expect(pinnedAtOf(runtime.state(), id)).toEqual(expect.any(String));
+    await pinning;
+    const deleting = runtime.delete(id);
+    expect(titleOf(runtime.state(), id)).toBeUndefined();
+    await deleting;
+    expect(titleOf(await ready(runtime), id)).toBeUndefined();
+    await runtime.restore(id);
+    expect(titleOf(runtime.state(), id)).toBe("Saturday");
+    await expect(runtime.mark(id, { snoozedUntil: "2020-01-01T00:00:00.000Z" })).rejects.toThrow(
+      "A snooze wakes after now",
+    );
+  }, 20_000);
+});
 
 describe("the runtime in a Web Worker keeps threads on the device", () => {
   it("starts from OPFS with the profit thread, and lists a new child before create settles", async () => {

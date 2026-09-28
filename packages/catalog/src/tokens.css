@@ -24,6 +24,9 @@
   /* Body and all secondary text, one step lighter than headings: the value in the site's
      shared brand.css (ADR-057), where its pages differ (#4a4a47, #5c5c57). 6.4:1 on paper. */
   --soft-ink: #565650;
+  /* An archived thread (ADR-129): soft ink a step toward the paper, as dim as text may go on
+     the sidebar's hover fill. 5.17:1 on paper, 4.67:1 on paper-deep. */
+  --faint-ink: #64645e;
   --blue: #95aac8; /* text selection */
   --sage: #c7cfba; /* the user's bubble only (ADR-047) */
   --chalk: #e5e8d9;
@@ -275,6 +278,7 @@ button:hover {
   --control-bg: #222722;
   --ink: var(--yak-cream); /* 14.7:1 */
   --soft-ink: #b4b4b0; /* derived: cream at 72%; 8.1:1, 6.8:1 on paper-deep */
+  --faint-ink: #92938f; /* archived: 5.46:1 on paper, 4.60:1 on paper-deep */
   --rule: rgba(240, 239, 234, 0.72);
   --hairline: rgba(240, 239, 234, 0.18);
   --olive: #8e9d6f; /* derived: the same hue, lifted so the slider's accent clears 3:1 (5.8:1) */
@@ -621,7 +625,7 @@ h1 span {
 .card-heading h2 {
   font-size: 21px;
 }
-/* A host's control before the title (ADR-127), such as a lane's collapse: first in the row, its
+/* A host's control before the title (ADR-134), such as a lane's collapse: first in the row, its
    glyph pulled back onto the heading's edge, and the title straight after it. A card with no
    header carries it at its top. */
 .card-heading > .header-leading,

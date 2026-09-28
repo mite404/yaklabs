@@ -48,7 +48,7 @@ function SidebarToggle() {
 
 /**
  * The window's one title bar, across its whole width: decorative traffic lights, the sidebar
- * toggle and the open threads at the left; at the right, the layout, Collapse all (ADR-127),
+ * toggle and the open threads at the left; at the right, the layout, Collapse all (ADR-134),
  * the bell, and the account in the corner (ADR-094). It is green chrome, flat or painted
  * (ADR-110, ADR-115). On a phone it is two rows (ADR-116): the project's name and what never
  * scrolls on top, Collapse all among them, with a "⋯" for the thread and project; below, the

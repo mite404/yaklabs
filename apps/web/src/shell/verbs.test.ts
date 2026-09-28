@@ -28,6 +28,9 @@ function thread(threadId: ThreadId, place: Place): ThreadSummary {
     updatedAt: at,
     preview: "",
     draft: "",
+    pinnedAt: null,
+    snoozedUntil: null,
+    archivedAt: null,
   };
 }
 
@@ -41,6 +44,7 @@ const WS: Workspace = {
   lanes: {},
   shell: null,
   notifications: [],
+  shares: [],
 };
 
 const PROFIT_ONLY: ShellState = { version: 1, tabs: [PROFIT], views: {}, read: [] };
@@ -69,6 +73,11 @@ function holding(shell: ShellState): { runtime: Runtime; saves: ShellState[] } {
       saves.push(parseShell(next, WS));
       return Promise.resolve();
     },
+    mark: unused,
+    delete: unused,
+    restore: unused,
+    share: unused,
+    unshare: unused,
     agent: unused,
     dispose: () => {},
   };

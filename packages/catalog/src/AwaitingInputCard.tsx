@@ -16,17 +16,21 @@ const ELSEWHERE = "Chat about something else";
  * @param onAnswer Sends a branch's label or the typed answer as the user's reply.
  * @param onElsewhere Sets the question aside and hands focus back to the compose box.
  * @param startCollapsed Open folded to its header (stories).
+ * @param label What the card is called, on its header and to assistive technology: "Needs
+ * attention" for the agent's question, or the host's own name for one it asks, such as "Snooze".
  */
 export function AwaitingInputCard({
   question,
   onAnswer,
   onElsewhere,
   startCollapsed = false,
+  label = "Needs attention",
 }: {
   question: AwaitingInput;
   onAnswer: (answer: string) => void;
   onElsewhere: () => void;
   startCollapsed?: boolean;
+  label?: string;
 }) {
   const [open, setOpen] = useState(!startCollapsed);
   const [selected, setSelected] = useState<number>();
@@ -86,7 +90,7 @@ export function AwaitingInputCard({
     // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- keys bubble here from the card's buttons and field; jsx-a11y's docs say to disable for bubbled events
     <section
       className="awaiting attention-surface"
-      aria-label="Needs attention"
+      aria-label={label}
       data-open={open || undefined}
       onKeyDown={keys}
     >
@@ -97,7 +101,7 @@ export function AwaitingInputCard({
         }}
         summary={
           <>
-            <span className="awaiting-label">Needs attention</span>
+            <span className="awaiting-label">{label}</span>
             {!open && <span className="awaiting-summary">{question.question}</span>}
           </>
         }

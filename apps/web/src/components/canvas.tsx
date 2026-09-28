@@ -164,7 +164,7 @@ function useFocusedLane(
  * The compose canvas (ADR-089): a row of lanes that grows to the right, with open space at
  * the end for the next thing. The gap after each lane drags the lane's width, a lane's title
  * bar drags it to another place in the row, and the ground drags to pan. A lane collapses to a
- * slim strip and back (ADR-126), and the whole strip drags it. The whole row takes a
+ * slim strip and back (ADR-133), and the whole strip drags it. The whole row takes a
  * carried card or highlight (ADR-091): while one is over it the pane shows it, and an ink
  * marker stands in the gap it would land in. On a phone the row is view-only (ADR-122): it
  * still scrolls sideways, but a lane's title bar no longer lifts it. The canvas keeps no lanes

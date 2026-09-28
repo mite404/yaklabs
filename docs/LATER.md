@@ -12,6 +12,12 @@ this list when it ships.
 - **Deploy the Worker and register its address.** The share page and the thread now ship in the
   one Cloudflare Worker (ADR-086); creating it from the repo publishes under Ethan's account, and
   its address must join WorkOS's redirect URIs and CORS origins (ADR-084).
+- **Let the first deploy create the SHARES namespace.** Share thread keeps sealed threads in a KV
+  namespace bound as `SHARES`, declared with no id so Wrangler 4 provisions it on the first
+  deploy under Ethan's account (ADR-131); the deploy log should show it created, once.
+- **Share a thread from a signed-in build.** Making a thread public needs a signed-in visitor, so
+  the lab build, which has no sign-in or share server, says "This build has no share server";
+  the whole path is proven only against the gateway's app run in the lever with a stand-in token.
 - **Check the token issuer against a real sign-in.** The gateway accepts the two issuer forms
   WorkOS documents; only a signed-in run shows which one this environment mints.
 

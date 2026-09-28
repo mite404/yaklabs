@@ -36,7 +36,7 @@ function sharedMax(selection: InteractiveSelection): number {
  * chart and the agent's sentence update instantly without calling the model. Each choice
  * is reported through `onChoose` so it can ride along with the next message (ADR-030).
  * @param shareable Show the share button (ADR-064); off on the public page itself.
- * @param leading A host's control before the title, such as a lane's collapse (ADR-127).
+ * @param leading A host's control before the title, such as a lane's collapse (ADR-134).
  */
 export function InteractiveCard({
   payload,

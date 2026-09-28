@@ -3,18 +3,26 @@ import type { ThreadMessage } from "@yaklabs/catalog/thread";
 import { z } from "zod";
 import type { Transcript } from "./conversation";
 import { threadMessageSchema } from "./protocol";
-import { workspaceSchema, type ThreadId, type Workspace } from "./workspace";
+import type { SettleInput } from "./settle";
+import { threadIdSchema, workspaceSchema, type ThreadId, type Workspace } from "./workspace";
 
 // The sidebar shows one line of the latest message, cut at a word-ish length.
 const PREVIEW_LENGTH = 80;
 
 const PROJECTS = "select id, name, created_at as createdAt from projects order by created_at, id";
-// Every thread, oldest first, with the text of its latest message for the preview.
+// The threads the page sees: not deleted, and not the sub-thread of a deleted main (ADR-130).
+const LIVE = `
+  c.deleted_at is null
+  and (c.parent_id is null
+       or (select p.deleted_at from conversations p where p.id = c.parent_id) is null)
+`;
+// Every live thread, oldest first, with the text of its latest message for the preview.
 const THREADS = `
   select c.id, c.title, c.project_id, c.parent_id, c.created_at, c.updated_at, c.draft,
+    c.pinned_at, c.snoozed_until, c.archived_at,
     coalesce((select m.text from messages m where m.conversation_id = c.id
               order by m.seq desc limit 1), '') as last_text
-  from conversations c order by c.created_at, c.id
+  from conversations c where ${LIVE} order by c.created_at, c.id
 `;
 const LANES = `
   select main_id, id, thread_id, card_json, title, width, collapsed from lanes
@@ -22,6 +30,18 @@ const LANES = `
 `;
 const NOTIFICATIONS = `
   select id, thread_id as threadId, text, at from notifications order by at desc, id
+`;
+const SHARES = `
+  select id, thread_id as threadId, link, revoke_token as revokeToken, created_at as createdAt,
+    expires_at as expiresAt
+  from shares order by created_at desc, id
+`;
+// Every thread settling reads, deleted ones included, with its last activity.
+const SETTLE_ROWS = `
+  select id, title, parent_id as parentId, pinned_at as pinnedAt,
+    snoozed_until as snoozedUntil, archived_at as archivedAt, deleted_at as deletedAt,
+    max(updated_at, coalesce(touched_at, '')) as touchedAt
+  from conversations order by created_at, id
 `;
 
 // What SQLite hands back, checked before it becomes a domain type.
@@ -33,8 +53,22 @@ const threadRowSchema = z.object({
   created_at: z.string(),
   updated_at: z.string(),
   draft: z.string(),
+  pinned_at: z.string().nullable(),
+  snoozed_until: z.string().nullable(),
+  archived_at: z.string().nullable(),
   last_text: z.string(),
 });
+const settleRowSchema = z.object({
+  id: threadIdSchema,
+  title: z.string(),
+  parentId: threadIdSchema.nullable(),
+  touchedAt: z.string(),
+  pinnedAt: z.string().nullable(),
+  snoozedUntil: z.string().nullable(),
+  archivedAt: z.string().nullable(),
+  deletedAt: z.string().nullable(),
+});
+const expirySchema = z.object({ id: z.string(), expiresAt: z.string() });
 const laneRowSchema = z.object({
   main_id: z.string(),
   id: z.string(),
@@ -67,8 +101,17 @@ function fromMessageRow(row: Record<string, SqlValue>): ThreadMessage {
 
 // A thread row in the workspace's shape; the workspace schema checks it.
 function fromThreadRow(row: Record<string, SqlValue>) {
-  const { project_id, parent_id, created_at, updated_at, last_text, ...rest } =
-    threadRowSchema.parse(row);
+  const {
+    project_id,
+    parent_id,
+    created_at,
+    updated_at,
+    last_text,
+    pinned_at,
+    snoozed_until,
+    archived_at,
+    ...rest
+  } = threadRowSchema.parse(row);
   const place =
     project_id === null
       ? { kind: "child", parentId: parent_id }
@@ -79,6 +122,9 @@ function fromThreadRow(row: Record<string, SqlValue>) {
     createdAt: created_at,
     updatedAt: updated_at,
     preview: toPreview(last_text),
+    pinnedAt: pinned_at,
+    snoozedUntil: snoozed_until,
+    archivedAt: archived_at,
   };
 }
 
@@ -106,13 +152,28 @@ export function readWorkspace(db: Database): Workspace {
   }
   const saved = db.selectValue("select json from shell where id = 1"); // → JSON text, or undefined
   const shell: unknown = typeof saved === "string" ? JSON.parse(saved) : null;
+  // The bell and the shares name only threads the page can see.
+  const live = new Set(threadRows.map((row) => row.id));
+  const visible = (row: Record<string, SqlValue>) =>
+    typeof row.threadId === "string" && live.has(row.threadId);
   return workspaceSchema.parse({
     projects: db.selectObjects(PROJECTS),
     threads: threadRows,
     lanes: Object.fromEntries(lanes),
     shell,
-    notifications: db.selectObjects(NOTIFICATIONS),
+    notifications: db.selectObjects(NOTIFICATIONS).filter((row) => visible(row)),
+    shares: db.selectObjects(SHARES).filter((row) => visible(row)),
   });
+}
+
+/** Every thread as settling reads it, deleted ones included, and each share's expiry. */
+export function readSettleInput(db: Database): Pick<SettleInput, "rows" | "shares"> {
+  return {
+    rows: db.selectObjects(SETTLE_ROWS).map((row) => settleRowSchema.parse(row)),
+    shares: db
+      .selectObjects("select id, expires_at as expiresAt from shares")
+      .map((row) => expirySchema.parse(row)),
+  };
 }
 
 /**

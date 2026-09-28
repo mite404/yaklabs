@@ -42,7 +42,7 @@ function barLayout() {
     ["lanes", drawn('[data-slot="collapse-all"]')],
     ["bell", drawn('[aria-label^="Notifications"]')],
     ["account", drawn('[aria-label="Account"]')],
-    ["more", drawn('[aria-label="Thread and project actions"]')],
+    ["more", drawn('[aria-label="Thread actions"]')],
   ]
     .filter(([, el]) => el !== undefined && el !== null)
     .map(([name, el]) => [name, el.getBoundingClientRect()]);

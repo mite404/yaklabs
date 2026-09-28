@@ -1,4 +1,4 @@
-// Checks for collapsible lanes (ADR-126): the strip's look in both themes, the drag by any part
+// Checks for collapsible lanes (ADR-133): the strip's look in both themes, the drag by any part
 // of it, the state kept across a reload, and the keyboard and screen reader's way in.
 import { canvasOf, laneTitles, makeLane } from "./canvas-checks.mjs";
 import {

@@ -1,6 +1,7 @@
 import type { BindingSpec, Database, SqlValue } from "@sqlite.org/sqlite-wasm";
 import { z } from "zod";
 import type { LegacyCanvas } from "./protocol";
+import { migrateToV3 } from "./schemaV3";
 import { planV2 } from "./v2Plan";
 import { threadIdSchema, type Lane, type ThreadId } from "./workspace";
 
@@ -119,9 +120,9 @@ const V2_RULES = `
   );
 `;
 
-// Step 2 → 3 gives each lane whether it is collapsed (ADR-126). Every lane a v2 canvas holds
+// Step 3 → 4 gives each lane whether it is collapsed (ADR-133). Every lane a v3 canvas holds
 // was open, so each one starts expanded; the check keeps the flag a yes or a no.
-const V3_COLLAPSED = `
+const V4_COLLAPSED = `
   alter table lanes add column collapsed integer not null default 0 check (collapsed in (0, 1));
 `;
 
@@ -195,13 +196,13 @@ function migrateToV2(db: Database, legacy: LegacyCanvas | undefined): void {
   }
 }
 
-function migrateToV3(db: Database): void {
-  db.exec(V3_COLLAPSED);
+function migrateToV4(db: Database): void {
+  db.exec(V4_COLLAPSED);
 }
 
 /**
  * The steps from each `user_version` to the next: 0 → 1 is the v1 schema, 1 → 2 the rebuild,
- * 2 → 3 a lane's collapsed flag.
+ * 2 → 3 the marks, tombstones and shares, 3 → 4 a lane's collapsed flag.
  */
 export const migrationSteps = [
   (db: Database) => {
@@ -209,6 +210,7 @@ export const migrationSteps = [
   },
   migrateToV2,
   migrateToV3,
+  migrateToV4,
 ] as const satisfies readonly Step[];
 
 /**

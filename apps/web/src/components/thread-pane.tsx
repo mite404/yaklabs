@@ -12,6 +12,8 @@ import {
 } from "react";
 import { inBackground, reasonOf, useRuntime } from "../runtime";
 import { useSession } from "../session";
+import { useSnoozeCard } from "../shell/snooze-card";
+import { ThreadHeaderActions } from "../shell/thread-actions-menu";
 import { QuietButton } from "./quiet-button";
 
 // A thread's turns as the worker hands them over: on their way, here, or refused.
@@ -23,10 +25,11 @@ type Turns =
 const LOADING: Turns = { kind: "loading" };
 
 // Where the focus rests in a thread, by what it shows: the frame while its turns come, Try
-// again when they cannot, the compose box once they are here.
+// again when they cannot (the frame's body, not its title bar's actions), the compose box once
+// they are here.
 const REST: Record<Turns["kind"], string> = {
   loading: "[data-pending]",
-  failed: "[data-pending] [data-retry]", // Try again, not a lane's collapse in the title bar
+  failed: "[data-pending] [data-retry]", // Try again, not the collapse or the menu in the bar
   open: ".compose-box textarea",
 };
 
@@ -90,6 +93,20 @@ function useFocusFollows(host: RefObject<HTMLElement | null>, turns: Turns): Foc
   };
 }
 
+// Puts the focus on the snooze card's first tile when it opens, once the menu that opened it
+// has handed the focus back to its trigger, so a keyboard can answer it at once (ADR-128).
+function useFocusCard(host: RefObject<HTMLElement | null>, open: boolean): void {
+  useEffect(() => {
+    const frame = requestAnimationFrame(() => {
+      if (open)
+        host.current?.querySelector<HTMLElement>('[aria-label="Snooze"] .awaiting-tile')?.focus();
+    });
+    return () => {
+      cancelAnimationFrame(frame);
+    };
+  }, [host, open]);
+}
+
 /**
  * Puts the focus in the first thread inside `within`, where it rests: on its compose box once
  * the thread is open, on Try again if it could not open, and on its frame while it opens, from
@@ -103,24 +120,36 @@ export function focusThreadIn(within: ParentNode): void {
 }
 
 // A thread whose turns are not here, in the frame an open thread has: the paper, the border and
-// the title bar, so a lane keeps the bar it is taken by and the main pane keeps its shape.
+// the title bar with its actions, so a lane keeps the bar it is taken by and the main pane
+// keeps its shape.
 function PendingFrame({
-  title,
+  thread,
   leading,
   children,
 }: {
-  title: string;
+  thread: ThreadSummary;
   leading: ReactNode;
   children: ReactNode;
 }) {
   return (
     // The frame takes the focus while the turns come, as a place to hold it (useFocusFollows).
-    <section className="thread-panel outline-none" aria-label={title} tabIndex={-1} data-pending="">
+    <section
+      className="thread-panel outline-none"
+      aria-label={thread.title}
+      tabIndex={-1}
+      data-pending=""
+    >
       <header className="thread-header">
         {leading !== undefined && <div className="header-leading">{leading}</div>}
-        <h2>{title}</h2>
+        <h2>{thread.title}</h2>
+        <div className="thread-header-actions">
+          <ThreadHeaderActions thread={thread} />
+        </div>
       </header>
-      <div className="flex flex-col items-start gap-2 px-(--thread-gutter) py-5 text-sm">
+      <div
+        className="flex flex-col items-start gap-2 px-(--thread-gutter) py-5 text-sm"
+        data-pending-body=""
+      >
         {children}
       </div>
     </section>
@@ -134,7 +163,7 @@ function PendingFrame({
  * frame, and on to Try again again or to the compose box. The title and the opening draft
  * come from the snapshot, so a rename shows everywhere at once.
  * @param leading A control before the title in the title bar, such as a lane's collapse
- * (ADR-127); in the frame too while the turns come.
+ * (ADR-134); in the frame too while the turns come.
  */
 export function ThreadPane({ thread, leading }: { thread: ThreadSummary; leading?: ReactNode }) {
   const runtime = useRuntime();
@@ -143,6 +172,8 @@ export function ThreadPane({ thread, leading }: { thread: ThreadSummary; leading
   const [turns, retry] = useTurns(thread.id);
   const host = useRef<HTMLDivElement>(null);
   const follow = useFocusFollows(host, turns);
+  const snooze = useSnoozeCard(thread);
+  useFocusCard(host, snooze !== undefined);
   return (
     <div ref={host} className="contents" data-thread-pane="" {...follow}>
       {turns.kind === "open" ? (
@@ -154,10 +185,12 @@ export function ThreadPane({ thread, leading }: { thread: ThreadSummary; leading
             inBackground(runtime.rename({ kind: "thread", id: thread.id }, title), "Renaming");
           }}
           cardsCarry={!isMobile}
+          headerActions={<ThreadHeaderActions thread={thread} />}
+          hostAsk={snooze}
           leading={leading}
         />
       ) : (
-        <PendingFrame title={thread.title} leading={leading}>
+        <PendingFrame thread={thread} leading={leading}>
           {turns.kind === "loading" ? (
             <p className="text-soft-ink">Opening {thread.title}…</p>
           ) : (
