@@ -14,7 +14,7 @@ import {
 import { useLanding, type Landing } from "./canvas-carry";
 import { panRow, usePan } from "./canvas-pan";
 import { LaneSeparator } from "./lane-separator";
-import { Kay, SplashDrawing } from "./splash";
+import { Kay, SplashLandscape } from "./splash";
 import { displacement, useReorder, type LaneHandlers } from "./lane-reorder";
 
 /** One lane on the canvas: its name, the width it was left at (null: the default), its content. */
@@ -100,7 +100,7 @@ function OpenSpace({
       data-lit={lit || undefined}
       className="open-space @container relative isolate flex h-full min-w-[320px] flex-1 flex-col items-center justify-center gap-4 rounded-[var(--radius-card)] border border-dashed border-hairline p-6 text-center transition-colors data-lit:border-olive"
     >
-      {splash && <SplashDrawing />}
+      {splash && <SplashLandscape />}
       <p className="font-serif text-xl text-ink">
         Drag a text selection or card
         <br />

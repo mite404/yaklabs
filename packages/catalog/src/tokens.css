@@ -139,6 +139,11 @@
      a stroke stands 1.26:1 off the field in light and 1.36:1 in dark, visible without ever
      competing with the words */
   --splash-line: color-mix(in srgb, var(--ink) 12%, transparent);
+  /* the landscape behind an empty canvas: the paper at 40% over the painting, so it reads as a
+     picture under the field, not a photograph on it. Washed, its mean (#9dab9d) stands 2.08:1
+     off the paper; the ink is 14.51:1 on its brightest pixel and 2.42:1 on its darkest, which
+     is why the words sit in the clearing, on plain paper, and never on it */
+  --splash-wash: color-mix(in srgb, var(--paper) 40%, transparent);
 
   --radius-card: 14px; /* the catalog card and the thread panel; shadcn owns --radius (ADR-082) */
   --space: 24px;
@@ -289,6 +294,10 @@ button:hover {
   --bubble-line: color-mix(in srgb, var(--sage) 45%, var(--paper)); /* 3.2:1 */
   --shadow: color-mix(in srgb, black 40%, transparent);
   --shadow-strong: color-mix(in srgb, black 60%, transparent);
+  /* the dark paper at 60% over the landscape, deeper than the light wash, so a daylight
+     painting sits back in the night theme: its washed mean (#38443a) stands 1.66:1 off the
+     paper; the cream is 3.87:1 on its brightest pixel and 16.36:1 on its darkest */
+  --splash-wash: color-mix(in srgb, var(--paper) 60%, transparent);
   --warn-bg: #3a3320; /* derived: the warm notice, deepened */
   --warn-ink: #eddcaa; /* 9.2:1 on it */
   --record: #d7573f; /* the recording dot, lifted to 4.3:1 */

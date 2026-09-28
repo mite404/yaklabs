@@ -168,17 +168,48 @@
       var(--chrome-painting);
   }
 
-  /* The empty canvas's splash (ADR-113): the drawing is a mask filled with --splash-line, so it
-     themes with the ink and shows only its strokes, never the bounds of an image. It sits
-     behind the words, and it and Kay fade in once, with no fade under reduced motion. */
+  /* The empty canvas's splash (ADR-113): a landscape under the field, showing at the open
+     space's edges and fading to the paper in the middle, so the words sit on plain paper
+     without a plate. It sits behind the words, and it and Kay fade in once, with no fade under
+     reduced motion. The open space turns paper while it holds the splash, so the clearing is
+     the app's paper and not the brighter field, and the carry's lit fill still shows there,
+     between the paper and the painting. A :has() keeps the switch in CSS, off OpenSpace. */
+  .open-space:has(> .splash) {
+    background-color: var(--paper);
+  }
   .splash {
     position: absolute;
     inset: 0;
     z-index: -1;
+    border-radius: calc(var(--radius-card) - 1px); /* inside the open space's 1px border */
+    overflow: hidden;
   }
+  /* The painting under --splash-wash, masked to a clearing: an ellipse of the open space's own
+     proportions, clear to 35% of its half width and height and full at 95%, so the fade is long
+     and has no edge, and the picture is vivid in the corners. The gradient's box is the open
+     space or 48rem by 16rem, whichever is larger, centred (Chromium takes no max() in the
+     ellipse's own size), so the clearing is always wider than the two-line copy: a narrow open
+     space keeps the words on paper and shows the picture above and below them. */
   .splash-drawing {
-    background-color: var(--splash-line);
-    mask: url("/splash/sphere.svg") center / contain no-repeat;
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(var(--splash-wash), var(--splash-wash)),
+      url("/splash/landscape.webp") center / cover no-repeat;
+    mask-image: radial-gradient(ellipse 50% 50% at center, transparent 35%, black 95%);
+    mask-size: max(100%, 48rem) max(100%, 16rem);
+    mask-position: center;
+    mask-repeat: no-repeat;
+  }
+  /* The field's dots go on over the painting and the clearing alike, drawn here since the open
+     space's paper covers the canvas's own. They start 1rem and 1px up and left, the canvas's
+     padding and the open space's border, so they fall on the field's grid outside. */
+  .splash::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(var(--hairline) 1px, transparent 1px) calc(-1rem - 1px)
+      calc(-1rem - 1px) / 18px 18px;
   }
   .splash,
   .splash-in {
