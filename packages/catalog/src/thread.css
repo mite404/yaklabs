@@ -747,6 +747,9 @@
   font-size: 12px;
   color: var(--soft-ink);
 }
+.share-note-lead {
+  margin: 0 4px 12px;
+}
 /* A shared thread (ADR-129) reads as the thread it came from, frame and all, but grows with its
    turns instead of scrolling inside a box: the page scrolls, and nothing is docked below. */
 .shared-thread {

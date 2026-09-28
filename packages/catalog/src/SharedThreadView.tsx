@@ -54,6 +54,11 @@ function useShared(id: string, key: string, load: LoadShare | undefined): Loaded
 function OpenThread({ thread }: { thread: SharedThread }) {
   return (
     <>
+      {/* Above the turns, so a reader knows how long the page lasts before scrolling a word. */}
+      <p className="share-note share-note-lead">
+        Shared from Kay until {until(new Date(thread.expiresAt))}; after that this link stops
+        working. Only people with the link can read it.
+      </p>
       <section className="thread-panel shared-thread" aria-label={thread.title}>
         <header className="thread-header">
           <h2>{thread.title}</h2>
@@ -74,10 +79,6 @@ function OpenThread({ thread }: { thread: SharedThread }) {
           )}
         </div>
       </section>
-      <p className="share-note">
-        Shared from Kay until {until(new Date(thread.expiresAt))}; after that this link stops
-        working. Only people with the link can read it.
-      </p>
     </>
   );
 }
