@@ -119,9 +119,8 @@ export function focusThreadIn(within: ParentNode): void {
   if (rest instanceof HTMLElement) rest.focus();
 }
 
-// A thread whose turns are not here, in the frame an open thread has: the paper, the border and
-// the title bar with its actions, so a lane keeps the bar it is taken by and the main pane
-// keeps its shape.
+// A thread whose turns are not here, in the frame an open thread has: a lane keeps its paper,
+// border and the title bar it is taken by; the main pane stays bare, with no bar of its own.
 function PendingFrame({
   thread,
   leading,
