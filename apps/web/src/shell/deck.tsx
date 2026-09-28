@@ -73,17 +73,19 @@ function Retain({
   );
 }
 
-// The main thread, centred in its pane at the thread's own measure. Hidden on a phone while the
-// browser or the canvas has the width, it stays mounted but inert, like a retained pane.
+// The main thread, on the pane itself: no window of its own, its text centred at the thread's
+// measure and its welcome reaching the pane's edges. Only a lane on the canvas is a window.
+// Hidden on a phone while the browser or the canvas has the width, it stays mounted but inert,
+// like a retained pane.
 function MainPane({ thread, hidden }: { thread: ThreadSummary; hidden: boolean }) {
   return (
     <div
       inert={hidden}
       data-retain=""
-      className="flex h-full min-w-0 justify-center p-4"
+      className="h-full min-w-0"
       style={{ ["--thread-height" as string]: "100%" }}
     >
-      <ThreadPane key={thread.id} thread={thread} welcome={<Welcome thread={thread} />} />
+      <ThreadPane key={thread.id} thread={thread} welcome={<Welcome thread={thread} />} bare />
     </div>
   );
 }

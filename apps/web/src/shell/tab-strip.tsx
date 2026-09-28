@@ -1,13 +1,15 @@
 import type { ThreadId, ThreadSummary } from "@yaklabs/runtime";
 import { Button } from "@yaklabs/ui/components/button";
+import { DropdownMenu, DropdownMenuTrigger } from "@yaklabs/ui/components/dropdown-menu";
 import { Skeleton } from "@yaklabs/ui/components/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@yaklabs/ui/components/tabs";
-import { Plus, X } from "lucide-react";
+import { Ellipsis, Plus, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState, type RefObject } from "react";
 import { panelId } from "./deck";
 import { LAYOUTS } from "./layouts";
 import type { Shell } from "./model";
 import { closeTab, viewOf } from "./state";
+import { THREAD_ACTIONS, ThreadActionsContent } from "./thread-actions-menu";
 
 // A tab's box. A tablist may own only tabs, so each close button sits in a layer over the
 // tablist, in a slot with this same box in the same row: it lines up with its tab unmeasured.
@@ -104,7 +106,7 @@ function Tab({ thread, shell, hover, plus }: TabProps) {
         id={tabId(thread.id)}
         aria-controls={panelId(thread.id)}
         data-hovered={hover.hovered === thread.id || undefined}
-        className="tab h-[30px] w-full min-w-0 flex-none justify-start gap-2 rounded-[var(--radius)] bg-transparent px-2.5 text-xs font-normal text-soft-ink data-hovered:pr-7 data-hovered:text-ink data-hovered:not-data-active:bg-paper-deep data-active:bg-[var(--chrome-pill)] data-active:pr-7 data-active:text-ink dark:text-soft-ink dark:data-hovered:text-ink dark:data-active:border-transparent dark:data-active:bg-[var(--chrome-pill)] dark:data-active:text-ink"
+        className="tab h-[30px] w-full min-w-0 flex-none justify-start gap-2 rounded-[var(--radius)] bg-transparent px-2.5 text-xs font-normal text-soft-ink data-hovered:pr-7 data-hovered:text-ink data-hovered:not-data-active:bg-paper-deep data-active:bg-[var(--chrome-pill)] data-active:pr-13 data-active:text-ink dark:text-soft-ink dark:data-hovered:text-ink dark:data-active:border-transparent dark:data-active:bg-[var(--chrome-pill)] dark:data-active:text-ink"
         {...hover.handlers(thread.id)}
         onAuxClick={(event) => {
           if (event.button === 1) close(event.currentTarget);
@@ -120,12 +122,43 @@ function Tab({ thread, shell, hover, plus }: TabProps) {
   );
 }
 
+// The active tab's "⋯", left of its close: the thread's menu (ADR-126), which a main thread no
+// longer carries in a title bar of its own. Only the tab in view has one, so it is the one
+// "⋯" the keyboard reaches after the strip, and the menu always acts on the thread on screen.
+function TabMenu({ thread, shell }: { thread: ThreadSummary; shell: Shell }) {
+  if (shell.active?.main !== thread.id) return null;
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={
+          <button
+            type="button"
+            aria-label={THREAD_ACTIONS}
+            className="pointer-events-auto absolute top-1/2 right-7 flex size-5 -translate-y-1/2 items-center justify-center rounded-[var(--radius)] border-0 bg-transparent p-0 text-soft-ink hover:bg-paper-deep hover:text-ink aria-expanded:bg-paper-deep aria-expanded:text-ink"
+          />
+        }
+      >
+        <Ellipsis className="size-3.5" aria-hidden="true" />
+      </DropdownMenuTrigger>
+      <ThreadActionsContent
+        shell={shell}
+        thread={thread}
+        // Snoozing opens its card in the thread's pane, which a browser or canvas view hides.
+        beforeSnooze={() => {
+          shell.setPane(thread.id, "thread");
+        }}
+      />
+    </DropdownMenu>
+  );
+}
+
 // A tab's close button, in its slot over the tab's right end: shown on the active tab and while
 // the pointer is on the tab. It is for the pointer; the keyboard closes a tab with Delete.
 function CloseSlot({ thread, shell, hover, plus }: TabProps) {
   const active = shell.active?.main === thread.id;
   return (
     <div data-active={active || undefined} className={`chrome-pill group/slot relative ${TAB_BOX}`}>
+      <TabMenu thread={thread} shell={shell} />
       <button
         type="button"
         tabIndex={-1}
