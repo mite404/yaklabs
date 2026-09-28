@@ -46,6 +46,18 @@ const ON_WASH: Pair[] = [
   ["--on-chrome", "--chrome-painting-hover", 10.12, 4.5],
   ["--on-chrome-painting-soft", "--chrome-painting-hover", 7.91, 4.5],
 ];
+// An archived thread's title and icon (ADR-126): dimmer than the soft ink, and still text on the
+// sidebar's paper and on its hover fill.
+const FAINT: Record<"light" | "dark", Pair[]> = {
+  light: [
+    ["--faint-ink", "--paper", 5.17, 4.5],
+    ["--faint-ink", "--paper-deep", 4.67, 4.5],
+  ],
+  dark: [
+    ["--faint-ink", "--paper", 5.46, 4.5],
+    ["--faint-ink", "--paper-deep", 4.6, 4.5],
+  ],
+};
 // The splash's line, the ink at a share over nothing, as it lands on the canvas field (--bg).
 const SPLASH = { light: 1.26, dark: 1.36 };
 // No pixel of the decoded painting may be brighter than this (paint-chrome.mjs).
@@ -136,6 +148,10 @@ describe("the window chrome's tokens", () => {
 
   it("set the window apart from its desk, and the trim apart from the body", () => {
     expect([...misses(LIGHT, THEMES.light), ...misses(DARK, THEMES.dark)]).toEqual([]);
+  });
+
+  it("dim an archived thread and keep it readable in either theme", () => {
+    expect([...misses(FAINT.light, THEMES.light), ...misses(FAINT.dark, THEMES.dark)]).toEqual([]);
   });
 
   it("lay their translucent fills over the bar where they show, and the inks on them", () => {
