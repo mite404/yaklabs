@@ -139,6 +139,14 @@
      a stroke stands 1.26:1 off the field in light and 1.36:1 in dark, visible without ever
      competing with the words */
   --splash-line: color-mix(in srgb, var(--ink) 12%, transparent);
+  /* the splash's figure, Atlas: the ink a step stronger than the line, 1.48:1 off the field in
+     light and 1.54:1 in dark, so he reads as the drawing and the mat's marks as the ground */
+  --splash-figure: color-mix(in srgb, var(--ink) 20%, transparent);
+  /* the canvas's cutting-mat grid: a heavy line every fifth cell, 1.16:1 off the field in light
+     and 1.21:1 in dark, and a fine line every cell, 1.08:1 in light and 1.09:1 in dark; both
+     stay under the splash's line so the mat is the ground and never the drawing */
+  --mat-line: color-mix(in srgb, var(--ink) 8%, transparent);
+  --mat-line-fine: color-mix(in srgb, var(--ink) 4%, transparent);
 
   --radius-card: 14px; /* the catalog card and the thread panel; shadcn owns --radius (ADR-082) */
   --space: 24px;
@@ -282,6 +290,10 @@ button:hover {
   /* Ethan's slate as the desk: 2.75:1 against the paper, 1.69:1 against the bar; a desk darker
      than the paper cannot reach 1.3:1, since black itself is 1.24:1 */
   --desk: var(--yak-slate);
+  /* --splash-line follows the ink: the cream at 12%, 1.36:1 off the night field */
+  --splash-figure: color-mix(in srgb, var(--ink) 16%, transparent); /* 1.54:1; 20% would be 1.76 */
+  --mat-line: color-mix(in srgb, var(--ink) 8%, transparent); /* 1.21:1 */
+  --mat-line-fine: color-mix(in srgb, var(--ink) 4%, transparent); /* 1.09:1 */
   --data: #b5b5ae; /* chart marks: 8.2:1 */
   --on-ink: var(--yak-night); /* 16.1:1 on the cream */
   --bubble-tint: color-mix(in srgb, var(--sage) 16%, var(--paper));

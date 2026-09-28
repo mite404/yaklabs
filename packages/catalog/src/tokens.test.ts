@@ -110,6 +110,17 @@ const contrast = (a: number, b: number): number =>
 const ROOT = block(":root");
 const THEMES = { light: [ROOT], dark: [ROOT, block(':root[data-theme="dark"]')] };
 
+// A translucent token's contrast off the canvas field (--bg) in each theme, rounded to two
+// places as tokens.css writes it.
+function offField(name: string): Record<keyof typeof THEMES, number> {
+  const ratio = (blocks: Map<string, string>[]) => {
+    const field = colour("--bg", blocks);
+    const over = colour(name, blocks, field);
+    return Math.round(contrast(luminance(over), luminance(field)) * 100) / 100;
+  };
+  return { light: ratio(THEMES.light), dark: ratio(THEMES.dark) };
+}
+
 // A ratio as tokens.css writes it: "8.98:1", "16.1:1", "6.3:1".
 const writtenInCss = (ratio: number): boolean =>
   [ratio.toFixed(2), ratio.toFixed(1), String(ratio)].some((text) => CSS.includes(`${text}:1`));
@@ -163,16 +174,39 @@ describe("the window chrome's tokens", () => {
       readable: Math.min(...ratios) >= 4.5,
     }).toEqual({ mean: facts.mean, withinBound: true, readable: true });
   });
+});
+
+// The canvas's ground and drawing: each a translucent ink off the field, in a fixed order, so
+// the mat's grid stays under the splash's line and Atlas a step over it, never past the 1.6:1
+// ceiling the shell polish sets for the drawing (G5 in section 7).
+describe("the canvas's tokens", () => {
+  const figure = offField("--splash-figure");
+  const heavy = offField("--mat-line");
+  const fine = offField("--mat-line-fine");
 
   it("draw the splash's line faintly off the field in either theme", () => {
-    const share = Number(/(\d+)%/.exec(ROOT.get("--splash-line") ?? "")?.[1]) / 100;
-    const measured = Object.entries(THEMES).map(([name, theme]) => {
-      const field = colour("--bg", theme);
-      const ink = colour("--ink", theme);
-      const over = (i: 0 | 1 | 2) => ink[i] * share + field[i] * (1 - share);
-      const line: Rgb = [over(0), over(1), over(2)];
-      return [name, Math.round(contrast(luminance(line), luminance(field)) * 100) / 100];
+    expect(offField("--splash-line")).toEqual(SPLASH);
+  });
+
+  it("draw Atlas a step past the line, and the mat's grid a step under it", () => {
+    expect({ figure, heavy, fine }).toEqual({
+      figure: { light: 1.48, dark: 1.54 },
+      heavy: { light: 1.16, dark: 1.21 },
+      fine: { light: 1.08, dark: 1.09 },
     });
-    expect(Object.fromEntries(measured)).toEqual(SPLASH);
+  });
+
+  it("keep the order in light", () => {
+    expect(fine.light).toBeLessThan(heavy.light);
+    expect(heavy.light).toBeLessThan(SPLASH.light);
+    expect(figure.light).toBeGreaterThan(SPLASH.light);
+    expect(figure.light).toBeLessThanOrEqual(1.6);
+  });
+
+  it("keep the order in dark", () => {
+    expect(fine.dark).toBeLessThan(heavy.dark);
+    expect(heavy.dark).toBeLessThan(SPLASH.dark);
+    expect(figure.dark).toBeGreaterThan(SPLASH.dark);
+    expect(figure.dark).toBeLessThanOrEqual(1.6);
   });
 });
