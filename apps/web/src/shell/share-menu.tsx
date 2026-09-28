@@ -9,6 +9,7 @@ import {
   DropdownMenuSubTrigger,
 } from "@yaklabs/ui/components/dropdown-menu";
 import { ExternalLink, Link, Share2, Timer, X } from "lucide-react";
+import { MenuStatus, statusName } from "./menu-status";
 import type { Shell } from "./model";
 import { LIFETIMES } from "./share-thread";
 import { wakeText } from "./wake-text";
@@ -88,15 +89,17 @@ function LifetimeItems({ shell, thread, isPublic }: ShareProps & { isPublic: boo
  */
 export function ShareItem({ shell, thread }: ShareProps) {
   const share = liveShare(shell, thread);
+  const status =
+    share === undefined ? "Private" : `Until ${wakeText(new Date(share.expiresAt), "menu")}`;
   return (
     <DropdownMenuSub>
-      <DropdownMenuSubTrigger className="whitespace-nowrap">
+      <DropdownMenuSubTrigger
+        className="whitespace-nowrap"
+        aria-label={statusName("Share thread", status)}
+      >
         <Share2 aria-hidden="true" />
         Share thread
-        <span className="sr-only">, </span>
-        <span className="ml-auto pl-3 text-muted-foreground">
-          {share === undefined ? "Private" : `Until ${wakeText(new Date(share.expiresAt), "menu")}`}
-        </span>
+        <MenuStatus>{status}</MenuStatus>
       </DropdownMenuSubTrigger>
       <DropdownMenuSubContent className="w-56">
         {share !== undefined && <PublicItems shell={shell} thread={thread} share={share} />}

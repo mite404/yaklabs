@@ -6,25 +6,15 @@ import {
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuSeparator,
-  DropdownMenuShortcut,
   DropdownMenuTrigger,
 } from "@yaklabs/ui/components/dropdown-menu";
 import { useSidebar } from "@yaklabs/ui/components/sidebar";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@yaklabs/ui/components/tooltip";
-import {
-  AlarmClock,
-  Archive,
-  ArchiveRestore,
-  Ellipsis,
-  Link,
-  Pin,
-  PinOff,
-  Trash2,
-} from "lucide-react";
+import { Archive, ArchiveRestore, Ellipsis, Link, Pin, PinOff, Trash2 } from "lucide-react";
 import type { ComponentProps } from "react";
 import { useShell, type Shell } from "./model";
 import { ShareItem } from "./share-menu";
-import { wakeText } from "./wake-text";
+import { SnoozeItem } from "./snooze-item";
 
 /** The label every "⋯" for a thread carries, in its title bar or the phone's (ADR-124). */
 export const THREAD_ACTIONS = "Thread actions";
@@ -43,26 +33,6 @@ function PinItem({ shell, thread }: ItemProps) {
     >
       {pinned ? <PinOff aria-hidden="true" /> : <Pin aria-hidden="true" />}
       {pinned ? "Unpin thread" : "Pin thread"}
-    </DropdownMenuItem>
-  );
-}
-
-// Snooze opens the card; a snoozed thread's item says when it wakes (ADR-126).
-function SnoozeItem({ shell, thread, before }: ItemProps & { before?: () => void }) {
-  return (
-    <DropdownMenuItem
-      onClick={() => {
-        before?.();
-        shell.askSnooze(thread.id);
-      }}
-    >
-      <AlarmClock aria-hidden="true" />
-      Snooze
-      {thread.snoozedUntil !== null && (
-        <DropdownMenuShortcut>
-          {wakeText(new Date(thread.snoozedUntil), "menu")}
-        </DropdownMenuShortcut>
-      )}
     </DropdownMenuItem>
   );
 }
