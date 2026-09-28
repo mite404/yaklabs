@@ -46,8 +46,12 @@ const ON_WASH: Pair[] = [
   ["--on-chrome", "--chrome-painting-hover", 10.12, 4.5],
   ["--on-chrome-painting-soft", "--chrome-painting-hover", 7.91, 4.5],
 ];
-// The splash's line, the ink at a share over nothing, as it lands on the canvas field (--bg).
-const SPLASH = { light: 1.26, dark: 1.36 };
+// The splash's lines, the ink at a share over nothing, as they land on the canvas field (--bg):
+// the sheet's construction lines, and the figure a step stronger so it reads first.
+const SPLASH = {
+  "--splash-line": { light: 1.26, dark: 1.36 },
+  "--splash-figure": { light: 1.42, dark: 1.65 },
+};
 // No pixel of the decoded painting may be brighter than this (paint-chrome.mjs).
 const PAINTING_BOUND = 0.1;
 
@@ -164,15 +168,18 @@ describe("the window chrome's tokens", () => {
     }).toEqual({ mean: facts.mean, withinBound: true, readable: true });
   });
 
-  it("draw the splash's line faintly off the field in either theme", () => {
-    const share = Number(/(\d+)%/.exec(ROOT.get("--splash-line") ?? "")?.[1]) / 100;
-    const measured = Object.entries(THEMES).map(([name, theme]) => {
-      const field = colour("--bg", theme);
-      const ink = colour("--ink", theme);
-      const over = (i: 0 | 1 | 2) => ink[i] * share + field[i] * (1 - share);
-      const line: Rgb = [over(0), over(1), over(2)];
-      return [name, Math.round(contrast(luminance(line), luminance(field)) * 100) / 100];
-    });
-    expect(Object.fromEntries(measured)).toEqual(SPLASH);
-  });
+  it.each(Object.entries(SPLASH))(
+    "draw %s faintly off the field in either theme",
+    (token, want) => {
+      const share = Number(/(\d+)%/.exec(ROOT.get(token) ?? "")?.[1]) / 100;
+      const measured = Object.entries(THEMES).map(([name, theme]) => {
+        const field = colour("--bg", theme);
+        const ink = colour("--ink", theme);
+        const over = (i: 0 | 1 | 2) => ink[i] * share + field[i] * (1 - share);
+        const line: Rgb = [over(0), over(1), over(2)];
+        return [name, Math.round(contrast(luminance(line), luminance(field)) * 100) / 100];
+      });
+      expect(Object.fromEntries(measured)).toEqual(want);
+    },
+  );
 });

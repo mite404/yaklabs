@@ -139,6 +139,9 @@
      a stroke stands 1.26:1 off the field in light and 1.36:1 in dark, visible without ever
      competing with the words */
   --splash-line: color-mix(in srgb, var(--ink) 12%, transparent);
+  /* the splash's figure, the ink at 18%: a step past the construction lines, so Atlas reads as
+     the drawing and the sheet as the ground; 1.42:1 off the field in light, 1.65:1 in dark */
+  --splash-figure: color-mix(in srgb, var(--ink) 18%, transparent);
 
   --radius-card: 14px; /* the catalog card and the thread panel; shadcn owns --radius (ADR-082) */
   --space: 24px;
