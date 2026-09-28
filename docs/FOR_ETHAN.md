@@ -87,6 +87,11 @@ moves from the bar to the foot of that drawer, and the canvas becomes somewhere 
 than arrange (ADR-122). On a phone, dragging a lane sideways fought the row's own sideways scroll,
 so the drag is simply off there, and the lanes still scroll. One fact decides all three: the
 sidebar's own `isMobile`, the same 768px line the styles use.
+A main thread's fold arrow then moved to sit beside its own name, matching the project row's, and
+the count of sub-threads it used to carry ("^ 2") is gone at Ethan's word - clutter, not signal.
+The row keeps a stretched link (Bootstrap's own pattern) so a click anywhere on it still opens the
+thread, with the fold button lifted above that layer so it still catches its own clicks (ADR-093,
+amended by ADR-124).
 
 ## 2. Cast & Crew
 

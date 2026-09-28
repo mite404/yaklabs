@@ -1412,3 +1412,18 @@ phone anyway, ADR-119). Keyboard reordering on a lane's gap stays. From 768px up
 changes. All of it follows the one `isMobile` the sidebar already reads: the lane reorder takes
 an `enabled` flag, the row carries `data-reorder` for the grip's styles, and the thread panel
 takes `cardsCarry`.
+
+## ADR-124 - A main thread's fold arrow sits beside its name, not a count
+
+2026-09-28 - Accepted (Ethan); amends ADR-093.
+ADR-093 put a project's fold chevron right after its name, but a main thread with sub-threads
+still folded them behind a count at the row's far right ("^ 2"), a second design for the same
+job. Ethan: "i dont think we need the number of threads thats UI clutter." The count is gone, and
+the fold button now sits right after the title, sharing the project row's own chevron: ">" while
+folded, and open, a "v" on hover or on keyboard focus of the row or the button.
+The row is a link, so its fold button cannot nest inside it; the row uses the stretched-link
+pattern instead (Bootstrap's recipe). The link stays sized to its title, with an `::after` that
+stretches to the row's edges since the row, not the link, is the nearest positioned ancestor, so
+a click anywhere on the row still opens the thread. The button sits after the title in flow,
+lifted above that layer by its own stacking context (`relative z-10`), so it still catches its
+own clicks and only folds the children.
