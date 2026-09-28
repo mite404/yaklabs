@@ -24,13 +24,15 @@ const requestSchema = z.discriminatedUnion("kind", [
 ]);
 type Request = z.infer<typeof requestSchema>;
 
-// The 1 → 2 step with a crash after the rebuild, before its transaction commits.
+// The 1 → 2 step with a crash after the rebuild, before its transaction commits; the 2 → 3
+// step after it is never reached.
 const crashingSteps: typeof migrationSteps = [
   migrationSteps[0],
   (db, legacy) => {
     migrationSteps[1](db, legacy);
     throw new Error("crashed before commit");
   },
+  migrationSteps[2],
 ];
 
 async function saveThenReopen(name: string, turn: ThreadMessage) {
