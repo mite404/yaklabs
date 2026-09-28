@@ -1500,6 +1500,113 @@ try {
   );
 
   await onOwnPage(
+    "a project's + for a new thread sits at the row's right edge, folded or open",
+    "/?scenario=demo",
+    {},
+    async (own) => {
+      const side = own.locator('[data-slot="sidebar"]');
+      const project = side.getByRole("button", { name: "Demo store", exact: true });
+      await project.waitFor({ timeout: 15_000 });
+      const plus = side.getByRole("button", { name: "New thread in Demo store" });
+      const look = async () => {
+        const [projectBox, plusBox] = await Promise.all([
+          project.boundingBox(),
+          plus.boundingBox(),
+        ]);
+        const right = projectBox.x + projectBox.width;
+        return {
+          visible: Boolean(await plus.isVisible()),
+          atRight:
+            plusBox.x + plusBox.width <= right + 1 && right - (plusBox.x + plusBox.width) <= 24,
+        };
+      };
+      const openLook = await look();
+      await project.click();
+      await own.waitForTimeout(200);
+      const foldedLook = await look();
+      return {
+        ok: openLook.visible && openLook.atRight && foldedLook.visible && foldedLook.atRight,
+        detail: `open ${JSON.stringify(openLook)}; folded ${JSON.stringify(foldedLook)}`,
+      };
+    },
+  );
+
+  await onOwnPage(
+    "a main row with children keeps its fold arrow beside the name and drops the count",
+    "/?scenario=demo",
+    {},
+    async (own) => {
+      const row = own.locator('[data-slot="sidebar"] [data-slot="thread-row"]').first();
+      await row.waitFor({ timeout: 15_000 });
+      const label = row.locator("[data-label]");
+      const arrow = row.locator("button[aria-expanded]");
+      const chevron = row.locator('[data-slot="fold-chevron"]');
+      const [labelBox, arrowBox] = await Promise.all([label.boundingBox(), arrow.boundingBox()]);
+      const gap = arrowBox.x - (labelBox.x + labelBox.width);
+      const text = await row.innerText();
+      await own.mouse.move(900, 450);
+      await own.waitForTimeout(200);
+      const restOpacity = await chevron.evaluate((el) => getComputedStyle(el).opacity);
+      await row.hover();
+      await own.waitForTimeout(200);
+      const hoverOpacity = await chevron.evaluate((el) => getComputedStyle(el).opacity);
+      await arrow.click();
+      await own.waitForTimeout(200);
+      const foldedExpanded = await arrow.getAttribute("aria-expanded");
+      const foldedOpacity = await chevron.evaluate((el) => getComputedStyle(el).opacity);
+      return {
+        ok:
+          gap >= 0 &&
+          gap <= 12 &&
+          !/\d/.test(text) &&
+          restOpacity === "0" &&
+          hoverOpacity === "1" &&
+          foldedExpanded === "false" &&
+          foldedOpacity === "1",
+        detail: `gap ${gap.toFixed(1)}px; row text ${JSON.stringify(text)}; chevron opacity at rest ${restOpacity}, on hover ${hoverOpacity}, folded ${foldedOpacity} (expanded ${foldedExpanded})`,
+      };
+    },
+  );
+
+  await onOwnPage(
+    "clicking a main row's empty space opens it, and its arrow only folds",
+    "/?scenario=demo",
+    {},
+    async (own) => {
+      const side = own.locator('[data-slot="sidebar"]');
+      const row = side.locator('[data-slot="thread-row"]').first();
+      await row.waitFor({ timeout: 15_000 });
+      await side.getByRole("link", { name: "Refund audit", exact: true }).click();
+      await own.waitForTimeout(300);
+      const away = own.url();
+      const rowBox = await row.boundingBox();
+      await own.mouse.click(rowBox.x + rowBox.width - 4, rowBox.y + rowBox.height / 2);
+      await own.waitForTimeout(300);
+      const opened = own.url();
+      const arrow = row.locator("button[aria-expanded]");
+      const beforeToggle = await arrow.getAttribute("aria-expanded");
+      const child = side.getByRole("link", { name: "Saturday leads at every level" });
+      const shownBefore = Boolean(await child.isVisible());
+      await arrow.click();
+      await own.waitForTimeout(200);
+      const afterToggle = await arrow.getAttribute("aria-expanded");
+      const shownAfter = Boolean(await child.isVisible());
+      const stillOpened = own.url();
+      return {
+        ok:
+          opened !== away &&
+          /\/t\//.test(opened) &&
+          beforeToggle === "true" &&
+          shownBefore &&
+          afterToggle === "false" &&
+          !shownAfter &&
+          stillOpened === opened,
+        detail: `left ${away} for ${opened} on a click at the row's right edge; fold ${beforeToggle}→${afterToggle} ${stillOpened === opened ? "kept the address" : `moved to ${stillOpened}`}; child shown before ${shownBefore}, after ${shownAfter}`,
+      };
+    },
+  );
+
+  await onOwnPage(
     "a project name with an unbroken word wraps inside its tooltip",
     "/t/t-001?scenario=long",
     {},
