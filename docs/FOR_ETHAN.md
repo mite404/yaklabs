@@ -1891,7 +1891,7 @@ is olive, nearly clear is sage.
 ```css
 /* packages/catalog/src/motion.css */
 .agent-working {
-  --working-duration: 150ms; /* one knob; Storybook scrubs it */
+  --working-duration: 1200ms; /* one knob; Storybook scrubs it */
   /* a head start of 65% is the same as a lag of 35%, and never shows a blank first frame */
   --working-lag: calc(var(--working-duration) * -0.65);
 }
@@ -1904,7 +1904,7 @@ is olive, nearly clear is sage.
 sequenceDiagram
   participant L as Left column
   participant R as Right column
-  Note over L,R: one 150ms cycle, same keyframes
+  Note over L,R: one 1200ms cycle, same keyframes
   L->>L: 0-35% fade in, sage → moss
   R->>R: already fading out from last cycle
   L->>L: 35-50% hold solid
@@ -1916,10 +1916,10 @@ sequenceDiagram
 The film version: two dancers, one piece of music, the second one counting in late. You do not
 choreograph a second routine, you cue the same one later. A canon in music works the same way.
 
-Two review tools came with it. The Frames story is a contact sheet: the wave paused at ten points
-and blown up 4x, so a cut that looks right at speed can be checked frame by frame. The Speeds
-story plays 150, 300, 600 and 1200ms side by side, because timing is a taste call that is easier
-to defend with the alternatives on screen than in words.
+The first cut ran at 150ms: nearly seven loops a second, which the eye reads as flicker, not a
+travelling wave, and the fade through the greens lasted about 75ms, too short to register. It now
+ships at 1200ms. The Speeds story plays 650, 850, 1200, 1350 and 1500ms side by side, because
+timing is a taste call that is easier to defend with the alternatives on screen than in words.
 
 Senior-engineer takeaway: when motion must stay in sync, derive every actor from one clock. A
 second keyframe track would drift the moment someone changed one duration and not the other.
