@@ -3,7 +3,10 @@ import { MAX_SHARE_BYTES, SHARE_TTLS, type ShareCreated } from "./contract";
 /** A sealed thread as the gateway keeps it: the bytes it cannot read, when they end, and the revoke token's hash. */
 export type StoredShare = { bytes: ArrayBuffer; expiresAt: string; revokeHash: string };
 
-/** Where shares live: Cloudflare KV in the Worker, memory in tests. It forgets each at its end. */
+/**
+ * Where shares live: Cloudflare KV in the Worker (worker.ts), memory in tests. It forgets each at
+ * its end. This module names no Worker type, so the runtime can import the app's types.
+ */
 export type ShareStore = {
   put(id: string, share: StoredShare, ttlSeconds: number): Promise<void>;
   /** The share, or null once it has ended or been taken down. */
@@ -104,19 +107,5 @@ export function memoryShares(now: () => number): ShareStore {
       shares.delete(id);
       return Promise.resolve();
     },
-  };
-}
-
-/** Shares in Cloudflare KV, which deletes each at its `expirationTtl`. */
-export function kvShares(kv: KVNamespace): ShareStore {
-  type Meta = { expiresAt: string; revokeHash: string };
-  return {
-    put: (id, { bytes, expiresAt, revokeHash }, ttlSeconds) =>
-      kv.put(id, bytes, { expirationTtl: ttlSeconds, metadata: { expiresAt, revokeHash } }),
-    get: async (id) => {
-      const { value, metadata } = await kv.getWithMetadata<Meta>(id, "arrayBuffer");
-      return value === null || metadata === null ? null : { bytes: value, ...metadata };
-    },
-    delete: (id) => kv.delete(id),
   };
 }

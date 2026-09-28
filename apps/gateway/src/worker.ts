@@ -2,7 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
 import { createApp, type AppType } from "./app";
 import { workOsVerifier } from "./auth";
-import { kvShares, randomToken } from "./shares";
+import { randomToken, type ShareStore } from "./shares";
 
 // The Worker's bindings: `WORKOS_CLIENT_ID` is a var in wrangler.jsonc, `ANTHROPIC_API_KEY` a
 // secret (`wrangler secret put`); `.dev.vars` supplies both under `wrangler dev`. `SHARES` is
@@ -14,6 +14,20 @@ const envSchema = z.object({
   ANTHROPIC_API_KEY: z.string().min(1),
   WORKOS_CLIENT_ID: z.string().startsWith("client_"),
 });
+
+// Shares in Cloudflare KV, which deletes each at its `expirationTtl` (ADR-129).
+function kvShares(kv: KVNamespace): ShareStore {
+  type Meta = { expiresAt: string; revokeHash: string };
+  return {
+    put: (id, { bytes, expiresAt, revokeHash }, ttlSeconds) =>
+      kv.put(id, bytes, { expirationTtl: ttlSeconds, metadata: { expiresAt, revokeHash } }),
+    get: async (id) => {
+      const { value, metadata } = await kv.getWithMetadata<Meta>(id, "arrayBuffer");
+      return value === null || metadata === null ? null : { bytes: value, ...metadata };
+    },
+    delete: (id) => kv.delete(id),
+  };
+}
 
 // One app per isolate: the JWKS cache and the SDK client live as long as the isolate does.
 let app: AppType | undefined;
