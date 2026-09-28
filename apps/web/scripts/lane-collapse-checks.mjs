@@ -1,92 +1,35 @@
 // Checks for collapsible lanes (ADR-124): the strip's look in both themes, the drag by any part
 // of it, the state kept across a reload, and the keyboard and screen reader's way in.
 import { canvasOf, laneTitles, makeLane } from "./canvas-checks.mjs";
-import { BASE, luminance, shotPath } from "./lever.mjs";
-
-// Long enough to outgrow a strip down a 900px window, so its end has to give way to an ellipsis.
-const LONG_TITLE =
-  "Why supplier invoices and deliveries disagree at the northern warehouse, week by week, since June, and what the stores could do about it before the quarter closes";
-const STRIP_PX = 32;
-
-const near = (a, b) => Math.abs(a - b) <= 1;
-// A box grown by 2px each way, so a measure of its ink takes in the paper around it.
-const pad = (box) => ({
-  x: box.x - 2,
-  y: box.y - 2,
-  width: box.width + 4,
-  height: box.height + 4,
-});
-const NO_INK = { min: 255, max: 0, mean: 0 };
-const laneNamed = (page, title) =>
-  canvasOf(page).locator(`:scope > article[aria-label="${title.replaceAll('"', '\\"')}"]`);
-
-// The app in `theme` in a fresh context, ready once a thread panel is on screen. The context is
-// the page's own, so a reload keeps what the device stored and nothing else sees it.
-async function openThemed(browser, theme = "light") {
-  const context = await browser.newContext({
-    viewport: { width: 1440, height: 900 },
-    reducedMotion: "reduce",
-  });
-  const page = await context.newPage();
-  const errors = [];
-  page.on("pageerror", (error) => errors.push(String(error)));
-  await page.addInitScript((chosen) => {
-    localStorage.setItem("theme", chosen);
-  }, theme);
-  await page.goto(`${BASE}/`, { waitUntil: "load" });
-  await page.locator(".thread-panel").first().waitFor({ timeout: 20_000 });
-  return { page, errors, close: () => context.close() };
-}
-
-// What a collapsed lane shows, measured: the strip's box against the lane's, the title's
-// writing mode and clip, the grip's opacity, the buttons it offers and what it hides.
-function stripLook(lane) {
-  return lane.evaluate((el) => {
-    const box = el.getBoundingClientRect();
-    const strip = el.querySelector("[data-lane-strip]");
-    const title = el.querySelector("[data-lane-strip-title]");
-    const grip = el.querySelector("[data-lane-strip-grip]");
-    const stripBox = strip?.getBoundingClientRect();
-    const titleStyle = title && getComputedStyle(title);
-    const buttons = [...el.querySelectorAll("button")]
-      .filter((button) => button.offsetWidth > 0)
-      .map((button) => button.getAttribute("aria-label") ?? button.textContent.trim());
-    return {
-      width: box.width,
-      stripTop: stripBox ? stripBox.top - box.top : -1,
-      stripBottom: stripBox ? box.bottom - stripBox.bottom : -1,
-      stripWidth: stripBox?.width ?? 0,
-      text: title?.textContent ?? "",
-      writing: titleStyle?.writingMode ?? "",
-      overflow: titleStyle?.textOverflow ?? "",
-      clipped: title ? title.scrollHeight > title.clientHeight + 1 : false,
-      tall: title
-        ? title.getBoundingClientRect().height > title.getBoundingClientRect().width
-        : false,
-      gripOpacity: grip ? getComputedStyle(grip).opacity : "",
-      gripBox: grip?.getBoundingClientRect().toJSON() ?? null,
-      titleBox: title?.getBoundingClientRect().toJSON() ?? null,
-      contentShown: [...el.querySelectorAll(".thread-panel, .card")].some(
-        (part) => part.offsetWidth > 0,
-      ),
-      buttons,
-    };
-  });
-}
+import {
+  dragStrip,
+  laneNamed,
+  LONG_TITLE,
+  near,
+  NO_INK,
+  openThemed,
+  pad,
+  STRIP_PX,
+  stripLook,
+} from "./lane-collapse-look.mjs";
+import { luminance, shotPath } from "./lever.mjs";
 
 // One theme's strip: a long-titled lane collapsed, measured at rest with the pointer away.
 async function stripIn(browser, theme) {
   const { page, close } = await openThemed(browser, theme);
   await makeLane(page, LONG_TITLE);
   const lane = laneNamed(page, LONG_TITLE);
+  // Open, the toggle sits in the thread's own title bar, before its title.
+  const inHeader = await lane.locator(".thread-header [data-lane-toggle]").count();
   await lane.getByRole("button", { name: "Collapse lane" }).click();
   await page.mouse.move(5, 5);
   await page.waitForTimeout(300);
   const look = await stripLook(lane);
-  const gripInk = look.gripBox ? await luminance(page, pad(look.gripBox)) : NO_INK;
-  const titleInk = look.titleBox
-    ? await luminance(page, { ...look.titleBox, height: Math.min(look.titleBox.height, 120) })
-    : NO_INK;
+  const gripInk = look.gripBox === null ? NO_INK : await luminance(page, pad(look.gripBox));
+  const titleInk =
+    look.titleBox === null
+      ? NO_INK
+      : await luminance(page, { ...look.titleBox, height: Math.min(look.titleBox.height, 120) });
   await lane.screenshot({ path: shotPath(`P14-strip-${theme}`) });
   await page.screenshot({ path: shotPath(`P14-canvas-${theme}`) });
   await close();
@@ -95,7 +38,7 @@ async function stripIn(browser, theme) {
   const ok =
     near(look.width, STRIP_PX) &&
     near(look.stripWidth, STRIP_PX) &&
-    look.stripTop >= 0 &&
+    near(look.stripTop, 0) &&
     look.stripBottom <= 1 &&
     look.text === LONG_TITLE &&
     look.writing === "vertical-rl" &&
@@ -106,37 +49,16 @@ async function stripIn(browser, theme) {
     marked(gripInk) &&
     marked(titleInk) &&
     !look.contentShown &&
-    JSON.stringify(look.buttons) === JSON.stringify(["Expand lane"]);
+    JSON.stringify(look.buttons) === JSON.stringify(["Expand lane"]) &&
+    look.toggleInStrip &&
+    inHeader === 1;
   return {
     ok,
-    note: `${theme}: lane ${Math.round(look.width)}px, strip ${Math.round(look.stripWidth)}px from ${Math.round(look.stripTop)}px to ${Math.round(look.stripBottom)}px off the foot; title ${look.writing} ${look.overflow} clipped ${look.clipped}; grip opacity ${look.gripOpacity} ink ${JSON.stringify(gripInk)}; title ink ${JSON.stringify(titleInk)}; content shown ${look.contentShown}; buttons ${look.buttons.join("|")}`,
+    note: `${theme}: lane ${Math.round(look.width)}px, strip ${Math.round(look.stripWidth)}px from ${Math.round(look.stripTop)}px to ${Math.round(look.stripBottom)}px off the foot; title ${look.writing} ${look.overflow} clipped ${look.clipped}; grip opacity ${look.gripOpacity} ink ${JSON.stringify(gripInk)}; title ink ${JSON.stringify(titleInk)}; content shown ${look.contentShown}; buttons ${look.buttons.join("|")}; toggle in the header ${inHeader === 1}, in the strip ${look.toggleInStrip}`,
   };
 }
 
-// Presses at `from`, travels to `to` in steps, and reports what the page showed on the way.
-async function dragStrip(page, from, to) {
-  await page.mouse.move(from.x, from.y);
-  await page.mouse.down();
-  await page.mouse.move(from.x + 10, from.y + 4, { steps: 3 });
-  await page.mouse.move(to.x, to.y, { steps: 12 });
-  await page.waitForTimeout(150);
-  const during = await page.evaluate(() => {
-    const ghost = document.querySelector(".lane-ghost");
-    return {
-      dragging: document.documentElement.dataset.dragging ?? "",
-      ghostWidth: ghost ? Math.round(ghost.getBoundingClientRect().width) : 0,
-      ghostShadow: ghost ? getComputedStyle(ghost).filter : "none",
-      ghostGrip: ghost?.querySelector("[data-lane-strip-grip]")?.offsetWidth ?? 0,
-      lifted: document.querySelector("article[data-lifted]")?.getAttribute("aria-label") ?? "",
-    };
-  });
-  await page.screenshot({ path: shotPath("P15-carrying") });
-  await page.mouse.up();
-  await page.waitForTimeout(500);
-  return during;
-}
-
-/** Collapsible lanes (P14 to P17). */
+/** Collapsible lanes (P14 to P18). */
 export const laneCollapseChecks = {
   async P14(browser) {
     const results = await Promise.all(["light", "dark"].map((theme) => stripIn(browser, theme)));
@@ -248,6 +170,7 @@ export const laneCollapseChecks = {
     await page.keyboard.press("Enter");
     await page.waitForTimeout(200);
     const afterEnter = await focusedName();
+    /** @type {string} */
     const tree = await lane.ariaSnapshot();
     const gap = canvasOf(page).getByRole("separator", { name: "Move By keyboard" });
     const gapShown = await gap.count();
@@ -278,6 +201,51 @@ export const laneCollapseChecks = {
     return {
       ok,
       detail: `focus after Enter "${afterEnter}", after Space "${afterSpace}"; tree ${JSON.stringify(tree.replaceAll(/\s+/g, " ").slice(0, 120))}; gap named "Move By keyboard" ${gapShown === 1}; Shift+ArrowLeft ${titles.join(" | ")} → ${moved.join(" | ")}; ArrowRight leaves the strip ${stripAfterArrow}px`,
+    };
+  },
+  async P18(browser) {
+    const { page, close } = await openThemed(browser);
+    await makeLane(page, "One");
+    await makeLane(page, "Two");
+    const bar = page.locator('header[data-slot="title-bar"]');
+    const inBar = (name) => bar.getByRole("button", { name, exact: true });
+    const strips = () => canvasOf(page).getByRole("button", { name: "Expand lane" }).count();
+    await laneNamed(page, "One").getByRole("button", { name: "Collapse lane" }).click();
+    await page.waitForTimeout(300);
+    const one = await strips();
+    // One lane still open: the bar offers to collapse the rest.
+    await inBar("Collapse all lanes").click();
+    await page.waitForTimeout(300);
+    const all = await strips();
+    const offersExpand = await inBar("Expand all lanes").count();
+    await bar.screenshot({ path: shotPath("P18-bar-all-collapsed") });
+    await page.screenshot({ path: shotPath("P18-all-collapsed") });
+    await page.reload({ waitUntil: "load" });
+    await laneNamed(page, "Two").waitFor({ timeout: 20_000 });
+    await page.waitForTimeout(500);
+    const kept = await strips();
+    await inBar("Expand all lanes").click();
+    await page.waitForTimeout(300);
+    const none = await strips();
+    const offersCollapse = await inBar("Collapse all lanes").count();
+    // Beside the thread alone the canvas is off screen, and the bar's button waits for it.
+    await page
+      .getByRole("group", { name: "Layout" })
+      .getByRole("button", { name: "Thread", exact: true })
+      .click();
+    await page.waitForTimeout(300);
+    const offScreen = await inBar("Collapse all lanes").isDisabled();
+    await close();
+    return {
+      ok:
+        one === 1 &&
+        all === 2 &&
+        offersExpand === 1 &&
+        kept === 2 &&
+        none === 0 &&
+        offersCollapse === 1 &&
+        offScreen,
+      detail: `collapsed ${one} → ${all} by the bar, then offered Expand all ${offersExpand === 1}; ${kept} after a reload; ${none} after Expand all; disabled with the canvas off screen ${offScreen}`,
     };
   },
 };

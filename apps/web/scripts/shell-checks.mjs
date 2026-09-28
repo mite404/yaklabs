@@ -39,6 +39,7 @@ function barLayout() {
   const controls = [
     ["toggle", drawn('[aria-label="Toggle sidebar"]')],
     ["project", drawn('[data-slot="project-name"]')],
+    ["lanes", drawn('[data-slot="collapse-all"]')],
     ["bell", drawn('[aria-label^="Notifications"]')],
     ["account", drawn('[aria-label="Account"]')],
     ["more", drawn('[aria-label="Thread and project actions"]')],
@@ -95,7 +96,7 @@ async function narrowBar(browser, { theme, width }) {
     m.height === PHONE_BAR &&
     m.scroll[0] === m.scroll[1] &&
     m.page[0] === m.page[1] &&
-    m.names.length === 4 &&
+    m.names.join("|") === "toggle|project|lanes|bell|more" &&
     m.overlaps.length === 0 &&
     m.outside.length === 0 &&
     m.namePx >= Math.min(m.nameFull, LEGIBLE_PX) &&
