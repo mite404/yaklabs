@@ -38,12 +38,15 @@ const ticksOfWeight = (test) =>
     .join(""); // → path data
 
 // The strokes keep a screen pixel's width whatever the box's size (non-scaling-stroke), so the
-// sheet is a hairline at a phone's width and at a desktop's alike.
+// sheet is a hairline at a phone's width and at a desktop's alike. The mask is filled with one
+// token, so the hierarchy is in the strokes' opacity: the square and the ticks at full, since
+// they are the construction, the circle fainter, since the globe it rings draws that line.
 const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${SIDE} ${SIDE}" fill="none" stroke="#000" stroke-width="1" vector-effect="non-scaling-stroke">
 <rect x="1" y="1" width="${SIDE - 2}" height="${SIDE - 2}" vector-effect="non-scaling-stroke"/>
-<circle cx="${CENTRE}" cy="${CENTRE}" r="${RADIUS}" vector-effect="non-scaling-stroke"/>
-<path vector-effect="non-scaling-stroke" d="${ticksOfWeight((d) => d % 15 === 0)}"/>
-<path vector-effect="non-scaling-stroke" stroke-width=".75" d="${ticksOfWeight((d) => d % 15 !== 0)}"/>
+<circle cx="${CENTRE}" cy="${CENTRE}" r="${RADIUS}" stroke-opacity=".55" vector-effect="non-scaling-stroke"/>
+<path vector-effect="non-scaling-stroke" stroke-width="1.5" d="${ticksOfWeight((d) => d % 90 === 0)}"/>
+<path vector-effect="non-scaling-stroke" d="${ticksOfWeight((d) => d % 15 === 0 && d % 90 !== 0)}"/>
+<path vector-effect="non-scaling-stroke" stroke-opacity=".7" d="${ticksOfWeight((d) => d % 15 !== 0)}"/>
 </svg>
 `;
 

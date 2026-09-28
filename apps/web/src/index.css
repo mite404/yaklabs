@@ -186,6 +186,10 @@
     inset: 0;
     z-index: -1;
     container-type: size;
+    /* Atlas runs past the square, and his faded feet may pass the open space's edge: clipped
+       here, so nothing of the figure's box can reach the canvas's scroll. */
+    overflow: hidden;
+    border-radius: inherit;
     /* The square: the shorter side less the open space's own padding. Read by the children,
        where the units resolve against this layer. */
     --side: calc(100cqmin - 48px);
@@ -216,30 +220,32 @@
     inset: 0;
     background: radial-gradient(
       circle calc(var(--side) * 0.47) at center,
-      var(--clearing) 40%,
+      var(--clearing) 55%,
       transparent 100%
     );
     transition: --clearing 150ms ease;
   }
   /* The sheet: Leonardo's square, the circle inside it and the protractor between the two
-     (draw-vitruvian.mjs), sized to the square and centred. */
+     (draw-vitruvian.mjs), sized to the square and centred. It shares the figure's ink, since
+     the square and the ticks are construction, not ground; the circle is drawn fainter in
+     the file. */
   .splash-sheet {
     position: absolute;
     inset: 0;
     margin: auto;
     width: var(--side);
     height: var(--side);
-    background-color: var(--splash-line);
+    background-color: var(--splash-figure);
     mask: url("/splash/vitruvian.svg") center / contain no-repeat;
   }
-  /* Atlas, a step stronger than the sheet so he reads as the drawing. He stands eight tenths
-     of the square tall, which keeps his feet inside the circle, and is shifted by the distance
-     from his image's centre to his globe's, so the globe is concentric with the circle. */
+  /* Atlas, shifted by the distance from his image's centre to his globe's, so the globe is
+     concentric with the circle. His height makes the globe 82% of the circle's diameter,
+     with the words and the button inside it, and his body runs down out of the circle. */
   .splash-drawing {
     position: absolute;
     inset: 0;
     margin: auto;
-    height: calc(var(--side) * 0.8);
+    height: calc(var(--side) * 1.39);
     aspect-ratio: 635 / 1081;
     translate: 1.23% 20.59%;
     background-color: var(--splash-figure);

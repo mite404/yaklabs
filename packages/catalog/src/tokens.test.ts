@@ -50,7 +50,7 @@ const ON_WASH: Pair[] = [
 // the sheet's construction lines, and the figure a step stronger so it reads first.
 const SPLASH = {
   "--splash-line": { light: 1.26, dark: 1.36 },
-  "--splash-figure": { light: 1.42, dark: 1.65 },
+  "--splash-figure": { light: 1.55, dark: 1.89 },
 };
 // No pixel of the decoded painting may be brighter than this (paint-chrome.mjs).
 const PAINTING_BOUND = 0.1;
