@@ -82,8 +82,17 @@ function ThemeChoices({ theme }: { theme: ThemeChoice }) {
   );
 }
 
-// The avatar in the title bar's corner, and the menu it opens.
-function AccountMenu({ face, children }: { face: ReactNode; children: ReactNode }) {
+// Where the menu opens from: the title bar's corner by default (ADR-094), or wherever the
+// host places its trigger, such as the sidebar's foot on a phone (ADR-121).
+type Placement = { side?: "top" | "bottom"; align?: "start" | "end" };
+
+// The avatar in the trigger's corner, and the menu it opens.
+function AccountMenu({
+  face,
+  side,
+  align = "end",
+  children,
+}: Placement & { face: ReactNode; children: ReactNode }) {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
@@ -97,7 +106,7 @@ function AccountMenu({ face, children }: { face: ReactNode; children: ReactNode 
           {face}
         </Avatar>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
+      <DropdownMenuContent side={side} align={align} className="w-56">
         {children}
       </DropdownMenuContent>
     </DropdownMenu>
@@ -105,7 +114,7 @@ function AccountMenu({ face, children }: { face: ReactNode; children: ReactNode 
 }
 
 // Signed in with WorkOS (ADR-084): the picture or initials, the email, and the way out.
-function WorkOsAccount({ theme, chrome }: Looks) {
+function WorkOsAccount({ theme, chrome, side, align }: Looks & Placement) {
   const { user, signOut } = useAuth();
   if (user === null) return null;
   const face = (
@@ -118,7 +127,7 @@ function WorkOsAccount({ theme, chrome }: Looks) {
     </>
   );
   return (
-    <AccountMenu face={face}>
+    <AccountMenu face={face} side={side} align={align}>
       <DropdownMenuGroup>
         <DropdownMenuLabel className="text-soft-ink">{user.email}</DropdownMenuLabel>
         <DropdownMenuItem
@@ -139,7 +148,7 @@ function WorkOsAccount({ theme, chrome }: Looks) {
 
 // A build without sign-in: Kay's face, the one person who is always there (ADR-114), and a
 // menu that says sign-in is off. A signed-in account keeps its own face.
-function LocalAccount({ theme, chrome }: Looks) {
+function LocalAccount({ theme, chrome, side, align }: Looks & Placement) {
   const face = (
     <>
       <AvatarImage src="/kay/kay-face.webp" alt="" />
@@ -149,7 +158,7 @@ function LocalAccount({ theme, chrome }: Looks) {
     </>
   );
   return (
-    <AccountMenu face={face}>
+    <AccountMenu face={face} side={side} align={align}>
       <DropdownMenuGroup>
         <DropdownMenuLabel className="text-soft-ink">
           Sign-in is off in this build
@@ -164,7 +173,10 @@ function LocalAccount({ theme, chrome }: Looks) {
 }
 
 /**
- * The account in the title bar's corner, with the theme and the bar's look; WorkOS's user when
- * the build signs in.
+ * The account, with the theme and the bar's look; WorkOS's user when the build signs in. In
+ * the title bar's corner by default (ADR-094); on a phone the sidebar places it at the
+ * sidebar's foot instead, opening upward so its menu stays on screen (ADR-121).
+ * @param side Which side of the trigger the menu opens on; the default suits the title bar.
+ * @param align Which end of the trigger the menu aligns to; the default suits the title bar.
  */
 export const Account = env.auth.kind === "workos" ? WorkOsAccount : LocalAccount;

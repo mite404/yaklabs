@@ -66,6 +66,15 @@ it("never lets the recap ask for anything, even when the user has been away", ()
   expect(recap).not.toContain("Needs attention");
 });
 
+it("keeps a card's header draggable by default, and drops data-carry when told not to", () => {
+  const carrying = renderToStaticMarkup(<ChatThreadPanel thread={threads.trend} />);
+  expect(carrying.match(/data-carry=""/g)).toHaveLength(2);
+  const viewOnly = renderToStaticMarkup(
+    <ChatThreadPanel thread={threads.trend} cardsCarry={false} />,
+  );
+  expect(viewOnly).not.toContain("data-carry");
+});
+
 it("gives every card in the thread a share button, and the public page none", () => {
   const thread = renderToStaticMarkup(<ChatThreadPanel thread={threads.trend} />);
   expect(thread.match(/aria-label="Share this card"/g)).toHaveLength(2);

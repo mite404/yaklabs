@@ -7,6 +7,7 @@ import { LayoutSwitch } from "./layout-switch";
 import { useShell } from "./model";
 import { SIDEBAR_ID } from "./sidebar";
 import { TabStrip } from "./tab-strip";
+import { ProjectName, ThreadMenu } from "./thread-menu";
 
 // Decorative, as a desktop window's: they do nothing, and a screen reader never meets them. On
 // a phone the window is full-bleed, not a window, so they go; on the green bar they need no ring.
@@ -49,26 +50,31 @@ function SidebarToggle() {
  * The window's one title bar, across its whole width: decorative traffic lights, the sidebar
  * toggle and the open threads at the left; at the right where the data lives, the layout, the
  * bell, and the account in the corner (ADR-094). It is green chrome, flat or painted (ADR-110,
- * ADR-115). On a phone the tabs take a row of their own below, so neither they nor the controls
- * are squeezed off the screen.
+ * ADR-115). On a phone it is two rows (ADR-116): the project's name and what never scrolls on
+ * top, with a "⋯" for the thread and project; below, the views, Thread, Browser and Canvas.
+ * The account moves to the sidebar's foot on a phone instead (ADR-121).
  */
 export function TitleBar({ theme, chrome }: Looks) {
   const shell = useShell();
   const starting = useRuntimeState().kind === "starting";
+  const { isMobile, openMobile } = useSidebar();
   return (
     <header
       data-slot="title-bar"
+      inert={isMobile && openMobile}
       data-chrome={chrome.style}
-      className="chrome-surface grid shrink-0 grid-cols-[auto_minmax(0,1fr)] items-center gap-x-2 gap-y-1 px-3 py-[5px] select-none md:flex md:h-11 md:py-0 md:pl-0"
+      className="chrome-surface flex h-11 shrink-0 items-center gap-2 pr-3 select-none max-md:grid max-md:h-auto max-md:grid-cols-[auto_minmax(0,1fr)_repeat(3,auto)] max-md:grid-rows-[44px_auto] max-md:gap-x-1 max-md:gap-y-0 max-md:px-2 max-md:pb-1.5"
     >
       <TrafficLights />
       <SidebarToggle />
+      <ProjectName shell={shell} />
       <TabStrip shell={shell} starting={starting} />
-      <div className="flex shrink-0 items-center gap-2 max-md:col-start-2 max-md:row-start-1 max-md:min-w-0 max-md:justify-end">
+      <div className="flex shrink-0 items-center gap-2 max-md:contents">
         <DataMarker />
         <LayoutSwitch shell={shell} />
         <Bell shell={shell} />
-        <Account theme={theme} chrome={chrome} />
+        {!isMobile && <Account theme={theme} chrome={chrome} />}
+        <ThreadMenu shell={shell} />
       </div>
     </header>
   );

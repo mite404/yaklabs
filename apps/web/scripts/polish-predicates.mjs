@@ -37,6 +37,8 @@ const VARIANTS = ["solid", "painting"];
 const GROWN = { width: 1456, height: 916 };
 // The trim draws 2px over the body's edge (ADR-112); pixel comparisons leave that band out.
 const TRIM = 2;
+// The phone bar: 44px of controls over a row of views (ADR-116).
+const PHONE_BAR = 82;
 
 const query = (variant) => `chrome=${variant}`;
 const inside = (r, x, y) => x >= r.x && x < r.x + r.width && y >= r.y && y < r.y + r.height;
@@ -283,11 +285,8 @@ export const polishChecks = {
       const a1 = bg === chrome && chrome === "rgb(59, 66, 60)";
       // Measured before the widths below, since a tab eases to its new width after a resize.
       const report = await inkReport(page, titleBar(page));
-      // A2: 44px wherever the bar is one row, and the base's own height where the tabs take
-      // a row of their own below 768px (the base's phone layout, not the polish's).
       const heights = await headerHeights(page);
-      const before = readBaseline().json[theme].bar.heights;
-      const a2 = heights.every((h, i) => h === before[i] && (WIDTHS[i].width < 768 || h === 44));
+      const a2 = heights.every((h, i) => h === (WIDTHS[i].width < 768 ? PHONE_BAR : 44));
       const a3 = report.failures.length === 0;
       ok &&= a1 && a2 && a3;
       notes.push(

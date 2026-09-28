@@ -2,6 +2,7 @@ import {
   latestMain,
   threadIdSchema,
   type Located,
+  type ProjectId,
   type ThreadId,
   type Workspace,
 } from "@yaklabs/runtime";
@@ -241,4 +242,22 @@ export function resume(
   if (lastShown !== null && state.tabs.includes(lastShown)) return lastShown;
   const open = { ...ws, threads: ws.threads.filter((each) => state.tabs.includes(mainOf(each))) };
   return latestMain(open) ?? null;
+}
+
+/** The project the thread on screen belongs to, and which tab closing it would close. */
+export type ThreadActions = {
+  name: string | null;
+  projectId: ProjectId | undefined;
+  closes: ThreadId | null;
+};
+
+/**
+ * What the phone bar's "⋯" and project name act on (ADR-116): the project of the thread on
+ * screen, or none with nothing on screen or a thread the workspace lacks.
+ */
+export function threadActions(ws: Workspace, at: Located | null): ThreadActions {
+  const thread = ws.threads.find((each) => each.id === at?.main); // → ThreadSummary | undefined
+  const projectId = thread?.place.kind === "main" ? thread.place.projectId : undefined;
+  const project = ws.projects.find((each) => each.id === projectId); // → Project | undefined
+  return { name: project?.name ?? null, projectId: project?.id, closes: at?.main ?? null };
 }

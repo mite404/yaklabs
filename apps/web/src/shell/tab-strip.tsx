@@ -155,7 +155,7 @@ export function TabStrip({ shell, starting }: { shell: Shell | null; starting: b
   const plus = useRef<HTMLButtonElement>(null);
   useInView(active);
   return (
-    <div className="flex min-w-0 flex-1 items-center gap-1 max-md:col-span-2 max-md:row-start-2">
+    <div className="flex min-w-0 flex-1 items-center gap-1 max-md:hidden">
       <Tabs
         value={active}
         onValueChange={(value) => {

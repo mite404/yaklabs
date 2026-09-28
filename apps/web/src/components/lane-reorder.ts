@@ -154,8 +154,13 @@ function liftAt(event: PointerEvent<HTMLElement>, id: LaneId, index: number): Li
  * Reordering by a lane's grip (ADR-089): past a small dead zone the lane lifts, a copy of it
  * rides the pointer, the lane itself waits dimmed in the slot it would take and the lanes it
  * passes step aside; Escape puts it back. The lane handlers go on each lane's element.
+ * @param enabled Whether a grip takes hold of its lane at all; off makes the canvas view-only,
+ * as on a phone (ADR-122), where the row still scrolls but nothing lifts.
  */
-export function useReorder(onMove: (id: LaneId, to: number) => void): {
+export function useReorder(
+  onMove: (id: LaneId, to: number) => void,
+  enabled = true,
+): {
   drag: Drag | null;
   laneFor: (id: LaneId, index: number) => LaneHandlers;
 } {
@@ -179,6 +184,7 @@ export function useReorder(onMove: (id: LaneId, to: number) => void): {
 
   const laneFor = (id: LaneId, index: number): LaneHandlers => ({
     onPointerDown: (event) => {
+      if (!enabled) return;
       const pressed = liftAt(event, id, index);
       if (!pressed) return;
       event.preventDefault();

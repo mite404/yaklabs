@@ -178,12 +178,15 @@ function UserTurn({ message, ref }: { message: UserMessage; ref: Ref<HTMLElement
 function AgentTurn({
   message,
   onChoose,
+  cardsCarry,
   ref,
 }: {
   message: AgentMessage;
   onChoose: (attachment: CardAttachment) => void;
+  cardsCarry: boolean | undefined;
   ref: Ref<HTMLElement>;
 }) {
+  const carries = cardsCarry !== false;
   return (
     <article
       ref={ref}
@@ -194,14 +197,14 @@ function AgentTurn({
     >
       <p>{message.text}</p>
       {message.payload !== undefined && (
-        <CatalogCard payload={message.payload} context="thread" draggable />
+        <CatalogCard payload={message.payload} context="thread" draggable={carries} />
       )}
       {message.interactive !== undefined && (
         <InteractiveCard
           payload={message.interactive}
           turnId={message.id}
           onChoose={onChoose}
-          draggable
+          draggable={carries}
         />
       )}
     </article>
@@ -308,14 +311,16 @@ function useClock(now?: number): number {
 function Turn({
   message,
   onChoose,
+  cardsCarry,
 }: {
   message: ThreadMessage;
   onChoose: (attachment: CardAttachment) => void;
+  cardsCarry: boolean | undefined;
 }) {
   return message.role === "user" ? (
     <UserTurn ref={landOn} message={message} />
   ) : (
-    <AgentTurn ref={landOn} message={message} onChoose={onChoose} />
+    <AgentTurn ref={landOn} message={message} onChoose={onChoose} cardsCarry={cardsCarry} />
   );
 }
 
@@ -558,7 +563,12 @@ function focusComposeIn(scroller: HTMLElement | null): void {
  * @param initialDraft Text waiting in the compose box when the thread opens, such as a
  * highlight dropped on the canvas (ADR-089).
  * @param onRename When set, the title can be renamed in place; the host keeps the new name.
+ * @param cardsCarry Let a card's header carry it out onto the compose canvas (ADR-089). On by
+ * default; off where the host has no canvas to drop it on, such as a phone (ADR-122). The
+ * catalog cannot see the host's layout, so the host decides.
  */
+// fallow scores each prop as cognitive load: the ninth host knob tips 15 to 16 with no branch.
+// fallow-ignore-next-line complexity
 export function ChatThreadPanel({
   thread,
   width,
@@ -568,6 +578,7 @@ export function ChatThreadPanel({
   agent = labAgent,
   initialDraft = "",
   onRename,
+  cardsCarry,
 }: {
   thread: Thread;
   width?: number;
@@ -577,6 +588,7 @@ export function ChatThreadPanel({
   agent?: Agent;
   initialDraft?: string;
   onRename?: (title: string) => void;
+  cardsCarry?: boolean;
 }) {
   const { source, open } = dictationSetup(dictation);
   const [messages, setMessages] = useState(thread.messages);
@@ -639,7 +651,12 @@ export function ChatThreadPanel({
       <ThreadHeader title={thread.title} onRename={onRename} />
       <div className="thread-scroll" ref={scroller}>
         {messages.map((message) => (
-          <Turn key={message.id} message={message} onChoose={outbox.choose} />
+          <Turn
+            key={message.id}
+            message={message}
+            onChoose={outbox.choose}
+            cardsCarry={cardsCarry}
+          />
         ))}
       </div>
       <div className="thread-dock">

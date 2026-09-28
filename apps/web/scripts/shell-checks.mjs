@@ -22,6 +22,99 @@ const near = (a, b) => Math.abs(a - b) <= 1;
 // The box of a locator, or null when it is not on screen.
 const boxOf = (locator) => locator.boundingBox().catch(() => null);
 
+// The widths below the window's frame (ADR-111) where the bar must still fit (ADR-116).
+const NARROW = [390, 520, 767];
+// About ten characters of the project's name at 14px.
+const LEGIBLE_PX = 64;
+// The phone bar's two rows (ADR-116): 44px of controls, then the views' 32px and a 6px foot.
+const PHONE_BAR = 82;
+
+// Runs in the page: the top row's controls left to right, whether any two overlap, leave the bar
+// or fall out of the top row, how much of the project's name shows, and the views below it.
+function barLayout() {
+  const bar = document.querySelector('header[data-slot="title-bar"]');
+  const edge = bar.getBoundingClientRect();
+  const drawn = (selector) =>
+    [...bar.querySelectorAll(selector)].find((el) => el.getClientRects().length > 0);
+  const controls = [
+    ["toggle", drawn('[aria-label="Toggle sidebar"]')],
+    ["project", drawn('[data-slot="project-name"]')],
+    ["marker", drawn('[data-slot="data-marker"]')?.closest("button")],
+    ["bell", drawn('[aria-label^="Notifications"]')],
+    ["account", drawn('[aria-label="Account"]')],
+    ["more", drawn('[aria-label="Thread and project actions"]')],
+  ]
+    .filter(([, el]) => el !== undefined && el !== null)
+    .map(([name, el]) => [name, el.getBoundingClientRect()]);
+  const overlaps = controls
+    .slice(1)
+    .filter(([, box], i) => box.x < controls[i][1].right - 0.5)
+    .map(([name], i) => `${controls[i][0]}>${name}`);
+  const outside = controls
+    .filter(
+      ([, box]) =>
+        box.x < edge.x - 0.5 || box.right > edge.right + 0.5 || box.bottom > edge.y + 44.5,
+    )
+    .map(([name]) => name);
+  const name = bar.querySelector('[data-slot="project-name"]');
+  const views = [...bar.querySelectorAll('[role="group"][aria-label="Layout"] button')];
+  const below = views.every((view) => {
+    const box = view.getBoundingClientRect();
+    return box.y >= edge.y + 44 - 0.5 && box.x >= edge.x && box.right <= edge.right + 0.5;
+  });
+  return {
+    height: Math.round(edge.height),
+    scroll: [bar.scrollWidth, bar.clientWidth],
+    page: [document.documentElement.scrollWidth, document.documentElement.clientWidth],
+    names: controls.map(([each]) => each),
+    overlaps,
+    outside,
+    namePx: Math.round(name.getBoundingClientRect().width),
+    nameFull: name.scrollWidth,
+    views: views.map((view) => view.textContent.trim()),
+    below,
+  };
+}
+
+// One width in one theme: the bar's two rows, their picture, and a tap on the Canvas view.
+async function narrowBar(browser, { theme, width }) {
+  const context = await browser.newContext({
+    viewport: { width, height: 844 },
+    reducedMotion: "reduce",
+  });
+  await context.addInitScript((chosen) => {
+    localStorage.setItem("theme", chosen);
+  }, theme);
+  const page = await context.newPage();
+  await page.goto(`${BASE}/?scenario=demo`, { waitUntil: "load" });
+  await page.locator('[data-slot="project-name"]').filter({ hasText: /\S/ }).waitFor({
+    timeout: 20_000,
+  });
+  await page.evaluate(() => document.fonts.ready);
+  const m = await page.evaluate(barLayout);
+  const fits =
+    m.height === PHONE_BAR &&
+    m.scroll[0] === m.scroll[1] &&
+    m.page[0] === m.page[1] &&
+    m.names.length === 5 &&
+    m.overlaps.length === 0 &&
+    m.outside.length === 0 &&
+    m.namePx >= Math.min(m.nameFull, LEGIBLE_PX) &&
+    m.views.join("|") === "Thread|Browser|Canvas" &&
+    m.below;
+  await titleBar(page).screenshot({ path: shotPath(`P13-bar-${width}-${theme}`) });
+  await layoutButton(page, "Canvas").click();
+  await page
+    .locator('[role="tabpanel"]:not([inert]) [aria-label="Compose canvas"]')
+    .waitFor({ timeout: 10_000 });
+  const pressed = await layoutButton(page, "Canvas").getAttribute("aria-pressed");
+  await context.close();
+  return {
+    ok: fits && pressed === "true",
+    note: `${theme} ${width}: ${m.height}px; bar ${m.scroll.join("/")}; page ${m.page.join("/")}; top row [${m.names}]; overlaps [${m.overlaps}]; outside [${m.outside}]; name ${m.namePx}/${m.nameFull}px; views ${m.views.join("|")} below ${m.below}; canvas pressed ${pressed}`,
+  };
+}
+
 async function onThreadPage(browser) {
   const opened = await openApp(browser);
   await opened.page.waitForURL(/\/t\//, { timeout: 20_000 });
@@ -351,6 +444,15 @@ export const shellChecks = {
         db.y >= kb.y + kb.height - 1 &&
         docsNext,
       detail: `mark polygon ${points === null ? "missing" : "present"}${points?.replaceAll(/\s+/g, " ").trim() === KAY_POINTS ? " and exact" : ""}; docs below the mark ${db.y >= kb.y + kb.height - 1}; next link after the mark ${docsNext}`,
+    };
+  },
+
+  async P13(browser) {
+    const cases = ["light", "dark"].flatMap((theme) => NARROW.map((width) => ({ theme, width })));
+    const results = await Promise.all(cases.map((each) => narrowBar(browser, each)));
+    return {
+      ok: results.every((each) => each.ok),
+      detail: results.map((each) => each.note).join("; "),
     };
   },
 };

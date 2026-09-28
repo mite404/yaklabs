@@ -77,6 +77,16 @@ the bottom right (ADR-113), and Kay's face is the avatar when nobody is signed i
 bar can also be painted, from a painting the repo generates itself (ADR-115). Every one of those is
 Proposed, with its open question listed for Ethan, and a lever of eleven predicates, A to K,
 measures each against a baseline shot on the commit before the polish.
+On a phone the bar then had no room for its own tabs. Below 768px it is now two rows, after
+Amp's phone layout: a top row that never scrolls, with the project's name and a "⋯" for the thread
+and project, and below it the views, Thread, Browser and Canvas (ADR-116); P13 holds 390, 520 and
+767 to that. The phone's sidebar no longer covers the page: like Amp's, it slides in from the left
+and pushes the whole window aside, leaving the page's edge as the way back (ADR-121). Ethan then
+settled the phone: the row of views wins over a row of tabs (ADR-116 over ADR-120), the account
+moves from the bar to the foot of that drawer, and the canvas becomes somewhere to look rather
+than arrange (ADR-122). On a phone, dragging a lane sideways fought the row's own sideways scroll,
+so the drag is simply off there, and the lanes still scroll. One fact decides all three: the
+sidebar's own `isMobile`, the same 768px line the styles use.
 
 ## 2. Cast & Crew
 
@@ -328,6 +338,19 @@ The first entries are ideas from before any code existed; the rest are parts of 
 
 ## 4. Bloopers
 
+- **The `false` that still said yes.** The phone's canvas hid its drag grip behind a
+  `[data-reorder]` selector, and the row set `data-reorder={reorderable}`. React writes a `false`
+  data attribute out as the string `"false"`, so the attribute was present on a phone too, and a
+  tap still drew the grab hand and the six dots. The test passed anyway, because it only checked
+  that nothing lifted. Fix: select `[data-reorder="true"]`, and make the test read the grip
+  itself (the cursor, and whether the dots are drawn at all). Lesson: a test named "the grip is
+  not shown" has to look at the grip.
+- **Two Escapes, one key.** With the account menu open inside the phone drawer, Escape closed
+  both. Both listen on the document; the drawer's listener was added first, when the drawer
+  opened, so it ran before the menu could claim the key, and checking `defaultPrevented` could
+  not help. Fix: the drawer leaves an Escape that comes from inside an open menu to the menu.
+  Lesson: when two layers share one key, decide who owns it by where the key came from, not by
+  who happened to subscribe first.
 - **The rulebook with a missing chapter.** The first oxlint config listed five plugins. In oxlint,
   a `plugins` list replaces the defaults instead of adding to them, and `eslint` was not on the
   list, so core rules like `no-unused-vars` never ran and the output looked clean. Lesson: an
@@ -709,6 +732,10 @@ The first entries are ideas from before any code existed; the rest are parts of 
   so the check now records the base's height at each width in the baseline and compares against
   it, and still demands 44px from 768px up. Lesson: write a check against the intent, not
   against the number that happened to express it on the day.
+  The last act: the phone bar had been fixed twice in parallel, as that second row and as the
+  one 44px row of ADR-116. Ethan chose the one row, then saw what the question had meant: the
+  44px was for the desktop. The phone got two rows after all, a fixed row and a row of views, so
+  A2 now asks for 44px from 768px up and 82px below.
 - **The avatar that decided how every letter was drawn.** Making the avatar's ring blend the same
   in both themes (`mix-blend-mode: normal`) changed 35,000 pixels in a panel it is nowhere near.
   Every glyph in the app had switched from greyscale to coloured subpixel smoothing. Chromium only
@@ -755,6 +782,15 @@ The first entries are ideas from before any code existed; the rest are parts of 
   for. The lever passed because it asked whether any pixel near the control was bright. A tab now
   draws its ring inside itself (cream, or night on the pill), and the lever asks how much of each
   side of the control the ring covers, so a ring clipped on one side fails.
+
+- **The tab that would not fit its own floor.** On a phone the active tab's floor is the strip's
+  width less the "+", written `min(100cqw - 32px, 10rem)`. A first try used `min(100%, 10rem)` and
+  changed nothing: the tab list sizes itself from its tabs, so a percentage of it is a percentage
+  of an answer that depends on the question. A container query unit measures the strip instead,
+  whose width comes from the bar. Then the tab still landed 32px short of whole, because the
+  scroller keeps 32px of `scroll-padding` for its edge fade, and a tab exactly as wide as the
+  scroller has no room for it. Below 768px that padding is now zero. Lesson: when a size refuses
+  to change, ask what it is measured against before changing the number.
 
 ## 5. Director's Commentary
 
@@ -1449,3 +1485,45 @@ for that region instead of restyling the components in it. Then a new component 
 bar is right on day one, and the contrast lives in one place, where a unit test can check every
 ratio from the token values.
 
+### Settle a layout fight with a ruler, not a meeting
+
+The phone bar had four candidate fixes and a fixed budget: 390 pixels. Rather than argue which
+control deserved the space, each candidate was a few lines of CSS injected into the real app, and
+one script measured what the active tab's title got.
+
+```js
+// apps/web/scripts/shell-checks.mjs, P13: how much of the active title does the list show?
+const list = bar.querySelector('[role="tablist"]').getBoundingClientRect();
+const title = bar.querySelector('[role="tab"][aria-selected="true"] .truncate');
+const shown = title.getBoundingClientRect();
+return Math.round(Math.min(shown.right, list.right) - Math.max(shown.x, list.x));
+// → 17px with the Layout group inline, 37px with an icon marker, 82px behind a trigger
+```
+
+```mermaid
+flowchart LR
+  Q[Which control gives way?] --> P1[Prototype: all inline, tighter]
+  Q --> P2[Prototype: icon marker]
+  Q --> P3[Prototype: Layout behind a button]
+  P1 --> M[One probe, same page, same widths]
+  P2 --> M
+  P3 --> M
+  M -->|17px| X1[Rejected]
+  M -->|37px| X2[Rejected]
+  M -->|82px| K[Won the budget]
+  K --> E[Ethan: the phone wants two rows]
+```
+
+The film version: when two camera positions compete, you do not debate them in the production
+office; you shoot both on the stand-in and look at the monitor. The probe is the stand-in, and
+the winning shot's numbers become the continuity sheet (P13) that every later take is checked
+against.
+
+Senior-engineer takeaway: if a design question has an answer you can measure, measure it. The
+numbers end the argument, and the script that produced them becomes the regression test.
+
+The twist is the other half of the lesson. The ruler answered "what fits in 44px?" perfectly,
+and the answer was set aside, because the 44px rule was meant for the desktop and nobody had
+asked what a phone should be. A measurement settles the question you put to it; it cannot tell
+you that you asked the wrong one. When the question is "what should this be?", put a working
+build in the person's hand, as the picture of Amp's two rows did here, before you optimise.

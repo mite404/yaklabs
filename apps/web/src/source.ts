@@ -11,8 +11,11 @@ export type Wanted =
   | { kind: "scenario"; name: ScenarioName }
   | { kind: "unknown"; name: string };
 
-/** The title bar's word on where the threads live and who answers, and the longer why. */
-export type Marker = { label: string; hint: string };
+/**
+ * The title bar's word on where the threads live and who answers, and the longer why. `short`
+ * is the one-word form a phone shows in place of `label`.
+ */
+export type Marker = { label: string; short: string; hint: string };
 
 const PARAM = "scenario";
 
@@ -60,6 +63,7 @@ export function markerFor(source: Source | null, agent: AgentSource): Marker | n
   if (source.kind === "scenario") {
     return {
       label: `Mock: ${source.name}`,
+      short: "Mock",
       hint: "Sample data, answered by the lab's script. Nothing here is saved.",
     };
   }
@@ -67,12 +71,21 @@ export function markerFor(source: Source | null, agent: AgentSource): Marker | n
   const who = live ? "Replies come from a live model." : "Replies come from the lab's script.";
   const kept =
     source.storage === "opfs"
-      ? { label: "On this device", hint: "Threads are kept in this browser's own storage." }
+      ? {
+          label: "On this device",
+          short: "On device",
+          hint: "Threads are kept in this browser's own storage.",
+        }
       : {
           label: "Not saved",
+          short: "Not saved",
           hint: "This browser cannot keep threads; they go when the tab closes.",
         };
-  return { label: live ? `${kept.label} · Live model` : kept.label, hint: `${kept.hint} ${who}` };
+  return {
+    label: live ? `${kept.label} · Live model` : kept.label,
+    short: live ? "Live" : kept.short,
+    hint: `${kept.hint} ${who}`,
+  };
 }
 
 /**

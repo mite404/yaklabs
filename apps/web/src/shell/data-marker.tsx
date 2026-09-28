@@ -27,7 +27,10 @@ export function DataMarker() {
           )}
         >
           <span data-slot="data-marker" className="truncate">
-            {marker.label}
+            <span className="max-md:sr-only">{marker.label}</span>
+            <span aria-hidden="true" className="md:hidden">
+              {marker.short}
+            </span>
           </span>
         </TooltipTrigger>
         <TooltipContent side="bottom">{marker.hint}</TooltipContent>

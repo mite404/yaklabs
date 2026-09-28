@@ -136,9 +136,17 @@ type LaneActions = {
 };
 
 // The lanes with the gap after each: a lane lifts by its title bar, a gap drags its width.
-function LaneRow({ lanes, actions }: { lanes: LaneView[]; actions: LaneActions }) {
+function LaneRow({
+  lanes,
+  actions,
+  reorderable,
+}: {
+  lanes: LaneView[];
+  actions: LaneActions;
+  reorderable: boolean;
+}) {
   const { onClose, onMove, onResize } = actions;
-  const reorder = useReorder(onMove);
+  const reorder = useReorder(onMove, reorderable);
   // The width of the lane whose gap is being dragged, until the drag lets go and it is kept.
   const [resizing, setResizing] = useState<{ id: LaneId; px: number } | null>(null);
   return lanes.map((lane, index) => (
@@ -227,9 +235,10 @@ function useFocusedLane(
  * the end for the next thing. The gap after each lane drags the lane's width, a lane's title
  * bar drags it to another place in the row, and the ground drags to pan. The whole row takes a
  * carried card or highlight (ADR-091): while one is over it the pane shows it, and an ink
- * marker stands in the gap it would land in. The canvas keeps no lanes of its own: it reports
- * each change, and the caller's lanes come back changed. A lane that closes with the focus in it
- * hands the focus on to its neighbour.
+ * marker stands in the gap it would land in. On a phone the row is view-only (ADR-122): it
+ * still scrolls sideways, but a lane's title bar no longer lifts it. The canvas keeps no lanes
+ * of its own: it reports each change, and the caller's lanes come back changed. A lane that
+ * closes with the focus in it hands the focus on to its neighbour.
  */
 export function Canvas({
   lanes,
@@ -238,6 +247,7 @@ export function Canvas({
   actions,
   onBlank,
   onCarry,
+  reorderable,
 }: {
   lanes: LaneView[];
   /** The lane to bring into view and flash, a focused child's. */
@@ -247,6 +257,8 @@ export function Canvas({
   actions: LaneActions;
   onBlank: () => void;
   onCarry: (carried: Carried, at: number) => void;
+  /** Whether a lane's title bar takes hold of it; off makes the row view-only (ADR-122). */
+  reorderable: boolean;
 }) {
   const row = useRef<HTMLElement>(null);
   const pan = usePan();
@@ -262,6 +274,7 @@ export function Canvas({
       ref={row}
       aria-label="Compose canvas"
       data-drop={landing === null ? undefined : ""}
+      data-reorder={reorderable}
       className="canvas relative flex h-full overflow-x-auto p-4"
       onWheel={panRow}
       onPointerDown={pan.onPointerDown}
@@ -269,7 +282,7 @@ export function Canvas({
       onPointerUp={pan.onPointerUp}
       onPointerCancel={pan.onPointerUp}
     >
-      <LaneRow lanes={lanes} actions={{ ...actions, onClose }} />
+      <LaneRow lanes={lanes} actions={{ ...actions, onClose }} reorderable={reorderable} />
       <DropMarker landing={landing} />
       <OpenSpace lit={landing?.marker === null} splash={lanes.length === 0} onBlank={onBlank} />
       {/* The ground goes on for a pane past the open space: the canvas has no right edge. */}

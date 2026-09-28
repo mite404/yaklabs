@@ -297,12 +297,14 @@
 
   /* A lane on its way to another slot (ADR-089): a hand over its title bar says it can be
      taken; once lifted, a copy of it floats under the pointer with a shadow, the lane itself
-     waits dimmed in the slot it would take, and the lanes it passes slide aside. */
-  .lane :is(.thread-header, .card-heading) {
+     waits dimmed in the slot it would take, and the lanes it passes slide aside. On a phone
+     the row is view-only (ADR-122), so every grip affordance below is scoped to a row that
+     still reorders: it never shows there, sticky hover after a tap included. */
+  [data-reorder="true"] .lane :is(.thread-header, .card-heading) {
     position: relative;
     cursor: grab;
   }
-  .lane .card-heading-text {
+  [data-reorder="true"] .lane .card-heading-text {
     cursor: default;
   }
   /* The grip: six dots that fade up in the middle of the bar while the pointer is on the part
@@ -310,14 +312,14 @@
      veil in the bar's own paper fades out the stretch of title they sit on, so the whole title
      shows at rest and only yields its middle to the grip on hover. The veil is the grip's hit
      area too: a press on it lands on the bar, never on the title under it. */
-  .lane :is(.thread-header, .card-heading)::before,
-  .lane :is(.thread-header, .card-heading)::after {
+  [data-reorder="true"] .lane :is(.thread-header, .card-heading)::before,
+  [data-reorder="true"] .lane :is(.thread-header, .card-heading)::after {
     content: "";
     position: absolute;
     opacity: 0;
     transition: opacity 150ms ease;
   }
-  .lane :is(.thread-header, .card-heading)::before {
+  [data-reorder="true"] .lane :is(.thread-header, .card-heading)::before {
     inset: 0 auto 0 50%;
     width: 46px;
     transform: translateX(-50%);
@@ -329,7 +331,7 @@
       transparent
     );
   }
-  .lane :is(.thread-header, .card-heading)::after {
+  [data-reorder="true"] .lane :is(.thread-header, .card-heading)::after {
     top: 50%;
     left: 50%;
     width: 15px;
@@ -338,15 +340,17 @@
     background: radial-gradient(circle, var(--soft-ink) 1.25px, transparent 1.75px) 0 0 / 5px 5px;
     pointer-events: none;
   }
-  .lane :is(.thread-header, .card-heading):hover::before,
-  .lane :is(.thread-header, .card-heading):hover::after {
+  [data-reorder="true"] .lane :is(.thread-header, .card-heading):hover::before,
+  [data-reorder="true"] .lane :is(.thread-header, .card-heading):hover::after {
     opacity: 1;
   }
-  .lane
+  [data-reorder="true"]
+    .lane
     :is(.thread-header, .card-heading):has(
       :is(h2, .card-heading-text, .thread-rename):hover
     )::before,
-  .lane
+  [data-reorder="true"]
+    .lane
     :is(.thread-header, .card-heading):has(
       :is(h2, .card-heading-text, .thread-rename):hover
     )::after {

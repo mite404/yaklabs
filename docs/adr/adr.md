@@ -1308,6 +1308,25 @@ in localStorage and held for the visit in memory too, so a refused storage still
 Account menu has a Title bar choice beside
 Theme, so Ethan can switch while he decides.
 
+## ADR-116 - On a phone the title bar is two rows: what never scrolls, then the views
+
+2026-09-27 - Accepted (Ethan chose it over ADR-120's row of tabs); supersedes ADR-120. Amends
+ADR-094 and ADR-096 below 768px only.
+From 768px up the bar stays one 44px row. Below it, where the window is already full-bleed
+(ADR-111), the one row left the tabs no room: the traffic lights, the marker and the Layout group
+took 250px of 390. The phone bar is two rows instead. The top row never scrolls: the sidebar
+toggle, the name of the project on screen, the marker as one word ("Mock", "On device", "Not
+saved", "Live", with the full label kept for a screen reader), the bell, and at the far right a
+"⋯" menu for the thread and its project (New thread, Close this thread, New project).
+The second row is the views, Thread, Browser and Canvas, named in words and scrolling if they
+ever overflow; it is the same Layout group, so its names do not change. The tab strip is hidden
+on a phone, and other threads open from the sidebar, as in Amp. The account is not in the bar
+on a phone: it sits at the foot of the sidebar (ADR-121), which gives the top row back 32px.
+Tried first and set aside: one 44px row with the Layout group behind a button and the active tab
+as wide as the strip, which fitted (82px of title at 390px) but hid every other tab and the views
+behind taps; and a second row of tabs (80px), which kept the tabs but not the views.
+P13 in the workspace lever holds 390, 520 and 767 to the two rows, 82px tall.
+
 ## ADR-117 - A lane's gap reports the lane's width, and a lane is 320 to 1800px wide
 
 2026-09-27 - Accepted; amends ADR-089.
@@ -1355,9 +1374,41 @@ breakpoint remounts nothing.
 
 ## ADR-120 - On a phone the title bar puts the tabs on a row of their own
 
-2026-09-27 - Accepted (Ethan, relayed by the PR #13 session).
+2026-09-27 - Superseded by ADR-116 (Ethan chose the row of views over the row of tabs).
 At 390px the one-row title bar squeezed the tab strip to nothing and slid New thread under the
 data marker. Below 768px the tabs now take a row of their own under the controls, 80px in all,
 so every tab stays whole and tappable. A one-row, 44px bar that hid the Layout switch behind a
 button was tried in #14 and withdrawn: Ethan wants two rows on a phone and one on a wide screen.
 With ADR-119, a phone shows the controls, then the tabs, then one pane.
+
+## ADR-121 - On a phone the sidebar pushes the page aside
+
+2026-09-27 - Proposed (Ethan's direction, after Amp's phone sidebar); amends the phone half of
+ADR-094's sidebar, which was shadcn's sheet over a dimmed page.
+Below 768px the Toggle sidebar button slides the whole window, title bar included, to the right,
+and the sidebar comes in with it from the left, in one 300ms move (none under reduced motion).
+The drawer is 85% of the width, at most 20rem (320px of 390), so the page's own edge stays in
+view: it is the way back, and a tap on it closes the drawer, as Escape and choosing a place do.
+While it is open the pushed page is inert, and focus goes into the drawer and comes back to the
+toggle. The drawer is `mobile="push"` on shadcn's Sidebar: it sits just off the sliding wrapper's
+left edge, fixed inside a translated parent, so one transform moves both and no width is
+measured. The sheet stays the primitive's default.
+The account lives at the foot of the drawer on a phone, not in the title bar, as in Amp: the
+place you go for where you are is also where you go for who you are. It is mounted in exactly
+one place, chosen by the provider's `isMobile`, so there is one menu and one theme choice, and
+the desktop rail, which renders the same children, never shows it. Its menu opens upward from
+the avatar, and Escape closes the menu before it closes the drawer.
+
+## ADR-122 - On a phone the canvas is for looking, not arranging
+
+2026-09-27 - Accepted (Ethan). Amends ADR-091, ADR-102 and ADR-108 below 768px only.
+The canvas keeps the cards and child threads a person wants to come back to without scrolling up
+or hunting through threads. Arranging them by dragging sideways does not work on a phone: the
+drag fights the row's own sideways scroll, and a card header's `touch-action: none` turned a
+swipe that started on it into a carry. Below 768px the canvas is view-only. Lanes still scroll
+sideways, but a lane's title bar no longer lifts it, the grip and its veil are not drawn, and a
+card in a thread is not carried (the thread and the canvas are never on screen together on a
+phone anyway, ADR-119). Keyboard reordering on a lane's gap stays. From 768px up nothing
+changes. All of it follows the one `isMobile` the sidebar already reads: the lane reorder takes
+an `enabled` flag, the row carries `data-reorder` for the grip's styles, and the thread panel
+takes `cardsCarry`.

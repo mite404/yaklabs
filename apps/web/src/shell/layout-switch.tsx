@@ -12,7 +12,11 @@ function shownPane(shell: Shell): { main: ThreadId; pane: PaneKind } | null {
   return { main, pane: viewOf(shell.doc, main).pane };
 }
 
-/** Thread, Browser or Canvas beside the active tab's thread; nothing to switch with no tab. */
+/**
+ * Thread, Browser or Canvas beside the active tab's thread; nothing to switch with no tab. On a
+ * phone it is the bar's second row, each view named in words, and it scrolls when they overflow
+ * (ADR-116).
+ */
 export function LayoutSwitch({ shell }: { shell: Shell | null }) {
   const shown = shell === null ? null : shownPane(shell);
   return (
@@ -25,7 +29,7 @@ export function LayoutSwitch({ shell }: { shell: Shell | null }) {
         const next = PANES.find((each) => values.includes(each));
         if (shown !== null && next !== undefined) shell?.setPane(shown.main, next);
       }}
-      className="rounded-[var(--radius)] border border-hairline p-0.5"
+      className="rounded-[var(--radius)] border border-hairline p-0.5 max-md:no-scrollbar max-md:col-span-full max-md:row-start-2 max-md:w-full max-md:justify-start max-md:gap-1 max-md:overflow-x-auto max-md:border-0 max-md:p-0"
     >
       {PANES.map((each) => {
         const { label, Icon } = LAYOUTS[each];
@@ -36,11 +40,12 @@ export function LayoutSwitch({ shell }: { shell: Shell | null }) {
                 <ToggleGroupItem
                   value={each}
                   aria-label={label}
-                  className="size-7 min-w-7 rounded-[3px] px-0 text-soft-ink hover:text-ink"
+                  className="size-7 min-w-7 rounded-[3px] px-0 text-soft-ink hover:text-ink max-md:h-8 max-md:w-auto max-md:shrink-0 max-md:gap-1.5 max-md:rounded-[var(--radius)] max-md:px-3 max-md:text-xs"
                 />
               }
             >
               <Icon aria-hidden="true" />
+              <span className="md:hidden">{label}</span>
             </TooltipTrigger>
             <TooltipContent side="bottom">{label}</TooltipContent>
           </Tooltip>
