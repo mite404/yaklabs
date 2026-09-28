@@ -53,11 +53,6 @@ this list when it ships.
   the `lanes` table, copied from the card when it lands, but `rename` takes only a project or a
   thread, and the card's header still shows its payload's title. Renaming it needs a lane target
   for `rename` and a header that shows the lane's title.
-- **The data marker on a failed migration.** When the device's file opens but cannot be read or
-  migrated, the start ends `broken` before the worker posts `opening`, so the runtime reports
-  `source: null` and the title bar shows no marker. The contract says a held start still shows its
-  source (`docs/trail/evidence/projects-sidebar/contract.md`). Waits on the store reporting its
-  storage kind before it migrates, so `opening` can go out first.
 - **A blank moment leaving a thread.** Going from a thread to the Lab, following the Kay link, or
   closing the last tab shows an empty workspace for a few frames (5 to 16 measured) while the next
   route loads. Holding the old tab on screen until the route commits would bring a just-closed tab
