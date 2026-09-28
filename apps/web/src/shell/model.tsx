@@ -45,10 +45,20 @@ export type Shell = ShellVerbs & {
   unread: number;
   /** The thread whose snooze card is open, if any (ADR-128). */
   snoozing: ThreadId | null;
+  /** The thread whose share permissions dialog is open, if any (ADR-131). */
+  sharePermissions: ThreadId | null;
 };
 
 // The runtime's state once it is ready: its source and its workspace.
 type Ready = Extract<RuntimeState, { kind: "ready" }>;
+
+// The dialogs and cards a menu can ask the window to open, each for one thread at a time.
+type Asks = {
+  snoozing: ThreadId | null;
+  setSnoozing: (id: ThreadId | null) => void;
+  sharePermissions: ThreadId | null;
+  setSharePermissions: (id: ThreadId | null) => void;
+};
 
 // What the shell is built from on each render.
 type Parts = {
@@ -60,8 +70,7 @@ type Parts = {
   go: Go;
   lastShown: ThreadId | null;
   href: (id: ThreadId) => string;
-  snoozing: ThreadId | null;
-  setSnoozing: (id: ThreadId | null) => void;
+  asks: Asks;
   session: Session | undefined;
 };
 
@@ -96,8 +105,8 @@ function activeIn(ws: Workspace | null, named: string | undefined): Located | nu
 // The shell the frame reads: the document with the URL's thread visited, its tabs, where "/"
 // goes, the unread count, and the verbs.
 function shellOf(parts: Parts): Shell {
-  const { runtime, ready, saved, active, visitKey, go, lastShown, href, snoozing } = parts;
-  const { setSnoozing, session } = parts;
+  const { runtime, ready, saved, active, visitKey, go, lastShown, href, asks, session } = parts;
+  const { snoozing, setSnoozing, sharePermissions, setSharePermissions } = asks;
   const shareClient = shareClientFor(runtime, session);
   const { workspace, source } = ready;
   const doc = active === null ? saved : visit(saved, active);
@@ -112,8 +121,22 @@ function shellOf(parts: Parts): Shell {
     resumeTo: resume(doc, workspace, lastShown),
     unread: unreadCount(doc, workspace),
     snoozing,
-    ...verbs({ runtime, workspace, active, go, href, setSnoozing, shareClient }, doc),
+    sharePermissions,
+    ...verbs(
+      { runtime, workspace, active, go, href, setSnoozing, setSharePermissions, shareClient },
+      doc,
+    ),
   };
+}
+
+// Which thread the snooze card and the share permissions dialog are open for, if either.
+function useAsks(): Asks {
+  const [snoozing, setSnoozing] = useState<ThreadId | null>(null);
+  const [sharePermissions, setSharePermissions] = useState<ThreadId | null>(null);
+  return useMemo(
+    () => ({ snoozing, setSnoozing, sharePermissions, setSharePermissions }),
+    [snoozing, sharePermissions],
+  );
 }
 
 // The address, or the one it is on its way to: a navigation in flight counts at once, so a tab
@@ -138,8 +161,11 @@ function useGo(): Go {
   );
 }
 
-// A thread's address as a whole URL, its scenario kept, for Copy thread URL (ADR-126).
-function useHref(): (id: ThreadId) => string {
+/**
+ * A thread's address as a whole URL, its scenario kept: what Copy thread URL puts on the
+ * clipboard (ADR-126), and what the share dialog shows.
+ */
+export function useHref(): (id: ThreadId) => string {
   const { pathTo } = usePaths();
   return useCallback((id: ThreadId) => new URL(pathTo(id), window.location.href).href, [pathTo]);
 }
@@ -192,7 +218,7 @@ export function ShellProvider({ children }: { children: ReactNode }) {
   const active = useMemo(() => activeIn(ws, named), [ws, named]);
   const lastShown = useLastShown(active);
   const href = useHref();
-  const [snoozing, setSnoozing] = useState<ThreadId | null>(null);
+  const asks = useAsks();
   const session = useSession();
   useKeepShell(runtime, ws, saved, named);
 
@@ -208,12 +234,11 @@ export function ShellProvider({ children }: { children: ReactNode }) {
             go,
             lastShown,
             href,
-            snoozing,
-            setSnoozing,
+            asks,
             session,
           })
         : null,
-    [state, runtime, saved, active, shown.key, go, lastShown, href, snoozing, session],
+    [state, runtime, saved, active, shown.key, go, lastShown, href, asks, session],
   );
   return <ShellContext value={shell}>{children}</ShellContext>;
 }

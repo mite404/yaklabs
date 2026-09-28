@@ -6,6 +6,7 @@ import { useMatch } from "react-router";
 import { SplashSwitch } from "../components/splash-switch";
 import { useSplash } from "../splash";
 import type { ThemeChoice } from "../theme";
+import { SharePermissions } from "./share-permissions";
 import { AppSidebar } from "./sidebar";
 import { TitleBar } from "./title-bar";
 
@@ -92,6 +93,7 @@ export function Window({ theme, children }: { theme: ThemeChoice; children: Reac
           </div>
         </SidebarProvider>
       </div>
+      <SharePermissions />
       <SplashSwitch splash={splash} />
     </>
   );

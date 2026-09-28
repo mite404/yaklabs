@@ -56,6 +56,7 @@ type Deps = {
   go: Go;
   href: (id: ThreadId) => string;
   setSnoozing: (id: ThreadId | null) => void;
+  setSharePermissions: (id: ThreadId | null) => void;
   shareClient: ShareClient;
 };
 
@@ -134,9 +135,16 @@ type Change = (update: (current: ShellState) => ShellState) => void;
 // The thread menu's verbs (ADR-126 to ADR-131), Share's included: a delete takes the thread's
 // public pages down with it.
 function menuVerbs(deps: Deps, doc: ShellState, change: Change): ThreadVerbs & ShareVerbs {
-  const { runtime, workspace, active, go, href, setSnoozing, shareClient } = deps;
-  const threads = workspace.threads;
-  const sharing = shareVerbs({ runtime, client: shareClient, shares: workspace.shares, threads });
+  const { runtime, workspace, active, go, href, setSnoozing, setSharePermissions } = deps;
+  const { shareClient } = deps;
+  const { threads, shares } = workspace;
+  const sharing = shareVerbs({
+    runtime,
+    client: shareClient,
+    shares,
+    threads,
+    setSharePermissions,
+  });
   const takeDown = (id: ThreadId) => {
     sharing.takeDown(id);
   };
