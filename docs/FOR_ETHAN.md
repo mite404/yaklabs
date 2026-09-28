@@ -92,8 +92,10 @@ The title bar's pill is gone. It once said "Mock: demo", "On this device" or "No
 plan behind it yet, so it and the logic behind it are deleted outright, not just hidden
 (ADR-123, amending ADR-096 and ADR-116). He may ask for a delineation again once there is
 something worth delineating.
-A main thread's fold arrow then moved to sit beside its own name, matching the project row's, and
-the count of sub-threads it used to carry ("^ 2") is gone at Ethan's word - clutter, not signal.
+A main thread's fold arrow then moved to sit beside its own name, matching the project row's. The
+count of sub-threads ("^ 2") went too, then came back at Ethan's word as a plain number at the
+row's far right: a caption, not a second fold control. An open fold's "v" now fades the moment
+the pointer leaves, since a clicked button keeping focus had held it up.
 The row keeps a stretched link (Bootstrap's own pattern) so a click anywhere on it still opens the
 thread, with the fold button lifted above that layer so it still catches its own clicks (ADR-093,
 amended by ADR-124).

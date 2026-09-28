@@ -1528,7 +1528,7 @@ try {
   );
 
   await onOwnPage(
-    "a main row with children keeps its fold arrow beside the name and drops the count",
+    "a main row with children keeps its fold arrow beside the name and its count at the far right",
     "/?scenario=demo",
     {},
     async (own) => {
@@ -1537,9 +1537,13 @@ try {
       const label = row.locator("[data-label]");
       const arrow = row.locator("button[aria-expanded]");
       const chevron = row.locator('[data-slot="fold-chevron"]');
-      const [labelBox, arrowBox] = await Promise.all([label.boundingBox(), arrow.boundingBox()]);
+      const count = row.locator('[data-slot="thread-count"]');
+      const [labelBox, arrowBox, countBox, rowBox] = await Promise.all(
+        [label, arrow, count, row].map((each) => each.boundingBox()),
+      );
       const gap = arrowBox.x - (labelBox.x + labelBox.width);
-      const text = await row.innerText();
+      const countRight = rowBox.x + rowBox.width - (countBox.x + countBox.width); // → px
+      const countText = await count.innerText();
       await own.mouse.move(900, 450);
       await own.waitForTimeout(200);
       const restOpacity = await chevron.evaluate((el) => getComputedStyle(el).opacity);
@@ -1566,20 +1570,21 @@ try {
         ok:
           gap >= 0 &&
           gap <= 12 &&
-          !/\d/.test(text) &&
+          countText === "2" &&
+          countRight === 8 &&
           leftOpacity === "0" &&
           ink === plainInk &&
           restOpacity === "0" &&
           hoverOpacity === "1" &&
           foldedExpanded === "false" &&
           foldedOpacity === "1",
-        detail: `gap ${gap.toFixed(1)}px; row text ${JSON.stringify(text)}; opacity after a click and leaving ${leftOpacity}; title ${ink} vs a plain row ${plainInk}; chevron opacity at rest ${restOpacity}, on hover ${hoverOpacity}, folded ${foldedOpacity} (expanded ${foldedExpanded})`,
+        detail: `gap ${gap.toFixed(1)}px; count ${countText}, ${countRight}px from the right; opacity after a click and leaving ${leftOpacity}; title ${ink} vs a plain row ${plainInk}; chevron opacity at rest ${restOpacity}, on hover ${hoverOpacity}, folded ${foldedOpacity} (expanded ${foldedExpanded})`,
       };
     },
   );
 
   await onOwnPage(
-    "every thread row keeps only 8px at its right, with no room left for a count",
+    "every thread row keeps only 8px at its right, not the room shadcn keeps for an action",
     "/?scenario=demo",
     {},
     async (own) => {

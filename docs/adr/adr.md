@@ -1422,14 +1422,20 @@ The bar no longer says whether a thread is mock, kept on this device, or answere
 model, so a private window that cannot keep threads no longer warns before they vanish; Ethan
 accepted that gap and may ask for a delineation again later.
 
-## ADR-124 - A main thread's fold arrow sits beside its name, not a count
+## ADR-124 - A main thread's fold arrow sits beside its name; its count is read only
 
 2026-09-28 - Accepted (Ethan); amends ADR-093.
 ADR-093 put a project's fold chevron right after its name, but a main thread with sub-threads
 still folded them behind a count at the row's far right ("^ 2"), a second design for the same
-job. Ethan: "i dont think we need the number of threads thats UI clutter." The count is gone, and
-the fold button now sits right after the title, sharing the project row's own chevron: ">" while
-folded, and open, a "v" on hover or on keyboard focus of the row or the button.
+job. The fold button now sits right after the title, sharing the project row's own chevron: ">"
+while folded, and open, a "v" while the pointer is on the row. Ethan first dropped the count as
+clutter, then asked for it back: the number of children stays at the row's far right, but as
+plain text with no arrow, so folding has one control, the arrow. The count is hidden from
+assistive tech, since the fold button names it ("Hide the 2 threads in ...").
+An open fold's "v" fades out as soon as the pointer leaves, on a project and a main alike (Ethan:
+"as soon as the mouse is off hover ... this icon should fade away"). Keyboard focus shows it too,
+but only `:focus-visible`: a click leaves focus on the button, and `:focus-within` would hold the
+"v" up until the next click elsewhere.
 The row is a link, so its fold button cannot nest inside it; the row uses the stretched-link
 pattern instead (Bootstrap's recipe). The link stays sized to its title, with an `::after` that
 stretches to the row's edges since the row, not the link, is the nearest positioned ancestor, so

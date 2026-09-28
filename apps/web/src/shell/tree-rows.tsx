@@ -20,6 +20,9 @@ const THREAD_ROW = `${ROW} pl-6 pr-2`;
 // none of them holds an action of its own; each takes it back for its title.
 const NO_ACTION = "group-has-data-[sidebar=menu-action]/menu-item:pr-2";
 
+// How many threads a fold holds, as its button names them: "2 threads", "1 thread".
+const threadCount = (count: number): string => `${count} ${count === 1 ? "thread" : "threads"}`;
+
 // A row's own title, truncated to whatever room its row leaves it. `block` matters here: as a
 // flex item's child it would otherwise stay inline and ignore that width.
 const LABEL = "block truncate";
@@ -71,7 +74,8 @@ function FoldChevron({ open }: { open: boolean }): ReactElement {
 
 /**
  * A main thread with sub-threads: the stretched-link pattern (Bootstrap's recipe), so a click
- * anywhere on the row still opens the thread while a separate button folds the children. The
+ * anywhere on the row still opens the thread while a separate button folds the children, and
+ * the number of children sits at the row's far right, read only, since the button names it. The
  * link stays un-positioned and sized to its title; its `::after` is what stretches, to the
  * row's own edges, since that is the nearest positioned ancestor. The button sits after the
  * title in flow, lifted above that layer by its own stacking context (`relative z-10`) so it
@@ -81,11 +85,13 @@ function FoldableMainRow({
   thread,
   active,
   open,
+  count,
   onToggle,
 }: {
   thread: ThreadSummary;
   active: boolean;
   open: boolean;
+  count: number;
   onToggle: () => void;
 }): ReactElement {
   const { pathTo } = usePaths();
@@ -111,12 +117,19 @@ function FoldableMainRow({
           <button
             type="button"
             aria-expanded={open}
-            aria-label={`${open ? "Hide" : "Show"} the threads in ${thread.title}`}
+            aria-label={`${open ? "Hide" : "Show"} the ${threadCount(count)} in ${thread.title}`}
             onClick={onToggle}
             className="relative z-10 flex h-5 w-5 shrink-0 items-center justify-center rounded-[var(--radius)] border-0 bg-transparent p-0 text-soft-ink outline-hidden ring-sidebar-ring hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2"
           >
             <FoldChevron open={open} />
           </button>
+          <span
+            data-slot="thread-count"
+            aria-hidden="true"
+            className="ml-auto shrink-0 text-xs text-soft-ink tabular-nums"
+          >
+            {count}
+          </span>
         </div>
       }
     />
@@ -125,7 +138,7 @@ function FoldableMainRow({
 
 /**
  * A thread row: a link named by its title, indented under its project. A main with sub-threads
- * takes `fold`, and becomes a {@link FoldableMainRow} instead; a child reads "↳ title", one
+ * takes `fold`, with how many it holds, and becomes a {@link FoldableMainRow} instead; a child reads "↳ title", one
  * step further in than its main.
  */
 export function ThreadRow({
@@ -137,12 +150,18 @@ export function ThreadRow({
   thread: ThreadSummary;
   active: boolean;
   kind: "main" | "child";
-  fold?: { open: boolean; onToggle: () => void };
+  fold?: { open: boolean; count: number; onToggle: () => void };
 }): ReactElement {
   const { pathTo } = usePaths();
   if (fold) {
     return (
-      <FoldableMainRow thread={thread} active={active} open={fold.open} onToggle={fold.onToggle} />
+      <FoldableMainRow
+        thread={thread}
+        active={active}
+        open={fold.open}
+        count={fold.count}
+        onToggle={fold.onToggle}
+      />
     );
   }
   return (

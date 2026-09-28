@@ -81,6 +81,7 @@ function MainRows({
             hasChildren
               ? {
                   open,
+                  count: children.length,
                   onToggle: () => {
                     folds.toggle(main.id);
                   },
