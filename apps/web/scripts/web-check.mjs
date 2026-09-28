@@ -247,9 +247,17 @@ try {
   const surface = () =>
     page.evaluate(() => {
       const panel = document.querySelector(".thread-panel");
+      // The main thread is bare (ADR-138), so its paper is the nearest surface behind it.
+      let paper = panel;
+      while (
+        getComputedStyle(paper).backgroundColor === "rgba(0, 0, 0, 0)" &&
+        paper.parentElement
+      ) {
+        paper = paper.parentElement;
+      }
       return {
         page: getComputedStyle(document.documentElement).backgroundColor,
-        paper: getComputedStyle(panel).backgroundColor,
+        paper: getComputedStyle(paper).backgroundColor,
         ink: getComputedStyle(panel).color,
       };
     });
@@ -996,8 +1004,8 @@ try {
     `${forward.join(" → ")}; from the end: ${back.join("")}`,
   );
 
-  // A thread that cannot be opened keeps the frame an open one has, in the main pane and in a
-  // lane: the paper, the border and the title bar, with the reason and Try again inside it.
+  // A thread that cannot be opened keeps the frame an open one has: a lane its paper, border and
+  // title bar, the main pane its bare pane (ADR-138), with the reason and Try again inside it.
   // The title bar is what takes hold of a lane, so the failed lane still moves along the row.
   const fails = await openScenario("/t/t-002?scenario=thread-fails", 'button:text-is("Try again")');
   const failedTab = fails.locator('[role="tabpanel"]:not([inert])');
@@ -1035,11 +1043,10 @@ try {
   }
   const lanesAfter = await failedLanes();
   await fails.close();
-  const framed = frames.filter(
-    (frame) =>
-      frame.paper === true &&
-      frame.named === frame.title &&
-      (frame.place === "main" || frame.place === frame.title),
+  const framed = frames.filter((frame) =>
+    frame.place === "main"
+      ? frame.named !== null && frame.title === null
+      : frame.paper === true && frame.named === frame.title && frame.place === frame.title,
   );
   record(
     "a thread that cannot be opened keeps its frame and title bar, and its lane still moves",
