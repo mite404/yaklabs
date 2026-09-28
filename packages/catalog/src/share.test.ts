@@ -20,13 +20,15 @@ it("returns nothing for a fragment that is missing, garbled or of an unknown kin
   expect(decodeCard(unknownKind)).toBeUndefined();
 });
 
-it("links to share.html in the app and to the public-page story inside Storybook", () => {
-  const app = {
-    href: "https://kay.example/lab/",
-    pathname: "/lab/",
+it("links to the site's share.html from any address in the app, and to the public-page story inside Storybook", () => {
+  // A card shared from a thread: a relative link would land on /t/share.html, the app's own
+  // thread route, which says the thread is gone.
+  const thread = {
+    href: "https://kay.example/t/profit?scenario=demo",
+    pathname: "/t/profit",
     origin: "https://kay.example",
   };
-  expect(shareLink(card, app)).toMatch(/^https:\/\/kay\.example\/lab\/share\.html#c=/);
+  expect(shareLink(card, thread)).toMatch(/^https:\/\/kay\.example\/share\.html#c=/);
   const storybook = {
     href: "http://localhost:6006/iframe.html?id=x",
     pathname: "/iframe.html",
