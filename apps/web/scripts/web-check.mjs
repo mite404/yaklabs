@@ -290,12 +290,12 @@ try {
     .getByRole("region", { name: "Compose canvas" });
   record(
     "the canvas opens empty and invites a drop",
-    await canvas.getByText("Drag a text selection or card").isVisible(),
+    await canvas.getByText("Drag a text selection or UI card here").isVisible(),
   );
 
   // A highlight carried out of the thread starts a thread where it lands.
   const picked = await highlight(18);
-  const empty = await canvas.getByText("Drag a text selection or card").boundingBox();
+  const empty = await canvas.getByText("Drag a text selection or UI card here").boundingBox();
   await carryTo(picked, { x: empty.x + empty.width / 2, y: empty.y - 40 });
   const lane = canvas.locator("article").first();
   await lane.locator(".thread-panel").waitFor({ timeout: 10_000 });
@@ -313,8 +313,10 @@ try {
     .locator(".card-heading")
     .first();
   await heading.scrollIntoViewIfNeeded();
-  await canvas.getByText("Drag a text selection or card").scrollIntoViewIfNeeded();
-  const openSpaceBox = await canvas.getByText("Drag a text selection or card").boundingBox();
+  await canvas.getByText("Drag a text selection or UI card here").scrollIntoViewIfNeeded();
+  const openSpaceBox = await canvas
+    .getByText("Drag a text selection or UI card here")
+    .boundingBox();
   const headingBox = await heading.boundingBox();
   await page.mouse.move(headingBox.x + 30, headingBox.y + headingBox.height / 2);
   await page.mouse.down();
@@ -424,7 +426,7 @@ try {
 
   // Two lanes outgrow the pane; the row pans by a sideways wheel, and by a vertical one over
   // the ground between and after the lanes.
-  const openSpace = canvas.getByText("Drag a text selection or card");
+  const openSpace = canvas.getByText("Drag a text selection or UI card here");
   await openSpace.scrollIntoViewIfNeeded();
   const openBox = await openSpace.boundingBox();
   const leftBefore = await canvas.evaluate((el) => el.scrollLeft);
@@ -664,7 +666,7 @@ try {
       .click();
   }
   await page.reload({ waitUntil: "load" });
-  await canvas.getByText("Drag a text selection or card").waitFor({ timeout: 15_000 });
+  await canvas.getByText("Drag a text selection or UI card here").waitFor({ timeout: 15_000 });
   record(
     "a closed lane stays closed",
     closedOnce && (await canvas.locator("article").count()) === 0,
