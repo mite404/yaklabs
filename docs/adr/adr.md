@@ -1442,3 +1442,14 @@ stretches to the row's edges since the row, not the link, is the nearest positio
 a click anywhere on the row still opens the thread. The button sits after the title in flow,
 lifted above that layer by its own stacking context (`relative z-10`), so it still catches its
 own clicks and only folds the children.
+
+## ADR-125 - The sidebar lists threads by creation, never by what was opened
+
+2026-09-28 - Accepted (Ethan).
+A main's children were listed in canvas lane order: open lanes first, then the closed ones. A
+click on a closed child's row reopens its lane, so the row jumped up the list, out from under
+the pointer that had just clicked it. Ethan: "when a user interacts with the thread, by opening
+it in the side nav bar it should not be rearranged ... that's bad UI." The recency he asked for
+is creation order. Mains stay newest created first; children are now oldest created first, the
+order their lanes first appended to the canvas. Opening, closing or dragging a lane never moves
+a row, and nothing in the sidebar sorts by activity. The canvas keeps its own lane order.

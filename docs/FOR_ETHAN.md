@@ -350,6 +350,14 @@ The first entries are ideas from before any code existed; the rest are parts of 
 
 ## 4. Bloopers
 
+- **The row that ran from the cursor.** A main's children were listed in the canvas's lane
+  order, open lanes first. Clicking a closed child's row reopened its lane, which promoted it to
+  the open group, so the row slid up one slot the instant it was clicked, and the pointer was
+  left over its neighbour. Opening a thread by a plain click never showed it; only a child whose
+  lane had been closed did. Fix: the sidebar orders by creation alone (ADR-125), and web-check
+  closes both lanes, clicks the second row and checks it has not moved a pixel. Lesson: a list
+  people click must not be sorted by anything the click itself changes, like a shot list that
+  reshuffles whenever you call "action".
 - **The empty seat saved for a count.** Dropping the "^ 2" count from a main thread's row left
   the chair it sat in. shadcn pads a row 32px at its right whenever its list item holds an action,
   and the project's "+" shares its item with every thread below it, so each thread row kept a
