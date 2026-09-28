@@ -7,7 +7,7 @@ import { createRequire } from "node:module";
 import path from "node:path";
 import { ROOT } from "./harness.mjs";
 import { BASE } from "./lever.mjs";
-import { headerOf, menuButtonOf, openDemo } from "./thread-actions-checks.mjs";
+import { menuButtonOf, openDemo, shownPanel } from "./thread-actions-checks.mjs";
 
 const LEVER_TOKEN = "lever-stands-in-for-workos";
 const DESKTOP = { width: 1440, height: 900 };
@@ -81,7 +81,7 @@ export const shareChecks = {
     const page = await context.newPage();
     await page.goto(`${BASE}/?scenario=demo`);
     await menuButtonOf(page).waitFor();
-    const title = await headerOf(page).locator("h2").innerText();
+    const title = await shownPanel(page).getAttribute("aria-label");
     await openShare(page);
     const privately = String(
       await page.getByRole("menuitem", { name: /^Share thread/ }).innerText(),

@@ -3,14 +3,15 @@
 // opens its own browser context, so no check sees another's data.
 import { BASE, openApp } from "./lever.mjs";
 
-// A thread header's padding and its rule: its height is its title's line and these, so actions
-// that make it taller show as a difference.
-const HEADER_FRAME_PX = 14 * 2 + 1;
 // The menu's items, in Ethan's order (ADR-126).
 const ITEMS = ["Copy thread URL", "Share thread", "Pin thread", "Snooze", "Archive", "Delete"];
+// A tab's menu leads with Rename (ADR-138).
+const TAB_ITEMS = ["Rename", ...ITEMS];
 const DEMO = `${BASE}/?scenario=demo`;
 
-const shownPanel = (page) => page.locator('[role="tabpanel"]:not([inert]) .thread-panel').first();
+/** The thread panel on screen: a main thread has no title bar, so its name is the panel's label. */
+export const shownPanel = (page) =>
+  page.locator('[role="tabpanel"]:not([inert]) .thread-panel').first();
 export const headerOf = (page) => shownPanel(page).locator(".thread-header");
 // A main thread's "⋯" is on its active tab (ADR-138), not in a title bar of its own.
 export const menuButtonOf = (page) =>
@@ -74,19 +75,17 @@ async function rowOf(page, title) {
 
 /** The checks, keyed A1 to A8, each resolving to { ok, detail }; Share's are in share-checks.mjs. */
 export const threadActionChecks = {
-  // The desktop header carries the "⋯" with the six items, and is no taller than its title.
+  // The active tab carries the "⋯" with Rename and the six items, and the main thread has no
+  // title bar of its own (ADR-138).
   async A1(browser) {
     const page = await openDemo(browser);
-    const height = (await headerOf(page).boundingBox()).height;
-    const title = (await headerOf(page).locator("h2").boundingBox()).height;
+    const bars = await headerOf(page).count();
     await menuButtonOf(page).click();
     const items = await menuItems(page);
-    const ok =
-      JSON.stringify(items) === JSON.stringify(ITEMS) &&
-      Math.abs(height - (title + HEADER_FRAME_PX)) <= 0.01;
+    const ok = JSON.stringify(items) === JSON.stringify(TAB_ITEMS) && bars === 0;
     return {
       ok,
-      detail: `items [${items.join(" | ")}]; header ${height}px = title ${title}px + ${HEADER_FRAME_PX}px`,
+      detail: `items [${items.join(" | ")}]; main title bars ${bars}`,
     };
   },
 

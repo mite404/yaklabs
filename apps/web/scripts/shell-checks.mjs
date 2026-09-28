@@ -169,7 +169,7 @@ export const shellChecks = {
     await child.click();
     await page.waitForURL((url) => url.pathname !== home, { timeout: 10_000 });
     const childPath = pathOf(page);
-    const mainTitle = await mainPanel(page).locator(".thread-header").innerText();
+    const mainTitle = await mainPanel(page).getAttribute("aria-label");
     const lane = canvasOf(page).locator(':scope > article[aria-label="New thread"]');
     const laneShown = await lane.isVisible();
     await side.getByRole("link", { name: "Last week's sales" }).click();

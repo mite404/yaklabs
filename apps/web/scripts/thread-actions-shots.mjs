@@ -7,7 +7,7 @@ import { mkdirSync } from "node:fs";
 import path from "node:path";
 import { BASE } from "./lever.mjs";
 import { serveShares } from "./share-checks.mjs";
-import { headerOf, menuButtonOf, openThread, pick } from "./thread-actions-checks.mjs";
+import { menuButtonOf, openThread, pick } from "./thread-actions-checks.mjs";
 
 const THEMES = ["light", "dark"];
 const DESKTOP = { width: 1440, height: 900 };
@@ -91,7 +91,9 @@ async function desktop(browser, theme, file) {
   await page.keyboard.press("Escape");
   await openThread(page, PINNED);
   await quiet(page);
-  await headerOf(page).screenshot({ path: file(`desktop-header-${theme}`) });
+  await page
+    .locator('[data-slot="title-bar"]')
+    .screenshot({ path: file(`desktop-tabbar-${theme}`) });
   await menuButtonOf(page).click();
   await page.getByRole("menu").waitFor();
   await still(page);
