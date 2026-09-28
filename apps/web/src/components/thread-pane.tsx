@@ -25,10 +25,11 @@ type Turns =
 const LOADING: Turns = { kind: "loading" };
 
 // Where the focus rests in a thread, by what it shows: the frame while its turns come, Try
-// again when they cannot, the compose box once they are here.
+// again when they cannot (the frame's body, not its title bar's actions), the compose box once
+// they are here.
 const REST: Record<Turns["kind"], string> = {
   loading: "[data-pending]",
-  failed: "[data-pending] button",
+  failed: "[data-pending-body] button",
   open: ".compose-box textarea",
 };
 
@@ -136,7 +137,10 @@ function PendingFrame({ thread, children }: { thread: ThreadSummary; children: R
           <ThreadHeaderActions thread={thread} />
         </div>
       </header>
-      <div className="flex flex-col items-start gap-2 px-(--thread-gutter) py-5 text-sm">
+      <div
+        className="flex flex-col items-start gap-2 px-(--thread-gutter) py-5 text-sm"
+        data-pending-body=""
+      >
         {children}
       </div>
     </section>
