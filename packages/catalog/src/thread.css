@@ -32,11 +32,17 @@
   scrollbar-gutter: stable;
 }
 .thread-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   padding: 14px var(--thread-gutter);
   border-bottom: 1px solid var(--hairline);
 }
-/* The thread title is a display moment: brand serif (Newsreader). */
+/* The thread title is a display moment: brand serif (Newsreader). It takes the bar's width,
+   leaving the host's actions their own at the end. */
 .thread-header h2 {
+  flex: 1;
+  min-width: 0;
   margin: 0;
   font-family: var(--font-display);
   font-size: 17px;
@@ -56,10 +62,22 @@
   text-decoration: underline dotted var(--rule);
   text-underline-offset: 4px;
 }
+/* The host's actions at the bar's end (ADR-123): pulled into the bar's padding, so a button
+   taller than the title's line never makes the bar taller. */
+.thread-header-actions {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 2px;
+  margin-block: -6px;
+  margin-inline-end: -8px;
+}
 /* No rule under the field (ADR-089): the title reads the same, in the same box, the moment
    editing starts, rather than jumping a pixel to make room for an underline. */
 .thread-rename {
   display: block;
+  flex: 1;
+  min-width: 0;
   width: 100%;
   margin: 0;
   padding: 0;

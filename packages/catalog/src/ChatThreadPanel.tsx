@@ -1,33 +1,40 @@
 import {
   useEffect,
   useEffectEvent,
+  type ReactNode,
   useLayoutEffect,
   useRef,
   useState,
   type Dispatch,
-  type Ref,
   type RefObject,
   type SetStateAction,
 } from "react";
 import type { Agent, AgentEvent } from "./agent";
 import { AwaitingInputCard } from "./AwaitingInputCard";
 import { resolveAwaiting, type AwaitingInput } from "./awaiting";
-import { CatalogCard } from "./CatalogCard";
-import { ChartGlyph, ComposeBox } from "./ComposeBox";
+import { ComposeBox } from "./ComposeBox";
 import { appendDictation } from "./dictation";
 import { markGrabbableHighlight } from "./grabbable";
 import { DictationModal, type DictationSource } from "./DictationModal";
-import { InteractiveCard } from "./InteractiveCard";
 import { labAgent } from "./labAgent";
 import { resolveInteractive, type CardAttachment } from "./interactive";
 import { Recap } from "./Recap";
 import { shouldShowRecap, type RecapItem } from "./recapRules";
 import type { Thread, ThreadMessage } from "./thread";
 import { centerInScroller, keepExpansionsInView } from "./threadReveal";
+import { AgentTurn, UserTurn } from "./Turns";
 import "./thread.css";
 
-type UserMessage = Extract<ThreadMessage, { role: "user" }>;
-type AgentMessage = Extract<ThreadMessage, { role: "agent" }>;
+/**
+ * A question the host asks in the thread's dock, in the agent's card (ADR-039) but answered to
+ * the host: the card's name, the question, and what an answer or a dismissal does.
+ */
+export type HostAsk = {
+  label: string;
+  question: AwaitingInput;
+  onAnswer: (answer: string) => void;
+  onDismiss: () => void;
+};
 
 /** Whether the thread is still running, and when the user last sent something. */
 export type ThreadActivity = { active: boolean; lastUserInputAt: number };
@@ -83,13 +90,15 @@ function reserveDockSpace(thread: HTMLElement, slot: HTMLElement): () => void {
 // The title bar. With `onRename` the title is a button that becomes a field on click: Enter or
 // leaving the field keeps the new name, Escape or an empty name keeps the old one (ADR-089).
 // Every way out goes through the field's blur, so the field is never torn down inside the key
-// event that closed it.
+// event that closed it. The host's `actions` sit at the bar's end (ADR-123).
 function ThreadHeader({
   title,
   onRename,
+  actions,
 }: {
   title: string;
   onRename: ((title: string) => void) | undefined;
+  actions: ReactNode;
 }) {
   const [editing, setEditing] = useState(false);
   const field = useRef<HTMLInputElement>(null);
@@ -135,79 +144,8 @@ function ThreadHeader({
           )}
         </h2>
       )}
+      {actions !== undefined && <div className="thread-header-actions">{actions}</div>}
     </header>
-  );
-}
-
-// The user's turn: a tinted bubble resting on the thread (ADR-025).
-function UserTurn({ message, ref }: { message: UserMessage; ref: Ref<HTMLElement> }) {
-  return (
-    <article
-      ref={ref}
-      className="turn turn-user"
-      data-turn-id={message.id}
-      aria-label={`You, ${message.time}`}
-    >
-      <p>{message.text}</p>
-      {message.attachments && message.attachments.length > 0 && (
-        <ul className="sent-context" aria-label="Sent with this message">
-          {message.attachments.map((item) => (
-            <li key={item.turnId} className="context-chip">
-              <ChartGlyph />
-              {item.label}
-            </li>
-          ))}
-        </ul>
-      )}
-      {message.files && message.files.length > 0 && (
-        <ul className="sent-context" aria-label="Files sent with this message">
-          {message.files.map((item) => (
-            <li key={item.id} className="context-chip">
-              {item.label}
-            </li>
-          ))}
-        </ul>
-      )}
-      <time>{message.time}</time>
-    </article>
-  );
-}
-
-// The agent's turn: prose first, then an optional catalog card sized by the panel.
-// While a reply is still streaming in, the turn is marked busy for assistive technology.
-function AgentTurn({
-  message,
-  onChoose,
-  cardsCarry,
-  ref,
-}: {
-  message: AgentMessage;
-  onChoose: (attachment: CardAttachment) => void;
-  cardsCarry: boolean | undefined;
-  ref: Ref<HTMLElement>;
-}) {
-  const carries = cardsCarry !== false;
-  return (
-    <article
-      ref={ref}
-      className="turn turn-agent"
-      data-turn-id={message.id}
-      aria-label={`Agent, ${message.time}`}
-      aria-busy={message.streaming || undefined}
-    >
-      <p>{message.text}</p>
-      {message.payload !== undefined && (
-        <CatalogCard payload={message.payload} context="thread" draggable={carries} />
-      )}
-      {message.interactive !== undefined && (
-        <InteractiveCard
-          payload={message.interactive}
-          turnId={message.id}
-          onChoose={onChoose}
-          draggable={carries}
-        />
-      )}
-    </article>
   );
 }
 
@@ -566,6 +504,10 @@ function focusComposeIn(scroller: HTMLElement | null): void {
  * @param cardsCarry Let a card's header carry it out onto the compose canvas (ADR-089). On by
  * default; off where the host has no canvas to drop it on, such as a phone (ADR-122). The
  * catalog cannot see the host's layout, so the host decides.
+ * @param headerActions What the host puts at the end of the title bar, such as the thread's
+ * menu (ADR-123); the catalog cannot import the host's components, so it takes them whole.
+ * @param hostAsk A question of the host's own in the dock, such as when to snooze (ADR-125). It
+ * stands over the agent's question while it is open, since the user just asked for it.
  */
 // fallow scores each prop as cognitive load: the ninth host knob tips 15 to 16 with no branch.
 // fallow-ignore-next-line complexity
@@ -579,6 +521,8 @@ export function ChatThreadPanel({
   initialDraft = "",
   onRename,
   cardsCarry,
+  headerActions,
+  hostAsk,
 }: {
   thread: Thread;
   width?: number;
@@ -589,6 +533,8 @@ export function ChatThreadPanel({
   initialDraft?: string;
   onRename?: (title: string) => void;
   cardsCarry?: boolean;
+  headerActions?: ReactNode;
+  hostAsk?: HostAsk;
 }) {
   const { source, open } = dictationSetup(dictation);
   const [messages, setMessages] = useState(thread.messages);
@@ -648,7 +594,7 @@ export function ChatThreadPanel({
 
   return (
     <section className="thread-panel" style={{ width }} aria-label={thread.title}>
-      <ThreadHeader title={thread.title} onRename={onRename} />
+      <ThreadHeader title={thread.title} onRename={onRename} actions={headerActions} />
       <div className="thread-scroll" ref={scroller}>
         {messages.map((message) => (
           <Turn
@@ -660,7 +606,20 @@ export function ChatThreadPanel({
         ))}
       </div>
       <div className="thread-dock">
-        {awaiting !== undefined && (
+        {hostAsk !== undefined && (
+          <div className="dock-overlay" ref={setDockSlot}>
+            <AwaitingInputCard
+              label={hostAsk.label}
+              question={hostAsk.question}
+              onAnswer={hostAsk.onAnswer}
+              onElsewhere={() => {
+                hostAsk.onDismiss();
+                focusComposeIn(scroller.current);
+              }}
+            />
+          </div>
+        )}
+        {hostAsk === undefined && awaiting !== undefined && (
           <div className="dock-overlay" ref={setDockSlot}>
             <AwaitingInputCard
               question={awaiting}
@@ -672,7 +631,7 @@ export function ChatThreadPanel({
             />
           </div>
         )}
-        {recap.visible && (
+        {hostAsk === undefined && recap.visible && (
           <div className="dock-overlay" ref={setDockSlot}>
             <Recap
               items={recap.items}
