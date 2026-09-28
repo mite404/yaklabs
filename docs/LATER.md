@@ -6,6 +6,9 @@ this list when it ships.
 
 ## Waiting on Ethan
 
+Sign-in and everything that needs it is cut for the interview (ADR-137): the five items below
+are not to be started, and stay here only so the reason is not lost.
+
 - **Put a model key in the gateway.** `apps/gateway` streams from Claude once `ANTHROPIC_API_KEY`
   is set as a Worker secret; no key was available where the slice was built, so the real-model
   path is proven only against a fake upstream (ADR-088).
@@ -117,7 +120,8 @@ What would let Kay's team drop the lab into their TypeScript monorepo (see
 ## Interview extras
 
 Each one starts from a design decision and carries it one layer down, into a neighbouring role's
-work; pick two or three.
+work; pick two or three. Cut by ADR-137: the catalog MCP server, the evaluation loop, the flame
+graph and `MessagePort` agent, and the Cloudflare share deploy; only the first two below stay.
 
 - **Visual regression and accessibility checks in CI** (Design Engineer: Infrastructure, which asks
   for "state catalogs, screenshot and visual regression tests, and accessibility checks in CI").

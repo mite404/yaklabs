@@ -78,6 +78,15 @@ line will not fit in 50 characters, that is usually the commit doing two things 
 - Skip the body entirely when the subject fully covers the change.
 
 **Never** add an agent name as co-author.
+**Never** add a public link to the thread session -- that can be a security risk!
+
+---
+
+## Interview scope
+
+- The interview build runs with sign-in off (`VITE_AUTH=none`, `VITE_AGENT=lab`).
+- Do not build WorkOS sign-in wiring, telemetry, or the extras cut in ADR-137
+  (`docs/adr/adr.md`). If one looks needed, ask Ethan.
 
 ---
 
@@ -102,19 +111,19 @@ line will not fit in 50 characters, that is usually the commit doing two things 
 ```css
 /* Kay tokens stay the source of truth */
 @theme inline {
-  --color-paper: var(--paper);
-  --color-ink: var(--ink);
-  --color-soft-ink: var(--soft-ink);
-  --color-moss: var(--moss);
+    --color-paper: var(--paper);
+    --color-ink: var(--ink);
+    --color-soft-ink: var(--soft-ink);
+    --color-moss: var(--moss);
 }
 :root {
-  --background: var(--paper);
-  --foreground: var(--ink);
-  --muted-foreground: var(--soft-ink);
-  --border: var(--hairline);
-  --ring: var(--focus);
-  --primary: var(--ink); /* green stays for hovers (ADR-058) */
-  --radius: 4px; /* the site's button corners */
+    --background: var(--paper);
+    --foreground: var(--ink);
+    --muted-foreground: var(--soft-ink);
+    --border: var(--hairline);
+    --ring: var(--focus);
+    --primary: var(--ink); /* green stays for hovers (ADR-058) */
+    --radius: 4px; /* the site's button corners */
 }
 ```
 

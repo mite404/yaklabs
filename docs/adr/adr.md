@@ -1638,3 +1638,24 @@ the light theme and "Good evening" in the dark, both in the DOM with the theme's
 construction lines fade to nothing towards the surface's edges and sit under the clearing, so
 their meeting point never fights the words; and both paintings share one `--splash-wash` and one
 clearing, so the abstract strokes read exactly as the landscape does.
+
+## ADR-137 - The interview build cuts sign-in and the neighbouring roles' extras
+
+2026-09-28 - Accepted (Ethan). Narrows ADR-084, ADR-085 and ADR-088 for the interview; supersedes
+none of them.
+The build shown in the interview runs with `VITE_AUTH=none` and `VITE_AGENT=lab`, the defaults in
+`apps/web/.env.example`, so a scripted stand-in answers the thread and no one signs in. The
+gateway verifies a WorkOS token on every request (ADR-085), so the real-model path and Share
+thread's public pages (ADR-131) stay proven only against the fake upstream and the lever, and the
+demo says so instead of hiding it.
+Do not build any of this before the interview: WorkOS redirect URIs or CORS origins, a live
+sign-in run, `auth-check.mjs` against a real account, the issuer check, the token-refresh check
+outside localhost, the 503-on-JWKS change, a model key in the gateway, or a Worker deploy made to
+register an address with WorkOS. The sign-in code ADR-084 and ADR-088 describe stays as written,
+neither deleted nor extended.
+Also cut: analytics or usage telemetry of any kind (PostHog included; the slice sends nothing
+about how it is used, which is the local-first story), the catalog MCP server, the evaluation
+loop, the flame graph and `MessagePort` agent, and the Cloudflare share deploy. The one extra
+that stays is ADR-086's: visual regression and accessibility checks in CI, with the contrast
+guard.
+If a cut item looks needed, ask Ethan; do not decide it.
