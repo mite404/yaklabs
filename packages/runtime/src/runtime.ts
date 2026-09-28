@@ -10,7 +10,7 @@ import {
   type RenameTarget,
   type RuntimeData,
 } from "./protocol";
-import { arranged, renamed, withShell, type Edit } from "./edits";
+import { arranged, marked, removed, renamed, withShell, type Edit } from "./edits";
 import { createInbox } from "./inbox";
 import {
   breakDown,
@@ -21,8 +21,16 @@ import {
   type Handle,
   type RuntimeState,
 } from "./handle";
+import type { ThreadMark } from "./marks";
 import { untilAborted } from "./untilAborted";
-import { lanesOf, type Lane, type LaneId, type ShellState, type ThreadId } from "./workspace";
+import {
+  lanesOf,
+  type Lane,
+  type LaneId,
+  type ShellState,
+  type ThreadId,
+  type ThreadShare,
+} from "./workspace";
 
 export type { RuntimeState } from "./handle";
 
@@ -56,6 +64,19 @@ export type Runtime = {
   arrange(mainId: ThreadId, lanes: Lane[]): Promise<void>;
   /** Keeps the page's shell whole, in `state()` at once, then in the worker, like `rename`. */
   saveShell(shell: ShellState): Promise<void>;
+  /** Pins, snoozes or archives a thread, in `state()` at once, then in the worker, like `rename`. */
+  mark(id: ThreadId, change: ThreadMark): Promise<void>;
+  /**
+   * Deletes a thread and its sub-threads: gone from `state()` at once, and for good once the
+   * undo window (`UNDO_MS`) passes without a `restore` (ADR-127).
+   */
+  delete(id: ThreadId): Promise<void>;
+  /** Takes a delete back inside its window. @throws Once the worker has purged it. */
+  restore(id: ThreadId): Promise<void>;
+  /** Records a thread made public, with its link and revoke token, on the device (ADR-128). */
+  share(share: ThreadShare): Promise<void>;
+  /** Forgets a public share, once the page has taken it down or found it gone. */
+  unshare(shareId: string): Promise<void>;
   /** The thread's `Agent` (ADR-041); replies stream from the worker. */
   agent(id: ThreadId, session?: Session): Agent;
   /** Stops the worker; everything still waiting fails, and the state is broken. */
@@ -65,6 +86,8 @@ export type Runtime = {
 // What a request settles with, and how the page sends a command.
 type Settled = Exclude<Answer, { kind: "failed" | "chunk" }>;
 type Post = (command: Command) => void;
+// The runtime's verbs for the thread menu.
+type MenuVerb = "mark" | "delete" | "restore" | "share" | "unshare";
 // A command the page waits on for one answer.
 type Asked = Exclude<Command, { kind: "init" | "send" | "abort" }>;
 
@@ -159,6 +182,30 @@ function listen(worker: Worker, handle: Handle): void {
   });
 }
 
+// The thread menu's verbs (ADR-123): a mark and a delete show at once, like `rename`; an undo,
+// a share and its end wait for the worker.
+function menuVerbs(handle: Handle, post: Post): Pick<Runtime, MenuVerb> {
+  return {
+    mark: async (threadId, change) => {
+      const command: Command = { kind: "mark", requestId: newId(), threadId, change };
+      await ask(handle, post, command, marked(threadId, change, new Date().toISOString()));
+    },
+    delete: async (threadId) => {
+      const command: Command = { kind: "delete", requestId: newId(), threadId };
+      await ask(handle, post, command, removed(threadId));
+    },
+    restore: async (threadId) => {
+      await ask(handle, post, { kind: "restore", requestId: newId(), threadId });
+    },
+    share: async (share) => {
+      await ask(handle, post, { kind: "share", requestId: newId(), share });
+    },
+    unshare: async (shareId) => {
+      await ask(handle, post, { kind: "unshare", requestId: newId(), shareId });
+    },
+  };
+}
+
 /**
  * Starts the worker that stands in for Kay's daemon (ADR-076, ADR-083) and returns the page's
  * handle on it. The page and the worker talk only through messages, each checked on arrival
@@ -208,6 +255,7 @@ export function startRuntime(config: RuntimeConfig): Runtime {
       const command: Command = { kind: "saveShell", requestId: newId(), shell };
       await ask(handle, post, command, withShell(shell));
     },
+    ...menuVerbs(handle, post),
     agent: (threadId, session) => agentFor(handle, post, threadId, session),
     dispose: () => {
       worker.terminate();

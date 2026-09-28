@@ -73,6 +73,11 @@ function holding(shell: ShellState): { runtime: Runtime; saves: ShellState[] } {
       saves.push(parseShell(next, WS));
       return Promise.resolve();
     },
+    mark: unused,
+    delete: unused,
+    restore: unused,
+    share: unused,
+    unshare: unused,
     agent: unused,
     dispose: () => {},
   };
