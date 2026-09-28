@@ -217,16 +217,12 @@ export function resizeLane(lanes: Lane[], id: LaneId, width: number | null): Lan
 
 /**
  * The sidebar's tree: projects oldest first, each with its mains newest created first, and each
- * main's children in lane order, then the closed children oldest first.
+ * main's children oldest created first. Only creation orders it, never the canvas or activity,
+ * so a row stays under the pointer that opens it (ADR-125).
  */
 export function sidebarTree(ws: Workspace): ProjectNode[] {
-  const children = (main: ThreadSummary): ThreadSummary[] => {
-    const own = ws.threads.filter((thread) => parentOf(thread) === main.id).toSorted(byCreated);
-    const open = lanesOf(ws, main.id).flatMap((lane) =>
-      lane.kind === "thread" ? own.filter((child) => child.id === lane.threadId) : [],
-    );
-    return [...open, ...own.filter((child) => !open.includes(child))];
-  };
+  const children = (main: ThreadSummary): ThreadSummary[] =>
+    ws.threads.filter((thread) => parentOf(thread) === main.id).toSorted(byCreated);
   return ws.projects.toSorted(byCreated).map((project) => ({
     project,
     mains: ws.threads

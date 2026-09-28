@@ -1604,6 +1604,42 @@ try {
   );
 
   await onOwnPage(
+    "a child row stays under the pointer when a click reopens its closed lane",
+    "/?scenario=demo",
+    {},
+    async (own) => {
+      const side = own.locator('[data-slot="sidebar"]');
+      const children = () => side.locator('a[data-thread="child"] [data-label]').allInnerTexts(); // → string[]
+      const composeCanvas = shownPanel(own).getByRole("region", { name: "Compose canvas" });
+      const titles = ["Saturday leads at every level", "Why is Tuesday quiet?"];
+      // Opens each child's lane from its row, then closes it from the canvas, so both rows sit
+      // among the closed children, where a lane-ordered list once reshuffled them on a click.
+      for (const kidTitle of titles) {
+        const kidLane = composeCanvas.locator(`:scope > article[aria-label="${kidTitle}"]`);
+        // oxlint-disable-next-line no-await-in-loop -- one lane at a time, in order
+        await side.getByRole("link", { name: kidTitle, exact: true }).click();
+        // oxlint-disable-next-line no-await-in-loop -- as above
+        await kidLane.waitFor({ timeout: 10_000 });
+        // oxlint-disable-next-line no-await-in-loop -- as above
+        await composeCanvas.getByRole("button", { name: `Close ${kidTitle}`, exact: true }).click();
+        // oxlint-disable-next-line no-await-in-loop -- as above
+        await kidLane.waitFor({ state: "detached", timeout: 10_000 });
+      }
+      const before = await children();
+      const row = side.getByRole("link", { name: titles[1], exact: true });
+      const yBefore = (await row.boundingBox()).y;
+      await row.click();
+      await own.waitForTimeout(600);
+      const yAfter = (await row.boundingBox()).y;
+      const after = await children();
+      return {
+        ok: yAfter === yBefore && after.join() === before.join() && before.join() === titles.join(),
+        detail: `row y ${yBefore} → ${yAfter}; children ${before.join(" | ")} → ${after.join(" | ")}`,
+      };
+    },
+  );
+
+  await onOwnPage(
     "clicking a main row's empty space opens it, and its arrow only folds",
     "/?scenario=demo",
     {},
