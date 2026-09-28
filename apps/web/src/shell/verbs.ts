@@ -22,24 +22,27 @@ import {
   type PaneKind,
   type ShellState,
 } from "./state";
+import type { ShareClient } from "./share-thread";
+import { shareVerbs, type ShareVerbs } from "./share-verbs";
 import { threadVerbs, type ThreadVerbs } from "./thread-verbs";
 
 /** What the shell can change: tabs, threads, projects, panes, the bell and the thread menu. */
-export type ShellVerbs = ThreadVerbs & {
-  /** Goes to a thread's address, main or child; the address keeps the scenario. */
-  open(id: ThreadId): void;
-  /** Closes a tab; the one on screen gives way to its right neighbour, else its left, else home. */
-  close(main: ThreadId): void;
-  /** Starts a main thread in the project (else the active one's, else the first) and opens it. */
-  newThread(projectId?: ProjectId): void;
-  /** Starts a project with its first main thread and opens it. */
-  newProject(): void;
-  /** Shows a pane beside a main; leaving the canvas on a child's address goes to its main's. */
-  setPane(main: ThreadId, pane: PaneKind): void;
-  setSplit(main: ThreadId, split: number): void;
-  browse(main: ThreadId, step: BrowserStep): void;
-  markRead(ids: string[]): void;
-};
+export type ShellVerbs = ThreadVerbs &
+  ShareVerbs & {
+    /** Goes to a thread's address, main or child; the address keeps the scenario. */
+    open(id: ThreadId): void;
+    /** Closes a tab; the one on screen gives way to its right neighbour, else its left, else home. */
+    close(main: ThreadId): void;
+    /** Starts a main thread in the project (else the active one's, else the first) and opens it. */
+    newThread(projectId?: ProjectId): void;
+    /** Starts a project with its first main thread and opens it. */
+    newProject(): void;
+    /** Shows a pane beside a main; leaving the canvas on a child's address goes to its main's. */
+    setPane(main: ThreadId, pane: PaneKind): void;
+    setSplit(main: ThreadId, split: number): void;
+    browse(main: ThreadId, step: BrowserStep): void;
+    markRead(ids: string[]): void;
+  };
 
 /** Goes to a thread's address, or home for null. */
 export type Go = (to: ThreadId | null) => void;
@@ -53,6 +56,7 @@ type Deps = {
   go: Go;
   href: (id: ThreadId) => string;
   setSnoozing: (id: ThreadId | null) => void;
+  shareClient: ShareClient;
 };
 
 // What a project started from the shell is called until someone names it.
@@ -124,15 +128,30 @@ async function newProjectIn(runtime: Runtime): Promise<ProjectId> {
   return createdProject(runtime, await runtime.create({ kind: "project", name: NEW_PROJECT }));
 }
 
+// A change to the document the runtime holds, with the URL's thread visited (see `edit`).
+type Change = (update: (current: ShellState) => ShellState) => void;
+
+// The thread menu's verbs (ADR-124 to ADR-129), Share's included: a delete takes the thread's
+// public pages down with it.
+function menuVerbs(deps: Deps, doc: ShellState, change: Change): ThreadVerbs & ShareVerbs {
+  const { runtime, workspace, active, go, href, setSnoozing, shareClient } = deps;
+  const threads = workspace.threads;
+  const sharing = shareVerbs({ runtime, client: shareClient, shares: workspace.shares, threads });
+  const takeDown = (id: ThreadId) => {
+    sharing.takeDown(id);
+  };
+  const menu = { runtime, threads, active, doc, go, href, change, setSnoozing, takeDown };
+  return { ...sharing, ...threadVerbs(menu) };
+}
+
 /** The shell's verbs over the document the runtime keeps, as the page shows it in `doc`. */
 export function verbs(deps: Deps, doc: ShellState): ShellVerbs {
-  const { runtime, workspace, active, go, href, setSnoozing } = deps;
-  const change = (update: (current: ShellState) => ShellState) => {
+  const { runtime, workspace, active, go } = deps;
+  const change: Change = (update) => {
     edit(runtime, active, update);
   };
-  const threads = workspace.threads;
   return {
-    ...threadVerbs({ runtime, threads, active, doc, go, href, change, setSnoozing }),
+    ...menuVerbs(deps, doc, change),
     open: (id) => {
       go(id);
     },

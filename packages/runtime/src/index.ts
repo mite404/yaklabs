@@ -9,6 +9,9 @@ export type {
   Source,
 } from "./protocol";
 export { startRuntime } from "./runtime";
+// The share contract the page publishes with (ADR-129). The web app reads it here: depending on
+// the gateway itself would make its build wait on the gateway's, which waits on the web's.
+export { SHARE_TTLS, shareCreatedSchema } from "gateway/contract";
 export { IDLE_MS, UNDO_MS } from "./settle";
 export type { Runtime, RuntimeConfig, RuntimeState, Session } from "./runtime";
 export { applyMark } from "./marks";

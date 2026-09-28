@@ -23,7 +23,8 @@ import {
 } from "lucide-react";
 import type { ComponentProps } from "react";
 import { useShell, type Shell } from "./model";
-import { wakeText } from "./snooze";
+import { ShareItem } from "./share-menu";
+import { wakeText } from "./wake-text";
 
 /** The label every "⋯" for a thread carries, in its title bar or the phone's (ADR-124). */
 export const THREAD_ACTIONS = "Thread actions";
@@ -94,7 +95,7 @@ export function ThreadActionsContent({
   ...props
 }: ItemProps & { beforeSnooze?: () => void } & ComponentProps<typeof DropdownMenuContent>) {
   return (
-    <DropdownMenuContent align="end" className="w-56" {...props}>
+    <DropdownMenuContent align="end" className="w-64" {...props}>
       <DropdownMenuGroup>
         <DropdownMenuItem
           onClick={() => {
@@ -104,6 +105,7 @@ export function ThreadActionsContent({
           <Link aria-hidden="true" />
           Copy thread URL
         </DropdownMenuItem>
+        <ShareItem shell={shell} thread={thread} />
         <PinItem shell={shell} thread={thread} />
         <SnoozeItem shell={shell} thread={thread} before={beforeSnooze} />
         <ArchiveItem shell={shell} thread={thread} />

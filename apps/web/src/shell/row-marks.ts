@@ -1,5 +1,5 @@
 import type { ThreadSummary } from "@yaklabs/runtime";
-import { wakeText } from "./snooze";
+import { wakeText } from "./wake-text";
 
 /** A mark a thread row shows before its title (ADR-125 to ADR-127). */
 export type Mark = "pinned" | "snoozed" | "archived";

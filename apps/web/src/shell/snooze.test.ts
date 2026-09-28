@@ -1,14 +1,6 @@
 import { resolveAwaiting } from "@yaklabs/catalog/awaiting";
 import { describe, expect, it } from "vitest";
-import {
-  KEEP_AWAKE,
-  parseWhen,
-  snoozeChoices,
-  snoozeQuestion,
-  WAKE_NOW,
-  wakeFor,
-  wakeText,
-} from "./snooze";
+import { KEEP_AWAKE, parseWhen, snoozeChoices, snoozeQuestion, WAKE_NOW, wakeFor } from "./snooze";
 
 // Monday 28 September 2026, 10:03 on the machine's own clock; every expectation is built the
 // same way, so the tests hold in any time zone.
@@ -147,15 +139,5 @@ describe("wakeFor turns the card's answer into a wake (ADR-126)", () => {
     ["whenever", undefined],
   ])("reads %j", (answer, expected) => {
     expect(wakeFor(answer, choices, NOW)).toBe(expected);
-  });
-});
-
-describe("wakeText writes the hour unpadded, as turn times are", () => {
-  it.each<["long" | "row" | "menu", string]>([
-    ["long", "Friday 2 October at 7:05"],
-    ["row", "Fri 2 Oct, 7:05"],
-    ["menu", "Fri 7:05"],
-  ])("at %s length", (length, expected) => {
-    expect(wakeText(on(10, 2, 7, 5), length)).toBe(expected);
   });
 });

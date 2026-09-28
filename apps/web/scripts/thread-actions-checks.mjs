@@ -11,15 +11,17 @@ const ITEMS = ["Copy thread URL", "Share thread", "Pin thread", "Snooze", "Archi
 const DEMO = `${BASE}/?scenario=demo`;
 
 const shownPanel = (page) => page.locator('[role="tabpanel"]:not([inert]) .thread-panel').first();
-const headerOf = (page) => shownPanel(page).locator(".thread-header");
+export const headerOf = (page) => shownPanel(page).locator(".thread-header");
 const sidebarOf = (page) => page.locator('[data-slot="sidebar"]');
 const rowsOf = (page) => sidebarOf(page).locator("[data-thread]");
 const rowTitles = async (page) =>
-  (await rowsOf(page).locator("[data-label]").allInnerTexts()).map((text) => text.trim());
+  Array.from(await rowsOf(page).locator("[data-label]").allInnerTexts(), (text) =>
+    String(text).trim(),
+  );
 const serviceDesk = "Service desk weekly review";
 
 // The demo's desktop, ready once its sidebar has rows and a thread shows.
-async function openDemo(browser, options = {}) {
+export async function openDemo(browser, options = {}) {
   const { page } = await openApp(browser, DEMO, options);
   await sidebarOf(page).locator("[data-thread]").first().waitFor();
   return page;
@@ -35,22 +37,37 @@ async function openThread(page, title) {
 }
 
 // Opens the shown thread's "⋯" and picks an item by name.
-async function pick(page, name) {
+export async function pick(page, name) {
   await headerOf(page).getByRole("button", { name: "Thread actions" }).click();
   await page.getByRole("menuitem", { name, exact: true }).click();
 }
+
+/** The open menu's items by their own words, without a status beside them ("Private"). */
+export const menuItems = (page) =>
+  page.getByRole("menuitem").evaluateAll((items) =>
+    items.map((item) =>
+      [...item.childNodes]
+        .filter((node) => node.nodeType === Node.TEXT_NODE)
+        .map((node) => node.textContent)
+        .join("")
+        .trim(),
+    ),
+  );
 
 // A row's box and ink, found by the title it shows.
 async function rowOf(page, title) {
   const row = rowsOf(page).filter({ hasText: title }).first();
   return {
     row,
-    marks: await row.locator("[data-mark]").evaluateAll((els) => els.map((el) => el.dataset.mark)),
-    ink: await row.evaluate((el) => getComputedStyle(el).color),
+    marks: Array.from(
+      await row.locator("[data-mark]").evaluateAll((els) => els.map((el) => el.dataset.mark)),
+      String,
+    ),
+    ink: String(await row.evaluate((el) => getComputedStyle(el).color)),
   };
 }
 
-/** The checks, keyed A1 to A8, each resolving to { ok, detail }. */
+/** The checks, keyed A1 to A8, each resolving to { ok, detail }; Share's are in share-checks.mjs. */
 export const threadActionChecks = {
   // The desktop header carries the "⋯" with the six items, and is no taller than its title.
   async A1(browser) {
@@ -58,7 +75,7 @@ export const threadActionChecks = {
     const height = (await headerOf(page).boundingBox()).height;
     const title = (await headerOf(page).locator("h2").boundingBox()).height;
     await headerOf(page).getByRole("button", { name: "Thread actions" }).click();
-    const items = (await page.getByRole("menuitem").allInnerTexts()).map((text) => text.trim());
+    const items = await menuItems(page);
     const ok =
       JSON.stringify(items) === JSON.stringify(ITEMS) &&
       Math.abs(height - (title + HEADER_FRAME_PX)) <= 0.01;
@@ -91,7 +108,7 @@ export const threadActionChecks = {
       page.url() === url;
     return {
       ok,
-      detail: `before [${before}]; pinned [${pinned}] marks ${pinnedRow.marks}; after [${after}]; view kept ${page.url() === url}`,
+      detail: `before [${before.join()}]; pinned [${pinned.join()}] marks ${pinnedRow.marks.join()}; after [${after.join()}]; view kept ${page.url() === url}`,
     };
   },
 
@@ -138,7 +155,7 @@ export const threadActionChecks = {
       live.ink === "rgb(86, 86, 80)";
     return {
       ok,
-      detail: `order [${titles}]; archived ink ${archived.ink} vs ${live.ink}; marks ${archived.marks}`,
+      detail: `order [${titles.join()}]; archived ink ${archived.ink} vs ${live.ink}; marks ${archived.marks.join()}`,
     };
   },
 
@@ -167,7 +184,7 @@ export const threadActionChecks = {
       focused.includes("In 1 hour");
     return {
       ok,
-      detail: `tiles [${tiles}]; focus on "${focused.trim()}"; marks ${row.marks}; menu "${snooze.replaceAll("\n", " ")}"`,
+      detail: `tiles [${tiles.join()}]; focus on "${focused.trim()}"; marks ${row.marks.join()}; menu "${snooze.replaceAll("\n", " ")}"`,
     };
   },
 
@@ -214,7 +231,7 @@ export const threadActionChecks = {
     await page.setViewportSize({ width: 390, height: 844 });
     const bar = page.locator('header[data-slot="title-bar"]');
     await bar.getByRole("button", { name: "Thread actions" }).click();
-    const items = (await page.getByRole("menuitem").allInnerTexts()).map((text) => text.trim());
+    const items = await menuItems(page);
     await page.keyboard.press("Escape");
     const inHeader = await page
       .locator(".thread-header")

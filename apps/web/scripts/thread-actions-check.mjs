@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // oxlint-disable no-await-in-loop, no-console -- a lever drives one step at a time and reports on stdout
-// The thread actions menu, on the real app (ADR-124 to ADR-129): the checks A1 to A8, or with
-// --shots its pictures, light and dark, a desktop and a 390px phone. It waits on the tree and
-// the tabs, never on the data marker, which may leave the title bar on its own.
+// The thread actions menu, on the real app (ADR-124 to ADR-129): the checks A1 to A8 and S1
+// to S2, or with --shots its pictures, light and dark, a desktop and a 390px phone. It waits on
+// the tree and the tabs, never on the data marker, which main has since removed (ADR-123).
 //
 //   pnpm dev:web                                          # http://127.0.0.1:5173
 //   node apps/web/scripts/thread-actions-check.mjs [--only A1,A2] [--out dir]
@@ -11,6 +11,7 @@ import { mkdirSync } from "node:fs";
 import path from "node:path";
 import { arg, chromium, ROOT } from "./harness.mjs";
 import { run } from "./lever.mjs";
+import { shareChecks } from "./share-checks.mjs";
 import { threadActionChecks } from "./thread-actions-checks.mjs";
 
 const BASE = arg("--base", "http://127.0.0.1:5173");
@@ -77,7 +78,7 @@ async function shots(browser, dir) {
 }
 
 if (SHOTS === undefined) {
-  await run(threadActionChecks);
+  await run({ ...threadActionChecks, ...shareChecks });
 } else {
   const browser = await chromium.launch({ args: ["--disable-partial-raster"] }); // ADR-107
   try {

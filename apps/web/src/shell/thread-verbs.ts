@@ -6,11 +6,12 @@ import {
   type ThreadSummary,
 } from "@yaklabs/runtime";
 import { toast } from "sonner";
-import { inBackground, reasonOf } from "../runtime";
-import { wakeText } from "./snooze";
+import { inBackground } from "../runtime";
+import { copyText } from "./share-verbs";
+import { wakeText } from "./wake-text";
 import { awayFrom, type ShellState } from "./state";
 
-/** What the thread's menu does (ADR-124), besides Share. */
+/** What the thread's menu does (ADR-124), besides Share (see share-verbs.ts). */
 export type ThreadVerbs = {
   /** Copies the thread's address, its scenario kept, and says so. */
   copyUrl(id: ThreadId): void;
@@ -38,6 +39,8 @@ export type ThreadDeps = {
   /** Saves a change to the shell's document, as the shell's own verbs do. */
   change: (update: (doc: ShellState) => ShellState) => void;
   setSnoozing: (id: ThreadId | null) => void;
+  /** Takes down a thread's public pages, and its sub-threads', when it is deleted (ADR-129). */
+  takeDown: (id: ThreadId) => void;
 };
 
 // A thread's title in quotes, for a toast; the id when the snapshot lacks it.
@@ -45,21 +48,14 @@ function named(threads: ThreadSummary[], id: ThreadId): string {
   return `“${threads.find((each) => each.id === id)?.title ?? id}”`;
 }
 
-async function copy(href: string): Promise<void> {
-  try {
-    await navigator.clipboard.writeText(href);
-    toast.success("Thread URL copied");
-  } catch (error: unknown) {
-    toast.error("Copying did not work", { description: `${reasonOf(error)} ${href}` });
-  }
-}
-
 // Deletes, moves the page off the thread if it showed it, and offers Undo for as long as the
 // worker keeps the tombstone. Undo puts the thread back and returns to it if it was on screen.
+// Its public pages come down at once: privacy first, and Undo brings back the thread, not them.
 function removeWithUndo(deps: ThreadDeps, id: ThreadId): void {
-  const { runtime, threads, active, doc, go, change } = deps;
+  const { runtime, threads, active, doc, go, change, takeDown } = deps;
   const title = named(threads, id);
   const { next } = awayFrom(doc, active, id);
+  takeDown(id);
   inBackground(runtime.delete(id), "Deleting");
   change((current) => awayFrom(current, active, id).state);
   if (next !== undefined) go(next);
@@ -83,7 +79,7 @@ export function threadVerbs(deps: ThreadDeps): ThreadVerbs {
   const { runtime, threads, href, setSnoozing } = deps;
   return {
     copyUrl: (id) => {
-      void copy(href(id));
+      void copyText(href(id), "Thread URL copied");
     },
     pin: (id, pinned) => {
       inBackground(runtime.mark(id, { pinned }), pinned ? "Pinning" : "Unpinning");

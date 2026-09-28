@@ -1,6 +1,5 @@
 import {
   threadIdSchema,
-  type Located,
   type Place,
   type ProjectId,
   type ThreadId,
@@ -22,8 +21,6 @@ import {
   setPane,
   setSplit,
   stepBrowser,
-  onScreen,
-  awayFrom,
   unreadCount,
   unsaved,
   viewOf,
@@ -266,49 +263,5 @@ describe("resume", () => {
   });
   it("finds nothing with no tabs open", () => {
     expect(resume({ ...OPEN, tabs: [] }, WS, null)).toBeNull();
-  });
-});
-
-// The title of the thread the phone's menu acts on, or null.
-const titleOf = (at: Located | null) => onScreen(WS, at).thread?.title ?? null;
-
-describe("onScreen (ADR-116, ADR-124)", () => {
-  it("names the main on screen and its project", () => {
-    expect(onScreen(WS, { main: PROFIT, focus: null }).name).toBe("Demo store");
-    expect(titleOf({ main: PROFIT, focus: null })).toBe(PROFIT);
-  });
-  it("acts on the child in focus, under its main's project", () => {
-    expect(onScreen(WS, { main: PROFIT, focus: SATURDAY }).name).toBe("Demo store");
-    expect(titleOf({ main: PROFIT, focus: SATURDAY })).toBe(SATURDAY);
-  });
-  it("acts on nothing with nothing on screen, or a thread the workspace lacks", () => {
-    expect(onScreen(WS, null)).toEqual({ name: null, thread: null });
-    expect(onScreen(WS, { main: id("gone"), focus: null })).toEqual({ name: null, thread: null });
-  });
-});
-
-describe("awayFrom (ADR-128)", () => {
-  const doc: ShellState = { version: 1, tabs: [PROFIT, REFUNDS], views: {}, read: [] };
-
-  it("closes a deleted main's tab and goes to its neighbour, as Close does", () => {
-    expect(awayFrom(doc, { main: PROFIT, focus: null }, PROFIT)).toEqual({
-      state: { ...doc, tabs: [REFUNDS] },
-      next: REFUNDS,
-    });
-  });
-  it("goes from a deleted child to its main, keeping the tabs", () => {
-    expect(awayFrom(doc, { main: PROFIT, focus: SATURDAY }, SATURDAY)).toEqual({
-      state: doc,
-      next: PROFIT,
-    });
-  });
-  it("closes the tab of a deleted main off screen, and stays where it is", () => {
-    expect(awayFrom(doc, { main: PROFIT, focus: null }, REFUNDS)).toEqual({
-      state: { ...doc, tabs: [PROFIT] },
-      next: undefined,
-    });
-  });
-  it("stays put for a deleted thread with no tab and not on screen", () => {
-    expect(awayFrom(doc, null, SATURDAY)).toEqual({ state: doc, next: undefined });
   });
 });

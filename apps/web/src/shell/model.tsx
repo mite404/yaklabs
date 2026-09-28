@@ -2,6 +2,7 @@ import {
   locate,
   type Located,
   type Runtime,
+  type Session,
   type RuntimeState,
   type Source,
   type ThreadId,
@@ -18,7 +19,10 @@ import {
   type ReactNode,
 } from "react";
 import { matchPath, useLocation, useNavigate, useNavigation, type Location } from "react-router";
+import { env } from "../env";
 import { inBackground, usePaths, useRuntimeState, useStartedRuntime } from "../runtime";
+import { useSession } from "../session";
+import type { ShareClient } from "./share-thread";
 import { parseShell, resume, unreadCount, unsaved, visit, type ShellState } from "./state";
 import { edit, verbs, type Go, type ShellVerbs } from "./verbs";
 
@@ -58,9 +62,23 @@ type Parts = {
   href: (id: ThreadId) => string;
   snoozing: ThreadId | null;
   setSnoozing: (id: ThreadId | null) => void;
+  session: Session | undefined;
 };
 
 const ShellContext = createContext<Shell | null>(null);
+
+// How the page makes a thread public (ADR-129): the gateway this build names, the visitor's
+// token when the build signs in, the worker's turns, and the device's record of each share.
+function shareClientFor(runtime: Runtime, session: Session | undefined): ShareClient {
+  return {
+    base: env.shareBase,
+    now: () => new Date(),
+    token: () => session?.getAccessToken(),
+    turns: (thread) => runtime.open(thread.id),
+    keep: (share) => runtime.share(share),
+    fetch: (input, init) => fetch(input, init),
+  };
+}
 
 // Where a thread the address names sits in the runtime's workspace as it stands now.
 function locateNow(runtime: Runtime, named: string | undefined): Located | undefined {
@@ -78,8 +96,9 @@ function activeIn(ws: Workspace | null, named: string | undefined): Located | nu
 // The shell the frame reads: the document with the URL's thread visited, its tabs, where "/"
 // goes, the unread count, and the verbs.
 function shellOf(parts: Parts): Shell {
-  const { runtime, ready, saved, active, visitKey, go, lastShown, href, snoozing, setSnoozing } =
-    parts;
+  const { runtime, ready, saved, active, visitKey, go, lastShown, href, snoozing } = parts;
+  const { setSnoozing, session } = parts;
+  const shareClient = shareClientFor(runtime, session);
   const { workspace, source } = ready;
   const doc = active === null ? saved : visit(saved, active);
   const byId = new Map(workspace.threads.map((thread) => [thread.id, thread] as const));
@@ -93,7 +112,7 @@ function shellOf(parts: Parts): Shell {
     resumeTo: resume(doc, workspace, lastShown),
     unread: unreadCount(doc, workspace),
     snoozing,
-    ...verbs({ runtime, workspace, active, go, href, setSnoozing }, doc),
+    ...verbs({ runtime, workspace, active, go, href, setSnoozing, shareClient }, doc),
   };
 }
 
@@ -174,6 +193,7 @@ export function ShellProvider({ children }: { children: ReactNode }) {
   const lastShown = useLastShown(active);
   const href = useHref();
   const [snoozing, setSnoozing] = useState<ThreadId | null>(null);
+  const session = useSession();
   useKeepShell(runtime, ws, saved, named);
 
   const shell = useMemo(
@@ -190,9 +210,10 @@ export function ShellProvider({ children }: { children: ReactNode }) {
             href,
             snoozing,
             setSnoozing,
+            session,
           })
         : null,
-    [state, runtime, saved, active, shown.key, go, lastShown, href, snoozing],
+    [state, runtime, saved, active, shown.key, go, lastShown, href, snoozing, session],
   );
   return <ShellContext value={shell}>{children}</ShellContext>;
 }

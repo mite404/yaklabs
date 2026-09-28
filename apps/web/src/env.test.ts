@@ -6,7 +6,14 @@ describe("parseEnv", () => {
     expect(parseEnv({}, "http://localhost:5173")).toEqual({
       agent: { kind: "lab" },
       auth: { kind: "none" },
+      shareBase: "http://localhost:5173",
     });
+  });
+
+  it("keeps public threads on the gateway, whichever agent answers (ADR-129)", () => {
+    expect(
+      parseEnv({ VITE_GATEWAY_URL: "https://api.example" }, "https://kay.example").shareBase,
+    ).toBe("https://api.example");
   });
 
   it("points a gateway with no URL at the site's own origin", () => {

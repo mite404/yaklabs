@@ -1,7 +1,7 @@
 import { threadIdSchema, type ProjectId, type ThreadSummary } from "@yaklabs/runtime";
 import { describe, expect, it } from "vitest";
 import { rowLook } from "./row-marks";
-import { wakeText } from "./snooze";
+import { wakeText } from "./wake-text";
 
 // Friday 2 October 2026 at 9:00 on the machine's clock, as a stored instant.
 const WAKE = new Date(2026, 9, 2, 9, 0);
