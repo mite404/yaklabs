@@ -621,7 +621,7 @@ h1 span {
 .card-heading h2 {
   font-size: 21px;
 }
-/* A host's control before the title (ADR-124), such as a lane's collapse: first in the row, its
+/* A host's control before the title (ADR-127), such as a lane's collapse: first in the row, its
    glyph pulled back onto the heading's edge, and the title straight after it. A card with no
    header carries it at its top. */
 .card-heading > .header-leading,

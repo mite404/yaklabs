@@ -1,4 +1,4 @@
-// What the collapsible lane checks (ADR-124) measure with: a themed app in a context of its own,
+// What the collapsible lane checks (ADR-126) measure with: a themed app in a context of its own,
 // a collapsed lane's look, and a drag by its strip.
 import { canvasOf } from "./canvas-checks.mjs";
 import { BASE, shotPath } from "./lever.mjs";

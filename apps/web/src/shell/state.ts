@@ -264,7 +264,7 @@ export function threadActions(ws: Workspace, at: Located | null): ThreadActions 
 }
 
 /**
- * What Collapse all offers for the thread on screen (ADR-124): to collapse its canvas's lanes
+ * What Collapse all offers for the thread on screen (ADR-127): to collapse its canvas's lanes
  * while any is open, and to expand them once all are collapsed.
  */
 export type FoldOffer = { main: ThreadId; collapse: boolean };

@@ -587,7 +587,7 @@ function focusComposeIn(scroller: HTMLElement | null): void {
  * default; off where the host has no canvas to drop it on, such as a phone (ADR-122). The
  * catalog cannot see the host's layout, so the host decides.
  * @param leading A host's control before the title in the title bar, such as a lane's collapse
- * on the compose canvas (ADR-124).
+ * on the compose canvas (ADR-127).
  */
 // fallow scores each prop as cognitive load: the ninth host knob tips 15 to 16 with no branch.
 // fallow-ignore-next-line complexity

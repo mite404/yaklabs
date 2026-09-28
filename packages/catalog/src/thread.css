@@ -35,7 +35,7 @@
   padding: 14px var(--thread-gutter);
   border-bottom: 1px solid var(--hairline);
 }
-/* A host's control before the title (ADR-124), such as a lane's collapse: the bar lays out in
+/* A host's control before the title (ADR-127), such as a lane's collapse: the bar lays out in
    a row, the control first, its glyph pulled back onto the text column's edge. */
 .thread-header:has(> .header-leading) {
   display: flex;

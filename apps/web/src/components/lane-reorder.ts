@@ -38,7 +38,7 @@ export type LaneHandlers = {
 };
 
 // What takes hold of a lane: the title bar of what it shows, the same bar that drags a card
-// out of a thread, or the whole of a collapsed lane (ADR-124), its strip's title included. The
+// out of a thread, or the whole of a collapsed lane (ADR-126), its strip's title included. The
 // title of an open lane is for renaming, and any button keeps its job.
 const GRIP = '.thread-header, .card-heading, [data-collapsed="true"]';
 const NOT_GRIP = "h2, .card-heading-text, input, button";

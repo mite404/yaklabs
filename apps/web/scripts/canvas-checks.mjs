@@ -9,8 +9,10 @@ export const onScreen = (page) =>
 export const canvasOf = (page) => onScreen(page).getByRole("region", { name: "Compose canvas" });
 export const mainPanel = (page) => onScreen(page).locator(".thread-panel").first();
 
-// Selects the first `length` characters of the main thread's first agent turn.
-export function selectReply(page, length) {
+// Selects the first `length` characters of the main thread's first agent turn, once it has
+// drawn: the thread panel can be on screen before its turns, as on a cold dev server.
+export async function selectReply(page, length) {
+  await page.locator(".turn-agent p").first().waitFor({ timeout: 20_000 });
   return page.evaluate((count) => {
     const paragraph =
       document.querySelector('[role="tabpanel"]:not([inert]) .turn-agent p') ??

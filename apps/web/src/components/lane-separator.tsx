@@ -28,7 +28,7 @@ const KEYS: Keys = {
 };
 
 // What a gap is for: resizing and moving the lane before it, or, after a collapsed lane
-// (ADR-124), only moving it, since a strip has no width to drag. Each says so in its name, its
+// (ADR-126), only moving it, since a strip has no width to drag. Each says so in its name, its
 // keys, its look and the range of widths it reports.
 type Gap = { verb: string; keys: Keys; look: string; range: (width: number) => [number, number] };
 const GAPS: Record<"resize" | "move", Gap> = {
@@ -145,7 +145,7 @@ function keyOn(
  * the pointer is on it; pointer capture keeps the drag alive once the pointer outruns the gap.
  * The width follows the pointer and is kept when it lets go (`kept`); an arrow key keeps its
  * step at once, and with Shift moves the lane a slot instead. Focused, it says the lane's
- * width, as a window splitter does. After a collapsed lane (ADR-124) it only moves the lane:
+ * width, as a window splitter does. After a collapsed lane (ADR-126) it only moves the lane:
  * a strip has no width to drag, so it says its fixed width and draws no hint.
  */
 export function LaneSeparator({

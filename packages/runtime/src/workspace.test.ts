@@ -74,20 +74,31 @@ const ws: Workspace = {
   notifications: [],
 };
 
+// The tree as ids: each project with its mains, each main followed by its children.
+const rows = (of: Workspace) =>
+  sidebarTree(of).map(({ project, mains }) => ({
+    project: project.id,
+    mains: mains.map((node) => [node.main.id, ...node.children.map((each) => each.id)]),
+  }));
+
 const lanes = ["a", "b", "c"].map((id) => threadLane(t(id)));
 const ids = (list: Lane[]) => list.map((lane) => lane.id);
 const lane = (threadId: string) => threadLaneId(t(threadId));
 
 describe("sidebarTree", () => {
-  it("lists projects oldest first, mains newest first, children open then closed", () => {
-    const tree = sidebarTree(ws).map(({ project, mains }) => ({
-      project: project.id,
-      mains: mains.map((node) => [node.main.id, ...node.children.map((each) => each.id)]),
-    }));
-    expect(tree).toEqual([
+  it("lists projects oldest first, mains and their children newest first", () => {
+    expect(rows(ws)).toEqual([
       { project: "desk", mains: [["m3"]] },
-      { project: "store", mains: [["m2"], ["m1", "c1", "c3", "c2"]] },
+      { project: "store", mains: [["m2"], ["m1", "c2", "c1", "c3"]] },
     ]);
+  });
+
+  it("keeps each row where it is when lanes open, close or move", () => {
+    const reordered = {
+      ...ws,
+      lanes: { ...ws.lanes, [t("m1")]: [threadLane(t("c2")), card, threadLane(t("c3"))] },
+    };
+    expect(rows(reordered)).toEqual(rows(ws));
   });
 });
 
@@ -156,7 +167,7 @@ describe("lane edits are idempotent list edits", () => {
   });
 });
 
-describe("collapsing lanes (ADR-124)", () => {
+describe("collapsing lanes (ADR-126)", () => {
   it.each([
     ["collapses", true],
     ["expands", false],

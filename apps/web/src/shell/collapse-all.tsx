@@ -27,7 +27,7 @@ function foldAll({ runtime, main, collapse }: Offer): void {
 }
 
 /**
- * Collapse all or Expand all for the canvas on screen (ADR-124), in the title bar: beside the
+ * Collapse all or Expand all for the canvas on screen (ADR-127), in the title bar: beside the
  * layout on a desktop, and in the top row on a phone, never the row of views. It stays in its
  * place, disabled, while there is nothing on screen to fold, so the bar never shifts.
  */

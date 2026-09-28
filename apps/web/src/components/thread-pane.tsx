@@ -134,7 +134,7 @@ function PendingFrame({
  * frame, and on to Try again again or to the compose box. The title and the opening draft
  * come from the snapshot, so a rename shows everywhere at once.
  * @param leading A control before the title in the title bar, such as a lane's collapse
- * (ADR-124); in the frame too while the turns come.
+ * (ADR-127); in the frame too while the turns come.
  */
 export function ThreadPane({ thread, leading }: { thread: ThreadSummary; leading?: ReactNode }) {
   const runtime = useRuntime();

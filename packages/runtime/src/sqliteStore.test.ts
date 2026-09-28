@@ -183,7 +183,7 @@ describe("the store keeps lanes", () => {
   });
 });
 
-describe("the store keeps a collapsed lane (ADR-124)", () => {
+describe("the store keeps a collapsed lane (ADR-126)", () => {
   it("keeps a collapsed lane collapsed, at its width, in a store opened on the same file", async () => {
     const store = await openStore();
     addChild(store, "child");

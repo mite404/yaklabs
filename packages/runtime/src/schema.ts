@@ -119,7 +119,7 @@ const V2_RULES = `
   );
 `;
 
-// Step 2 → 3 gives each lane whether it is collapsed (ADR-124). Every lane a v2 canvas holds
+// Step 2 → 3 gives each lane whether it is collapsed (ADR-126). Every lane a v2 canvas holds
 // was open, so each one starts expanded; the check keeps the flag a yes or a no.
 const V3_COLLAPSED = `
   alter table lanes add column collapsed integer not null default 0 check (collapsed in (0, 1));

@@ -1422,7 +1422,41 @@ The bar no longer says whether a thread is mock, kept on this device, or answere
 model, so a private window that cannot keep threads no longer warns before they vanish; Ethan
 accepted that gap and may ask for a delineation again later.
 
-## ADR-124 - A lane keeps whether it is collapsed, in a column of its own (schema v3)
+## ADR-124 - A main thread's fold arrow sits beside its name; its count is read only
+
+2026-09-28 - Accepted (Ethan); amends ADR-093.
+ADR-093 put a project's fold chevron right after its name, but a main thread with sub-threads
+still folded them behind a count at the row's far right ("^ 2"), a second design for the same
+job. The fold button now sits right after the title, sharing the project row's own chevron: ">"
+while folded, and open, a "v" while the pointer is on the row. Ethan first dropped the count as
+clutter, then asked for it back: the number of children stays at the row's far right, but as
+plain text with no arrow, so folding has one control, the arrow. The count is hidden from
+assistive tech, since the fold button names it ("Hide the 2 threads in ...").
+An open fold's "v" fades out as soon as the pointer leaves, on a project and a main alike (Ethan:
+"as soon as the mouse is off hover ... this icon should fade away"). Keyboard focus shows it too,
+but only `:focus-visible`: a click leaves focus on the button, and `:focus-within` would hold the
+"v" up until the next click elsewhere.
+A touch screen has no hover to reveal the "v", so there (`@media (hover: none)`) an open fold
+always shows it, on a project and a main alike (Ethan, asked whether it should: "yes").
+The row is a link, so its fold button cannot nest inside it; the row uses the stretched-link
+pattern instead (Bootstrap's recipe). The link stays sized to its title, with an `::after` that
+stretches to the row's edges since the row, not the link, is the nearest positioned ancestor, so
+a click anywhere on the row still opens the thread. The button sits after the title in flow,
+lifted above that layer by its own stacking context (`relative z-10`), so it still catches its
+own clicks and only folds the children.
+
+## ADR-125 - The sidebar lists threads by creation, never by what was opened
+
+2026-09-28 - Accepted (Ethan).
+A main's children were listed in canvas lane order: open lanes first, then the closed ones. A
+click on a closed child's row reopens its lane, so the row jumped up the list, out from under
+the pointer that had just clicked it. Ethan: "when a user interacts with the thread, by opening
+it in the side nav bar it should not be rearranged ... that's bad UI." The recency he asked for
+is creation order, newest first: mains stay newest created first, and at Ethan's word children
+now list the same way under their main. Opening, closing or dragging a lane never moves a row,
+and nothing in the sidebar sorts by activity. The canvas keeps its own lane order.
+
+## ADR-126 - A lane keeps whether it is collapsed, in a column of its own (schema v3)
 
 2026-09-28 - Accepted. Extends ADR-099 and ADR-100.
 A lane on the canvas can collapse to a 32px strip, as GitButler's stacks do, so a busy canvas
@@ -1433,15 +1467,15 @@ The existing record had nowhere honest to put it: the shell document is the page
 outlive a closed lane, and folding it into `width` would give one column two meanings. The
 1 → 2 step keeps writing only the columns v2 had, so a finished step never changes. A collapsed
 lane keeps its width for when it opens, and a closed lane that reopens comes back expanded.
-Where the controls sit is ADR-125.
+Where the controls sit is ADR-127.
 Proof: `packages/runtime/src/schema.test.ts` migrates a v2 canvas to v3 with its lanes expanded
 and refuses a flag other than 0 or 1; `sqliteStore.test.ts` reads a collapsed lane back.
 
-## ADR-125 - A lane's collapse lives in what it folds, and Collapse all in the title bar
+## ADR-127 - A lane's collapse lives in what it folds, and Collapse all in the title bar
 
 2026-09-28 - Accepted (Ethan: "the collapse/expand for a thread or card should live within the
 container of that element. the collapse all/expand all should be part of the title bar on
-desktop. on mobile it should be in the top row, not the second row"). Extends ADR-124, ADR-116.
+desktop. on mobile it should be in the top row, not the second row"). Extends ADR-126, ADR-116.
 A lane's collapse sits first in the thread's or the card's own title bar, and at the head of the
 strip once collapsed, as GitButler's does; the catalog's headers take it through a `leading`
 slot, so they stay the catalog's. Collapse all sits in the title bar beside the layout on a

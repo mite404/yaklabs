@@ -194,7 +194,11 @@ export const shellChecks = {
   async P5(browser) {
     const { page } = await onThreadPage(browser);
     const project = sidebarOf(page).getByRole("button", { name: "Demo store", exact: true });
-    const chevron = project.locator('[data-slot="project-chevron"]');
+    const chevron = project.locator('[data-slot="fold-chevron"]');
+    const plusVisible = async () =>
+      Boolean(
+        await sidebarOf(page).getByRole("button", { name: "New thread in Demo store" }).isVisible(),
+      );
     const look = async () => ({
       expanded: await project.getAttribute("aria-expanded"),
       chevron: await chevron.evaluate((el) => getComputedStyle(el).opacity),
@@ -202,6 +206,7 @@ export const shellChecks = {
     await page.mouse.move(900, 450);
     await page.waitForTimeout(250);
     const openRest = await look();
+    const plusOpen = await plusVisible();
     await project.hover();
     await page.waitForTimeout(250);
     const openHover = await look();
@@ -214,9 +219,13 @@ export const shellChecks = {
     const threadsHidden = !(await sidebarOf(page)
       .getByRole("link", { name: "Last week's sales" })
       .isVisible());
-    const plus = await sidebarOf(page)
-      .getByRole("button", { name: "New thread in Demo store" })
-      .isVisible();
+    const plusFolded = await plusVisible();
+    // Opened again by a click, which leaves focus on the row: the "v" still fades once the
+    // pointer leaves, since only keyboard focus holds it up.
+    await project.click();
+    await page.mouse.move(900, 450);
+    await page.waitForTimeout(250);
+    const reopened = await look();
     return {
       ok:
         openRest.expanded === "true" &&
@@ -224,9 +233,12 @@ export const shellChecks = {
         openHover.chevron === "1" &&
         folded.expanded === "false" &&
         folded.chevron === "1" &&
+        reopened.expanded === "true" &&
+        reopened.chevron === "0" &&
         threadsHidden &&
-        plus,
-      detail: `open at rest ${JSON.stringify(openRest)}, on hover ${JSON.stringify(openHover)}, folded ${JSON.stringify(folded)}; threads hidden when folded ${threadsHidden}; + shown ${plus}`,
+        plusOpen &&
+        plusFolded,
+      detail: `open at rest ${JSON.stringify(openRest)}, on hover ${JSON.stringify(openHover)}, folded ${JSON.stringify(folded)}, opened by a click and left ${JSON.stringify(reopened)}; threads hidden when folded ${threadsHidden}; + shown open ${plusOpen} folded ${plusFolded}`,
     };
   },
 

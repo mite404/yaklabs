@@ -53,7 +53,7 @@ const widthSchema = z.number().positive().nullable();
 
 /**
  * One lane; a thread lane's id is always `l-<threadId>`. A collapsed lane is a slim strip that
- * keeps its width for when it opens again (ADR-124).
+ * keeps its width for when it opens again (ADR-126).
  */
 export const laneSchema = z.discriminatedUnion("kind", [
   z
@@ -120,6 +120,11 @@ const TITLE_LENGTH = 48;
 // Oldest first; the id breaks ties so the order never depends on insertion.
 function byCreated(a: { createdAt: string; id: string }, b: { createdAt: string; id: string }) {
   return a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id);
+}
+
+// Newest first, the reverse of `byCreated`.
+function newestCreated(a: { createdAt: string; id: string }, b: { createdAt: string; id: string }) {
+  return byCreated(b, a);
 }
 
 // An index in 0..length; one off either end lands at that end, and NaN lands at the end.
@@ -220,33 +225,29 @@ export function resizeLane(lanes: Lane[], id: LaneId, width: number | null): Lan
   return lanes.map((lane) => (lane.id === id ? { ...lane, width } : lane));
 }
 
-/** The lane `id` collapsed to its strip, or expanded again at the width it had (ADR-124). */
+/** The lane `id` collapsed to its strip, or expanded again at the width it had (ADR-126). */
 export function collapseLane(lanes: Lane[], id: LaneId, collapsed: boolean): Lane[] {
   return lanes.map((lane) => (lane.id === id ? { ...lane, collapsed } : lane));
 }
 
-/** Every lane collapsed to its strip, or every lane expanded, in the same order (ADR-124). */
+/** Every lane collapsed to its strip, or every lane expanded, in the same order (ADR-126). */
 export function collapseLanes(lanes: Lane[], collapsed: boolean): Lane[] {
   return lanes.map((lane) => ({ ...lane, collapsed }));
 }
 
 /**
  * The sidebar's tree: projects oldest first, each with its mains newest created first, and each
- * main's children in lane order, then the closed children oldest first.
+ * main's children newest created first too. Only creation orders it, never the canvas or
+ * activity, so a row stays under the pointer that opens it (ADR-125).
  */
 export function sidebarTree(ws: Workspace): ProjectNode[] {
-  const children = (main: ThreadSummary): ThreadSummary[] => {
-    const own = ws.threads.filter((thread) => parentOf(thread) === main.id).toSorted(byCreated);
-    const open = lanesOf(ws, main.id).flatMap((lane) =>
-      lane.kind === "thread" ? own.filter((child) => child.id === lane.threadId) : [],
-    );
-    return [...open, ...own.filter((child) => !open.includes(child))];
-  };
+  const children = (main: ThreadSummary): ThreadSummary[] =>
+    ws.threads.filter((thread) => parentOf(thread) === main.id).toSorted(newestCreated);
   return ws.projects.toSorted(byCreated).map((project) => ({
     project,
     mains: ws.threads
       .filter((thread) => thread.place.kind === "main" && thread.place.projectId === project.id)
-      .toSorted((a, b) => byCreated(b, a))
+      .toSorted(newestCreated)
       .map((main) => ({ main, children: children(main) })),
   }));
 }

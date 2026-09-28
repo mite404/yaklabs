@@ -92,15 +92,24 @@ The title bar's pill is gone. It once said "Mock: demo", "On this device" or "No
 plan behind it yet, so it and the logic behind it are deleted outright, not just hidden
 (ADR-123, amending ADR-096 and ADR-116). He may ask for a delineation again once there is
 something worth delineating.
+A main thread's fold arrow then moved to sit beside its own name, matching the project row's. The
+count of sub-threads ("^ 2") went too, then came back at Ethan's word as a plain number at the
+row's far right: a caption, not a second fold control. An open fold's "v" now fades the moment
+the pointer leaves, since a clicked button keeping focus had held it up. A phone, with no hover,
+always shows an open fold's "v". And the sidebar lists threads by when they were made, newest
+first, children too, so opening one never moves it (ADR-125).
+The row keeps a stretched link (Bootstrap's own pattern) so a click anywhere on it still opens the
+thread, with the fold button lifted above that layer so it still catches its own clicks (ADR-093,
+amended by ADR-124).
 
 Then the canvas got busy. It keeps cards and child threads side by side so Ethan can refer back
 without scrolling, but six open lanes leave room for about one. Following GitButler's collapsible
 stacks, any lane now folds to a 32px strip: its expand at the head, the six-dot grip always
 showing, and the title turned to read top to bottom. The whole strip drags, and the fold is kept
-with the lane in SQLite, so it survives a reload (ADR-124, schema v3). A first mock put Collapse
+with the lane in SQLite, so it survives a reload (ADR-126, schema v3). A first mock put Collapse
 all at the start of the lane row; Ethan moved it into the title bar, beside the layout on a
 desktop and in the phone's top row, and moved each lane's own toggle into the thread's or card's
-title bar, inside the thing it folds (ADR-125).
+title bar, inside the thing it folds (ADR-127).
 
 ## 2. Cast & Crew
 
@@ -180,11 +189,11 @@ The first entries are ideas from before any code existed; the rest are parts of 
   track in the timeline. Premiere lets you fold a track to a sliver that still shows its name, so
   the edit stays in view without its thumbnails eating the screen. The strip is that sliver: the
   track's name runs down it, the grip says it can still be dragged to another slot, and the clip
-  inside is only hidden, not unloaded, so a half-typed draft is there when it unfolds (ADR-124).
+  inside is only hidden, not unloaded, so a half-typed draft is there when it unfolds (ADR-126).
 - **Collapse all** (`apps/web/src/shell/collapse-all.tsx`) is the "collapse all tracks" button
   on the timeline's header, not on any one track. It reads the room first (`foldOffer` in
   `apps/web/src/shell/state.ts`): collapse while any lane is open, expand once none is, and wait,
-  greyed out, while the canvas is off screen (ADR-125).
+  greyed out, while the canvas is off screen (ADR-127).
 
 ## 3. Behind the Scenes
 
@@ -360,18 +369,34 @@ The first entries are ideas from before any code existed; the rest are parts of 
   scratchpad and would remember a fold for a lane that was since closed, and folding it into
   `width` (say, a negative width) gives one column two meanings. It is a `collapsed` column, 0 or
   1, added by schema step 2 to 3, which starts every existing lane open. The 1 to 2 step keeps its
-  own insert with only the columns v2 had: a finished migration never changes (ADR-124).
+  own insert with only the columns v2 had: a finished migration never changes (ADR-126).
 - **A slot in the catalog's headers, not a button floated over them.** The toggle could have been
   positioned from the lane over the header's left edge, touching no catalog file. It would have
   been tied to each header's padding and height, and to both the thread's bar and the card's. A
   `leading` prop on `CardHeader`, `CatalogCard`, `InteractiveCard` and `ChatThreadPanel` lets the
-  host hand in the control; the catalog lays it out and still owns its headers (ADR-125).
+  host hand in the control; the catalog lays it out and still owns its headers (ADR-127).
 - **The query picks the bar, and storage keeps it.** The app's links keep only `?scenario=`, so
   `?chrome=painting` would vanish on the first click. Rather than teach every link a second
   parameter, the page reads it once and stores it, the way the sidebar remembers open or closed.
 
 ## 4. Bloopers
 
+- **The row that ran from the cursor.** A main's children were listed in the canvas's lane
+  order, open lanes first. Clicking a closed child's row reopened its lane, which promoted it to
+  the open group, so the row slid up one slot the instant it was clicked, and the pointer was
+  left over its neighbour. Opening a thread by a plain click never showed it; only a child whose
+  lane had been closed did. Fix: the sidebar orders by creation alone (ADR-125), and web-check
+  closes both lanes, clicks the second row and checks it has not moved a pixel. Lesson: a list
+  people click must not be sorted by anything the click itself changes, like a shot list that
+  reshuffles whenever you call "action".
+- **The empty seat saved for a count.** Dropping the "^ 2" count from a main thread's row left
+  the chair it sat in. shadcn pads a row 32px at its right whenever its list item holds an action,
+  and the project's "+" shares its item with every thread below it, so each thread row kept a
+  32px gap for a count that no longer existed. "Service desk weekly review" cut to "...revi..."
+  with room to spare. Every test passed; only comparing screenshots with main's showed the titles
+  ending early. Fix: each thread row takes that room back, and web-check reads every row's right
+  padding. Lesson: when you strike a prop from a scene, check the blocking tape it left on the
+  floor.
 - **The `false` that still said yes.** The phone's canvas hid its drag grip behind a
   `[data-reorder]` selector, and the row set `data-reorder={reorderable}`. React writes a `false`
   data attribute out as the string `"false"`, so the attribute was present on a phone too, and a
