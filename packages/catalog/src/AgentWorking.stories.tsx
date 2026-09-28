@@ -43,7 +43,7 @@ const meta = {
   argTypes: {
     duration: { control: { type: "range", min: 100, max: 2000, step: 50 } },
   },
-  args: { duration: 1200 },
+  args: { duration: 1500 },
   decorators: [(Story) => <Stage>{Story()}</Stage>],
 } satisfies Meta<typeof AgentWorking>;
 export default meta;

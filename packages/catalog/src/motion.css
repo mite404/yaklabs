@@ -9,10 +9,10 @@
   --working-strong: var(--moss);
   --working-mid: var(--yak-green);
   --working-soft: var(--sage);
-  --working-duration: 1200ms;
-  /* The right column runs 35% of a cycle behind, so it peaks as the left one starts to fade.
-     Written as a head start of 65% (a negative delay), so no square waits blank on load. */
-  --working-lag: calc(var(--working-duration) * -0.65);
+  --working-duration: 1500ms;
+  /* The right column runs 25% of a cycle behind, so it peaks while the left one fades.
+     Written as a head start of 75% (a negative delay), so no square waits blank on load. */
+  --working-lag: calc(var(--working-duration) * -0.75);
   display: inline-grid;
   grid-template-columns: repeat(2, 5px);
   grid-auto-rows: 5px;
@@ -36,20 +36,24 @@
 .agent-working-cell:nth-child(even) {
   --working-offset: var(--working-lag);
 }
+/* The motion fits in the first 65% of the cycle; each square then rests clear. With the 25%
+   lag, the right column finishes as the loop ends, so the wave completes and all four squares
+   sit clear for a beat (90-100%) before the left column comes back in. */
 @keyframes agent-working-wave {
   0% {
     opacity: 0;
     background: var(--working-soft);
   }
-  35%,
-  50% {
+  25%,
+  35% {
     opacity: 1;
     background: var(--working-strong);
   }
-  75% {
+  50% {
     opacity: 0.55;
     background: var(--working-mid);
   }
+  65%,
   100% {
     opacity: 0;
     background: var(--working-soft);

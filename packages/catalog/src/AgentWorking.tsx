@@ -15,8 +15,8 @@ type AgentWorkingProps = {
  * Kay's 2x2 task-size glyph as an "agent working" indicator: a wave of green that fades
  * in and out left to right on a loop. Holds still under reduced motion.
  */
-export function AgentWorking({ duration = 1200, label = "Agent working" }: AgentWorkingProps) {
-  const style: StyleWithVars = { "--working-duration": `${duration}ms` }; // number → "1200ms"
+export function AgentWorking({ duration = 1500, label = "Agent working" }: AgentWorkingProps) {
+  const style: StyleWithVars = { "--working-duration": `${duration}ms` }; // number → "1500ms"
   // <output> is a live status region, so the label is announced once when it appears.
   return (
     <output className="agent-working" aria-label={label} style={style}>
