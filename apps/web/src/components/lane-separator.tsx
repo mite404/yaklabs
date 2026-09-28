@@ -16,11 +16,29 @@ const LANE_MAX_PX = 1800;
 // What an arrow does on a separator: resize the lane before it by some px, or, with Shift,
 // move that lane some slots.
 type KeyAction = { kind: "resize"; by: number } | { kind: "move"; step: number };
-const KEYS: Partial<Record<string, KeyAction>> = {
-  ArrowLeft: { kind: "resize", by: -24 },
-  ArrowRight: { kind: "resize", by: 24 },
+type Keys = Partial<Record<string, KeyAction>>;
+const MOVE_KEYS: Keys = {
   "Shift+ArrowLeft": { kind: "move", step: -1 },
   "Shift+ArrowRight": { kind: "move", step: 1 },
+};
+const KEYS: Keys = {
+  ArrowLeft: { kind: "resize", by: -24 },
+  ArrowRight: { kind: "resize", by: 24 },
+  ...MOVE_KEYS,
+};
+
+// What a gap is for: resizing and moving the lane before it, or, after a collapsed lane
+// (ADR-124), only moving it, since a strip has no width to drag. Each says so in its name, its
+// keys, its look and the range of widths it reports.
+type Gap = { verb: string; keys: Keys; look: string; range: (width: number) => [number, number] };
+const GAPS: Record<"resize" | "move", Gap> = {
+  resize: {
+    verb: "Resize or move",
+    keys: KEYS,
+    look: "drag-hint cursor-col-resize",
+    range: (width) => [Math.min(LANE_MIN_PX, width), Math.max(LANE_MAX_PX, width)],
+  },
+  move: { verb: "Move", keys: MOVE_KEYS, look: "", range: (width) => [width, width] },
 };
 
 // The lane a separator resizes is the one before it in the row.
@@ -35,12 +53,13 @@ function clampWidth(px: number): number {
 
 // The gap's value, as ARIA's window splitter gives one: the lane's width, inside the range the
 // gap sets, widened to hold a width the lane has from elsewhere (a default column in a pane
-// narrower than the minimum). A lane it cannot resize has a range of just its width.
-function splitterValue(width: number, resizable: boolean) {
+// narrower than the minimum). A gap that only moves its lane has a range of just its width.
+function splitterValue(width: number, gap: Gap) {
+  const [min, max] = gap.range(width);
   return {
     "aria-valuenow": width,
-    "aria-valuemin": resizable ? Math.min(LANE_MIN_PX, width) : width,
-    "aria-valuemax": resizable ? Math.max(LANE_MAX_PX, width) : width,
+    "aria-valuemin": min,
+    "aria-valuemax": max,
     "aria-valuetext": `${width} pixels wide`,
   };
 }
@@ -65,8 +84,9 @@ function useLaneWidth(gap: RefObject<HTMLDivElement | null>): number | null {
   return width;
 }
 
-// Dragging the gap: the width follows the pointer, and is kept once the pointer lets go.
-function useGapDrag(onResize: (px: number, kept: boolean) => void) {
+// Dragging the gap: the width follows the pointer, and is kept once the pointer lets go. A gap
+// that does not resize its lane takes no drag.
+function useGapDrag(resizable: boolean, onResize: (px: number, kept: boolean) => void) {
   const [dragging, setDragging] = useState(false);
   // Where the drag began (the pointer's x and the lane's width then) and the width reached since.
   const origin = useRef<{ x: number; width: number; reached: number } | null>(null);
@@ -80,7 +100,7 @@ function useGapDrag(onResize: (px: number, kept: boolean) => void) {
     dragging,
     onPointerDown: (event: PointerEvent<HTMLDivElement>) => {
       const lane = laneBefore(event.currentTarget);
-      if (event.button !== 0 || !lane) return;
+      if (event.button !== 0 || !lane || !resizable) return;
       event.preventDefault();
       const width = lane.getBoundingClientRect().width;
       origin.current = { x: event.clientX, width, reached: width };
@@ -99,23 +119,22 @@ function useGapDrag(onResize: (px: number, kept: boolean) => void) {
   };
 }
 
-// The key as KEYS names it: "ArrowLeft", or "Shift+ArrowLeft" with Shift held.
+// The key as a gap's keys name it: "ArrowLeft", or "Shift+ArrowLeft" with Shift held.
 function keyName(event: KeyboardEvent<HTMLDivElement>): string {
   return event.shiftKey ? `Shift+${event.key}` : event.key;
 }
 
 // Arrows resize the lane before the gap, kept at once; with Shift they move it a slot instead.
-// A lane that cannot be resized, a collapsed one, only moves.
+// A gap's keys may only move its lane, as after a collapsed one.
 function keyOn(
   event: KeyboardEvent<HTMLDivElement>,
-  resizable: boolean,
+  keys: Keys,
   onResize: (px: number, kept: boolean) => void,
   onMove: (step: number) => void,
 ): void {
-  const action = KEYS[keyName(event)];
+  const action = keys[keyName(event)];
   const lane = laneBefore(event.currentTarget);
   if (action === undefined || lane === undefined) return;
-  if (action.kind === "resize" && !resizable) return;
   event.preventDefault();
   if (action.kind === "move") onMove(action.step);
   else onResize(clampWidth(lane.getBoundingClientRect().width + action.by), true);
@@ -143,25 +162,26 @@ export function LaneSeparator({
   onResize: (px: number, kept: boolean) => void;
   onMove: (step: number) => void;
 }) {
-  const { dragging, ...handlers } = useGapDrag(onResize);
+  const kind = GAPS[resizable ? "resize" : "move"];
+  const { dragging, ...handlers } = useGapDrag(resizable, onResize);
   const gap = useRef<HTMLDivElement>(null);
   const width = useLaneWidth(gap);
-  const value = width === null ? {} : splitterValue(width, resizable);
+  const value = width === null ? {} : splitterValue(width, kind);
   /* oxlint-disable jsx-a11y/prefer-tag-over-role -- a separator that takes focus and a drag is a widget; an hr can do neither */
   return (
     <div
       ref={gap}
       role="separator"
       aria-orientation="vertical"
-      aria-label={resizable ? `Resize or move ${title}` : `Move ${title}`}
+      aria-label={`${kind.verb} ${title}`}
       {...value}
       tabIndex={0}
       data-dragging={dragging || undefined}
-      className={`lane-shift relative w-4 shrink-0 outline-none${resizable ? " drag-hint cursor-col-resize" : ""}`}
+      className={`lane-shift relative w-4 shrink-0 outline-none ${kind.look}`}
       style={style}
-      {...(resizable ? handlers : {})}
+      {...handlers}
       onKeyDown={(event) => {
-        keyOn(event, resizable, onResize, onMove);
+        keyOn(event, kind.keys, onResize, onMove);
       }}
     />
   );

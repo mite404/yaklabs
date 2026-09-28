@@ -20,20 +20,20 @@ import {
   type Workspace,
 } from "@yaklabs/runtime";
 import { useSidebar } from "@yaklabs/ui/components/sidebar";
-import { useEffect } from "react";
+import { useEffect, type ReactNode } from "react";
 import { inBackground, useRuntime } from "../runtime";
-import { Canvas } from "./canvas";
-import type { LaneView } from "./lane";
+import { arrangeFrom } from "./arrange";
+import { Canvas, type LaneView } from "./canvas";
 import { ThreadPane } from "./thread-pane";
 
 // What a thread started without a title is called until someone names it.
 const NEW_THREAD = "New thread";
 
-function Artifact({ card }: { card: SharedCard }) {
+function Artifact({ card, leading }: { card: SharedCard; leading: ReactNode }) {
   return card.kind === "interactive" ? (
-    <InteractiveCard payload={card.payload} turnId="canvas" onChoose={() => {}} />
+    <InteractiveCard payload={card.payload} turnId="canvas" onChoose={() => {}} leading={leading} />
   ) : (
-    <CatalogCard payload={card.payload} context="thread" />
+    <CatalogCard payload={card.payload} context="thread" leading={leading} />
   );
 }
 
@@ -42,7 +42,8 @@ function Artifact({ card }: { card: SharedCard }) {
 function laneView(lane: Lane, threads: Map<string, ThreadSummary>): LaneView[] {
   if (lane.kind === "card") {
     const { id, title, width, collapsed, card } = lane;
-    return [{ id, title, width, collapsed, node: <Artifact card={card} /> }];
+    const render = (leading: ReactNode) => <Artifact card={card} leading={leading} />;
+    return [{ id, title, width, collapsed, render }];
   }
   const thread = threads.get(lane.threadId);
   if (thread === undefined) return [];
@@ -52,19 +53,11 @@ function laneView(lane: Lane, threads: Map<string, ThreadSummary>): LaneView[] {
       title: thread.title,
       width: lane.width,
       collapsed: lane.collapsed,
-      node: <ThreadPane key={thread.id} thread={thread} />,
+      render: (leading: ReactNode) => (
+        <ThreadPane key={thread.id} thread={thread} leading={leading} />
+      ),
     },
   ];
-}
-
-// Sets the main thread's lanes to `edit` of the lanes the runtime holds right now, so two quick
-// edits build on each other instead of on the lanes this render saw.
-function arrangeFrom(runtime: Runtime, main: ThreadId, edit: (lanes: Lane[]) => Lane[]): void {
-  const now = runtime.state();
-  if (now.kind !== "ready") return;
-  const before = lanesOf(now.workspace, main);
-  const after = edit(before);
-  if (after !== before) inBackground(runtime.arrange(main, after), "Arranging the canvas");
 }
 
 // A child of `main` whose lane lands at `at`: a highlight's first line as its title and the

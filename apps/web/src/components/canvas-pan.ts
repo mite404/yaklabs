@@ -47,7 +47,7 @@ function onLane(event: WheelEvent<HTMLElement>): boolean {
       (node) =>
         node instanceof HTMLElement &&
         node.tagName === "ARTICLE" &&
-        !Object.hasOwn(node.dataset, "collapsed"),
+        node.dataset.collapsed !== "true",
     );
 }
 

@@ -26,7 +26,7 @@ const LOADING: Turns = { kind: "loading" };
 // again when they cannot, the compose box once they are here.
 const REST: Record<Turns["kind"], string> = {
   loading: "[data-pending]",
-  failed: "[data-pending] button",
+  failed: "[data-pending] [data-retry]", // Try again, not a lane's collapse in the title bar
   open: ".compose-box textarea",
 };
 
@@ -104,11 +104,20 @@ export function focusThreadIn(within: ParentNode): void {
 
 // A thread whose turns are not here, in the frame an open thread has: the paper, the border and
 // the title bar, so a lane keeps the bar it is taken by and the main pane keeps its shape.
-function PendingFrame({ title, children }: { title: string; children: ReactNode }) {
+function PendingFrame({
+  title,
+  leading,
+  children,
+}: {
+  title: string;
+  leading: ReactNode;
+  children: ReactNode;
+}) {
   return (
     // The frame takes the focus while the turns come, as a place to hold it (useFocusFollows).
     <section className="thread-panel outline-none" aria-label={title} tabIndex={-1} data-pending="">
       <header className="thread-header">
+        {leading !== undefined && <div className="header-leading">{leading}</div>}
         <h2>{title}</h2>
       </header>
       <div className="flex flex-col items-start gap-2 px-(--thread-gutter) py-5 text-sm">
@@ -124,8 +133,10 @@ function PendingFrame({ title, children }: { title: string; children: ReactNode 
  * and Try again inside. Focus in the thread stays in it as it changes: from Try again to the
  * frame, and on to Try again again or to the compose box. The title and the opening draft
  * come from the snapshot, so a rename shows everywhere at once.
+ * @param leading A control before the title in the title bar, such as a lane's collapse
+ * (ADR-124); in the frame too while the turns come.
  */
-export function ThreadPane({ thread }: { thread: ThreadSummary }) {
+export function ThreadPane({ thread, leading }: { thread: ThreadSummary; leading?: ReactNode }) {
   const runtime = useRuntime();
   const session = useSession();
   const { isMobile } = useSidebar();
@@ -143,16 +154,19 @@ export function ThreadPane({ thread }: { thread: ThreadSummary }) {
             inBackground(runtime.rename({ kind: "thread", id: thread.id }, title), "Renaming");
           }}
           cardsCarry={!isMobile}
+          leading={leading}
         />
       ) : (
-        <PendingFrame title={thread.title}>
+        <PendingFrame title={thread.title} leading={leading}>
           {turns.kind === "loading" ? (
             <p className="text-soft-ink">Opening {thread.title}…</p>
           ) : (
             <>
               <p className="text-ink">{thread.title} could not be opened.</p>
               <p className="text-soft-ink">{turns.reason}</p>
-              <QuietButton onClick={retry}>Try again</QuietButton>
+              <QuietButton onClick={retry} data-retry="">
+                Try again
+              </QuietButton>
             </>
           )}
         </PendingFrame>

@@ -4,6 +4,8 @@ import { Fragment, useEffect, useRef, useState, type RefObject } from "react";
 import { useLanding, type Landing } from "./canvas-carry";
 import { panRow, usePan } from "./canvas-pan";
 import { Lane, type LaneReports, type LaneView } from "./lane";
+
+export type { LaneView } from "./lane";
 import { displacement, useReorder } from "./lane-reorder";
 import { LaneSeparator } from "./lane-separator";
 import { Kay, SplashDrawing } from "./splash";
@@ -113,10 +115,8 @@ function focusAfter(row: HTMLElement, lanes: LaneView[], id: LaneId): Element | 
   const at = lanes.findIndex((lane) => lane.id === id);
   const neighbour = lanes.slice(at + 1).at(0) ?? lanes.slice(0, at).at(-1);
   if (neighbour === undefined) return row.querySelector("[data-blank]");
-  const lane = laneIn(row, neighbour.id);
-  return (
-    lane?.querySelector("[data-lane-close]") ?? lane?.querySelector("[data-lane-toggle]") ?? null
-  );
+  // The close comes first in an open lane; a collapsed one has only its expand.
+  return laneIn(row, neighbour.id)?.querySelector("[data-lane-close], [data-lane-toggle]") ?? null;
 }
 
 // Before the lane `id` closes, hands on the focus it holds, which would otherwise fall back to

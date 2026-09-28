@@ -370,8 +370,16 @@
      clipped with an ellipsis where it outruns the strip. The whole strip takes hold of the lane,
      so a hand shows over all of it but its expand. As with the bar, the grip is only drawn on a
      row that still reorders (ADR-122). */
-  [data-reorder="true"] .lane[data-collapsed] {
+  [data-reorder="true"] .lane[data-collapsed="true"] {
     cursor: grab;
+  }
+  /* A lane is as wide as it was left (--lane-width, set on the lane), and a strip when it is
+     collapsed, keeping that width for when it opens. */
+  .lane {
+    width: var(--lane-width);
+  }
+  .lane[data-collapsed="true"] {
+    width: 32px;
   }
   .lane-strip-grip {
     display: none;
