@@ -348,6 +348,14 @@ The first entries are ideas from before any code existed; the rest are parts of 
 
 ## 4. Bloopers
 
+- **The empty seat saved for a count.** Dropping the "^ 2" count from a main thread's row left
+  the chair it sat in. shadcn pads a row 32px at its right whenever its list item holds an action,
+  and the project's "+" shares its item with every thread below it, so each thread row kept a
+  32px gap for a count that no longer existed. "Service desk weekly review" cut to "...revi..."
+  with room to spare. Every test passed; only comparing screenshots with main's showed the titles
+  ending early. Fix: each thread row takes that room back, and web-check reads every row's right
+  padding. Lesson: when you strike a prop from a scene, check the blocking tape it left on the
+  floor.
 - **The `false` that still said yes.** The phone's canvas hid its drag grip behind a
   `[data-reorder]` selector, and the row set `data-reorder={reorderable}`. React writes a `false`
   data attribute out as the string `"false"`, so the attribute was present on a phone too, and a
