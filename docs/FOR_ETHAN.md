@@ -1879,3 +1879,47 @@ plate in first.
 Senior-engineer takeaway: when a look depends on order, make the order the design. The three looks
 share one DOM and one stack; the attribute on `<html>` picks the plate, and nothing else moves.
 
+
+### One clock, two actors: a wave is a delay, not a second animation
+
+The "agent working" glyph (Storybook: Motion/Agent working) is Kay's 2x2 task-size squares,
+animated so a band of green sweeps left to right. There is only one keyframe track. Every square
+plays it; the right column is simply started 35% of a cycle later, so it peaks just as the left
+column begins to fade. Colour rides on opacity inside that one track: solid is moss, half-faded
+is olive, nearly clear is sage.
+
+```css
+/* packages/catalog/src/motion.css */
+.agent-working {
+  --working-duration: 150ms; /* one knob; Storybook scrubs it */
+  /* a head start of 65% is the same as a lag of 35%, and never shows a blank first frame */
+  --working-lag: calc(var(--working-duration) * -0.65);
+}
+.agent-working-cell:nth-child(even) {
+  --working-offset: var(--working-lag); /* right column: same track, shifted */
+}
+```
+
+```mermaid
+sequenceDiagram
+  participant L as Left column
+  participant R as Right column
+  Note over L,R: one 150ms cycle, same keyframes
+  L->>L: 0-35% fade in, sage → moss
+  R->>R: already fading out from last cycle
+  L->>L: 35-50% hold solid
+  R->>R: 0-35% fade in (35% behind)
+  L->>L: 50-100% fade out, moss → olive → sage
+  R->>R: holds solid while left fades
+```
+
+The film version: two dancers, one piece of music, the second one counting in late. You do not
+choreograph a second routine, you cue the same one later. A canon in music works the same way.
+
+Two review tools came with it. The Frames story is a contact sheet: the wave paused at ten points
+and blown up 4x, so a cut that looks right at speed can be checked frame by frame. The Speeds
+story plays 150, 300, 600 and 1200ms side by side, because timing is a taste call that is easier
+to defend with the alternatives on screen than in words.
+
+Senior-engineer takeaway: when motion must stay in sync, derive every actor from one clock. A
+second keyframe track would drift the moment someone changed one duration and not the other.
