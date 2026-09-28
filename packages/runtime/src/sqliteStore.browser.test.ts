@@ -73,7 +73,7 @@ describe("Ethan's v1 database in the private file system", () => {
     const reply = await inFreshWorker({ kind: "migrate-v1", name: freshName("v1") });
     const run = migrationSchema.parse(reply).result;
     expect(run.v1.user_version).toBe(1);
-    expect(run.once.user_version).toBe(2);
+    expect(run.once.user_version).toBe(3);
     expect(run.twice).toEqual(run.once);
     expect(run.crash).toBe("crashed before commit");
     expect(run.afterCrash).toEqual(run.v1);
@@ -102,6 +102,7 @@ describe("Ethan's v1 database in the private file system", () => {
         card_json: null,
         title: null,
         width: null,
+        collapsed: 0,
       },
     ]);
     expect(once["table messages"]).toEqual(v1["table messages"]);

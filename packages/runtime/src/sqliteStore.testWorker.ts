@@ -31,6 +31,7 @@ const crashingSteps: typeof migrationSteps = [
     migrationSteps[1](db, legacy);
     throw new Error("crashed before commit");
   },
+  migrationSteps[2],
 ];
 
 async function saveThenReopen(name: string, turn: ThreadMessage) {

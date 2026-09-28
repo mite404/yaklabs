@@ -72,7 +72,8 @@ function notify(write: Writer, n: number, threadId: ThreadId, text: string, minu
 
 function profitCardLane(write: Writer): Lane {
   const card = { v: 1, kind: "interactive", payload: profitCard } as const;
-  return { id: write.mint.lane(), width: null, kind: "card", card, title: profitCard.props.title };
+  const title = profitCard.props.title;
+  return { id: write.mint.lane(), width: null, collapsed: false, kind: "card", card, title };
 }
 
 // A tab's view as the page's shell keeps it: which pane, the split, and the browser's history.

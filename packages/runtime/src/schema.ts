@@ -1,4 +1,4 @@
-import type { BindingSpec, Database } from "@sqlite.org/sqlite-wasm";
+import type { BindingSpec, Database, SqlValue } from "@sqlite.org/sqlite-wasm";
 import { z } from "zod";
 import type { LegacyCanvas } from "./protocol";
 import {
@@ -136,15 +136,27 @@ const V2_RULES = `
   );
 `;
 
+// Step 2 → 3 gives each lane whether it is collapsed (ADR-124). Every lane a v2 canvas holds
+// was open, so each one starts expanded; the check keeps the flag a yes or a no.
+const V3_COLLAPSED = `
+  alter table lanes add column collapsed integer not null default 0 check (collapsed in (0, 1));
+`;
+
 const INSERT_PROJECT = "insert into projects (id, name, created_at) values (?, ?, ?)";
 // A v1 row moves over with its title and times; its place comes from the plan.
 const MOVE_CONVERSATION = `
   insert into conversations_next (id, title, created_at, updated_at, project_id, parent_id)
   select id, title, ?, updated_at, ?, ? from conversations where id = ?
 `;
-const INSERT_LANE = `
+// The lanes as the 1 → 2 step writes them, before the table had `collapsed`: a finished step
+// keeps writing the columns its version had.
+const INSERT_V2_LANE = `
   insert into lanes (main_id, seq, id, thread_id, card_json, title, width)
   values (?, ?, ?, ?, ?, ?, ?)
+`;
+const INSERT_LANE = `
+  insert into lanes (main_id, seq, id, thread_id, card_json, title, width, collapsed)
+  values (?, ?, ?, ?, ?, ?, ?, ?)
 `;
 
 /** The project a v1 database's conversations join, and the one the device starts with. */
@@ -168,10 +180,15 @@ function sortByOrder(rows: V1Row[], order: string[]): V1Row[] {
   return [...named, ...rows.filter((row) => !rank.has(row.id))];
 }
 
-function laneRow(mainId: ThreadId, seq: number, lane: Lane): BindingSpec {
+// A lane's row in the v2 columns: everything but whether it is collapsed.
+function v2LaneRow(mainId: ThreadId, seq: number, lane: Lane): SqlValue[] {
   return lane.kind === "thread"
     ? [mainId, seq, lane.id, lane.threadId, null, null, lane.width]
     : [mainId, seq, lane.id, null, JSON.stringify(lane.card), lane.title, lane.width];
+}
+
+function laneRow(mainId: ThreadId, seq: number, lane: Lane): BindingSpec {
+  return [...v2LaneRow(mainId, seq, lane), lane.collapsed ? 1 : 0];
 }
 
 /**
@@ -207,7 +224,15 @@ function migrateToV2(db: Database, legacy: LegacyCanvas | undefined): void {
   }
   db.exec(V2_SWAP);
   db.exec(V2_RULES);
-  for (const { mainId, lanes } of plan.lanes) writeLanes(db, mainId, lanes);
+  for (const { mainId, lanes } of plan.lanes) {
+    for (const [seq, lane] of lanes.entries()) {
+      db.exec({ sql: INSERT_V2_LANE, bind: v2LaneRow(mainId, seq, lane) });
+    }
+  }
+}
+
+function migrateToV3(db: Database): void {
+  db.exec(V3_COLLAPSED);
 }
 
 /**
@@ -244,12 +269,16 @@ export function planV2(rows: V1Row[], legacy: LegacyCanvas | undefined): V2Plan 
   };
 }
 
-/** The steps from each `user_version` to the next: 0 → 1 is the v1 schema, 1 → 2 the rebuild. */
+/**
+ * The steps from each `user_version` to the next: 0 → 1 is the v1 schema, 1 → 2 the rebuild,
+ * 2 → 3 a lane's collapsed flag.
+ */
 export const migrationSteps = [
   (db: Database) => {
     db.exec(V1_DDL);
   },
   migrateToV2,
+  migrateToV3,
 ] as const satisfies readonly Step[];
 
 /**

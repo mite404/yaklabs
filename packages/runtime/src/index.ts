@@ -12,6 +12,8 @@ export { startRuntime } from "./runtime";
 export type { Runtime, RuntimeConfig, RuntimeState, Session } from "./runtime";
 export {
   closeLane,
+  collapseLane,
+  collapseLanes,
   insertLane,
   lanesOf,
   latestMain,

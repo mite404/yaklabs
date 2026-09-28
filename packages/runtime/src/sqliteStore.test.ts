@@ -37,6 +37,7 @@ const trendTurns: ThreadMessage[] = [
 const card: Lane = {
   id: laneIdSchema.parse("c-1"),
   width: 420,
+  collapsed: false,
   kind: "card",
   card: { v: 1, kind: "interactive", payload: { title: "Profit" } },
   title: "Last week's profit",
@@ -156,6 +157,19 @@ describe("the store keeps lanes", () => {
     store.arrange(main, [card, threadLane(child)]);
     expect(store.workspace()).toEqual(once);
     expect(once.lanes).toEqual({ [main]: [card, threadLane(child)], [other]: [] });
+  });
+
+  it("keeps a collapsed lane collapsed, at its width, in a store opened on the same file", async () => {
+    const store = await openStore();
+    addChild(store, "child");
+    const lanes = [
+      { ...card, collapsed: true },
+      { ...threadLane(child), collapsed: true },
+    ];
+    store.arrange(main, lanes);
+    expect(lanesOf(store.workspace(), main)).toEqual(lanes);
+    store.arrange(main, [card, threadLane(child)]);
+    expect(lanesOf(store.workspace(), main).map((lane) => lane.collapsed)).toEqual([false, false]);
   });
 
   it("refuses a canvas for a sub-thread, an unknown thread, or another main's child", async () => {

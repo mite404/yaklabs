@@ -84,7 +84,14 @@ function land(runtime: Runtime, main: ThreadId, carried: Carried, at: number): v
     return;
   }
   const { card, title } = carried;
-  const lane: Lane = { id: newCardLaneId(), width: null, kind: "card", card, title };
+  const lane: Lane = {
+    id: newCardLaneId(),
+    width: null,
+    collapsed: false,
+    kind: "card",
+    card,
+    title,
+  };
   arrangeFrom(runtime, main, (current) => insertLane(current, at, lane));
 }
 

@@ -1,7 +1,7 @@
 import type { Database } from "@sqlite.org/sqlite-wasm";
 import { describe, expect, it, onTestFinished } from "vitest";
 import type { LegacyCanvas } from "./protocol";
-import { migrate, planV2, type V1Row } from "./schema";
+import { migrate, migrationSteps, planV2, type V1Row } from "./schema";
 import { openDatabase } from "./sqliteStore";
 import { threadIdSchema, threadLane } from "./workspace";
 
@@ -109,18 +109,37 @@ describe("planV2", () => {
 });
 
 describe("migrate", () => {
-  it("brings a new database to version 2, and leaves it there on a second run", async () => {
+  it("brings a new database to version 3, and leaves it there on a second run", async () => {
     const db = await freshDatabase();
     migrate(db);
-    expect(db.selectValue("pragma user_version")).toBe(2);
+    expect(db.selectValue("pragma user_version")).toBe(3);
   });
 
   it("refuses a database newer than this build", async () => {
     const db = await freshDatabase();
-    db.exec("pragma user_version = 3");
+    db.exec("pragma user_version = 4");
     expect(() => {
       migrate(db);
-    }).toThrow("The database is at version 3, newer than this build");
+    }).toThrow("The database is at version 4, newer than this build");
+  });
+
+  it("keeps a v2 canvas's lanes, each expanded, on the way to v3", async () => {
+    const db = await openDatabase({ kind: "memory" });
+    onTestFinished(() => {
+      db.close();
+    });
+    migrate(db, undefined, migrationSteps.slice(0, 2));
+    db.exec("insert into projects values ('p', 'P', '2026-09-26T10:00:00.000Z')");
+    insertThread(db, "main", "p", null);
+    insertThread(db, "kid", null, "main");
+    insertLane(db, "main", 0, "l-kid", "kid");
+    insertLane(db, "main", 1, "c-1");
+    migrate(db);
+    expect(db.selectValue("pragma user_version")).toBe(3);
+    expect(db.selectObjects("select id, width, collapsed from lanes order by seq")).toEqual([
+      { id: "l-kid", width: null, collapsed: 0 },
+      { id: "c-1", width: null, collapsed: 0 },
+    ]);
   });
 });
 
@@ -184,5 +203,15 @@ describe("the v2 schema keeps lanes on their own main", () => {
     expect(() => {
       db.exec("update lanes set seq = 5");
     }).toThrow("Lanes are replaced, never edited");
+  });
+
+  it("keeps whether a lane is collapsed as a yes or a no", async () => {
+    const db = await freshDatabase();
+    insertLane(db, "main", 0, "c-1");
+    expect(db.selectValue("select collapsed from lanes")).toBe(0);
+    expect(() => {
+      db.exec(`insert into lanes (main_id, seq, id, card_json, title, collapsed)
+               values ('main', 1, 'c-2', '{}', 'Card', 2)`);
+    }).toThrow(/CHECK constraint failed/);
   });
 });

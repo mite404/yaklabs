@@ -17,7 +17,8 @@ const THREADS = `
   from conversations c order by c.created_at, c.id
 `;
 const LANES = `
-  select main_id, id, thread_id, card_json, title, width from lanes order by main_id, seq
+  select main_id, id, thread_id, card_json, title, width, collapsed from lanes
+  order by main_id, seq
 `;
 const NOTIFICATIONS = `
   select id, thread_id as threadId, text, at from notifications order by at desc, id
@@ -41,6 +42,7 @@ const laneRowSchema = z.object({
   card_json: z.string().nullable(),
   title: z.string().nullable(),
   width: z.number().nullable(),
+  collapsed: z.union([z.literal(0), z.literal(1)]),
 });
 const transcriptRowSchema = z.object({ updated_at: z.string(), draft: z.string() });
 const messageRowSchema = z.object({
@@ -83,9 +85,10 @@ function fromThreadRow(row: Record<string, SqlValue>) {
 // A lane row in the workspace's shape; the workspace schema checks it and its card.
 function fromLaneRow(row: z.infer<typeof laneRowSchema>) {
   const { id, width, thread_id, card_json, title } = row;
-  if (thread_id !== null) return { id, width, kind: "thread", threadId: thread_id };
+  const collapsed = row.collapsed === 1;
+  if (thread_id !== null) return { id, width, collapsed, kind: "thread", threadId: thread_id };
   const card: unknown = JSON.parse(card_json ?? "null");
-  return { id, width, kind: "card", card, title };
+  return { id, width, collapsed, kind: "card", card, title };
 }
 
 /**

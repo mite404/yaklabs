@@ -1421,3 +1421,17 @@ marker in the bar, and ADR-116, whose phone top row counted it among five contro
 The bar no longer says whether a thread is mock, kept on this device, or answered by a live
 model, so a private window that cannot keep threads no longer warns before they vanish; Ethan
 accepted that gap and may ask for a delineation again later.
+
+## ADR-124 - A lane keeps whether it is collapsed, in a column of its own (schema v3)
+
+2026-09-28 - Accepted. Extends ADR-099 and ADR-100.
+A lane on the canvas can collapse to a 32px strip, as GitButler's stacks do, so a busy canvas
+still shows every card and child thread at a glance. Whether it is collapsed belongs to the lane,
+like its width: it rides `arrange` in the lane record (`collapsed: boolean`) and lives in a new
+`lanes.collapsed` column, `0` or `1`, which step 2 → 3 adds with every existing lane expanded.
+The existing record had nowhere honest to put it: the shell document is the page's and would
+outlive a closed lane, and folding it into `width` would give one column two meanings. The
+1 → 2 step keeps writing only the columns v2 had, so a finished step never changes. A collapsed
+lane keeps its width for when it opens, and a closed lane that reopens comes back expanded.
+Proof: `packages/runtime/src/schema.test.ts` migrates a v2 canvas to v3 with its lanes expanded
+and refuses a flag other than 0 or 1; `sqliteStore.test.ts` reads a collapsed lane back.
