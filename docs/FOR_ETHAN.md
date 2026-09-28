@@ -971,6 +971,22 @@ The first entries are ideas from before any code existed; the rest are parts of 
 - **A width without a unit.** Moving the lane's width into a CSS custom property,
   `--lane-width`, sent 423 instead of 423px: React adds `px` to `width: 423`, never to a custom
   property. Lesson: custom properties are strings, so write the unit yourself.
+- **The grid that grew a second column.** The main thread's welcome runs behind the compose box,
+  so the scroll area was told to span every row of the panel's grid. The compose box, which
+  asked only for row 3, found that row taken and was placed by the grid into a brand-new column
+  to the right: the greeting squeezed into a third of the pane and the box floated off beside it.
+  Every child now asks for column 1 by name. Lesson: the moment two things share a grid row,
+  place both on both axes, or the grid places one for you.
+- **A theme that only reaches half the component.** The 3-dot menu looked like a different app
+  next to the share button. Kay's palette had reached it through variables, but the shadcn
+  preset it was generated from (`base-lyra`) writes its shape into each file: `rounded-none`,
+  `text-xs`, tight padding. Variables carry colour and one radius; they cannot carry shape.
+  The vendored menu now has Kay's shape. There is no conversion script in the repo, so any
+  component added with `shadcn add` arrives in lyra's shape again. Lesson: a design token system
+  themes what it names; audit what the component hard-codes.
+- **The example that would not start.** Copying `.env.example` to `.env` left
+  `VITE_GATEWAY_URL=` empty, and the env parser reads an empty string as a bad URL, so the app
+  failed at start. The example now comments those lines out.
 
 ## 5. Director's Commentary
 

@@ -1659,3 +1659,26 @@ loop, the flame graph and `MessagePort` agent, and the Cloudflare share deploy. 
 that stays is ADR-086's: visual regression and accessibility checks in CI, with the contrast
 guard.
 If a cut item looks needed, ask Ethan; do not decide it.
+
+## ADR-138 - A main thread stands on the pane, and a window's controls live in its title bar
+
+2026-09-28 - Accepted (Ethan's polish list after the parallel work merged). Amends ADR-126,
+ADR-127, ADR-131, ADR-134 and ADR-136.
+Only a lane on the canvas is a window now. A main thread draws on the pane itself: no frame, no
+inset, its text still at the thread's measure (the gutters widen, not the column). It has no title
+bar until it has turns, since its tab already says "New thread", and then only a plain title row,
+the one place a thread is renamed. The welcome runs to the pane's edges and behind the compose
+box, so the greeting and the box it starts with are one surface. The thread's "⋯" moved onto the
+active tab, left of the tab's close; a phone keeps its own in the top row (ADR-116).
+A lane's close is the last control in its own title bar, for a thread and a card alike, and Share
+sits before it, so the far end never moves. The row that held the close is gone, so an open lane's
+top is flush with a collapsed strip's. A thread's Share button opens the same options as the
+menu's Share item, which now offers 1 hour, 6 hours, 1 day and 7 days (the gateway's `SHARE_TTLS`
+changed from 3 hours to 6). A card's own Share keeps its link menu (ADR-064).
+The pin in a title bar (ADR-127) is gone. A pinned thread unpins from its sidebar row, where the
+button shows on hover or focus and always on a touch screen, or from the "⋯" menu.
+The shadcn menu takes Kay's menu shape (8px popup, 4px items, 13px text) in the vendored
+`dropdown-menu.tsx`: `--radius` and the palette variables reach colours and one radius, but the
+`base-lyra` preset hard-codes `rounded-none` and `text-xs` in each file, so variables alone left
+the menu looking like a different app. Welcome actions use the app's 8px corners (`rounded-xl`).
+A strip's expand is 24px, so its hover fill sits 3px inside the strip on every side.
