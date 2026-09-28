@@ -81,7 +81,12 @@ On a phone the bar then had no room for its own tabs. Below 768px it is now two 
 Amp's phone layout: a top row that never scrolls, with the project's name and a "⋯" for the thread
 and project, and below it the views, Thread, Browser and Canvas (ADR-116); P13 holds 390, 520 and
 767 to that. The phone's sidebar no longer covers the page: like Amp's, it slides in from the left
-and pushes the whole window aside, leaving the page's edge as the way back (ADR-121).
+and pushes the whole window aside, leaving the page's edge as the way back (ADR-121). Ethan then
+settled the phone: the row of views wins over a row of tabs (ADR-116 over ADR-120), the account
+moves from the bar to the foot of that drawer, and the canvas becomes somewhere to look rather
+than arrange (ADR-122). On a phone, dragging a lane sideways fought the row's own sideways scroll,
+so the drag is simply off there, and the lanes still scroll. One fact decides all three: the
+sidebar's own `isMobile`, the same 768px line the styles use.
 
 ## 2. Cast & Crew
 
@@ -333,6 +338,19 @@ The first entries are ideas from before any code existed; the rest are parts of 
 
 ## 4. Bloopers
 
+- **The `false` that still said yes.** The phone's canvas hid its drag grip behind a
+  `[data-reorder]` selector, and the row set `data-reorder={reorderable}`. React writes a `false`
+  data attribute out as the string `"false"`, so the attribute was present on a phone too, and a
+  tap still drew the grab hand and the six dots. The test passed anyway, because it only checked
+  that nothing lifted. Fix: select `[data-reorder="true"]`, and make the test read the grip
+  itself (the cursor, and whether the dots are drawn at all). Lesson: a test named "the grip is
+  not shown" has to look at the grip.
+- **Two Escapes, one key.** With the account menu open inside the phone drawer, Escape closed
+  both. Both listen on the document; the drawer's listener was added first, when the drawer
+  opened, so it ran before the menu could claim the key, and checking `defaultPrevented` could
+  not help. Fix: the drawer leaves an Escape that comes from inside an open menu to the menu.
+  Lesson: when two layers share one key, decide who owns it by where the key came from, not by
+  who happened to subscribe first.
 - **The rulebook with a missing chapter.** The first oxlint config listed five plugins. In oxlint,
   a `plugins` list replaces the defaults instead of adding to them, and `eslint` was not on the
   list, so core rules like `no-unused-vars` never ran and the output looked clean. Lesson: an
