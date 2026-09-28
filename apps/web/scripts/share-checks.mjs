@@ -7,7 +7,7 @@ import { createRequire } from "node:module";
 import path from "node:path";
 import { ROOT } from "./harness.mjs";
 import { BASE } from "./lever.mjs";
-import { headerOf, openDemo } from "./thread-actions-checks.mjs";
+import { headerOf, menuButtonOf, openDemo } from "./thread-actions-checks.mjs";
 
 const LEVER_TOKEN = "lever-stands-in-for-workos";
 const DESKTOP = { width: 1440, height: 900 };
@@ -65,7 +65,7 @@ export async function serveShares(context) {
 
 // Opens the shown thread's Share submenu.
 async function openShare(page) {
-  await headerOf(page).getByRole("button", { name: "Thread actions" }).click();
+  await menuButtonOf(page).click();
   await page.getByRole("menuitem", { name: /^Share thread/ }).hover();
 }
 
@@ -80,7 +80,7 @@ export const shareChecks = {
     await serveShares(context);
     const page = await context.newPage();
     await page.goto(`${BASE}/?scenario=demo`);
-    await headerOf(page).getByRole("button", { name: "Thread actions" }).waitFor();
+    await menuButtonOf(page).waitFor();
     const title = await headerOf(page).locator("h2").innerText();
     await openShare(page);
     const privately = String(

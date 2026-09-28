@@ -12,6 +12,9 @@ const DEMO = `${BASE}/?scenario=demo`;
 
 const shownPanel = (page) => page.locator('[role="tabpanel"]:not([inert]) .thread-panel').first();
 export const headerOf = (page) => shownPanel(page).locator(".thread-header");
+// A main thread's "⋯" is on its active tab (ADR-138), not in a title bar of its own.
+export const menuButtonOf = (page) =>
+  page.locator('[data-slot="title-bar"]').getByRole("button", { name: "Thread actions" });
 const sidebarOf = (page) => page.locator('[data-slot="sidebar"]');
 const rowsOf = (page) => sidebarOf(page).locator("[data-thread]");
 const rowTitles = async (page) =>
@@ -40,7 +43,7 @@ export async function openThread(page, title) {
 
 // Opens the shown thread's "⋯" and picks an item by name.
 export async function pick(page, name) {
-  await headerOf(page).getByRole("button", { name: "Thread actions" }).click();
+  await menuButtonOf(page).click();
   await page.getByRole("menuitem", { name, exact: true }).click();
 }
 
@@ -76,7 +79,7 @@ export const threadActionChecks = {
     const page = await openDemo(browser);
     const height = (await headerOf(page).boundingBox()).height;
     const title = (await headerOf(page).locator("h2").boundingBox()).height;
-    await headerOf(page).getByRole("button", { name: "Thread actions" }).click();
+    await menuButtonOf(page).click();
     const items = await menuItems(page);
     const ok =
       JSON.stringify(items) === JSON.stringify(ITEMS) &&
@@ -87,15 +90,15 @@ export const threadActionChecks = {
     };
   },
 
-  // Pin lifts the thread to the top of its project and marks the title bar; the view stays;
-  // pressing the mark unpins, and the row goes back where it was.
+  // Pin lifts the thread to the top of its project and marks its row; the view stays; the row's
+  // Unpin (ADR-138) unpins, and the row goes back where it was.
   async A2(browser) {
     const page = await openDemo(browser, { ready: ".thread-panel" });
     await openThread(page, "Last week's sales");
     const url = page.url();
     const before = await rowTitles(page);
     await pick(page, "Pin thread");
-    const mark = headerOf(page).getByRole("button", { name: "Unpin thread" });
+    const mark = page.getByRole("button", { name: "Unpin Last week's sales" });
     await mark.waitFor();
     const pinned = await rowTitles(page);
     const pinnedRow = await rowOf(page, "Last week's sales");
@@ -175,7 +178,7 @@ export const threadActionChecks = {
     await card.getByRole("button", { name: "Submit" }).click();
     await card.waitFor({ state: "detached" });
     const row = await rowOf(page, serviceDesk);
-    await headerOf(page).getByRole("button", { name: "Thread actions" }).click();
+    await menuButtonOf(page).click();
     const snooze = (await page.getByRole("menuitem", { name: /^Snooze/ }).innerText()).trim();
     // Its name as a screen reader hears it: the wake time joined by a comma.
     const named = await page.getByRole("menuitem", { name: /^Snooze, \w{3} \d+:\d{2}$/ }).count();
