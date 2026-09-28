@@ -83,10 +83,10 @@ const ids = (list: Lane[]) => list.map((lane) => lane.id);
 const lane = (threadId: string) => threadLaneId(t(threadId));
 
 describe("sidebarTree", () => {
-  it("lists projects oldest first, mains newest first, children oldest first", () => {
+  it("lists projects oldest first, mains and their children newest first", () => {
     expect(rows(ws)).toEqual([
       { project: "desk", mains: [["m3"]] },
-      { project: "store", mains: [["m2"], ["m1", "c3", "c1", "c2"]] },
+      { project: "store", mains: [["m2"], ["m1", "c2", "c1", "c3"]] },
     ]);
   });
 

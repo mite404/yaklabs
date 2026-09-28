@@ -1611,7 +1611,8 @@ try {
       const side = own.locator('[data-slot="sidebar"]');
       const children = () => side.locator('a[data-thread="child"] [data-label]').allInnerTexts(); // → string[]
       const composeCanvas = shownPanel(own).getByRole("region", { name: "Compose canvas" });
-      const titles = ["Saturday leads at every level", "Why is Tuesday quiet?"];
+      // Newest first, as the sidebar lists them.
+      const titles = ["Why is Tuesday quiet?", "Saturday leads at every level"];
       // Opens each child's lane from its row, then closes it from the canvas, so both rows sit
       // among the closed children, where a lane-ordered list once reshuffled them on a click.
       for (const kidTitle of titles) {
