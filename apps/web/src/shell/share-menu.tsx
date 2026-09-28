@@ -1,3 +1,4 @@
+import { ExternalIcon, LinkIcon, ShareIcon } from "@yaklabs/catalog/icons";
 import type { ThreadShare, ThreadSummary } from "@yaklabs/runtime";
 import { Button } from "@yaklabs/ui/components/button";
 import {
@@ -12,7 +13,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@yaklabs/ui/components/dropdown-menu";
-import { ExternalLink, Link, Share2, Timer, X } from "lucide-react";
+import { Timer, X } from "lucide-react";
 import { MenuStatus, statusName } from "./menu-status";
 import type { Shell } from "./model";
 import { LIFETIMES } from "./share-thread";
@@ -40,7 +41,7 @@ function PublicItems({ shell, thread, share }: ShareProps & { share: ThreadShare
             shell.copyPublicLink(thread.id);
           }}
         >
-          <Link aria-hidden="true" />
+          <LinkIcon />
           Copy public link
         </DropdownMenuItem>
         <DropdownMenuItem
@@ -48,7 +49,7 @@ function PublicItems({ shell, thread, share }: ShareProps & { share: ThreadShare
             window.open(share.link, "_blank", "noopener");
           }}
         >
-          <ExternalLink aria-hidden="true" />
+          <ExternalIcon />
           Open public page
         </DropdownMenuItem>
         <DropdownMenuItem
@@ -113,7 +114,7 @@ export function ShareItem({ shell, thread }: ShareProps) {
         className="whitespace-nowrap"
         aria-label={statusName("Share thread", status)}
       >
-        <Share2 aria-hidden="true" />
+        <ShareIcon />
         Share thread
         <MenuStatus>{status}</MenuStatus>
       </DropdownMenuSubTrigger>
@@ -146,7 +147,7 @@ export function ThreadShareButton({ shell, thread }: ShareProps) {
           />
         }
       >
-        <Share2 aria-hidden="true" />
+        <ShareIcon />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
         <ShareOptions shell={shell} thread={thread} />

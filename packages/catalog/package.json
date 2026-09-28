@@ -8,6 +8,7 @@
     "./awaiting": "./src/awaiting.ts",
     "./carry": "./src/carry.ts",
     "./catalog": "./src/catalog.ts",
+    "./icons": "./src/icons.tsx",
     "./inputModality": "./src/inputModality.ts",
     "./interactive": "./src/interactive.ts",
     "./labAgent": "./src/labAgent.ts",
