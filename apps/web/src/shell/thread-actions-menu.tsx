@@ -1,3 +1,4 @@
+import { LinkIcon } from "@yaklabs/catalog/icons";
 import type { ThreadSummary } from "@yaklabs/runtime";
 import { Button } from "@yaklabs/ui/components/button";
 import {
@@ -9,7 +10,7 @@ import {
   DropdownMenuTrigger,
 } from "@yaklabs/ui/components/dropdown-menu";
 import { useSidebar } from "@yaklabs/ui/components/sidebar";
-import { Archive, ArchiveRestore, Ellipsis, Link, Pin, PinOff, Trash2 } from "lucide-react";
+import { Archive, ArchiveRestore, Ellipsis, Pencil, Pin, PinOff, Trash2 } from "lucide-react";
 import type { ComponentProps } from "react";
 import { useShell, type Shell } from "./model";
 import { ShareItem, ThreadShareButton } from "./share-menu";
@@ -56,22 +57,34 @@ function ArchiveItem({ shell, thread }: ItemProps) {
  * Snooze, Archive, then Delete apart. Pin and Archive name what they would do now. Delete keeps
  * ink for its words, which the red does not clear on a dark menu (ADR-065); its icon is red.
  * @param beforeSnooze Runs before the snooze card opens, to bring the thread into view.
+ * @param onRename When set, Rename leads the menu and calls this; a tab uses it to open its
+ * title as a field.
  */
 export function ThreadActionsContent({
   shell,
   thread,
   beforeSnooze,
+  onRename,
   ...props
-}: ItemProps & { beforeSnooze?: () => void } & ComponentProps<typeof DropdownMenuContent>) {
+}: ItemProps & {
+  beforeSnooze?: () => void;
+  onRename?: () => void;
+} & ComponentProps<typeof DropdownMenuContent>) {
   return (
     <DropdownMenuContent align="end" className="w-64" {...props}>
       <DropdownMenuGroup>
+        {onRename !== undefined && (
+          <DropdownMenuItem onClick={onRename}>
+            <Pencil aria-hidden="true" />
+            Rename
+          </DropdownMenuItem>
+        )}
         <DropdownMenuItem
           onClick={() => {
             shell.copyUrl(thread.id);
           }}
         >
-          <Link aria-hidden="true" />
+          <LinkIcon />
           Copy thread URL
         </DropdownMenuItem>
         <ShareItem shell={shell} thread={thread} />
@@ -92,7 +105,9 @@ export function ThreadActionsContent({
   );
 }
 
-// The "⋯" in a lane thread's own title bar, on a desktop.
+// The "⋯" in a lane thread's own title bar, on a desktop. It shows while the bar is hovered or
+// holds focus, and while its menu is open (index.css keys on data-thread-menu); it is only
+// faded out, so it stays in the tab order and the accessibility tree.
 function ThreadMenuButton({ shell, thread }: { shell: Shell; thread: ThreadSummary }) {
   return (
     <DropdownMenu>
@@ -102,6 +117,7 @@ function ThreadMenuButton({ shell, thread }: { shell: Shell; thread: ThreadSumma
             variant="ghost"
             size="icon-sm"
             aria-label={THREAD_ACTIONS}
+            data-thread-menu=""
             className="rounded-[var(--radius)] text-soft-ink hover:text-ink"
           />
         }

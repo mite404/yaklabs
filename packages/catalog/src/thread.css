@@ -24,16 +24,17 @@
   overflow: hidden;
 }
 
-/* A bare thread (a main thread's) has no window of its own: it fills the surface it stands on,
-   and its text keeps the same measure by widening the gutters, not the column. The header, the
-   scroll area and the compose box each sit in their own grid row, whichever of them is there.
-   Empty, the scroll area (a welcome's art) runs on behind the compose box, so the greeting and
-   the box it starts with share one surface. */
+/* A bare thread (a main thread's) has no window of its own and no title bar: it fills the
+   surface it stands on, and its text keeps the same measure by widening the gutters, not the
+   column. The scroll area and the compose box each sit in their own grid row. Empty, the scroll
+   area (a welcome's art) runs on behind the compose box, so the greeting and the box it starts
+   with share one surface. */
 .thread-panel[data-bare] {
   --thread-gutter: max(20px, calc((100cqw - var(--thread-measure)) / 2));
   width: 100%;
   height: var(--thread-height, 100%);
   max-height: 100%;
+  grid-template-rows: minmax(0, 1fr) auto;
   border: 0;
   border-radius: 0;
   background: transparent;
@@ -41,14 +42,11 @@
 .thread-panel[data-bare] > * {
   grid-column: 1;
 }
-.thread-panel[data-bare] > .thread-header {
+.thread-panel[data-bare] > .thread-scroll {
   grid-row: 1;
 }
-.thread-panel[data-bare] > .thread-scroll {
-  grid-row: 2;
-}
 .thread-panel[data-bare] > .thread-dock {
-  grid-row: 3;
+  grid-row: 2;
 }
 .thread-panel[data-bare][data-empty] > .thread-scroll {
   grid-row: 1 / -1;

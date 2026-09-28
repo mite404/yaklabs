@@ -1,6 +1,6 @@
 import { ChatThreadPanel } from "@yaklabs/catalog";
 import type { ThreadMessage } from "@yaklabs/catalog/thread";
-import type { ThreadId, ThreadSummary } from "@yaklabs/runtime";
+import type { Runtime, ThreadId, ThreadSummary } from "@yaklabs/runtime";
 import { useSidebar } from "@yaklabs/ui/components/sidebar";
 import {
   useEffect,
@@ -163,6 +163,31 @@ function PendingFrame({
   );
 }
 
+// What renames a thread from its own title bar: nothing for a bare pane, which has no bar and
+// is renamed from its tab.
+function renamer(
+  runtime: Runtime,
+  thread: ThreadSummary,
+  bare: boolean,
+): ((title: string) => void) | undefined {
+  if (bare) return undefined;
+  return (title) => {
+    inBackground(runtime.rename({ kind: "thread", id: thread.id }, title), "Renaming");
+  };
+}
+
+// What the thread's title bar carries at its end: its own actions, then the host's trailing
+// control. A bare pane has no bar.
+function barActions(thread: ThreadSummary, trailing: ReactNode, bare: boolean): ReactNode {
+  if (bare) return undefined;
+  return (
+    <>
+      <ThreadHeaderActions thread={thread} />
+      {trailing}
+    </>
+  );
+}
+
 /**
  * One thread in the catalog's panel, its turns loaded from the worker. While they come, and
  * when they cannot, the thread keeps its frame and title bar, with a quiet line or the reason
@@ -175,8 +200,9 @@ function PendingFrame({
  * a lane's close.
  * @param welcome What the thread shows while it has no turns (ADR-136); the main pane's
  * greeting, and nothing in a lane.
- * @param bare A main thread's own pane: no window frame and no actions in the pane, since its
- * tab carries the menu and the name. Only a lane on the canvas is a window.
+ * @param bare A main thread's own pane: no window frame and no title bar, so no actions or
+ * rename in the pane, since its tab carries the name, the rename and the menu (ADR-138). Only a
+ * lane on the canvas is a window.
  */
 export function ThreadPane({
   thread,
@@ -206,18 +232,9 @@ export function ThreadPane({
           thread={{ title: thread.title, messages: turns.messages }}
           agent={runtime.agent(thread.id, session)}
           initialDraft={thread.draft}
-          onRename={(title) => {
-            inBackground(runtime.rename({ kind: "thread", id: thread.id }, title), "Renaming");
-          }}
+          onRename={renamer(runtime, thread, bare)}
           cardsCarry={!isMobile}
-          headerActions={
-            bare ? undefined : (
-              <>
-                <ThreadHeaderActions thread={thread} />
-                {trailing}
-              </>
-            )
-          }
+          headerActions={barActions(thread, trailing, bare)}
           hostAsk={snooze}
           leading={leading}
           empty={welcome}
