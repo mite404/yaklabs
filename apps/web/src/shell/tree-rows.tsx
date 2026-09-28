@@ -1,11 +1,19 @@
 import type { ThreadSummary } from "@yaklabs/runtime";
 import { SidebarMenuAction, SidebarMenuButton } from "@yaklabs/ui/components/sidebar";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@yaklabs/ui/components/tooltip";
-import { AlarmClock, Archive, ChevronDown, ChevronRight, ChevronUp, Pin } from "lucide-react";
+import {
+  AlarmClock,
+  Archive,
+  ChevronDown,
+  ChevronRight,
+  ChevronUp,
+  Pin,
+  type LucideIcon,
+} from "lucide-react";
 import { useState, type ReactElement } from "react";
 import { Link } from "react-router";
 import { usePaths } from "../runtime";
-import { wakeText } from "./snooze";
+import { rowLook, type Mark } from "./row-marks";
 
 // A row: the hover fill stays inside the sidebar's padding, with the site's 4px corners.
 const ROW = "h-8 rounded-[var(--radius)] text-sm";
@@ -20,33 +28,20 @@ const THREAD_ROW = `${ROW} pl-6`;
 // with no count of its own takes it back for its title.
 const NO_ACTION = "group-has-data-[sidebar=menu-action]/menu-item:pr-2";
 
-// What a row says of its thread's marks (ADR-124 to ADR-126), after its title, to a screen
-// reader; the icons say it to the eye.
-function markWords(thread: ThreadSummary): string {
-  const words = [
-    thread.pinnedAt === null ? "" : "pinned",
-    thread.snoozedUntil === null
-      ? ""
-      : `snoozed until ${wakeText(new Date(thread.snoozedUntil), "row")}`,
-    thread.archivedAt === null ? "" : "archived",
-  ].filter((word) => word !== "");
-  return words.length === 0 ? "" : `, ${words.join(", ")}`;
-}
+// Each mark's icon: a pin, a clock, a closed filebox.
+const MARK_ICONS: Record<Mark, LucideIcon> = {
+  pinned: Pin,
+  snoozed: AlarmClock,
+  archived: Archive,
+};
 
-// The marks at the row's left, before its title: a pin, a clock, a closed filebox.
-function Marks({ thread }: { thread: ThreadSummary }) {
-  const icon = "size-3.5! shrink-0";
-  return (
-    <>
-      {thread.pinnedAt !== null && <Pin aria-hidden="true" data-mark="pinned" className={icon} />}
-      {thread.snoozedUntil !== null && (
-        <AlarmClock aria-hidden="true" data-mark="snoozed" className={icon} />
-      )}
-      {thread.archivedAt !== null && (
-        <Archive aria-hidden="true" data-mark="archived" className={icon} />
-      )}
-    </>
-  );
+// The marks at the row's left, before its title; the icons say to the eye what `spoken` says
+// to a screen reader.
+function Marks({ marks }: { marks: Mark[] }) {
+  return marks.map((mark) => {
+    const Icon = MARK_ICONS[mark];
+    return <Icon key={mark} aria-hidden="true" data-mark={mark} className="size-3.5! shrink-0" />;
+  });
 }
 
 // Whether the row's label is cut short, so its tooltip has something to add.
@@ -102,34 +97,29 @@ export function ThreadRow({
   counted: boolean;
 }) {
   const { pathTo } = usePaths();
-  const ink = thread.archivedAt === null ? "text-soft-ink" : "text-faint-ink";
-  const wakes =
-    thread.snoozedUntil === null
-      ? ""
-      : ` · wakes ${wakeText(new Date(thread.snoozedUntil), "row")}`;
+  const look = rowLook(thread);
   return (
     <Named
-      name={`${thread.title}${wakes}`}
-      always={wakes !== ""}
+      name={look.tooltip}
+      always={look.alwaysTip}
       row={
         <SidebarMenuButton
           render={<Link to={pathTo(thread.id)} />}
           isActive={active}
           aria-current={active ? "page" : undefined}
           data-thread={kind}
-          data-archived={thread.archivedAt === null ? undefined : ""}
-          className={`${THREAD_ROW} ${counted ? "" : NO_ACTION} ${ink} data-active:text-ink`}
+          className={`${THREAD_ROW} ${counted ? "" : NO_ACTION} ${look.ink} data-active:text-ink`}
         >
           {kind === "child" && (
             <span aria-hidden="true" className="shrink-0">
               ↳
             </span>
           )}
-          <Marks thread={thread} />
+          <Marks marks={look.marks} />
           <span data-label="" className="truncate">
             {thread.title}
           </span>
-          <span className="sr-only">{markWords(thread)}</span>
+          <span className="sr-only">{look.spoken}</span>
         </SidebarMenuButton>
       }
     />

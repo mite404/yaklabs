@@ -28,6 +28,59 @@ import { wakeText } from "./snooze";
 /** The label every "⋯" for a thread carries, in its title bar or the phone's (ADR-123). */
 export const THREAD_ACTIONS = "Thread actions";
 
+// What each item acts on: the shell's verbs and the thread.
+type ItemProps = { shell: Shell; thread: ThreadSummary };
+
+// Pin names what it would do now: Pin thread, or Unpin thread (ADR-124).
+function PinItem({ shell, thread }: ItemProps) {
+  const pinned = thread.pinnedAt !== null;
+  return (
+    <DropdownMenuItem
+      onClick={() => {
+        shell.pin(thread.id, !pinned);
+      }}
+    >
+      {pinned ? <PinOff aria-hidden="true" /> : <Pin aria-hidden="true" />}
+      {pinned ? "Unpin thread" : "Pin thread"}
+    </DropdownMenuItem>
+  );
+}
+
+// Snooze opens the card; a snoozed thread's item says when it wakes (ADR-125).
+function SnoozeItem({ shell, thread, before }: ItemProps & { before?: () => void }) {
+  return (
+    <DropdownMenuItem
+      onClick={() => {
+        before?.();
+        shell.askSnooze(thread.id);
+      }}
+    >
+      <AlarmClock aria-hidden="true" />
+      Snooze
+      {thread.snoozedUntil !== null && (
+        <DropdownMenuShortcut>
+          {wakeText(new Date(thread.snoozedUntil), "menu")}
+        </DropdownMenuShortcut>
+      )}
+    </DropdownMenuItem>
+  );
+}
+
+// Archive names what it would do now: Archive, or Unarchive (ADR-126).
+function ArchiveItem({ shell, thread }: ItemProps) {
+  const archived = thread.archivedAt !== null;
+  return (
+    <DropdownMenuItem
+      onClick={() => {
+        shell.archive(thread.id, !archived);
+      }}
+    >
+      {archived ? <ArchiveRestore aria-hidden="true" /> : <Archive aria-hidden="true" />}
+      {archived ? "Unarchive" : "Archive"}
+    </DropdownMenuItem>
+  );
+}
+
 /**
  * The thread menu's items (ADR-123), in Ethan's order: Copy thread URL, Share thread, Pin,
  * Snooze, Archive, then Delete apart. Pin and Archive name what they would do now. Delete keeps
@@ -39,13 +92,7 @@ export function ThreadActionsContent({
   thread,
   beforeSnooze,
   ...props
-}: {
-  shell: Shell;
-  thread: ThreadSummary;
-  beforeSnooze?: () => void;
-} & ComponentProps<typeof DropdownMenuContent>) {
-  const pinned = thread.pinnedAt !== null;
-  const archived = thread.archivedAt !== null;
+}: ItemProps & { beforeSnooze?: () => void } & ComponentProps<typeof DropdownMenuContent>) {
   return (
     <DropdownMenuContent align="end" className="w-56" {...props}>
       <DropdownMenuGroup>
@@ -57,36 +104,9 @@ export function ThreadActionsContent({
           <Link aria-hidden="true" />
           Copy thread URL
         </DropdownMenuItem>
-        <DropdownMenuItem
-          onClick={() => {
-            shell.pin(thread.id, !pinned);
-          }}
-        >
-          {pinned ? <PinOff aria-hidden="true" /> : <Pin aria-hidden="true" />}
-          {pinned ? "Unpin thread" : "Pin thread"}
-        </DropdownMenuItem>
-        <DropdownMenuItem
-          onClick={() => {
-            beforeSnooze?.();
-            shell.askSnooze(thread.id);
-          }}
-        >
-          <AlarmClock aria-hidden="true" />
-          Snooze
-          {thread.snoozedUntil !== null && (
-            <DropdownMenuShortcut>
-              {wakeText(new Date(thread.snoozedUntil), "menu")}
-            </DropdownMenuShortcut>
-          )}
-        </DropdownMenuItem>
-        <DropdownMenuItem
-          onClick={() => {
-            shell.archive(thread.id, !archived);
-          }}
-        >
-          {archived ? <ArchiveRestore aria-hidden="true" /> : <Archive aria-hidden="true" />}
-          {archived ? "Unarchive" : "Archive"}
-        </DropdownMenuItem>
+        <PinItem shell={shell} thread={thread} />
+        <SnoozeItem shell={shell} thread={thread} before={beforeSnooze} />
+        <ArchiveItem shell={shell} thread={thread} />
       </DropdownMenuGroup>
       <DropdownMenuSeparator />
       <DropdownMenuItem

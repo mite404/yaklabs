@@ -3,7 +3,7 @@ import type { ThreadSummary } from "@yaklabs/runtime";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useRuntime } from "../runtime";
-import { useShell } from "./model";
+import { useShell, type Shell } from "./model";
 import { snoozeChoices, snoozeQuestion, wakeFor, type SnoozeChoice } from "./snooze";
 
 // The card's tiles, once the thread's turns are read.
@@ -30,19 +30,24 @@ function useChoices(thread: ThreadSummary, asking: boolean): Ready | null {
 
 /**
  * The snooze card for a thread (ADR-125) while the thread menu has it open: the agent's card,
- * named Snooze, with the tiles `snoozeChoices` finds and a field for any time. A typed time
- * that cannot be read keeps the card open and says so. Undefined while it is closed.
+ * named Snooze, with the tiles `snoozeChoices` finds and a field for any time. Undefined while
+ * it is closed.
  */
 export function useSnoozeCard(thread: ThreadSummary): HostAsk | undefined {
   const shell = useShell();
   const ready = useChoices(thread, shell?.snoozing === thread.id);
-  if (shell === null || ready === null) return undefined;
+  return shell === null || ready === null ? undefined : snoozeCard(shell, thread, ready.choices);
+}
+
+// The card itself: its question, and what an answer does. A typed time that cannot be read
+// keeps the card open and says so.
+function snoozeCard(shell: Shell, thread: ThreadSummary, choices: SnoozeChoice[]): HostAsk {
   const wakes = thread.snoozedUntil === null ? null : new Date(thread.snoozedUntil);
   return {
     label: "Snooze",
-    question: snoozeQuestion(ready.choices, wakes),
+    question: snoozeQuestion(choices, wakes),
     onAnswer: (answer) => {
-      const until = wakeFor(answer, ready.choices, new Date());
+      const until = wakeFor(answer, choices, new Date());
       if (until !== undefined) {
         shell.snooze(thread.id, until);
         return;
