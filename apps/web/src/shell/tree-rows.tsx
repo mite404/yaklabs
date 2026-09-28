@@ -1,10 +1,19 @@
 import type { ThreadSummary } from "@yaklabs/runtime";
 import { SidebarMenuButton } from "@yaklabs/ui/components/sidebar";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@yaklabs/ui/components/tooltip";
-import { AlarmClock, Archive, ChevronDown, ChevronRight, Pin, type LucideIcon } from "lucide-react";
+import {
+  AlarmClock,
+  Archive,
+  ChevronDown,
+  ChevronRight,
+  Pin,
+  PinOff,
+  type LucideIcon,
+} from "lucide-react";
 import { useState, type ReactElement } from "react";
 import { Link } from "react-router";
 import { usePaths } from "../runtime";
+import { useShell } from "./model";
 import { rowLook, type Mark, type RowLook } from "./row-marks";
 
 // A row: the hover fill stays inside the sidebar's padding, with the site's 4px corners.
@@ -137,6 +146,36 @@ function FoldButton({
   );
 }
 
+// A pinned row's Unpin (ADR-127), at its right end, shown while the pointer or the focus is on
+// the row (`group/thread` is the row's list item) and always on a touch screen, which has no
+// hover to show it. It sits beside the row, not in its link, since a button may not live in one.
+// A row that shows a count leaves that its corner, so this stands one step left of it. Nothing
+// unless the thread is pinned.
+function UnpinButton({ thread, beside }: { thread: ThreadSummary; beside?: boolean }) {
+  const shell = useShell();
+  if (shell === null || thread.pinnedAt === null) return null;
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <button
+            type="button"
+            aria-label={`Unpin ${thread.title}`}
+            data-slot="unpin"
+            onClick={() => {
+              shell.pin(thread.id, false);
+            }}
+            className={`absolute top-1/2 ${beside === true ? "right-7" : "right-1"} z-10 flex size-6 -translate-y-1/2 items-center justify-center rounded-[var(--radius)] border-0 bg-transparent p-0 text-soft-ink opacity-0 outline-hidden ring-sidebar-ring transition-opacity group-focus-within/thread:opacity-100 group-hover/thread:opacity-100 hover:bg-paper-deep hover:text-ink focus-visible:opacity-100 focus-visible:ring-2 motion-reduce:transition-none [@media(hover:none)]:opacity-100`}
+          />
+        }
+      >
+        <PinOff className="size-3.5" aria-hidden="true" />
+      </TooltipTrigger>
+      <TooltipContent side="top">Unpin thread</TooltipContent>
+    </Tooltip>
+  );
+}
+
 /**
  * A main thread with sub-threads: the stretched-link pattern (Bootstrap's recipe), so a click
  * anywhere on the row still opens the thread while a separate button folds the children, and
@@ -162,34 +201,37 @@ function FoldableMainRow({
   const { pathTo } = usePaths();
   const look = rowLook(thread);
   return (
-    <Named
-      name={look.tooltip}
-      always={look.alwaysTip}
-      row={
-        <div
-          data-slot="thread-row"
-          data-active={active || undefined}
-          className={`${THREAD_ROW} group/fold relative flex items-center gap-2 ${look.ink} hover:bg-sidebar-accent hover:text-sidebar-accent-foreground active:bg-sidebar-accent active:text-sidebar-accent-foreground data-active:bg-sidebar-accent data-active:font-medium data-active:text-ink`}
-        >
-          <Link
-            to={pathTo(thread.id)}
-            aria-current={active ? "page" : undefined}
-            data-thread="main"
-            className="flex min-w-0 items-center gap-2 text-inherit outline-hidden after:absolute after:inset-0 after:rounded-[var(--radius)] focus-visible:after:ring-2 focus-visible:after:ring-sidebar-ring"
+    <>
+      <Named
+        name={look.tooltip}
+        always={look.alwaysTip}
+        row={
+          <div
+            data-slot="thread-row"
+            data-active={active || undefined}
+            className={`${THREAD_ROW} group/fold relative flex items-center gap-2 ${look.ink} hover:bg-sidebar-accent hover:text-sidebar-accent-foreground active:bg-sidebar-accent active:text-sidebar-accent-foreground data-active:bg-sidebar-accent data-active:font-medium data-active:text-ink`}
           >
-            <RowWords thread={thread} look={look} />
-          </Link>
-          <FoldButton open={open} count={count} title={thread.title} onToggle={onToggle} />
-          <span
-            data-slot="thread-count"
-            aria-hidden="true"
-            className="ml-auto shrink-0 text-xs text-soft-ink tabular-nums"
-          >
-            {count}
-          </span>
-        </div>
-      }
-    />
+            <Link
+              to={pathTo(thread.id)}
+              aria-current={active ? "page" : undefined}
+              data-thread="main"
+              className="flex min-w-0 items-center gap-2 text-inherit outline-hidden after:absolute after:inset-0 after:rounded-[var(--radius)] focus-visible:after:ring-2 focus-visible:after:ring-sidebar-ring"
+            >
+              <RowWords thread={thread} look={look} />
+            </Link>
+            <FoldButton open={open} count={count} title={thread.title} onToggle={onToggle} />
+            <span
+              data-slot="thread-count"
+              aria-hidden="true"
+              className="ml-auto shrink-0 text-xs text-soft-ink tabular-nums"
+            >
+              {count}
+            </span>
+          </div>
+        }
+      />
+      <UnpinButton thread={thread} beside />
+    </>
   );
 }
 
@@ -225,26 +267,29 @@ export function ThreadRow({
   }
   const look = rowLook(thread);
   return (
-    <Named
-      name={look.tooltip}
-      always={look.alwaysTip}
-      row={
-        <SidebarMenuButton
-          render={<Link to={pathTo(thread.id)} />}
-          isActive={active}
-          aria-current={active ? "page" : undefined}
-          data-thread={kind}
-          className={`${THREAD_ROW} ${NO_ACTION} ${look.ink} data-active:text-ink`}
-        >
-          {kind === "child" && (
-            <span aria-hidden="true" className="shrink-0">
-              ↳
-            </span>
-          )}
-          <RowWords thread={thread} look={look} />
-        </SidebarMenuButton>
-      }
-    />
+    <>
+      <Named
+        name={look.tooltip}
+        always={look.alwaysTip}
+        row={
+          <SidebarMenuButton
+            render={<Link to={pathTo(thread.id)} />}
+            isActive={active}
+            aria-current={active ? "page" : undefined}
+            data-thread={kind}
+            className={`${THREAD_ROW} ${NO_ACTION} ${look.ink} data-active:text-ink`}
+          >
+            {kind === "child" && (
+              <span aria-hidden="true" className="shrink-0">
+                ↳
+              </span>
+            )}
+            <RowWords thread={thread} look={look} />
+          </SidebarMenuButton>
+        }
+      />
+      <UnpinButton thread={thread} />
+    </>
   );
 }
 

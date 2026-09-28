@@ -72,7 +72,7 @@ function MainRows({
   const hasChildren = children.length > 0;
   return (
     <>
-      <SidebarMenuItem>
+      <SidebarMenuItem className="group/thread">
         <ThreadRow
           thread={main}
           active={at === main.id}
@@ -92,7 +92,7 @@ function MainRows({
       </SidebarMenuItem>
       {open &&
         children.map((thread) => (
-          <SidebarMenuItem key={thread.id}>
+          <SidebarMenuItem key={thread.id} className="group/thread">
             <ThreadRow thread={thread} active={at === thread.id} kind="child" />
           </SidebarMenuItem>
         ))}
