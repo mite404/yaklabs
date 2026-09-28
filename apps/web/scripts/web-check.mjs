@@ -67,7 +67,7 @@ async function carryTo(from, to) {
 // The main threads a tab's sidebar lists, top to bottom.
 const mainTitles = (tab) => tab.locator('[data-thread="main"]').allTextContents();
 
-// The theme lives in the account menu, in the title bar's corner.
+// The theme lives in the account menu, at the sidebar's foot.
 async function chooseTheme(name) {
   await page.getByRole("button", { name: "Account" }).click();
   await page.getByRole("menuitemradio", { name }).click();
@@ -1406,16 +1406,55 @@ try {
   );
 
   await onOwnPage(
-    "on desktop the sidebar has no Account button, since the rail shares its children",
+    "on desktop the one Account button is at the sidebar's foot, and the bell is the bar's last control",
     "/t/t-005?scenario=demo",
     {},
     async (own) => {
       await own.locator('[data-slot="sidebar"]').first().waitFor({ timeout: 15_000 });
-      const count = await own
-        .locator('[data-slot="sidebar"]')
+      const all = await own.getByRole("button", { name: "Account" }).count();
+      const account = own.locator('[data-slot="sidebar"]').getByRole("button", { name: "Account" });
+      const inSidebar = await account.count();
+      const inTitleBar = await own
+        .locator('header[data-slot="title-bar"]')
         .getByRole("button", { name: "Account" })
         .count();
-      return { ok: count === 0, detail: `${count} Account button(s) in the desktop sidebar` };
+      const inNav = await own
+        .locator('[role="navigation"][aria-label="Sidebar"]')
+        .getByRole("button", { name: "Account" })
+        .count();
+      const face = await account.boundingBox();
+      const sidebarBox = await own.locator('[data-slot="sidebar-container"]').boundingBox();
+      const foot = face.y + face.height >= sidebarBox.y + sidebarBox.height - 16;
+      const bell = await own
+        .locator('header[data-slot="title-bar"]')
+        .getByRole("button", { name: /^Notifications/ })
+        .boundingBox();
+      const rightmost = await own
+        .locator('header[data-slot="title-bar"]')
+        .getByRole("button")
+        .evaluateAll((els) => Math.max(...els.map((el) => el.getBoundingClientRect().right)));
+      const bellLast = Math.abs(bell.x + bell.width - rightmost) < 1;
+      await account.click();
+      const opened = await own.getByRole("menu").boundingBox();
+      const view = own.viewportSize();
+      const onScreen =
+        opened !== null &&
+        opened.x >= 0 &&
+        opened.y >= 0 &&
+        opened.x + opened.width <= view.width &&
+        opened.y + opened.height <= view.height;
+      await own.keyboard.press("Escape");
+      return {
+        ok:
+          all === 1 &&
+          inSidebar === 1 &&
+          inTitleBar === 0 &&
+          inNav === 0 &&
+          foot &&
+          bellLast &&
+          onScreen,
+        detail: `${all} Account button(s) on the page; ${inSidebar} in the sidebar, ${inTitleBar} in the bar, ${inNav} inside the navigation landmark; at the foot ${foot}; bell is the bar's last control ${bellLast}; menu on screen ${onScreen}`,
+      };
     },
   );
 

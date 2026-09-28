@@ -403,7 +403,7 @@ export const shellChecks = {
     const toggle = await boxOf(bar.getByRole("button", { name: "Toggle sidebar" }));
     const strip = await boxOf(bar.getByRole("tablist", { name: "Open threads" }));
     const bell = await boxOf(bar.getByRole("button", { name: "Notifications" }));
-    const account = await boxOf(bar.getByRole("button", { name: "Account" }));
+    const accountsInBar = await bar.getByRole("button", { name: "Account" }).count();
     const rightmost = await bar
       .getByRole("button")
       .evaluateAll((els) => Math.max(...els.map((el) => el.getBoundingClientRect().right)));
@@ -423,13 +423,13 @@ export const shellChecks = {
       lightsHidden === "true" &&
       lightsBox.x + lightsBox.width <= toggle.x &&
       toggle.x + toggle.width <= strip.x &&
-      bell.x + bell.width <= account.x &&
-      near(account.x + account.width, rightmost) &&
+      accountsInBar === 0 &&
+      near(bell.x + bell.width, rightmost) &&
       side.y >= barBox.y + barBox.height - 1 &&
       narrow.x === 0;
     return {
       ok,
-      detail: `window ${JSON.stringify(win)} radius ${radius}; bar ${JSON.stringify(barBox)}; lights before toggle ${lightsBox.x + lightsBox.width <= toggle.x}; toggle before tabs ${toggle.x + toggle.width <= strip.x}; bell before account ${bell.x + bell.width <= account.x}; account rightmost ${near(account.x + account.width, rightmost)}; sidebar under bar ${side.y >= barBox.y + barBox.height - 1}; full-bleed at 700px ${narrow.x === 0}`,
+      detail: `window ${JSON.stringify(win)} radius ${radius}; bar ${JSON.stringify(barBox)}; lights before toggle ${lightsBox.x + lightsBox.width <= toggle.x}; toggle before tabs ${toggle.x + toggle.width <= strip.x}; accounts in the bar ${accountsInBar}; bell rightmost ${near(bell.x + bell.width, rightmost)}; sidebar under bar ${side.y >= barBox.y + barBox.height - 1}; full-bleed at 700px ${narrow.x === 0}`,
     };
   },
 
