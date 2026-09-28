@@ -1925,5 +1925,12 @@ separates steady work from an alarm; an alarm never pauses. The Speeds story pla
 1350 and 1500ms side by side, because
 timing is a taste call that is easier to defend with the alternatives on screen than in words.
 
+The orbit variant runs on the same clock. Clockwise order is data, a table of each square's
+place in the lap (`CLOCKWISE_STEP` in `AgentWorking.tsx`), and CSS turns that place into a delay:
+step / cells of a loop. The orbit's keyframes rise fast and fall slowly, like a comet, because a
+symmetric fade has no front: the eye cannot tell which way a blob of light is going unless one
+edge is sharp. Six squares (two columns of three in the same 12px height) use the same table
+with six stops.
+
 Senior-engineer takeaway: when motion must stay in sync, derive every actor from one clock. A
 second keyframe track would drift the moment someone changed one duration and not the other.
