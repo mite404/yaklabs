@@ -102,6 +102,18 @@ The row keeps a stretched link (Bootstrap's own pattern) so a click anywhere on 
 thread, with the fold button lifted above that layer so it still catches its own clicks (ADR-093,
 amended by ADR-124).
 
+Every thread then got its own "⋯": the thread actions menu (ADR-126). Six verbs, in the order
+Ethan set: Copy thread URL, Share thread, Pin thread, Snooze, Archive, and Delete below a rule.
+Pin lifts a thread to the top of its own list and puts a pin in its title bar that is also the
+way to unpin (ADR-127). Snooze asks "When should this thread come back?" on the same ask card the
+agent uses, keeps the thread in place with a clock before its title, and rings the bell when it
+wakes (ADR-128). Archive settles a thread to the bottom of its list, dimmed, behind a closed
+filebox, and a thread nobody touches for 14 days now settles there by itself (ADR-129). Delete
+hides at once and offers Undo for ten seconds instead of asking "are you sure?" (ADR-130). And
+Share, after Ethan's reminder that this is an app about privacy, makes a thread public only for
+a length of time you pick, 1 hour to 7 days, sealed on your device so the server holds a locked
+box it has no key to (ADR-131).
+
 ## 2. Cast & Crew
 
 The first entries are ideas from before any code existed; the rest are parts of the running app.
@@ -176,6 +188,20 @@ The first entries are ideas from before any code existed; the rest are parts of 
   bare again. Kay stands in the corner like a mascot on a studio lot, and the drawing behind the
   words is a stencil, a mask the ink shines through, so it re-lights for dark mode on its own
   (ADR-113).
+
+- **The thread actions menu** (`apps/web/src/shell/thread-actions-menu.tsx`) is the slate
+  clapper each shot carries: one per thread, clipped to the thread's own title bar, and on a
+  phone to the one bar there is (ADR-126). What it writes goes to the runtime as a `mark`,
+  `delete` or `share` command, so the sidebar, the title bar and the menu all read the same
+  marks from the next snapshot.
+- **The settler** (`packages/runtime/src/settle.ts`, run by `settler.ts`) is the night-shift
+  script supervisor. Nobody calls it for a scene; it walks the set after every take and on a
+  timer, wakes the snoozed threads that are due, files away mains idle for 14 days, and sweeps up
+  deleted ones once Undo can no longer bring them back (ADR-129, ADR-130).
+- **The share vault** (`apps/gateway/src/shares.ts`) is a film vault that takes sealed canisters
+  it cannot open. The page seals the thread and keeps the key in the link's `#`, which browsers
+  never send, so the vault stores a locked box with a destruction date stamped on it (KV's TTL)
+  and a hash of the receipt that lets its owner pull it early (ADR-131).
 
 ## 3. Behind the Scenes
 
@@ -349,6 +375,26 @@ The first entries are ideas from before any code existed; the rest are parts of 
 - **The query picks the bar, and storage keeps it.** The app's links keep only `?scenario=`, so
   `?chrome=painting` would vanish on the first click. Rather than teach every link a second
   parameter, the page reads it once and stores it, the way the sidebar remembers open or closed.
+
+- **Undo, not "are you sure?".** A confirm dialog before every delete teaches people to click
+  through it, so it guards nothing. Undo catches the slip after the fact: the thread is only
+  marked deleted in SQLite (a tombstone) for ten seconds, and a settling pass removes it for good
+  afterwards (ADR-130).
+- **A sealed box with a clock, not the thread in the link.** A card's share link carries the card
+  itself (ADR-064), but a link has no way to stop working: whoever holds it holds the data
+  forever. Ethan wanted how long a public page lasts to be explicit, so the ciphertext lives on
+  the gateway with a KV TTL and dies on schedule, while the key stays in the fragment, where the
+  server never sees it (ADR-131).
+- **One pure plan for everything that happens later.** Snoozes waking, idle threads archiving,
+  tombstones purging and shares expiring are all "things due at a time". One function,
+  `planSettle`, takes the rows and the time and returns what to do and when to look again, so
+  every rule is tested as data with no clock, and one timer serves them all (ADR-129).
+- **The contract re-exported, not imported across.** The web app needed the gateway's share
+  contract, but the gateway's build already packs the web app's build, so a direct dependency
+  made a loop Turbo refuses. The runtime, which both sides already use, re-exports it (ADR-131).
+- **A dim ink chosen by calculation.** "Dimmed" is easy to overdo until the title fails
+  contrast. `--faint-ink` was computed to sit visibly under soft ink yet still clear 4.5:1 on both
+  papers in both themes (ADR-129).
 
 ## 4. Bloopers
 
@@ -821,6 +867,39 @@ The first entries are ideas from before any code existed; the rest are parts of 
   scroller keeps 32px of `scroll-padding` for its edge fade, and a tab exactly as wide as the
   scroller has no room for it. Below 768px that padding is now zero. Lesson: when a size refuses
   to change, ask what it is measured against before changing the number.
+
+- **The locator that grabbed the last thread's button.** Right after a sidebar click the address
+  changes, but for a moment the old thread's panel is not yet inert, so a locator for "the shown
+  panel's ⋯" resolved to the thread being left, and Pin pinned the wrong one. The lever now waits
+  for the panel labelled with the new title, and its compose box, before touching anything.
+  Lesson: "the visible one" is a race; wait for the one you mean by name.
+- **The lint fix that broke the build.** The pre-commit hook's `oxlint --fix` rewrote an index to
+  `.at(-1)`, whose type allows `undefined`, and the catalog's typecheck failed in CI. It passed
+  locally because Turbo replayed a cached typecheck. Every gate now runs with `--force` before a
+  push. Lesson: an automatic fix is a code change, and a cache can hide that it ever happened.
+- **The share link that pointed into a thread.** A card's "Copy public link" built
+  `share.html` relative to the page, so from `/t/t-005` it became `/t/share.html`, which the
+  router read as a thread called "share.html": "This thread is gone". It now resolves against the
+  site's root, and lever S3 opens a copied link to prove it.
+- **The title that ate the lane's handle.** To push the menu to the title bar's end, the title was
+  told to grow. In a canvas lane that made it cover the whole bar, so the middle of the bar, where
+  you grab a lane, was the title, which renames: the grip never showed and the lane never lifted.
+  Main's web-check caught it after the merge. The actions now push themselves along with an
+  automatic margin, and the title keeps its own width. Lesson: when a layout change needs room,
+  take it from the newcomer, not from the element other features stand on.
+- **Focus on the wrong button.** A failed thread's frame kept focus "on its button", found as the
+  first button in the frame. The frame's bar now carries the "⋯", which comes first, so a retry
+  left focus on the menu. The rule now looks only in the frame's body.
+- **The picture that waited forever.** To shoot menus once they stop fading, the script waited for
+  every animation on the page to finish, and the radar in the browser pane sweeps forever. It now
+  waits only for the menus' own animations.
+- **A comma a screen reader heard wrong.** The menu's status ("Private", "Tue 9:00") was joined to
+  the item's name by a hidden comma, but a flex row's parts join with a space, so the name read
+  "Share thread , Private", and Snooze's time was left out entirely. Both items now state their
+  name outright ("Snooze, Tue 9:00"), and lever A5 reads that name rather than the painted text.
+- **The ADR numbers taken twice.** Main merged work that took ADR-123, then ADR-124 and 125, while
+  this branch was open, so its decisions moved twice, ending at ADR-126 to 132. Lesson: number a
+  long branch's ADRs last, just before the merge.
 
 ## 5. Director's Commentary
 
@@ -1557,3 +1636,78 @@ and the answer was set aside, because the 44px rule was meant for the desktop an
 asked what a phone should be. A measurement settles the question you put to it; it cannot tell
 you that you asked the wrong one. When the question is "what should this be?", put a working
 build in the person's hand, as the picture of Amp's two rows did here, before you optimise.
+
+### Plan as data, act at the edge
+
+Four features needed "something happens later": a snooze wakes, an idle thread archives, a
+deleted one is purged, a share expires. Rather than four timers with four sets of bugs, one pure
+function reads the rows and the time and returns a plan; a thin actor applies it and sets one
+timer for the plan's `next`.
+
+```ts
+// packages/runtime/src/settle.ts (abridged): a calculation, no clock and no database
+export function planSettle({ rows, shares, now, starting }: SettleInput): SettlePlan {
+  const wake = rows.filter((row) => row.snoozedUntil !== null && row.snoozedUntil <= now); // due
+  const archive = deadlines.filter((each) => each.at <= now).map((each) => each.id); // idle 14d
+  const purge = tombs.filter((each) => starting || each.at <= now).map((each) => each.id);
+  const expire = shares.filter((share) => share.expiresAt <= now).map((share) => share.id);
+  const next = ahead.toSorted().at(0) ?? null; // → the earliest moment anything falls due
+  return { wake, archive, purge, expire, next };
+}
+```
+
+```mermaid
+flowchart LR
+  T[Worker starts / any write / timer fires] --> R[readSettleInput: rows, shares, now]
+  R --> P[planSettle: pure]
+  P --> A[settleThreads: one transaction]
+  A --> N[Notices: Back from snooze]
+  P -->|next, at most a day| T
+```
+
+The film version: the script supervisor does not shout "wake up" at an actor whenever they
+remember; they keep a call sheet of who is due when, check it at every break, and set one alarm
+for the next entry. The call sheet is data you can read and test; the alarm is the only moving
+part.
+
+Senior-engineer takeaway: Grokking Simplicity's split in practice. The rules (calculations) got
+exhaustive unit tests with made-up times; the actions (writing SQLite, posting a notice) are
+thin enough to trust, and a hand-cranked timer in the agent-loop tests proves they are wired.
+
+### The key never goes to the vault
+
+"Public for 1 day" is only a promise if something enforces it. The data rides to the gateway
+already sealed; the key rides in the part of the URL a browser never sends.
+
+```ts
+// apps/web/src/shell/share-thread.ts (abridged): seal on the page, send only ciphertext
+const { sealed, key } = await sealThread({ v: 1, title, messages, expiresAt }); // → bytes, key
+const response = await client.fetch(`${client.base}/api/shares?ttl=${seconds}`, {
+  method: "POST",
+  body: sealed, // the server stores this with expirationTtl = seconds
+});
+const link = threadLink(created.id, key, { href: client.base }); // → /share.html#t=<id>.<key>
+```
+
+```mermaid
+sequenceDiagram
+  participant P as Page (owner)
+  participant G as Gateway + KV
+  participant R as Reader
+  P->>P: seal thread with a fresh AES-GCM key
+  P->>G: POST ciphertext, ttl
+  G-->>P: id, revoke token (G keeps only its hash)
+  P->>R: link /share.html#t=id.key
+  R->>G: GET /api/shares/id (the fragment stays home)
+  G-->>R: ciphertext, until its TTL
+  R->>R: open with the key from the fragment
+  P->>G: DELETE with revoke token (Stop sharing)
+```
+
+The film version: you hand the vault a locked canister stamped "destroy on the 29th", and mail
+the key to your friend inside the invitation. The vault can prove it destroyed the canister, and
+it never had the key to peek.
+
+Senior-engineer takeaway: when privacy is the product, put the guarantee where a mistake cannot
+reach it. A server that never holds the key cannot leak the thread, and a store that deletes on
+a TTL cannot forget to.
