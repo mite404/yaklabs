@@ -21,6 +21,10 @@ const greetingFor = (part: Part, name: string | null): string =>
 
 const lineFor = (part: Part): string => `Spend your ${part} on the thing that matters.`;
 
+// Kay's own corners for the greeting's actions, the app's 8px and not the site's 4px button:
+// one step up from --radius, so it follows the token.
+const ACTION = "h-8 rounded-xl px-3";
+
 const LABEL = "text-[11px] font-medium tracking-[0.1em] text-soft-ink uppercase";
 
 function Greeting({ name }: { name: string | null }) {
@@ -102,19 +106,20 @@ export function Welcome({ thread }: { thread: ThreadSummary }) {
             More actions
           </h2>
           <div className="flex flex-wrap gap-2">
-            <Button variant="outline" size="sm" disabled title={NOT_HERE}>
+            <Button variant="outline" size="sm" className={ACTION} disabled title={NOT_HERE}>
               <FileText />
               Open file
             </Button>
             <Button
               variant="outline"
               size="sm"
+              className={ACTION}
               onClick={() => shell?.setPane(thread.id, "browser")}
             >
               <Globe />
               Open browser
             </Button>
-            <Button variant="outline" size="sm" disabled title={NOT_HERE}>
+            <Button variant="outline" size="sm" className={ACTION} disabled title={NOT_HERE}>
               <Terminal />
               Open terminal
             </Button>
