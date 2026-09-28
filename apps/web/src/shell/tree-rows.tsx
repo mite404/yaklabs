@@ -11,8 +11,14 @@ const ROW = "h-8 rounded-[var(--radius)] text-sm";
 
 // A project's threads sit one step in under its name, so the name reads as the label of the
 // group below it. The fill still spans the row; only the words move in. A child's "↳" stands
-// where its main's title starts, and its own title one step further in.
-const THREAD_ROW = `${ROW} pl-6`;
+// where its main's title starts, and its own title one step further in. The right keeps the
+// 8px every row has, so a long title or a fold arrow stops short of the fill's edge.
+const THREAD_ROW = `${ROW} pl-6 pr-2`;
+
+// shadcn leaves room at a row's right end when its item holds an action. The project's "+"
+// shares its item with the project's threads, so that room reaches every thread row, though
+// none of them holds an action of its own; each takes it back for its title.
+const NO_ACTION = "group-has-data-[sidebar=menu-action]/menu-item:pr-2";
 
 // A row's own title, truncated to whatever room its row leaves it. `block` matters here: as a
 // flex item's child it would otherwise stay inline and ignore that width.
@@ -146,7 +152,7 @@ export function ThreadRow({
           isActive={active}
           aria-current={active ? "page" : undefined}
           data-thread={kind}
-          className={`${THREAD_ROW} text-soft-ink data-active:text-ink`}
+          className={`${THREAD_ROW} ${NO_ACTION} text-soft-ink data-active:text-ink`}
         >
           {kind === "child" && (
             <span aria-hidden="true" className="shrink-0 text-soft-ink">

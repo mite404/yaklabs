@@ -1572,6 +1572,26 @@ try {
   );
 
   await onOwnPage(
+    "every thread row keeps only 8px at its right, with no room left for a count",
+    "/?scenario=demo",
+    {},
+    async (own) => {
+      const side = own.locator('[data-slot="sidebar"]');
+      await side.locator('[data-slot="thread-row"]').first().waitFor({ timeout: 15_000 });
+      // The element that paints each row's fill: the foldable main's wrapper, else the link.
+      const rows = await side
+        .locator('[data-slot="thread-row"], a[data-thread]:not([data-slot="thread-row"] a)')
+        .evaluateAll((all) =>
+          all.map((row) => `${row.textContent.trim()} ${getComputedStyle(row).paddingRight}`),
+        ); // → string[]
+      return {
+        ok: rows.length > 2 && rows.every((row) => row.endsWith(" 8px")),
+        detail: rows.join("; "),
+      };
+    },
+  );
+
+  await onOwnPage(
     "clicking a main row's empty space opens it, and its arrow only folds",
     "/?scenario=demo",
     {},
