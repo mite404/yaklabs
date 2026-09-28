@@ -1,0 +1,77 @@
+/* Microinteractions and motion. Every colour here is a brand token; the timing lives in one
+   custom property per component so Storybook can scrub it without touching the keyframes. */
+
+/* Agent working: Kay's 2x2 task-size glyph as a wave. Each square fades in to the strongest
+   green, then fades out through lighter greens, and the right column runs a step behind the
+   left, so the lit edge travels left to right. Colour follows opacity: solid is darkest. */
+.agent-working {
+  /* Light mode: moss when solid, olive on the way out, sage near clear. */
+  --working-strong: var(--moss);
+  --working-mid: var(--yak-green);
+  --working-soft: var(--sage);
+  --working-duration: 150ms;
+  /* The right column runs 35% of a cycle behind, so it peaks as the left one starts to fade.
+     Written as a head start of 65% (a negative delay), so no square waits blank on load. */
+  --working-lag: calc(var(--working-duration) * -0.65);
+  display: inline-grid;
+  grid-template-columns: repeat(2, 5px);
+  grid-auto-rows: 5px;
+  gap: 2px;
+  flex: none;
+}
+/* Dark mode flips the ramp, so "solid" still means the most contrast against the paper. */
+:root[data-theme="dark"] .agent-working {
+  --working-strong: var(--sage);
+  --working-mid: var(--olive);
+  --working-soft: var(--yak-green);
+}
+.agent-working-cell {
+  border-radius: 1px;
+  background: var(--working-strong);
+  opacity: 0;
+  animation: agent-working-wave var(--working-duration) linear infinite;
+  animation-delay: var(--working-offset, 0ms);
+}
+/* Grid order is TL, TR, BL, BR: the right column (2nd, 4th) lags. */
+.agent-working-cell:nth-child(even) {
+  --working-offset: var(--working-lag);
+}
+/* Freeze a phase for review: Storybook's frame strip sets --working-phase (0-1). */
+.agent-working[data-frozen] .agent-working-cell {
+  animation-play-state: paused;
+  animation-delay: calc(
+    var(--working-offset, 0ms) - var(--working-phase) * var(--working-duration)
+  );
+}
+@keyframes agent-working-wave {
+  0% {
+    opacity: 0;
+    background: var(--working-soft);
+  }
+  35%,
+  50% {
+    opacity: 1;
+    background: var(--working-strong);
+  }
+  75% {
+    opacity: 0.55;
+    background: var(--working-mid);
+  }
+  100% {
+    opacity: 0;
+    background: var(--working-soft);
+  }
+}
+/* No wave under reduced motion: the glyph holds still, half lit, still reading as "busy".
+   A frozen review frame is already still, so it keeps its phase. */
+@media (prefers-reduced-motion: reduce) {
+  .agent-working:not([data-frozen]) .agent-working-cell {
+    animation: none;
+    opacity: 0.55;
+    background: var(--working-mid);
+  }
+  .agent-working:not([data-frozen]) .agent-working-cell:nth-child(odd) {
+    opacity: 1;
+    background: var(--working-strong);
+  }
+}
