@@ -159,19 +159,6 @@ describe("the store keeps lanes", () => {
     expect(once.lanes).toEqual({ [main]: [card, threadLane(child)], [other]: [] });
   });
 
-  it("keeps a collapsed lane collapsed, at its width, in a store opened on the same file", async () => {
-    const store = await openStore();
-    addChild(store, "child");
-    const lanes = [
-      { ...card, collapsed: true },
-      { ...threadLane(child), collapsed: true },
-    ];
-    store.arrange(main, lanes);
-    expect(lanesOf(store.workspace(), main)).toEqual(lanes);
-    store.arrange(main, [card, threadLane(child)]);
-    expect(lanesOf(store.workspace(), main).map((lane) => lane.collapsed)).toEqual([false, false]);
-  });
-
   it("refuses a canvas for a sub-thread, an unknown thread, or another main's child", async () => {
     const store = await openStore();
     addChild(store, "child");
@@ -193,6 +180,21 @@ describe("the store keeps lanes", () => {
       store.addThread(thread("third", { kind: "main", projectId: store1 }, 4), 0);
     }).toThrow("third is a main thread, so it has no lane");
     expect(store.workspace().threads.map((each) => each.id)).toEqual(["main", "other"]);
+  });
+});
+
+describe("the store keeps a collapsed lane (ADR-124)", () => {
+  it("keeps a collapsed lane collapsed, at its width, in a store opened on the same file", async () => {
+    const store = await openStore();
+    addChild(store, "child");
+    const lanes = [
+      { ...card, collapsed: true },
+      { ...threadLane(child), collapsed: true },
+    ];
+    store.arrange(main, lanes);
+    expect(lanesOf(store.workspace(), main)).toEqual(lanes);
+    store.arrange(main, [card, threadLane(child)]);
+    expect(lanesOf(store.workspace(), main).map((lane) => lane.collapsed)).toEqual([false, false]);
   });
 });
 

@@ -154,7 +154,9 @@ describe("lane edits are idempotent list edits", () => {
     expect(once.map((each) => each.width)).toEqual([null, width, null]);
     expect(resizeLane(once, lane("b"), width)).toEqual(once);
   });
+});
 
+describe("collapsing lanes (ADR-124)", () => {
   it.each([
     ["collapses", true],
     ["expands", false],

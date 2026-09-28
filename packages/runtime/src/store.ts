@@ -1,7 +1,7 @@
 import { threads, type Thread, type ThreadMessage } from "@yaklabs/catalog/thread";
 import type { Transcript } from "./conversation";
 import type { RenameTarget } from "./protocol";
-import { DEMO_PROJECT, PROFIT } from "./schema";
+import { DEMO_PROJECT, PROFIT } from "./v2Plan";
 import type {
   Lane,
   Notification,

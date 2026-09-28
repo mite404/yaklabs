@@ -1,7 +1,8 @@
 import type { Database } from "@sqlite.org/sqlite-wasm";
 import { describe, expect, it, onTestFinished } from "vitest";
 import type { LegacyCanvas } from "./protocol";
-import { migrate, migrationSteps, planV2, type V1Row } from "./schema";
+import { migrate, migrationSteps } from "./schema";
+import { planV2, type V1Row } from "./v2Plan";
 import { openDatabase } from "./sqliteStore";
 import { threadIdSchema, threadLane } from "./workspace";
 
