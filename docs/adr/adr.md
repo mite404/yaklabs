@@ -1421,3 +1421,37 @@ marker in the bar, and ADR-116, whose phone top row counted it among five contro
 The bar no longer says whether a thread is mock, kept on this device, or answered by a live
 model, so a private window that cannot keep threads no longer warns before they vanish; Ethan
 accepted that gap and may ask for a delineation again later.
+
+## ADR-124 - A main thread's fold arrow sits beside its name; its count is read only
+
+2026-09-28 - Accepted (Ethan); amends ADR-093.
+ADR-093 put a project's fold chevron right after its name, but a main thread with sub-threads
+still folded them behind a count at the row's far right ("^ 2"), a second design for the same
+job. The fold button now sits right after the title, sharing the project row's own chevron: ">"
+while folded, and open, a "v" while the pointer is on the row. Ethan first dropped the count as
+clutter, then asked for it back: the number of children stays at the row's far right, but as
+plain text with no arrow, so folding has one control, the arrow. The count is hidden from
+assistive tech, since the fold button names it ("Hide the 2 threads in ...").
+An open fold's "v" fades out as soon as the pointer leaves, on a project and a main alike (Ethan:
+"as soon as the mouse is off hover ... this icon should fade away"). Keyboard focus shows it too,
+but only `:focus-visible`: a click leaves focus on the button, and `:focus-within` would hold the
+"v" up until the next click elsewhere.
+A touch screen has no hover to reveal the "v", so there (`@media (hover: none)`) an open fold
+always shows it, on a project and a main alike (Ethan, asked whether it should: "yes").
+The row is a link, so its fold button cannot nest inside it; the row uses the stretched-link
+pattern instead (Bootstrap's recipe). The link stays sized to its title, with an `::after` that
+stretches to the row's edges since the row, not the link, is the nearest positioned ancestor, so
+a click anywhere on the row still opens the thread. The button sits after the title in flow,
+lifted above that layer by its own stacking context (`relative z-10`), so it still catches its
+own clicks and only folds the children.
+
+## ADR-125 - The sidebar lists threads by creation, never by what was opened
+
+2026-09-28 - Accepted (Ethan).
+A main's children were listed in canvas lane order: open lanes first, then the closed ones. A
+click on a closed child's row reopens its lane, so the row jumped up the list, out from under
+the pointer that had just clicked it. Ethan: "when a user interacts with the thread, by opening
+it in the side nav bar it should not be rearranged ... that's bad UI." The recency he asked for
+is creation order, newest first: mains stay newest created first, and at Ethan's word children
+now list the same way under their main. Opening, closing or dragging a lane never moves a row,
+and nothing in the sidebar sorts by activity. The canvas keeps its own lane order.

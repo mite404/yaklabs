@@ -54,7 +54,7 @@ describe("the demo scenario", () => {
       {
         "Demo store": [
           ["Refund audit"],
-          [profitTitle, "Saturday leads at every level", "Why is Tuesday quiet?"],
+          [profitTitle, "Why is Tuesday quiet?", "Saturday leads at every level"],
         ],
       },
       { "Service desk": [[trendTitle]] },
