@@ -235,16 +235,12 @@ try {
   await shot("thread-after-reload");
   const turns = await page.locator(".turn-user, .turn-agent").allTextContents();
   record(
-    "the conversation survives a reload",
+    // A reload throws away everything a worker held only in memory, so this already proves the
+    // thread is kept on this device, not just in the tab's memory.
+    "the conversation survives a reload: threads are kept on this device",
     turns.some((t) => t.includes("Why is Saturday so high?")) &&
       turns.some((t) => t.includes("Answering about Net profit")),
     `${turns.length} turns after reload`,
-  );
-  const marker = (await page.locator('[data-slot="data-marker"]').innerText()).trim();
-  record(
-    "the marker says the threads are kept on this device, not in memory",
-    marker === "On this device",
-    marker,
   );
 
   // The look is measured, not the attribute: the page, the paper and the ink must all move.
@@ -1656,34 +1652,6 @@ try {
   );
 
   await onOwnPage(
-    "the data marker is a button whose accessible description is its hint",
-    "/t/t-005?scenario=demo",
-    {},
-    async (own) => {
-      await tabsOf(own).first().waitFor({ timeout: 15_000 });
-      const cdp = await own.context().newCDPSession(own);
-      const { root } = await cdp.send("DOM.getDocument");
-      const { nodeId } = await cdp.send("DOM.querySelector", {
-        nodeId: root.nodeId,
-        selector: ':has(> [data-slot="data-marker"])',
-      });
-      const [node] = (await cdp.send("Accessibility.getPartialAXTree", { nodeId })).nodes;
-      const read = {
-        role: node.role?.value,
-        name: node.name?.value,
-        description: node.description?.value ?? "",
-      };
-      return {
-        ok:
-          read.role === "button" &&
-          read.name === "Mock: demo" &&
-          read.description.includes("Nothing here is saved"),
-        detail: JSON.stringify(read),
-      };
-    },
-  );
-
-  await onOwnPage(
     "a thread page and /lab each have exactly one main landmark",
     "/t/t-005?scenario=demo",
     {},
@@ -1886,11 +1854,14 @@ try {
   await mock.getByRole("link", { name: /Fieldnotes/ }).click();
   await mock.locator('[data-thread="main"]').first().waitFor({ timeout: 20_000 });
   const landed = new URL(mock.url());
-  const mockMarker = (await mock.locator('[data-slot="data-marker"]').innerText()).trim();
+  const demoProject = await mock
+    .locator('[data-slot="sidebar"]')
+    .getByText("Demo store", { exact: true })
+    .count();
   record(
     "the lab's brand link keeps the scenario, so a mock visit stays on mock data",
-    landed.searchParams.get("scenario") === "demo" && mockMarker === "Mock: demo",
-    `${landed.pathname}${landed.search} · ${mockMarker}`,
+    landed.searchParams.get("scenario") === "demo" && demoProject > 0,
+    `${landed.pathname}${landed.search} · Demo store in the sidebar ${demoProject > 0}`,
   );
   await mock.close();
 

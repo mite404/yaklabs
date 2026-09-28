@@ -87,6 +87,11 @@ moves from the bar to the foot of that drawer, and the canvas becomes somewhere 
 than arrange (ADR-122). On a phone, dragging a lane sideways fought the row's own sideways scroll,
 so the drag is simply off there, and the lanes still scroll. One fact decides all three: the
 sidebar's own `isMobile`, the same 768px line the styles use.
+The title bar's pill is gone. It once said "Mock: demo", "On this device" or "Not saved", and
+"· Live model" when one answered - Ethan's call was that the pill added noise without a real
+plan behind it yet, so it and the logic behind it are deleted outright, not just hidden
+(ADR-123, amending ADR-096 and ADR-116). He may ask for a delineation again once there is
+something worth delineating.
 A main thread's fold arrow then moved to sit beside its own name, matching the project row's, and
 the count of sub-threads it used to carry ("^ 2") is gone at Ethan's word - clutter, not signal.
 The row keeps a stretched link (Bootstrap's own pattern) so a click anywhere on it still opens the

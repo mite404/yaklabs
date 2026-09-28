@@ -3,7 +3,7 @@
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { ROOT } from "./harness.mjs";
-import { BASE } from "./lever.mjs";
+import { BASE, sidebarDrawn } from "./lever.mjs";
 
 export const BASELINE = path.join(ROOT, ".artifacts/polish/baseline");
 export const THEMES = ["light", "dark"];
@@ -27,8 +27,8 @@ const addressOf = (scenario, query) =>
   `${BASE}/?scenario=${scenario}${query === undefined ? "" : `&${query}`}`;
 
 /**
- * A fresh context on a scenario in a theme, ready once the data marker shows and the sidebar
- * has stopped loading (SC-bar). `motion` is "reduce" unless a predicate says otherwise.
+ * A fresh context on a scenario in a theme, ready once the sidebar has drawn and stopped
+ * loading (SC-bar). `motion` is "reduce" unless a predicate says otherwise.
  */
 export async function openScenario(
   browser,
@@ -58,7 +58,7 @@ export async function openScenario(
   });
   await page.goto(addressOf(scenario, query), { waitUntil: "load" });
   if (ready) {
-    await page.locator('[data-slot="data-marker"]').waitFor({ timeout: 20_000 });
+    await sidebarDrawn(page);
     await page
       .locator('[data-sidebar="menu-skeleton"]')
       .first()
@@ -273,7 +273,7 @@ async function record(browser, theme) {
   await bar.context.close();
   for (const scenario of ["long", "loading"]) {
     const opened = await openScenario(browser, { scenario, theme, ready: false });
-    await opened.page.locator('[data-slot="data-marker"]').waitFor({ timeout: 20_000 });
+    await sidebarDrawn(opened.page);
     await opened.page.waitForTimeout(1500);
     out[scenario] = {
       header: await titleBar(opened.page).ariaSnapshot(),

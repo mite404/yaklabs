@@ -1413,6 +1413,15 @@ changes. All of it follows the one `isMobile` the sidebar already reads: the lan
 an `enabled` flag, the row carries `data-reorder` for the grip's styles, and the thread panel
 takes `cardsCarry`.
 
+## ADR-123 - The title bar drops the data marker
+
+2026-09-28 - Accepted (Ethan: "any 'live' indicators or pills or anything like that can be
+deleted. i will implement that delineation later if necessary."). Amends ADR-096, which put the
+marker in the bar, and ADR-116, whose phone top row counted it among five controls, now four.
+The bar no longer says whether a thread is mock, kept on this device, or answered by a live
+model, so a private window that cannot keep threads no longer warns before they vanish; Ethan
+accepted that gap and may ask for a delineation again later.
+
 ## ADR-124 - A main thread's fold arrow sits beside its name, not a count
 
 2026-09-28 - Accepted (Ethan); amends ADR-093.

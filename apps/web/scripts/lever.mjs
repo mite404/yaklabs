@@ -23,6 +23,23 @@ mkdirSync(OUT, { recursive: true });
 export const shotPath = (name) => path.join(OUT, `${name}.png`);
 
 /**
+ * Waits for the sidebar's own first word on what the runtime told it, whichever comes first: a
+ * project's "New thread" button, "No projects yet", or its loading skeleton while nothing has
+ * arrived yet. `attached`, not `visible`, since a phone starts with the sidebar closed in its
+ * sheet. Every wait once kept for the removed data marker (ADR-123) waits on this instead, since
+ * all three are already how a visitor reads the sidebar's state, ready or not.
+ */
+export function sidebarDrawn(page, options = {}) {
+  const sidebar = page.locator('[data-slot="sidebar"]');
+  return sidebar
+    .getByRole("button", { name: /^New thread in /u })
+    .first()
+    .or(sidebar.getByText("No projects yet"))
+    .or(sidebar.locator('[data-sidebar="menu-skeleton"]').first())
+    .waitFor({ state: "attached", timeout: 20_000, ...options });
+}
+
+/**
  * A fresh browser context on `url` (its own OPFS, so no check sees another's data), ready once
  * a thread panel, or `ready` when given, is on screen.
  */

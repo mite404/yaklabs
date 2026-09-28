@@ -1,6 +1,5 @@
-import { scenarioNames, type LegacyCanvas, type ScenarioName, type Source } from "@yaklabs/runtime";
+import { scenarioNames, type LegacyCanvas, type ScenarioName } from "@yaklabs/runtime";
 import { z } from "zod";
-import type { AgentSource } from "./env";
 
 /**
  * What the address asks the runtime to open (ADR-096): the device's own threads, a mock
@@ -10,12 +9,6 @@ export type Wanted =
   | { kind: "device" }
   | { kind: "scenario"; name: ScenarioName }
   | { kind: "unknown"; name: string };
-
-/**
- * The title bar's word on where the threads live and who answers, and the longer why. `short`
- * is the one-word form a phone shows in place of `label`.
- */
-export type Marker = { label: string; short: string; hint: string };
 
 const PARAM = "scenario";
 
@@ -52,40 +45,6 @@ export function keepScenario(path: string, wanted: Wanted): string {
 /** Why an unknown scenario opens nothing, naming the ones that exist. */
 export function unknownScenario(name: string): string {
   return `There is no scenario called "${name}". The scenarios are ${scenarioNames.join(", ")}.`;
-}
-
-/**
- * What the title bar says about the data on screen (ADR-096): a mock and its name, kept on this
- * device, or not kept at all, and whether a live model answers. Null until the source is known.
- */
-export function markerFor(source: Source | null, agent: AgentSource): Marker | null {
-  if (source === null) return null;
-  if (source.kind === "scenario") {
-    return {
-      label: `Mock: ${source.name}`,
-      short: "Mock",
-      hint: "Sample data, answered by the lab's script. Nothing here is saved.",
-    };
-  }
-  const live = agent.kind === "gateway";
-  const who = live ? "Replies come from a live model." : "Replies come from the lab's script.";
-  const kept =
-    source.storage === "opfs"
-      ? {
-          label: "On this device",
-          short: "On device",
-          hint: "Threads are kept in this browser's own storage.",
-        }
-      : {
-          label: "Not saved",
-          short: "Not saved",
-          hint: "This browser cannot keep threads; they go when the tab closes.",
-        };
-  return {
-    label: live ? `${kept.label} · Live model` : kept.label,
-    short: live ? "Live" : kept.short,
-    hint: `${kept.hint} ${who}`,
-  };
 }
 
 /**

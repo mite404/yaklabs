@@ -248,15 +248,15 @@ const LIFT_PX = 6;
 - **Frame.** The app is a window inside the viewport: a rounded 12px frame on a desk of its own
   (`--desk`) with a 16px margin, full-bleed below 768px (ADR-111, amending the 8px first built).
 - **Title bar, left to right.** Decorative traffic lights, then the sidebar toggle, then
-  `TabStrip`. At the right end: the data marker, the layout switch, the bell, and the account
-  avatar in the corner.
+  `TabStrip`. At the right end: the layout switch, the bell, and the account avatar in the
+  corner (ADR-123 dropped the data marker that once sat first in this group).
 - **Sidebar below 768px (ADR-121).** A drawer that pushes the whole window right, not a sheet
   over it: `dialog[data-slot="sidebar"]` named "Sidebar", 85% of the width up to 20rem. The
   pushed page is inert, and a tap on it, Escape, or an arrival anywhere closes the drawer.
-- **Title bar below 768px (ADR-116).** Two rows. The top row does not scroll: the sidebar toggle,
-  the project's name (`[data-slot="project-name"]`), the marker's short word (its full label kept
-  for screen readers), the bell, the account, and button "Thread and project actions". The second
-  row is the Layout group with its views named in words. The tab strip is hidden.
+- **Title bar below 768px (ADR-116, amended by ADR-123).** Two rows. The top row does not scroll:
+  the sidebar toggle, the project's name (`[data-slot="project-name"]`), the bell, the account,
+  and button "Thread and project actions". The second row is the Layout group with its views
+  named in words. The tab strip is hidden.
 - **Rail and sidebar.** shadcn `Sidebar collapsible="icon"` below the title bar (the
   `sidebar-16` pattern):
   - The header holds `KayMark` (the site's polygon), then Documentation and Lab.
@@ -280,7 +280,6 @@ const LIFT_PX = 6;
     by the title. Main rows carry `data-thread="main"`; child rows carry `data-thread="child"`
     and show "↳".
   - Rail links: "Kay", "Documentation", "Lab".
-  - Marker: `[data-slot="data-marker"]`.
   - Window: `[data-slot="window"]` wraps the whole app; `[data-slot="traffic-lights"]` holds
     the three decorative dots (`aria-hidden`).
   - Project row chevron: `[data-slot="project-chevron"]` inside the row button, `opacity: 0` at

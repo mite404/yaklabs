@@ -2,7 +2,7 @@
 // simulated browser, the title bar and the rail.
 import { writeFileSync } from "node:fs";
 import { canvasOf, carry, laneTitles, mainPanel, makeLane } from "./canvas-checks.mjs";
-import { BASE, openApp, shotPath } from "./lever.mjs";
+import { BASE, openApp, shotPath, sidebarDrawn } from "./lever.mjs";
 
 // The polygon meetkay.ai declares for its mark (ADR-095), as the rail must draw it.
 const KAY_POINTS =
@@ -39,7 +39,6 @@ function barLayout() {
   const controls = [
     ["toggle", drawn('[aria-label="Toggle sidebar"]')],
     ["project", drawn('[data-slot="project-name"]')],
-    ["marker", drawn('[data-slot="data-marker"]')?.closest("button")],
     ["bell", drawn('[aria-label^="Notifications"]')],
     ["account", drawn('[aria-label="Account"]')],
     ["more", drawn('[aria-label="Thread and project actions"]')],
@@ -96,7 +95,7 @@ async function narrowBar(browser, { theme, width }) {
     m.height === PHONE_BAR &&
     m.scroll[0] === m.scroll[1] &&
     m.page[0] === m.page[1] &&
-    m.names.length === 5 &&
+    m.names.length === 4 &&
     m.overlaps.length === 0 &&
     m.outside.length === 0 &&
     m.namePx >= Math.min(m.nameFull, LEGIBLE_PX) &&
@@ -131,12 +130,10 @@ function selectedTab(page) {
 
 async function scenarioLook(browser, name) {
   const { page } = await openApp(browser, `${BASE}/?scenario=${name}`, { ready: null });
-  const marker = page.locator('[data-slot="data-marker"]');
-  await marker.waitFor({ timeout: 20_000 });
+  await sidebarDrawn(page);
   await page.waitForTimeout(1500);
   const png = await page.screenshot();
   const look = {
-    marker: await marker.innerText(),
     projects: await sidebarOf(page).locator("[aria-expanded]").count(),
     tabs: await tabsOf(page).count(),
     skeletons: await page.locator('[data-sidebar="menu-skeleton"]').count(),
@@ -292,16 +289,15 @@ export const shellChecks = {
       results.push({
         name,
         same: Buffer.compare(a.png, b.png) === 0,
-        mock: a.look.marker.toLowerCase().includes("mock"),
         shows: EXPECT[name](a.look),
         kept: a.look.url.includes(`scenario=${name}`),
         look: a.look,
       });
     }
     return {
-      ok: results.every((r) => r.same && r.mock && r.shows && r.kept),
+      ok: results.every((r) => r.same && r.shows && r.kept),
       detail: results
-        .map((r) => `${r.name}: same ${r.same}, mock ${r.mock}, shows ${r.shows}, kept ${r.kept}`)
+        .map((r) => `${r.name}: same ${r.same}, shows ${r.shows}, kept ${r.kept}`)
         .join("; "),
     };
   },

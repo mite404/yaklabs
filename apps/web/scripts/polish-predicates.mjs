@@ -6,7 +6,7 @@ import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
 import { carry, selectReply } from "./canvas-checks.mjs";
 import { ROOT } from "./harness.mjs";
-import { shotPath } from "./lever.mjs";
+import { shotPath, sidebarDrawn } from "./lever.mjs";
 import {
   boxesOf,
   canvasIn,
@@ -313,7 +313,7 @@ export const polishChecks = {
     ]) {
       const opened = await openScenario(browser, { scenario, ready: scenario === "demo" });
       if (scenario !== "demo") {
-        await opened.page.locator('[data-slot="data-marker"]').waitFor();
+        await sidebarDrawn(opened.page);
         await opened.page.waitForTimeout(1500);
       }
       a5.push(`${scenario} ${(await titleBar(opened.page).ariaSnapshot()) === base[key].header}`);
@@ -364,7 +364,7 @@ export const polishChecks = {
 
     const fresh = await openScenario(browser, { query: query("painting"), ready: false });
     const before = (await titleBar(fresh.page).boundingBox())?.height;
-    await fresh.page.locator('[data-slot="data-marker"]').waitFor();
+    await sidebarDrawn(fresh.page);
     await settle(fresh.page);
     const size = await fresh.page.evaluate(
       () =>
@@ -381,7 +381,7 @@ export const polishChecks = {
       const opened = await openScenario(browser, { query: query("painting"), ready: false });
       await opened.context.route("**/chrome/painting.webp", (route) => route.abort());
       await opened.page.reload();
-      await opened.page.locator('[data-slot="data-marker"]').waitFor();
+      await sidebarDrawn(opened.page);
       await opened.page.getByRole("tab", { selected: true }).waitFor();
       await settle(opened.page);
       const report = await inkReport(opened.page, titleBar(opened.page));
@@ -543,7 +543,7 @@ export const polishChecks = {
         query: query(variant),
         ready: false,
       });
-      await loading.page.locator('[data-slot="data-marker"]').waitFor();
+      await sidebarDrawn(loading.page);
       const held = await titleBar(loading.page).locator('[data-slot="skeleton"]').boundingBox();
       const mid = held.y + held.height / 2;
       skeletons[variant] = round(
@@ -675,7 +675,7 @@ export const polishChecks = {
       const bare = await openScenario(browser, { query: query(variant), ready: false });
       await bare.context.route("**/kay/kay-face.webp", (route) => route.abort());
       await bare.page.reload();
-      await bare.page.locator('[data-slot="data-marker"]').waitFor();
+      await sidebarDrawn(bare.page);
       const fallback = titleBar(bare.page).locator('[data-slot="avatar-fallback"]');
       await fallback.waitFor();
       await fallback.evaluate((el) => {
@@ -1088,7 +1088,7 @@ export const polishChecks = {
       );
       for (const scenario of ["long", "loading"]) {
         const opened = await openScenario(browser, { scenario, theme, ready: scenario === "long" });
-        await opened.page.locator('[data-slot="data-marker"]').waitFor();
+        await sidebarDrawn(opened.page);
         await opened.page.waitForTimeout(1500);
         const canvas =
           (await canvasIn(opened.page).count()) > 0
