@@ -38,7 +38,17 @@ function thread(id: string, place: Place, created: string, updated = created): T
     updatedAt: at(updated),
     preview: "",
     draft: "",
+    pinnedAt: null,
+    snoozedUntil: null,
+    archivedAt: null,
   };
+}
+
+// A thread with a mark already on it: pinned, snoozed or archived at `stamp`.
+function marked(base: ThreadSummary, mark: "pin" | "snooze" | "archive", stamp: string) {
+  if (mark === "pin") return { ...base, pinnedAt: at(stamp) };
+  if (mark === "snooze") return { ...base, snoozedUntil: at(stamp) };
+  return { ...base, archivedAt: at(stamp) };
 }
 
 const main = (projectId: string): Place => ({ kind: "main", projectId: p(projectId) });
@@ -69,6 +79,7 @@ const ws: Workspace = {
   lanes: { [t("m1")]: [card, threadLane(t("c1"))], [t("m2")]: [], [t("m3")]: [] },
   shell: null,
   notifications: [],
+  shares: [],
 };
 
 const lanes = ["a", "b", "c"].map((id) => threadLane(t(id)));
@@ -85,6 +96,32 @@ describe("sidebarTree", () => {
       { project: "desk", mains: [["m3"]] },
       { project: "store", mains: [["m2"], ["m1", "c1", "c3", "c2"]] },
     ]);
+  });
+});
+
+// The fixture with a pin, a snooze or an archive on some mains and children.
+const withMarks = (edits: Record<string, ["pin" | "snooze" | "archive", string]>) => ({
+  ...ws,
+  threads: ws.threads.map((each) => {
+    const edit = new Map(Object.entries(edits)).get(each.id);
+    return edit === undefined ? each : marked(each, ...edit);
+  }),
+});
+// Each project's mains, each a main's id followed by its children's.
+const order = (tree: ReturnType<typeof sidebarTree>) =>
+  tree.map(({ mains }) => mains.map((node) => [node.main.id, ...node.children.map((c) => c.id)]));
+
+describe("sidebarTree with marks", () => {
+  it("lifts pinned threads to the top and sinks archived ones, each group in its usual order", () => {
+    const tree = sidebarTree(
+      withMarks({ m1: ["archive", "09:30"], c2: ["pin", "09:31"], c3: ["archive", "09:32"] }),
+    );
+    expect(order(tree)).toEqual([[["m3"]], [["m2"], ["m1", "c2", "c1", "c3"]]]);
+  });
+
+  it("keeps a pinned main above a newer one, and a snoozed thread in its place", () => {
+    const tree = sidebarTree(withMarks({ m1: ["pin", "09:30"], m2: ["snooze", "11:00"] }));
+    expect(order(tree)).toEqual([[["m3"]], [["m1", "c1", "c3", "c2"], ["m2"]]]);
   });
 });
 

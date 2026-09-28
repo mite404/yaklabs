@@ -102,6 +102,13 @@ describe("the long and empty scenarios", () => {
 
   it("holds nothing when empty", async () => {
     const ws = (await open("empty")).store.workspace();
-    expect(ws).toEqual({ projects: [], threads: [], lanes: {}, shell: null, notifications: [] });
+    expect(ws).toEqual({
+      projects: [],
+      threads: [],
+      lanes: {},
+      shell: null,
+      notifications: [],
+      shares: [],
+    });
   });
 });

@@ -42,7 +42,17 @@ const DOCS = pageAddressSchema.parse("https://docs.example/kay");
 
 function thread(threadId: ThreadId, place: Place, updatedAt: string): ThreadSummary {
   const createdAt = "2026-09-20T09:00:00.000Z";
-  return { id: threadId, title: threadId, place, createdAt, updatedAt, preview: "", draft: "" };
+  const marks = { pinnedAt: null, snoozedUntil: null, archivedAt: null };
+  return {
+    id: threadId,
+    title: threadId,
+    place,
+    createdAt,
+    updatedAt,
+    preview: "",
+    draft: "",
+    ...marks,
+  };
 }
 
 // Three mains, the profit one with a child whose reply is the newest thing in the workspace.
@@ -60,6 +70,7 @@ const WS: Workspace = {
     { id: "n-1", threadId: REFUNDS, text: "Needs you", at: "2026-09-21T12:00:00.000Z" },
     { id: "n-2", threadId: TREND, text: "Ready", at: "2026-09-21T11:00:00.000Z" },
   ],
+  shares: [],
 };
 
 const OPEN: ShellState = { version: 1, tabs: [PROFIT, REFUNDS, TREND], views: {}, read: [] };

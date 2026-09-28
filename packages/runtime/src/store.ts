@@ -1,5 +1,6 @@
 import { threads, type Thread, type ThreadMessage } from "@yaklabs/catalog/thread";
 import type { Transcript } from "./conversation";
+import type { ThreadMark } from "./marks";
 import type { RenameTarget } from "./protocol";
 import { DEMO_PROJECT, PROFIT } from "./schema";
 import type {
@@ -9,9 +10,13 @@ import type {
   Project,
   ShellState,
   ThreadId,
+  ThreadShare,
   ThreadSummary,
   Workspace,
 } from "./workspace";
+
+/** What a settling pass did: whether the workspace changed, and when the next one is due. */
+export type Settled = { changed: boolean; next: string | null };
 
 /** A thread as it is first written. */
 export type NewThread = {
@@ -48,8 +53,36 @@ export type Store = {
    *   is given a lane.
    */
   addThread(thread: NewThread, laneAt?: number): void;
-  /** Rewrites a thread's turns, draft and `updatedAt` from what they are now. @throws For an unknown thread. */
+  /**
+   * Rewrites a thread's turns, draft and `updatedAt` from what they are now. A thread that
+   * hears a message is live again: it and its main leave the archive (ADR-126).
+   * @throws For an unknown thread.
+   */
   changeTranscript(id: ThreadId, change: (transcript: Transcript) => Transcript): void;
+  /**
+   * Pins, snoozes or archives a live thread at `now`, by `applyMark`'s rules, and restarts its
+   * idle clock.
+   * @throws For a thread it does not hold or that is deleted, and a snooze that is not ahead.
+   */
+  mark(id: ThreadId, change: ThreadMark, now: string): void;
+  /**
+   * Deletes a thread, its sub-threads with it, behind a tombstone: gone from the workspace at
+   * once, and for good once `settle` passes the undo window (ADR-127).
+   * @throws For a thread it does not hold or that is deleted already.
+   */
+  remove(id: ThreadId, now: string): void;
+  /** Takes a tombstone back, before `settle` purges it. @throws When the thread is not deleted. */
+  restore(id: ThreadId, now: string): void;
+  /**
+   * One settling pass at `now` (`planSettle`), in one transaction: due snoozes wake with a note
+   * for the bell, idle mains archive, tombstones past their window go, expired shares drop.
+   * @param starting Whether the page just opened, when every tombstone goes.
+   */
+  settle(now: string, starting: boolean): Settled;
+  /** @throws When the id is taken or the thread is unknown. */
+  addShare(share: ThreadShare): void;
+  /** Forgets a share; one already gone changes nothing. */
+  removeShare(id: string): void;
   /** @throws For an unknown project or thread. */
   rename(target: RenameTarget, name: string): void;
   /**

@@ -8,6 +8,7 @@ import type { Transcript } from "./conversation";
 import type { LegacyCanvas, RenameTarget } from "./protocol";
 import { migrate, writeLanes } from "./schema";
 import { matchQuery, newestFirst } from "./search";
+import { addShare, markThread, removeThread, restoreThread, settleThreads } from "./sqliteMarks";
 import { readTranscript, readWorkspace } from "./sqliteRead";
 import type { NewThread, Store } from "./store";
 import {
@@ -32,6 +33,9 @@ export type StoreLocation = { kind: "opfs"; name: string } | { kind: "memory" };
  */
 export class StorageUnavailableError extends Error {}
 
+// The store's calls for the thread menu.
+type MenuCall = "mark" | "remove" | "restore" | "settle" | "addShare" | "removeShare";
+
 // Names become an OPFS directory and a file, so they stay plain.
 const NAME = /^[a-z0-9][a-z0-9-]{0,39}$/;
 
@@ -51,6 +55,11 @@ const RENAME: Record<RenameTarget["kind"], string> = {
   project: "update projects set name = ? where id = ?",
   thread: "update conversations set title = ? where id = ?",
 };
+// A message revives the thread and its main (ADR-126): neither stays archived.
+const REVIVE = `
+  update conversations set archived_at = null
+  where id = ?1 or id = (select parent_id from conversations where id = ?1)
+`;
 const SAVE_SHELL = `
   insert into shell (id, json) values (1, ?) on conflict (id) do update set json = excluded.json
 `;
@@ -134,6 +143,7 @@ function changeTranscript(
     sql: "update conversations set updated_at = ?, draft = ? where id = ?",
     bind: [updatedAt, draft, id],
   });
+  db.exec({ sql: REVIVE, bind: [id] });
   writeMessages(db, id, messages);
 }
 
@@ -156,6 +166,28 @@ function search(db: Database, query: string): ThreadSummary[] {
   return readWorkspace(db)
     .threads.filter((thread) => hits.has(thread.id))
     .toSorted(newestFirst);
+}
+
+// The thread menu's calls on the store (ADR-123), each in sqliteMarks.ts.
+function menuCalls(db: Database): Pick<Store, MenuCall> {
+  return {
+    mark: (id, change, now) => {
+      markThread(db, id, change, now);
+    },
+    remove: (id, now) => {
+      removeThread(db, id, now);
+    },
+    restore: (id, now) => {
+      restoreThread(db, id, now);
+    },
+    settle: (now, starting) => db.transaction(() => settleThreads(db, now, starting)),
+    addShare: (share) => {
+      addShare(db, share);
+    },
+    removeShare: (id) => {
+      db.exec({ sql: "delete from shares where id = ?", bind: [id] });
+    },
+  };
 }
 
 /**
@@ -240,6 +272,7 @@ export async function openSqliteStore(
         arrange(db, mainId, lanes);
       });
     },
+    ...menuCalls(db),
     saveShell: (shell) => {
       db.exec({ sql: SAVE_SHELL, bind: [JSON.stringify(shell)] });
     },

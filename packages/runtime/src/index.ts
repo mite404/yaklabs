@@ -9,7 +9,10 @@ export type {
   Source,
 } from "./protocol";
 export { startRuntime } from "./runtime";
+export { IDLE_MS, UNDO_MS } from "./settle";
 export type { Runtime, RuntimeConfig, RuntimeState, Session } from "./runtime";
+export { applyMark } from "./marks";
+export type { ThreadMark } from "./marks";
 export {
   closeLane,
   insertLane,
@@ -37,6 +40,7 @@ export type {
   ProjectNode,
   ShellState,
   ThreadId,
+  ThreadShare,
   ThreadSummary,
   Workspace,
 } from "./workspace";

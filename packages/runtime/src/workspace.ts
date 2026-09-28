@@ -1,5 +1,6 @@
 import type { SharedCard } from "@yaklabs/catalog/share";
 import { z } from "zod";
+import { markOrder } from "./marks";
 
 const idSchema = z.string().min(1);
 const instantSchema = z.iso.datetime();
@@ -46,6 +47,22 @@ const threadSummarySchema = z.object({
   updatedAt: instantSchema,
   preview: z.string(),
   draft: z.string(),
+  pinnedAt: instantSchema.nullable(), // pinned threads lead their list
+  snoozedUntil: instantSchema.nullable(), // when a snoozed thread wakes, in the future
+  archivedAt: instantSchema.nullable(), // archived threads settle to the bottom of their list
+});
+
+/**
+ * A thread made public for a while (ADR-128): the link carries its key, so it stays on the
+ * device; the revoke token takes it down before it expires.
+ */
+export const threadShareSchema = z.object({
+  id: idSchema,
+  threadId: threadIdSchema,
+  link: z.url(),
+  revokeToken: idSchema,
+  createdAt: instantSchema,
+  expiresAt: instantSchema,
 });
 
 // Null width means the default column.
@@ -87,6 +104,7 @@ export const workspaceSchema = z.object({
   lanes: z.record(threadIdSchema, z.array(laneSchema)), // every main, left to right
   shell: shellStateSchema.nullable(), // null until the page first saves one
   notifications: z.array(notificationSchema), // newest first
+  shares: z.array(threadShareSchema), // newest first
 });
 
 /** A project: a named group of main threads. */
@@ -97,6 +115,8 @@ export type Place = z.infer<typeof placeSchema>;
 export type ThreadSummary = z.infer<typeof threadSummarySchema>;
 /** One column on a main thread's canvas: a child thread, or a card opened large. */
 export type Lane = z.infer<typeof laneSchema>;
+/** One thread made public until `expiresAt`. */
+export type ThreadShare = z.infer<typeof threadShareSchema>;
 /** Something for the bell. */
 export type Notification = z.infer<typeof notificationSchema>;
 /** The page's shell state, opaque to the runtime; the page parses it with its own schema. */
@@ -217,7 +237,9 @@ export function resizeLane(lanes: Lane[], id: LaneId, width: number | null): Lan
 
 /**
  * The sidebar's tree: projects oldest first, each with its mains newest created first, and each
- * main's children in lane order, then the closed children oldest first.
+ * main's children in lane order, then the closed children oldest first. In each list the
+ * pinned lead and the archived settle to the bottom, keeping that order among themselves; a
+ * snoozed thread stays where it is.
  */
 export function sidebarTree(ws: Workspace): ProjectNode[] {
   const children = (main: ThreadSummary): ThreadSummary[] => {
@@ -225,14 +247,15 @@ export function sidebarTree(ws: Workspace): ProjectNode[] {
     const open = lanesOf(ws, main.id).flatMap((lane) =>
       lane.kind === "thread" ? own.filter((child) => child.id === lane.threadId) : [],
     );
-    return [...open, ...own.filter((child) => !open.includes(child))];
+    return markOrder([...open, ...own.filter((child) => !open.includes(child))]);
   };
   return ws.projects.toSorted(byCreated).map((project) => ({
     project,
-    mains: ws.threads
-      .filter((thread) => thread.place.kind === "main" && thread.place.projectId === project.id)
-      .toSorted((a, b) => byCreated(b, a))
-      .map((main) => ({ main, children: children(main) })),
+    mains: markOrder(
+      ws.threads
+        .filter((thread) => thread.place.kind === "main" && thread.place.projectId === project.id)
+        .toSorted((a, b) => byCreated(b, a)),
+    ).map((main) => ({ main, children: children(main) })),
   }));
 }
 

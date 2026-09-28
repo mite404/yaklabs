@@ -28,6 +28,9 @@ function thread(threadId: ThreadId, place: Place): ThreadSummary {
     updatedAt: at,
     preview: "",
     draft: "",
+    pinnedAt: null,
+    snoozedUntil: null,
+    archivedAt: null,
   };
 }
 
@@ -41,6 +44,7 @@ const WS: Workspace = {
   lanes: {},
   shell: null,
   notifications: [],
+  shares: [],
 };
 
 const PROFIT_ONLY: ShellState = { version: 1, tabs: [PROFIT], views: {}, read: [] };
