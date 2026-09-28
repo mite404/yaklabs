@@ -1708,3 +1708,6 @@ sidebar. The compose box and the cards cast a shadow to the right and bottom onl
 button beside `.btn` takes its corners from `--btn-radius` (4px), so Cancel and Done match.
 The layout switch offers Thread, Canvas, then Browser (it was Thread, Browser, Canvas): one array,
 `PANES`, orders the desktop switch and the phone's row alike.
+The edge shadow was refitted to Kay's by measuring their compose box: about 5% dark just below
+the box easing out over some 20px, 1% dark at its right, nothing above. It is now `2px 13px 22px
+-12px` on `--shadow`: mostly downward, a whisper to the right, and the long soft fall-off.

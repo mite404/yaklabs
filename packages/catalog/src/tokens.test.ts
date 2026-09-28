@@ -252,20 +252,25 @@ describe("the button radius", () => {
 });
 
 describe("the edge shadow", () => {
-  it("falls to the right and bottom only, in either theme", () => {
+  it("drops below the box, more than it reaches right, and leaves the top and left clear", () => {
     const reach = Object.values(THEMES).map((theme) => {
       const [x = NaN, y = NaN, blur = NaN, spread = NaN] =
         /^(-?\d+)px (-?\d+)px (\d+)px (-?\d+)px /
           .exec(declared("--edge-shadow", theme))
           ?.slice(1)
           .map(Number) ?? [];
-      // The shadow leaves the top and left when the blur, less the spread pulling it in, stays
-      // inside the offset: nothing of it then reaches past those two edges.
-      return { down: x > 0 && y > 0, clearOfTopLeft: blur + spread <= Math.min(x, y) };
+      // How far the blur reaches past an edge is the blur and the spread plus the offset toward
+      // it. Nothing reaches the top; the left stays inside one sigma (half the blur), where
+      // the shadow is too faint to see; the bottom is the edge it falls from.
+      return {
+        bottomOverRight: y > x && x >= 0,
+        clearOfTop: blur + spread <= y,
+        leftUnseen: blur + spread - x <= blur / 2,
+      };
     });
     expect(reach).toEqual([
-      { down: true, clearOfTopLeft: true },
-      { down: true, clearOfTopLeft: true },
+      { bottomOverRight: true, clearOfTop: true, leftUnseen: true },
+      { bottomOverRight: true, clearOfTop: true, leftUnseen: true },
     ]);
   });
 });

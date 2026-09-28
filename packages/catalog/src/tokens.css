@@ -69,10 +69,10 @@
   --focus: #8a8a85;
   --shadow: color-mix(in srgb, var(--yak-night) 10%, transparent);
   --shadow-strong: color-mix(in srgb, var(--yak-night) 20%, transparent);
-  /* Right and bottom edges only: the offset moves the shadow off the top and left, and the
-     negative spread pulls it in so its blur never reaches past them. Dark mode takes the
-     stronger --shadow-strong of its own block, since both resolve on the root. */
-  --edge-shadow: 4px 4px 6px -3px var(--shadow-strong);
+  /* A soft drop below the box and a faint one to its right, none above or left, fitted to Kay's:
+     the offset moves it down, the negative spread pulls its blur in from the sides, and the
+     long blur gives the slow fall-off. Both themes read the same --shadow token. */
+  --edge-shadow: 2px 13px 22px -12px var(--shadow);
   --scrim: color-mix(in srgb, var(--paper) 72%, transparent);
   --warn-bg: #f4ecd9; /* derived: warm notice, harmonised with the paper */
   --warn-ink: #66511f; /* derived */
