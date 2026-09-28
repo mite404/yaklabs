@@ -123,6 +123,14 @@ all at the start of the lane row; Ethan moved it into the title bar, beside the 
 desktop and in the phone's top row, and moved each lane's own toggle into the thread's or card's
 title bar, inside the thing it folds (ADR-134).
 
+Then the empty canvas got a splash Ethan actually asked for. The first one had put a stand-in
+line drawing and Kay the mascot there, both lifted from a mock; he had wanted neither. Six looks
+were built in parallel on six branches, three on his Atlas figure and three on his oil painting,
+each measured for contrast and shot in both themes, and he kept three: the landscape and an
+abstract painting clearing to paper behind the words, and Atlas alone with his globe ringing
+them. A floating debug button at the window's corner flips between them until he chooses
+(ADR-135).
+
 ## 2. Cast & Crew
 
 The first entries are ideas from before any code existed; the rest are parts of the running app.
@@ -427,6 +435,18 @@ The first entries are ideas from before any code existed; the rest are parts of 
 
 ## 4. Bloopers
 
+- **The matte that cut nothing.** Ethan's Figma mask group hid the landscape's gradient instead
+  of using it: the layer set as the mask was a solid rectangle at 78%, so it cut the painting to
+  a flat 78% everywhere, and the gradient rectangle sat under it, hidden, masking nothing. A
+  Figma mask is the bottom layer of its group and cuts everything stacked above it, so the fix
+  was layer order: make the gradient the mask and delete the solid one. Lesson: a matte is a
+  plate, and it goes in first.
+- **The gate the first branch tripped.** CI's fallow audit fails any function whose CRAP score
+  (complexity times untested lines) reaches 30, and `OpenSpace` sat exactly on that line, so the
+  one conditional the first splash option added turned CI red. Fix: the splash's pieces live in
+  their own small components, and the look is chosen in CSS off an attribute on `<html>`, so
+  `OpenSpace` gained nothing at all. Lesson: a component sitting on a threshold is a load-bearing
+  wall; hang new things on a frame of their own.
 - **The row that ran from the cursor.** A main's children were listed in the canvas's lane
   order, open lanes first. Clicking a closed child's row reopened its lane, which promoted it to
   the open group, so the row slid up one slot the instant it was clicked, and the pointer was
@@ -1791,3 +1811,37 @@ Senior-engineer takeaway: when code finds an element to act on, find it by its r
 (a data attribute or an accessible name), never by its tag or its position. And keep a check that
 drives the real flow, like the web lever did here, because a wrong match compiles and renders
 fine.
+
+### The matte goes in first: a mask is layer order, not a paint job
+
+Three splash looks, one stacking rule. In Figma a mask is the bottom layer of its group and cuts
+everything above it; in CSS a mask is a property of the layer it cuts. Either way the picture is
+never edited: a plate says how much of it shows, and the plate is authored on its own.
+
+```css
+/* apps/web/src/index.css: Atlas is a stencil (black on alpha) used as a mask and filled with a
+   token, so he themes; a second mask, a gradient, fades his feet out before the edge. */
+html[data-splash="vitruvian"] .splash-drawing {
+  background: var(--splash-figure); /* the ink at 30%: the paint */
+  mask-image: url("/splash/atlas.webp"), linear-gradient(black 55%, transparent); /* two plates */
+  mask-composite: intersect; /* a pixel shows only where both plates let it */
+}
+```
+
+```mermaid
+flowchart BT
+  P[Paper: the open space] --> L[Lit fill: the carry's tint]
+  L --> M["Picture under its plate<br/>a radial gradient, or the stencil ∩ a fade"]
+  M --> D[Dots, redrawn on the field's grid]
+  D --> W[Words and button]
+  W --> S["Splash · look (debug switch)"]
+```
+
+The film version: a garbage matte never touches the negative. The colourist grades the plate, the
+compositor decides where it shows, and the two jobs stay in two rooms. Ethan's Figma group went
+wrong because the matte was loaded second; the fix was not a better gradient, it was putting the
+plate in first.
+
+Senior-engineer takeaway: when a look depends on order, make the order the design. The three looks
+share one DOM and one stack; the attribute on `<html>` picks the plate, and nothing else moves.
+

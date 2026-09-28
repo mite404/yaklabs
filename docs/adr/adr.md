@@ -1583,3 +1583,29 @@ the canvas is off screen or empty, so the bar never shifts. A mock with the cont
 row's leading edge was set aside for it.
 Proof: P13 (the phone's top row), P14 (the toggle in the title bar and the strip) and P18
 (Collapse all, kept across a reload) in `apps/web/scripts/workspace-check.mjs`.
+
+## ADR-135 - The empty canvas has three looks behind a debug switch, and Kay leaves it
+
+2026-09-28 - Accepted (Ethan: "first let's axe the yak character ... i like both the vitruvian
+(codex sheet) and the oil paintings, so i think having either option be toggleable is good").
+Amends ADR-113.
+Six looks were built on six branches for Ethan to compare: a cutting mat, a codex sheet, a
+Vitruvian sheet, the landscape under the dots, a clearing in it, and a hero. He marked three Figma
+frames ready for dev, "App Shell - Splash - Landscape", "- Abstract" and "- Vitruvian", and asked
+for those three, switchable, so the app carries all three behind a floating debug button at the
+window's bottom right, "Splash · <look>", a shadcn menu on Kay's tokens. The choice is kept in
+`kay.splash` and reaches the CSS as `<html data-splash>`, the way the theme does, so the splash and
+the switch share no prop; a `?splash=` in the address sets it for a screenshot run. The switch
+leaves with the choice.
+Landscape and Abstract are one construction with a different painting: the picture under a paper
+wash at the open space's edges, masked by an elliptical gradient to a clearing of plain paper
+behind the words, with the field's dots drawn over all of it. Ethan's Figma values: the landscape
+shows through at 11%, the abstract strokes at 18%, each a step more on the dark paper. Vitruvian
+is Atlas alone, the stencil from Ethan's file as a CSS mask filled with the ink at 30% (26% in the
+dark), his globe ringing the words and his feet taken out by a second mask; the frame has no circle
+and square, so neither does the code. Kay the mascot is gone from the canvas: Ethan had not asked
+for him, he came from the mock. His face stays as the avatar (ADR-114). The comparison page built
+for the six was never code in this repository and is not merged.
+The sphere drawing and `--splash-line` are gone; `--splash-wash-landscape`,
+`--splash-wash-abstract` and `--splash-figure` replace them, measured in tokens.test.ts.
+Not yet: which look ships, and the origin and licence of Atlas and the paintings (Q11).
