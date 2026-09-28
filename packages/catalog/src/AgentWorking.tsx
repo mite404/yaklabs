@@ -47,6 +47,8 @@ export function AgentWorking({
     "--working-cells": cells, // the orbit divides one lap by this
   };
   const steps = CLOCKWISE_STEP[cells]; // → number[], one per square
+  // Keys carry the cell count: a new count replaces every square, so all of them start their
+  // animation on the same frame. Reusing some would leave those on the old clock, out of step.
   // <output> is a live status region, so the label is announced once when it appears.
   return (
     <output
@@ -57,7 +59,7 @@ export function AgentWorking({
       style={style}
     >
       {steps.map((step) => (
-        <span key={step} className="agent-working-cell" style={stepStyle(step)} />
+        <span key={`${cells}-${step}`} className="agent-working-cell" style={stepStyle(step)} />
       ))}
     </output>
   );
