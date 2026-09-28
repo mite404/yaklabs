@@ -59,7 +59,7 @@ function laneView(lane: Lane, threads: Map<string, ThreadSummary>): LaneView[] {
     const render = (leading: ReactNode, trailing: ReactNode) => (
       <Artifact card={card} leading={leading} trailing={trailing} />
     );
-    return [{ id, title, width, collapsed, render }];
+    return [{ id, title, width, collapsed, kind: "card", render }];
   }
   const thread = threads.get(lane.threadId);
   if (thread === undefined) return [];
@@ -69,6 +69,7 @@ function laneView(lane: Lane, threads: Map<string, ThreadSummary>): LaneView[] {
       title: thread.title,
       width: lane.width,
       collapsed: lane.collapsed,
+      kind: "thread",
       render: (leading: ReactNode, trailing: ReactNode) => (
         <ThreadPane key={thread.id} thread={thread} leading={leading} trailing={trailing} />
       ),

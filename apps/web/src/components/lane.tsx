@@ -6,15 +6,17 @@ import type { LaneHandlers } from "./lane-reorder";
 
 /**
  * One lane on the canvas: its name, the width it was left at (null: the default), whether it is
- * collapsed to a strip (ADR-133), and its content, drawn with the lane's collapse (`leading`)
- * before the title and its close (`trailing`) at the far end of its own title bar, or without
- * either while the lane is collapsed.
+ * collapsed to a strip (ADR-133), what kind of lane it is (a collapsed card is a half-height
+ * strip, so it reads as a card beside a thread's full one), and its content, drawn with the
+ * lane's collapse (`leading`) before the title and its close (`trailing`) at the far end of its
+ * own title bar, or without either while the lane is collapsed.
  */
 export type LaneView = {
   id: LaneId;
   title: string;
   width: number | null;
   collapsed: boolean;
+  kind: "thread" | "card";
   render: (leading: ReactNode, trailing: ReactNode) => ReactNode;
 };
 
@@ -65,10 +67,10 @@ function CloseButton({ title, onClick }: { title: string; onClick: () => void })
   );
 }
 
-// A collapsed lane (ADR-133): a slim strip down the lane's whole height with its
-// expand at the head, the grip always shown beneath, and the title turned to read top to
-// bottom, clipped with an ellipsis. The whole strip but its expand takes hold of the lane
-// (lane-reorder.ts).
+// A collapsed lane (ADR-133): a slim strip filling the lane's article (its whole height, or a
+// card's half, see `heightOf`) with its expand at the head, the grip always shown beneath, and
+// the title turned to read top to bottom, clipped with an ellipsis. The whole strip but its
+// expand takes hold of the lane (lane-reorder.ts).
 function LaneStrip({ title, toggle }: { title: string; toggle: ReactNode }) {
   return (
     <div
@@ -143,6 +145,14 @@ function LaneBody({
   );
 }
 
+// How tall a lane's article stands in the row: all of it, except a collapsed card, which is
+// half and stays at the row's top, so a card reads apart from a thread at a glance. Nothing
+// below the shorter strip belongs to the lane: the article is the strip's own height, so the
+// grip, the reorder and the floating copy (which clones the article's box) all follow it.
+function heightOf(lane: LaneView): string {
+  return lane.collapsed && lane.kind === "card" ? "h-1/2 self-start" : "h-full";
+}
+
 /** One lane in the canvas's row: open at its width, or collapsed to a strip (ADR-133). */
 export function Lane({
   lane,
@@ -165,10 +175,11 @@ export function Lane({
     // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- the pointer takes hold of the lane by its title bar or its strip; the keyboard moves it from the gap after it
     <article
       ref={article}
-      className="lane lane-shift flex h-full shrink-0 flex-col"
+      className={`lane lane-shift flex ${heightOf(lane)} shrink-0 flex-col`}
       style={{ ["--lane-width" as string]: width === null ? LANE_WIDTH : `${width}px`, ...style }}
       data-lane={lane.id}
       data-collapsed={lane.collapsed}
+      data-kind={lane.kind}
       data-lifted={lifted || undefined}
       aria-label={lane.title}
       {...handlers}
