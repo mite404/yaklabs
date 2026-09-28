@@ -59,8 +59,8 @@ function client(respond: (request: Request) => Response) {
 }
 
 describe("publish makes a thread public for a while (ADR-131)", () => {
-  it("offers 1 hour, 3 hours, 1 day and 7 days", () => {
-    expect(LIFETIMES.map((each) => each.label)).toEqual(["1 hour", "3 hours", "1 day", "7 days"]);
+  it("offers 1 hour, 6 hours, 1 day and 7 days", () => {
+    expect(LIFETIMES.map((each) => each.label)).toEqual(["1 hour", "6 hours", "1 day", "7 days"]);
   });
 
   it("sends the gateway only sealed bytes, signed in, and keeps the link with its key", async () => {

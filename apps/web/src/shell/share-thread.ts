@@ -22,7 +22,7 @@ export type ShareClient = {
 };
 
 /** The lifetimes the Share submenu offers (ADR-131), in its words, as the gateway takes them. */
-export const LIFETIMES = ["1 hour", "3 hours", "1 day", "7 days"].map((label, i) => ({
+export const LIFETIMES = ["1 hour", "6 hours", "1 day", "7 days"].map((label, i) => ({
   label,
   seconds: SHARE_TTLS[i] ?? SHARE_TTLS[0],
 }));
