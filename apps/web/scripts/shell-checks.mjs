@@ -219,6 +219,12 @@ export const shellChecks = {
       .getByRole("link", { name: "Last week's sales" })
       .isVisible());
     const plusFolded = await plusVisible();
+    // Opened again by a click, which leaves focus on the row: the "v" still fades once the
+    // pointer leaves, since only keyboard focus holds it up.
+    await project.click();
+    await page.mouse.move(900, 450);
+    await page.waitForTimeout(250);
+    const reopened = await look();
     return {
       ok:
         openRest.expanded === "true" &&
@@ -226,10 +232,12 @@ export const shellChecks = {
         openHover.chevron === "1" &&
         folded.expanded === "false" &&
         folded.chevron === "1" &&
+        reopened.expanded === "true" &&
+        reopened.chevron === "0" &&
         threadsHidden &&
         plusOpen &&
         plusFolded,
-      detail: `open at rest ${JSON.stringify(openRest)}, on hover ${JSON.stringify(openHover)}, folded ${JSON.stringify(folded)}; threads hidden when folded ${threadsHidden}; + shown open ${plusOpen} folded ${plusFolded}`,
+      detail: `open at rest ${JSON.stringify(openRest)}, on hover ${JSON.stringify(openHover)}, folded ${JSON.stringify(folded)}, opened by a click and left ${JSON.stringify(reopened)}; threads hidden when folded ${threadsHidden}; + shown open ${plusOpen} folded ${plusFolded}`,
     };
   },
 

@@ -1556,17 +1556,24 @@ try {
       await own.waitForTimeout(200);
       const foldedExpanded = await arrow.getAttribute("aria-expanded");
       const foldedOpacity = await chevron.evaluate((el) => getComputedStyle(el).opacity);
+      // Opened again by a click, which leaves focus on the button: the "v" still fades once the
+      // pointer leaves, since only keyboard focus holds it up.
+      await arrow.click();
+      await own.mouse.move(900, 450);
+      await own.waitForTimeout(400);
+      const leftOpacity = await chevron.evaluate((el) => getComputedStyle(el).opacity);
       return {
         ok:
           gap >= 0 &&
           gap <= 12 &&
           !/\d/.test(text) &&
+          leftOpacity === "0" &&
           ink === plainInk &&
           restOpacity === "0" &&
           hoverOpacity === "1" &&
           foldedExpanded === "false" &&
           foldedOpacity === "1",
-        detail: `gap ${gap.toFixed(1)}px; row text ${JSON.stringify(text)}; title ${ink} vs a plain row ${plainInk}; chevron opacity at rest ${restOpacity}, on hover ${hoverOpacity}, folded ${foldedOpacity} (expanded ${foldedExpanded})`,
+        detail: `gap ${gap.toFixed(1)}px; row text ${JSON.stringify(text)}; opacity after a click and leaving ${leftOpacity}; title ${ink} vs a plain row ${plainInk}; chevron opacity at rest ${restOpacity}, on hover ${hoverOpacity}, folded ${foldedOpacity} (expanded ${foldedExpanded})`,
       };
     },
   );
