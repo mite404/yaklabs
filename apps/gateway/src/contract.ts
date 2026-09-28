@@ -16,3 +16,19 @@ export const gatewayRequestSchema = z.object({
 
 /** A validated gateway request. */
 export type GatewayRequest = z.infer<typeof gatewayRequestSchema>;
+
+/** How long a thread may stay public, in seconds: 1 hour, 3 hours, 1 day, 7 days (ADR-129). */
+export const SHARE_TTLS = [60 * 60, 3 * 60 * 60, 24 * 60 * 60, 7 * 24 * 60 * 60] as const;
+
+/** The most a sealed thread may weigh; a thread of a few hundred turns is well under it. */
+export const MAX_SHARE_BYTES = 1_000_000;
+
+/** What `POST /api/shares` answers: the share's id, when it ends, and the token that ends it early. */
+export const shareCreatedSchema = z.object({
+  id: z.string().min(1),
+  expiresAt: z.iso.datetime(),
+  revokeToken: z.string().min(1),
+});
+
+/** A share the gateway made. */
+export type ShareCreated = z.infer<typeof shareCreatedSchema>;

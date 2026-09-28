@@ -2,10 +2,12 @@ import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
 import { createApp, type AppType } from "./app";
 import { workOsVerifier } from "./auth";
+import { kvShares, randomToken } from "./shares";
 
 // The Worker's bindings: `WORKOS_CLIENT_ID` is a var in wrangler.jsonc, `ANTHROPIC_API_KEY` a
-// secret (`wrangler secret put`); `.dev.vars` supplies both under `wrangler dev`.
-type Env = { ANTHROPIC_API_KEY: string; WORKOS_CLIENT_ID: string };
+// secret (`wrangler secret put`); `.dev.vars` supplies both under `wrangler dev`. `SHARES` is
+// the KV namespace public threads live in (ADR-129).
+type Env = { ANTHROPIC_API_KEY: string; WORKOS_CLIENT_ID: string; SHARES: KVNamespace };
 
 // Both must be set, and a WorkOS client id (not its API key) must go in the client id slot.
 const envSchema = z.object({
@@ -23,6 +25,7 @@ const appFor = (env: Env): AppType => {
     verifyToken: workOsVerifier(WORKOS_CLIENT_ID),
     // Pinned so an `ANTHROPIC_LOG=debug` binding cannot log request bodies (ADR-085).
     anthropic: new Anthropic({ apiKey: ANTHROPIC_API_KEY, logLevel: "warn" }),
+    shares: { store: kvShares(env.SHARES), now: () => new Date(), newToken: randomToken },
   });
 };
 

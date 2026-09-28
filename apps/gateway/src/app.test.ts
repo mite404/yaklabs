@@ -4,6 +4,7 @@ import { assert, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { createApp } from "./app";
 import type { TokenVerifier } from "./auth";
+import { memoryShares, randomToken } from "./shares";
 
 const TOKEN = "workos-access-token";
 const API_KEY = "sk-ant-test-key";
@@ -92,7 +93,8 @@ const appWithUpstream = (respond: () => Response) => {
   });
   // No retries, so a refused request reaches the gateway at once.
   const anthropic = new Anthropic({ apiKey: API_KEY, fetch, maxRetries: 0 });
-  return { app: createApp({ verifyToken, anthropic }), requests };
+  const shares = { store: memoryShares(Date.now), now: () => new Date(), newToken: randomToken };
+  return { app: createApp({ verifyToken, anthropic, shares }), requests };
 };
 
 const streamingUpstream = (): Response =>
