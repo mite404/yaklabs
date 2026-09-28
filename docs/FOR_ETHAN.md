@@ -131,6 +131,13 @@ abstract painting clearing to paper behind the words, and Atlas alone with his g
 them. A floating debug button at the window's corner flips between them until he chooses
 (ADR-135).
 
+Then Ethan got into Kay's shipped app and the picture sharpened. A new thread now opens the way
+Kay's new tab does: the mark, the date, a greeting for the time of day, the projects and the
+actions a thread can start with, over one of his paintings cleared to paper behind the words. The
+empty canvas became his composed surface, a raised sheet with the dots, Atlas and his construction
+lines, and the coloured trim around the window turned out to be a Figma selection outline caught
+in a screenshot, so it went (ADR-136).
+
 ## 2. Cast & Crew
 
 The first entries are ideas from before any code existed; the rest are parts of the running app.

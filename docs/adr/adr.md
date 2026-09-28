@@ -1609,3 +1609,27 @@ for the six was never code in this repository and is not merged.
 The sphere drawing and `--splash-line` are gone; `--splash-wash-landscape`,
 `--splash-wash-abstract` and `--splash-figure` replace them, measured in tokens.test.ts.
 Not yet: which look ships, and the origin and licence of Atlas and the paintings (Q11).
+
+## ADR-136 - A new thread greets, the canvas is a raised sheet, and the trim is gone
+
+2026-09-28 - Accepted (Ethan, on seeing Kay's shipped app: "what i want is the landscape and oil
+brush strokes to appear when you start a new thread ... for the canvas view that's where we'll
+have the dots grid and the vitruvian man. i want the canvas' surface to have drop shadow around
+it"). Amends ADR-135 and ADR-113; supersedes ADR-112.
+Kay's own new tab opens with a greeting, and so does a new thread here: while a main thread has
+no turns, its scroll area shows the mark, the date, "Good afternoon" (with the first name once a
+visitor is signed in), Kay's line for the time of day, the projects, and three actions after the
+desktop app's, of which Open browser works and Open file and Open terminal wait for a web
+counterpart. Behind it is one of Ethan's paintings, the landscape or the abstract strokes, under
+its paper wash, with a clearing of plain paper behind the words that fades out in every direction;
+the debug switch now picks that painting, and the first turn takes the welcome away. The catalog's
+panel gains an `empty` slot for it and drops its gutters while the slot shows, so the art reaches
+the panel's edges; a lane passes nothing and stays blank.
+The empty canvas is one look now, Ethan's composed surface: a raised sheet of paper with a solid
+hairline edge and a shadow, the field's dots on it and the ground behind it plain, a clearing of
+paper behind the words, a sheet of construction lines drawn by `draw-atlas-lines.mjs` (circles
+concentric with the globe, spokes through its centre), and Atlas with his globe ringing the words.
+The coloured trim around the window's body (ADR-112) was an artefact of a selected layer in a
+Figma screenshot, never a design: it is gone, with its token and its predicate, in both themes.
+Not yet: projects as a real grouping ("we'll deal with that later"), a file and a terminal for
+the two waiting actions, and the pictures' origin and licence (Q11).
