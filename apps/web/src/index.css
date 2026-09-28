@@ -168,17 +168,63 @@
       var(--chrome-painting);
   }
 
-  /* The empty canvas's splash (ADR-113): the drawing is a mask filled with --splash-line, so it
-     themes with the ink and shows only its strokes, never the bounds of an image. It sits
+  /* The empty canvas's splash (ADR-113), a codex sheet: a sheet of paper lies on the dotted
+     desk, so the dots fade out around the figure instead of stopping at a line; Atlas stands
+     in the clearing with his globe ringing the words, in a warm ink; and Leonardo's
+     construction marks sit under him in the splash line. Every picture is a mask filled with a
+     token, so it themes and shows only its strokes, never the bounds of an image. It all sits
      behind the words, and it and Kay fade in once, with no fade under reduced motion. */
   .splash {
     position: absolute;
     inset: 0;
     z-index: -1;
+    /* a size container, so each picture measures itself off the open space's own width and
+       height */
+    container-type: size;
+    /* the globe's diameter, as large as clears the sheet's margins at any width, and its
+       centre: the copy's centre, half a gap and half the button above the open space's middle */
+    --globe: min(90cqw, 46cqh);
+    --globe-y: calc(50cqh - 24px);
+  }
+  /* The sheet lies over the carry's lit fill with the rest of the drawing, so under a carry it
+     takes the same tint the fill gives the ground, and the whole open space lights up. */
+  .splash-sheet {
+    position: absolute;
+    inset: 0;
+    background-color: var(--paper);
+    mask-image: radial-gradient(closest-side, #000 55%, transparent 95%);
+    transition: background-color 150ms ease;
+  }
+  .open-space[data-lit] .splash-sheet {
+    background-color: color-mix(in srgb, var(--paper-deep) 60%, var(--paper));
+  }
+  /* The construction and the figure share the open space's box, each mask sized off the globe
+     and placed so its globe sits on --globe-y: the construction's is at its centre; atlas.webp's
+     is at 48.7% of its width and 28.4% of its height, 54.4% of its height across. The
+     construction fades out with the sheet, so no circle is cut off at the open space's edge;
+     the figure's own fade towards the feet is drawn into the file. */
+  .splash-codex,
+  .splash-drawing {
+    position: absolute;
+    inset: 0;
+    mask-repeat: no-repeat;
+  }
+  .splash-codex {
+    background-color: var(--splash-line);
+    mask-image: url("/splash/codex.svg"), radial-gradient(closest-side, #000 45%, transparent 92%);
+    mask-size:
+      calc(var(--globe) * 2) calc(var(--globe) * 2),
+      auto;
+    mask-position:
+      50% calc(var(--globe-y) - var(--globe)),
+      0 0;
+    mask-composite: intersect;
   }
   .splash-drawing {
-    background-color: var(--splash-line);
-    mask: url("/splash/sphere.svg") center / contain no-repeat;
+    background-color: var(--splash-ink);
+    mask-image: url("/splash/atlas.webp");
+    mask-size: auto calc(var(--globe) * 1.838);
+    mask-position: calc(50% + var(--globe) * 0.014) calc(var(--globe-y) - var(--globe) * 0.523);
   }
   .splash,
   .splash-in {
