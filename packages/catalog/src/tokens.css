@@ -641,6 +641,16 @@ h1 span {
   align-self: center;
   margin-left: -7px;
 }
+/* The host's control at the far end (a lane's close): a card with no header carries it at its
+   top right, where the header's actions would have ended. */
+.card.state {
+  position: relative;
+}
+.card.state > .header-trailing {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+}
 .card-heading > .header-leading + .card-heading-text {
   min-width: 0;
   margin-right: auto;

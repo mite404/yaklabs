@@ -37,6 +37,8 @@ function sharedMax(selection: InteractiveSelection): number {
  * is reported through `onChoose` so it can ride along with the next message (ADR-030).
  * @param shareable Show the share button (ADR-064); off on the public page itself.
  * @param leading A host's control before the title, such as a lane's collapse (ADR-134).
+ * @param trailing A host's control at the title bar's far end, after the share button, such as
+ * a lane's close.
  */
 export function InteractiveCard({
   payload,
@@ -45,6 +47,7 @@ export function InteractiveCard({
   shareable = true,
   draggable = false,
   leading,
+  trailing,
 }: {
   payload: unknown;
   turnId: string;
@@ -53,6 +56,7 @@ export function InteractiveCard({
   /** Let the header carry the card out, as onto the compose canvas (ADR-089). */
   draggable?: boolean;
   leading?: ReactNode;
+  trailing?: ReactNode;
 }) {
   const result = resolveInteractive(payload);
   const initial =
@@ -66,7 +70,7 @@ export function InteractiveCard({
   const [showWork, setShowWork] = useState(false);
   // An invalid payload gets the same honest catalog-limit card as any other rejection.
   if (result.kind === "rejected")
-    return <CatalogCard payload={null} context="thread" leading={leading} />;
+    return <CatalogCard payload={null} context="thread" leading={leading} trailing={trailing} />;
 
   const { props } = result.selection;
   const stops = props.control.stops;
@@ -88,7 +92,14 @@ export function InteractiveCard({
       <CardHeader
         title={props.title}
         leading={leading}
-        actions={shareable && <ShareButton card={{ v: 1, kind: "interactive", payload }} />}
+        actions={
+          (shareable || trailing !== undefined) && (
+            <>
+              {shareable && <ShareButton card={{ v: 1, kind: "interactive", payload }} />}
+              {trailing}
+            </>
+          )
+        }
         drag={
           draggable
             ? { card: { v: 1, kind: "interactive", payload }, title: props.title }

@@ -114,6 +114,17 @@ function Chart({ selection }: { selection: Selection }) {
   );
 }
 
+// The host's controls on a card with no header: the collapse at its top left, the close at its
+// top right.
+function HostEnds({ leading, trailing }: { leading: ReactNode; trailing: ReactNode }) {
+  return (
+    <>
+      {leading !== undefined && <div className="header-leading">{leading}</div>}
+      {trailing !== undefined && <div className="header-trailing">{trailing}</div>}
+    </>
+  );
+}
+
 /**
  * The only entry point for agent-selected UI. All content passes the catalog boundary.
  * @param context Host-owned placement, never part of the agent payload: "page" for the
@@ -122,6 +133,8 @@ function Chart({ selection }: { selection: Selection }) {
  * @param draggable Let the header carry the card out, as onto the compose canvas (ADR-089).
  * @param leading A host's control before the title, such as a lane's collapse (ADR-134); a
  * card with no header shows it at its top.
+ * @param trailing A host's control at the title bar's far end, after the share button, such as
+ * a lane's close; a card with no header shows it at its top right.
  */
 export function CatalogCard({
   payload,
@@ -129,19 +142,21 @@ export function CatalogCard({
   shareable = true,
   draggable = false,
   leading,
+  trailing,
 }: {
   payload: unknown;
   context?: "page" | "thread";
   shareable?: boolean;
   draggable?: boolean;
   leading?: ReactNode;
+  trailing?: ReactNode;
 }) {
   const result = resolve(payload);
   const [showTable, setShowTable] = useState(false);
   if (result.kind === "rejected")
     return (
       <section className="card state" data-context={context}>
-        {leading !== undefined && <div className="header-leading">{leading}</div>}
+        <HostEnds leading={leading} trailing={trailing} />
         <span className="state-symbol">↗</span>
         <p className="eyebrow">CATALOG LIMIT</p>
         <h2>We don’t have a safe view for this yet.</h2>
@@ -155,7 +170,7 @@ export function CatalogCard({
   if (result.kind === "empty")
     return (
       <section className="card state" data-context={context}>
-        {leading !== undefined && <div className="header-leading">{leading}</div>}
+        <HostEnds leading={leading} trailing={trailing} />
         <span className="state-symbol">∅</span>
         <p className="eyebrow">NO DATA</p>
         <h2>{result.title}</h2>
@@ -177,6 +192,7 @@ export function CatalogCard({
           <>
             <span className="badge">Validated</span>
             {shareable && <ShareButton card={{ v: 1, kind: "catalog", payload }} />}
+            {trailing}
           </>
         }
       />
