@@ -209,11 +209,21 @@
     background-color: color-mix(in srgb, var(--paper-deep) 60%, transparent);
   }
 
-  /* The canvas is a dotted field (ADR-089): open ground that invites something to be put down. */
+  /* The canvas is a cutting mat (ADR-089's open ground, Ethan's hobby mat): a self-healing grid
+     of fine lines every 18px cell and heavier ones every fifth, drawn as gradients on the field
+     so the lines stay crisp at any size and follow the theme. It runs under lanes too. */
   .canvas {
     background-color: var(--bg);
-    background-image: radial-gradient(var(--hairline) 1px, transparent 1px);
-    background-size: 18px 18px;
+    background-image:
+      linear-gradient(var(--mat-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--mat-line) 1px, transparent 1px),
+      linear-gradient(var(--mat-line-fine) 1px, transparent 1px),
+      linear-gradient(90deg, var(--mat-line-fine) 1px, transparent 1px);
+    background-size:
+      90px 90px,
+      90px 90px,
+      18px 18px,
+      18px 18px;
     /* The canvas fills the window's bottom right corner, which the window rounds at 12px
        inside its 1px border from md up (window.tsx), so the canvas rounds that corner the same
        way, and a carry's ring below follows the curve rather than being cut off by it. */
