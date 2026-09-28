@@ -30,12 +30,10 @@ const LIGHT: Pair[] = [
   ["--desk", "--yak-paper-bright", 1.54, 1.3],
   ["--desk", "--paper", 1.43, 1.3],
   ["--desk", "--chrome", 6.3, 1.5],
-  ["--trim", "--yak-paper-bright", 6.57, 3],
 ];
 const DARK: Pair[] = [
   ["--desk", "--paper", 2.75, 1.3],
   ["--desk", "--chrome", 1.69, 1.5],
-  ["--trim", "--paper", 5.79, 3],
 ];
 const WASHES: Wash[] = [
   ["--chrome-line", "--chrome", 1.63, 1],
@@ -58,8 +56,12 @@ const FAINT: Record<"light" | "dark", Pair[]> = {
     ["--faint-ink", "--paper-deep", 4.6, 4.5],
   ],
 };
-// The splash's line, the ink at a share over nothing, as it lands on the canvas field (--bg).
-const SPLASH = { light: 1.26, dark: 1.36 };
+// The splash's figure, the ink at a share over nothing, as it lands on the open space's paper
+// (ADR-135): a sketch behind the words, never competing with them.
+const SPLASH_FIGURE = { light: 1.84, dark: 2.21 };
+// The splash's paintings show through their paper wash at a share in this range: a picture
+// under the field, not a photograph on it, the same for both.
+const SPLASH_PAINT = { min: 0.1, max: 0.3 };
 // No pixel of the decoded painting may be brighter than this (paint-chrome.mjs).
 const PAINTING_BOUND = 0.1;
 
@@ -122,6 +124,16 @@ const contrast = (a: number, b: number): number =>
 const ROOT = block(":root");
 const THEMES = { light: [ROOT], dark: [ROOT, block(':root[data-theme="dark"]')] };
 
+// A token's declared value in a theme: the last block that declares it wins, as the cascade does.
+function declared(name: string, theme: Map<string, string>[]): string {
+  let value = "";
+  for (const each of theme) value = each.get(name) ?? value;
+  return value;
+}
+// How much of a splash painting shows through its wash: one less the wash's share of paper.
+const shown = (token: string, theme: Map<string, string>[]): number =>
+  1 - Number(/(\d+)%/.exec(declared(token, theme))?.[1]) / 100;
+
 // A ratio as tokens.css writes it: "8.98:1", "16.1:1", "6.3:1".
 const writtenInCss = (ratio: number): boolean =>
   [ratio.toFixed(2), ratio.toFixed(1), String(ratio)].some((text) => CSS.includes(`${text}:1`));
@@ -176,16 +188,24 @@ describe("the window chrome's tokens", () => {
     }).toEqual({ mean: facts.mean, withinBound: true, readable: true });
   });
 
-  it("draw the splash's line faintly off the field in either theme", () => {
-    const share = Number(/(\d+)%/.exec(ROOT.get("--splash-line") ?? "")?.[1]) / 100;
+  it("draw the splash's figure faintly off the paper in either theme", () => {
     const measured = Object.entries(THEMES).map(([name, theme]) => {
-      const field = colour("--bg", theme);
+      const share = Number(/(\d+)%/.exec(declared("--splash-figure", theme))?.[1]) / 100;
+      const paper = colour("--paper", theme);
       const ink = colour("--ink", theme);
-      const over = (i: 0 | 1 | 2) => ink[i] * share + field[i] * (1 - share);
+      const over = (i: 0 | 1 | 2) => ink[i] * share + paper[i] * (1 - share);
       const line: Rgb = [over(0), over(1), over(2)];
-      return [name, Math.round(contrast(luminance(line), luminance(field)) * 100) / 100];
+      return [name, Math.round(contrast(luminance(line), luminance(paper)) * 100) / 100];
     });
-    expect(Object.fromEntries(measured)).toEqual(SPLASH);
+    expect(Object.fromEntries(measured)).toEqual(SPLASH_FIGURE);
+  });
+
+  it("show the splash's paintings through their one wash in either theme", () => {
+    for (const theme of Object.values(THEMES)) {
+      const through = shown("--splash-wash", theme);
+      expect(through).toBeGreaterThanOrEqual(SPLASH_PAINT.min);
+      expect(through).toBeLessThanOrEqual(SPLASH_PAINT.max);
+    }
   });
 });
 

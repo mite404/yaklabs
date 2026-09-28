@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-// Cuts Kay out of Ethan's mock (docs/reference/shell-polish/crops/9-mascot.png) into the two
-// placeholder assets the shell uses until the source file arrives (Q11): the mascot and the
-// avatar's face, transparent WebP at 2x. The ground is flood-filled from the crop's edges over
+// Cuts Kay's face out of Ethan's mock (docs/reference/shell-polish/crops/9-mascot.png) into the
+// placeholder the account avatar uses until the source file arrives (Q11): a transparent WebP
+// at 2x. The mascot himself left the canvas (ADR-135). The ground is flood-filled from the crop's edges over
 // pale, grey pixels, so Kay's own whites (the eyes) stay.
 //
 //   node apps/web/scripts/cut-kay.mjs
@@ -11,12 +11,11 @@ import { chromium, ROOT } from "./harness.mjs";
 
 const SOURCE = path.join(ROOT, "docs/reference/shell-polish/crops/9-mascot.png");
 const OUT = path.join(ROOT, "apps/web/public/kay");
-// The mascot shows 96px wide (tasks.md H1), the face 32px in the avatar; both at 2x.
-const MASCOT_WIDTH = 192;
+// The face shows 32px in the avatar, at 2x.
 const FACE_SIZE = 64;
 
 // Runs in the page: the cut, the crop and the two encodes, returned as base64 WebP.
-async function cut({ png, mascotWidth, faceSize }) {
+async function cut({ png, faceSize }) {
   const img = new Image();
   img.src = `data:image/png;base64,${png}`;
   await img.decode();
@@ -95,15 +94,13 @@ async function cut({ png, mascotWidth, faceSize }) {
   };
   const w = right - left + 1;
   const h = bottom - top + 1;
-  const mascotHeight = Math.round((h / w) * mascotWidth);
   // The face: a square on the head, horns to chin, centred on the nose.
   const faceSide = Math.round(w * 0.62);
   const faceX = Math.round(left + w / 2 - faceSide / 2);
   const faceY = top;
   return {
-    mascot: await encode(left, top, w, h, mascotWidth, mascotHeight),
     face: await encode(faceX, faceY, faceSide, faceSide, faceSize, faceSize),
-    box: { left, top, w, h, mascotHeight },
+    box: { left, top, w, h },
   };
 }
 
@@ -111,11 +108,9 @@ const browser = await chromium.launch();
 const page = await browser.newPage();
 const result = await page.evaluate(cut, {
   png: readFileSync(SOURCE).toString("base64"),
-  mascotWidth: MASCOT_WIDTH,
   faceSize: FACE_SIZE,
 });
 await browser.close();
 mkdirSync(OUT, { recursive: true });
-writeFileSync(path.join(OUT, "kay.webp"), Buffer.from(result.mascot, "base64"));
 writeFileSync(path.join(OUT, "kay-face.webp"), Buffer.from(result.face, "base64"));
-console.log(`kay.webp ${MASCOT_WIDTH}x${result.box.mascotHeight}, kay-face.webp ${FACE_SIZE}px`);
+console.log(`kay-face.webp ${FACE_SIZE}px from a ${result.box.w}x${result.box.h} cut`);

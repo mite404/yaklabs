@@ -25,6 +25,11 @@
 :root[data-theme="dark"] .chrome-surface .dark\:hover\:bg-muted\/50:hover {
   background-color: var(--muted);
 }
+/* The empty canvas's raised surface (ADR-136) draws a solid edge; the open space's own
+   `border-dashed` utility would win over a layered rule, so this one is unlayered too. */
+.open-space:has(> .splash) {
+  border-style: solid;
+}
 /* A tab draws its ring inside itself: the tab strip scrolls, and a scroller clips whatever lies
    past its edge. On the active tab's pill the ring is the pill's own night ink (16.1:1). */
 .chrome-surface .tab:focus-visible {
@@ -129,27 +134,6 @@
     content-visibility: hidden;
   }
 
-  /* The trim (ADR-112): a line in --trim around the window's body, under the bar and down both
-     sides to the bottom, drawn over the edge so it takes no layout and no box below it moves. */
-  .window-trim::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    z-index: 30;
-    box-shadow: inset 0 0 0 2px var(--trim);
-    pointer-events: none;
-    /* A layer of its own: laid over the body in the page's layer, it made Chromium composite
-       what lies under it differently, and a dark-mode fill came out a level off. */
-    will-change: transform;
-  }
-  /* A window with a frame rounds its bottom corners at 12px less its 1px border; the trim bends
-     with them rather than being cut off where the corner clips it. */
-  @media (width >= 48rem) {
-    .window-trim::after {
-      border-radius: 0 0 11px 11px;
-    }
-  }
-
   /* The painted bar (ADR-115): the painting under a subtle green wash, darkest at the ends
      where the traffic lights and the account sit, over the painting's mean colour. Its soft ink
      is a step brighter than the flat bar's, since the painting is lighter than the flat green. */
@@ -168,20 +152,102 @@
       var(--chrome-painting);
   }
 
-  /* The empty canvas's splash (ADR-113): the drawing is a mask filled with --splash-line, so it
-     themes with the ink and shows only its strokes, never the bounds of an image. It sits
-     behind the words, and it and Kay fade in once, with no fade under reduced motion. */
+  /* The empty canvas's splash (ADR-113, ADR-136): a raised paper surface with the field's dots
+     on it, a clearing of plain paper behind the words that fades out in every direction, a
+     sheet of construction lines and Atlas with his globe ringing the words. The surface's
+     ground goes plain while the surface holds the dots, and the surface casts a shadow, so it
+     reads as raised above the thread. Bottom to top: the paper, the lit fill, the dots, the
+     lines, the clearing, Atlas. A :has() keeps the switch in CSS, off OpenSpace. The splash
+     fades in once, with no fade under reduced motion. */
+  .canvas:has(> .open-space > .splash) {
+    background-image: none;
+  }
+  .open-space:has(> .splash) {
+    --clearing: var(--paper);
+    background-color: var(--paper);
+    box-shadow:
+      0 1px 2px var(--shadow),
+      0 12px 40px var(--shadow-strong);
+  }
+  /* The clearing paints --clearing, which takes the carry's tint, so a carry lights the whole
+     surface and the fill below never hides behind a solid disc. */
+  .open-space[data-lit]:has(> .splash) {
+    --clearing: color-mix(in srgb, var(--paper-deep) 60%, var(--paper));
+  }
   .splash {
     position: absolute;
     inset: 0;
     z-index: -1;
+    border-radius: calc(var(--radius-card) - 1px); /* inside the open space's 1px border */
+    overflow: hidden; /* Atlas's faded feet run past the bottom edge */
+    container-type: size; /* the picture measures the surface in cq units */
+    /* Atlas stands 98% of the surface tall; his globe is 54.4% of that, its centre 28.4% down
+       his file. Everything else is placed off the globe. */
+    --atlas: 98cqh;
+    --globe: calc(var(--atlas) * 0.544);
   }
+  .splash > * {
+    position: absolute;
+  }
+  /* The field's dots, on the surface rather than the ground. They start 1rem and 1px up and
+     left, the canvas's padding and the surface's border, so they fall on the field's grid. */
+  .splash-dots {
+    inset: 0;
+    background: radial-gradient(var(--hairline) 1px, transparent 1px) calc(-1rem - 1px)
+      calc(-1rem - 1px) / 18px 18px;
+  }
+  /* The clearing, over the dots and the lines: an ellipse of the surface's own proportions,
+     solid paper to 25% of its half width and height and gone by 75%, on a box floored at 36rem
+     by 20rem, so the two-line copy always sits on plain paper and the spokes' meeting point
+     never fights the words. */
+  .splash-clearing {
+    inset: 0;
+    background: radial-gradient(ellipse 50% 50% at center, var(--clearing) 25%, transparent 75%)
+      center / max(100%, 36rem) max(100%, 20rem) no-repeat;
+  }
+  /* The construction (draw-atlas-lines.mjs): circles concentric with the globe and spokes
+     through its centre, one screen pixel wide, in the splash line. The file is a square four
+     globes wide centred on the globe, which is the surface's centre, and a second mask fades the
+     lines out towards the surface's edges so they never meet a corner. */
+  .splash-lines {
+    inset: 0;
+    background: var(--splash-line);
+    mask-image:
+      url("/splash/atlas-lines.svg"),
+      radial-gradient(ellipse 50% 50% at center, black 30%, transparent 100%);
+    mask-size:
+      calc(var(--globe) * 4) calc(var(--globe) * 4),
+      100% 100%;
+    mask-position: center;
+    mask-repeat: no-repeat;
+    mask-composite: intersect;
+  }
+  /* Atlas: a stencil (black strokes on alpha) as a mask filled with --splash-figure, so he
+     themes with the ink and shows no bounds, centred with his globe's centre at the surface's
+     middle. A second mask, solid to 55% and gone at the bottom, takes his feet out before the
+     edge. */
   .splash-drawing {
-    background-color: var(--splash-line);
-    mask: url("/splash/sphere.svg") center / contain no-repeat;
+    top: calc(50% - 0.284 * var(--atlas));
+    left: 50%;
+    height: var(--atlas);
+    aspect-ratio: 635 / 1081;
+    translate: -50% 0;
+    background: var(--splash-figure);
+    mask-image: url("/splash/atlas.webp"), linear-gradient(black 55%, transparent);
+    mask-size: 100% 100%;
+    mask-position: center;
+    mask-repeat: no-repeat;
+    mask-composite: intersect;
   }
-  .splash,
-  .splash-in {
+  /* Under a 330px content box (a phone) the sheet and Atlas would crowd the button, so they
+     stay away. The query reads the splash layer, sized as the surface is. */
+  @container (max-width: 329px) {
+    .splash-lines,
+    .splash-drawing {
+      display: none;
+    }
+  }
+  .splash {
     animation: splash-in 150ms ease-out;
   }
   @keyframes splash-in {
@@ -190,11 +256,51 @@
     }
   }
   @media (prefers-reduced-motion: reduce) {
-    .splash,
-    .splash-in {
+    .splash {
       animation: none;
     }
   }
+
+  /* A new thread's welcome (ADR-136): Kay's own greeting over one of Ethan's paintings, the
+     landscape or the abstract strokes by <html data-splash> (splash.ts), under the same paper
+     wash and the same clearing of plain paper behind the words, fading out in every direction,
+     so the two read as one treatment with a different picture. The greeting names the morning
+     in the light theme and the evening in the dark one, both in the DOM, one shown. The
+     scroll area drops its gutters for it (thread.css, data-empty), and the welcome fills it to
+     centre the words. */
+  .welcome {
+    position: relative;
+    isolation: isolate;
+    display: grid;
+    min-height: 100%;
+    place-items: center;
+    padding: 24px;
+  }
+  .welcome-art {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background:
+      linear-gradient(var(--splash-wash), var(--splash-wash)),
+      url("/splash/landscape.webp") center / cover no-repeat;
+  }
+  html[data-splash="abstract"] .welcome-art {
+    background:
+      linear-gradient(var(--splash-wash), var(--splash-wash)),
+      url("/splash/abstract.webp") center / cover no-repeat;
+  }
+  html[data-theme="dark"] .welcome [data-part="morning"],
+  html:not([data-theme="dark"]) .welcome [data-part="evening"] {
+    display: none;
+  }
+  .welcome-art::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse 50% 50% at center, var(--paper) 25%, transparent 75%) center
+      / max(100%, 40rem) max(100%, 28rem) no-repeat;
+  }
+
   /* The open space lights up under a carry (ADR-091) on a layer below the splash drawing, so the
      drawing stays on top of the fill, as the words do. */
   .open-space::before {

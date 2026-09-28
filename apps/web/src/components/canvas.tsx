@@ -8,7 +8,7 @@ import { Lane, type LaneReports, type LaneView } from "./lane";
 export type { LaneView } from "./lane";
 import { displacement, useReorder } from "./lane-reorder";
 import { LaneSeparator } from "./lane-separator";
-import { Kay, SplashDrawing } from "./splash";
+import { SplashDrawing } from "./splash";
 
 // The open space at the end of the row: the whole canvas when it is empty, with the splash
 // behind its words, and a slimmer column once lanes exist, so there is always somewhere to drop
@@ -38,7 +38,6 @@ function OpenSpace({
       <button type="button" className="btn btn-sm" data-blank="" onClick={onBlank}>
         Create blank thread
       </button>
-      {splash && <Kay />}
     </div>
   );
 }

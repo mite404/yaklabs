@@ -3,6 +3,8 @@ import { cssVars } from "@yaklabs/ui/lib/utils";
 import { useState, type ReactNode } from "react";
 import { useChrome } from "../chrome";
 import { useMatch } from "react-router";
+import { SplashSwitch } from "../components/splash-switch";
+import { useSplash } from "../splash";
 import type { ThemeChoice } from "../theme";
 import { AppSidebar } from "./sidebar";
 import { TitleBar } from "./title-bar";
@@ -55,12 +57,13 @@ function Workspace({ children }: { children: ReactNode }) {
 /**
  * The app drawn as a desktop window (ADR-094): a rounded frame on a desk of its own with a
  * margin around it, full-bleed on a narrow screen (ADR-111). The green title bar runs its whole
- * width (ADR-110); below it, framed by the trim, the sidebar (shadcn's sidebar-16 pattern) and,
+ * width (ADR-110); below it, the sidebar (shadcn's sidebar-16 pattern) and,
  * inset like Kay's content pane, the workspace.
  */
 export function Window({ theme, children }: { theme: ThemeChoice; children: ReactNode }) {
   const [open, setOpen] = useState(readSidebarOpen);
   const chrome = useChrome();
+  const splash = useSplash();
   return (
     <>
       <div data-slot="desk" aria-hidden="true" className="fixed inset-0 bg-[var(--desk)]" />
@@ -83,12 +86,13 @@ export function Window({ theme, children }: { theme: ThemeChoice; children: Reac
           })}
         >
           <TitleBar theme={theme} chrome={chrome} />
-          <div data-slot="window-body" className="window-trim relative flex min-h-0 flex-1">
+          <div data-slot="window-body" className="relative flex min-h-0 flex-1">
             <AppSidebar theme={theme} chrome={chrome} />
             <Workspace>{children}</Workspace>
           </div>
         </SidebarProvider>
       </div>
+      <SplashSwitch splash={splash} />
     </>
   );
 }

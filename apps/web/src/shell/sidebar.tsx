@@ -28,8 +28,8 @@ const DOCS_URL = "https://docs.meetkay.ai";
 const RAIL_BUTTON =
   "h-10 gap-3 px-3 text-sm text-soft-ink hover:text-ink data-active:text-ink group-data-[collapsible=icon]:size-10! group-data-[collapsible=icon]:p-2.5! [&_svg]:size-5";
 
-// Kay's mark, one polygon in the text colour; decorative, since its link carries the name.
-function KayMark({ className }: { className?: string }) {
+/** Kay's mark, one polygon in the text colour; decorative, so its host carries the name. */
+export function KayMark({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 78.59 78.54" aria-hidden="true" focusable="false" className={className}>
       <polygon fill="currentColor" points={KAY_MARK_POINTS} />

@@ -48,7 +48,6 @@ const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 const round = (n) => Math.round(n * 100) / 100;
 const min = (list) => (list.length === 0 ? Infinity : Math.min(...list));
 const splash = (page) => shown(page).locator('[data-slot="canvas-splash"]');
-const kay = (page) => shown(page).locator('[data-slot="kay-mascot"]');
 const openSpace = (page) => canvasIn(page).locator(":scope > [data-ground]").first();
 const lanes = (page) => canvasIn(page).locator(":scope > article");
 
@@ -409,7 +408,8 @@ export const polishChecks = {
     };
   },
 
-  // Section 3: the trim.
+  // Section 3: the trim. Gone (ADR-136): the window's body draws no coloured line, in either
+  // theme, and no token names one.
   async C(browser) {
     const notes = [];
     let ok = true;
@@ -417,45 +417,15 @@ export const polishChecks = {
       const { page, context } = await openScenario(browser, { theme });
       const body = page.locator('[data-slot="window-body"]');
       const look = await body.evaluate((el) => getComputedStyle(el, "::after").boxShadow);
-      const trim = await tokenColour(page, "--trim");
-      const c1 = look.includes("2px") && look.includes(trim);
-      const bright = rgbOf(await tokenColour(page, "--bg"));
-      const bar = await barColour(page);
-      const c2 = Math.max(ratio(rgbOf(trim), bright), ratio(rgbOf(trim), bar)) >= 3;
-      await page.locator("body").focus();
-      const atRest = await body.evaluate((el) => getComputedStyle(el, "::after").boxShadow);
-      await shown(page).getByRole("textbox").first().focus();
-      const focused = await body.evaluate((el) => getComputedStyle(el, "::after").boxShadow);
-      const c3 =
-        atRest === focused &&
-        trim !== (await tokenColour(page, "--focus")) &&
-        trim !== (await tokenColour(page, "--ring"));
-      ok &&= c1 && c2 && c3;
-      notes.push(
-        `${theme}: C1 ${c1}; C2 ${round(Math.max(ratio(rgbOf(trim), bright), ratio(rgbOf(trim), bar)))}; C3 ${c3}`,
+      const declared = await page.evaluate(() =>
+        getComputedStyle(document.documentElement).getPropertyValue("--trim").trim(),
       );
+      const c1 = look === "none" && declared === "";
+      ok &&= c1;
+      notes.push(`${theme}: body ::after ${look}, --trim "${declared}" ${c1}`);
       await context.close();
     }
-    const base = readBaseline().json.light.bar.boxes;
-    const grown = await openScenario(browser, { viewport: GROWN });
-    const now = await boxesOf(grown.page);
-    const c4 =
-      same(shift(now.tabpanel), base.tabpanel) &&
-      same(shift(now.sidebar), base.sidebar) &&
-      same(now.tabs.map(shift), base.tabs);
-    await grown.context.close();
-    const narrow = await openScenario(browser, { viewport: { width: 767, height: 900 } });
-    const width = (await narrow.page.locator('[data-slot="window-body"]').boundingBox()).width;
-    const drawn = await narrow.page
-      .locator('[data-slot="window-body"]')
-      .evaluate((el) => getComputedStyle(el, "::after").boxShadow.includes("2px"));
-    const c5 = width === 767 && drawn;
-    await narrow.context.close();
-    ok &&= c4 && c5;
-    return {
-      ok,
-      detail: `${notes.join("; ")}; C4 boxes as baseline ${c4}; C5 ${width}px drawn ${drawn}`,
-    };
+    return { ok, detail: notes.join("; ") };
   },
 
   // Section 4: the tabs on the bar.
@@ -762,8 +732,7 @@ export const polishChecks = {
       const drawing = shown(page).locator('[data-slot="splash-drawing"]');
       const box = await drawing.boundingBox();
       const hideOthers = await page.addStyleTag({
-        content:
-          '[data-slot="kay-mascot"],[data-ground] > p,[data-ground] > button{visibility:hidden!important}',
+        content: "[data-ground] > p,[data-ground] > button{visibility:hidden!important}",
       });
       const withDrawing = await page.screenshot({ clip: box });
       await drawing.evaluate((el) => {
@@ -794,24 +763,15 @@ export const polishChecks = {
       notes.push(
         `${theme}: G1 empty ${g1empty}; G3 empty ${g3empty}; G4 ${g4.join("/")}; G5 ${round(darkest)}; G6 ${cornerSame}`,
       );
-      // The brief's order, bottom to top: field, lit fill, drawing, words and button, Kay.
+      // The brief's order, bottom to top: field, lit fill, drawing, words and button.
       const order = await openSpace(page).evaluate((space) => {
         const layer = space.querySelector('[data-slot="canvas-splash"]');
-        const kayImg = space.querySelector('[data-slot="kay-mascot"]');
-        const blank = space.querySelector("button");
         return {
           fill: getComputedStyle(space, "::before").zIndex,
           drawing: getComputedStyle(layer).zIndex,
-          kayAfterButton:
-            blank.compareDocumentPosition(kayImg) === Node.DOCUMENT_POSITION_FOLLOWING,
-          kay: getComputedStyle(kayImg).zIndex,
         };
       });
-      const stacked =
-        Number(order.fill) < Number(order.drawing) &&
-        Number(order.drawing) < 0 &&
-        order.kayAfterButton &&
-        order.kay === "auto";
+      const stacked = Number(order.fill) < Number(order.drawing) && Number(order.drawing) < 0;
       ok &&= stacked;
       notes.push(`${theme}: order ${JSON.stringify(order)} ${stacked}`);
       if (theme === "light") await page.screenshot({ path: shotPath("G-empty-light") });
@@ -847,13 +807,13 @@ export const polishChecks = {
     const drops = [];
     const litBorders = [];
     const olive = await tokenColour(page, "--olive");
-    for (const target of ["centre", "kay"]) {
+    // Once on the picture's upper quarter, once on the lower, where Atlas's body is.
+    for (const target of ["upper", "lower"]) {
       const spaceBox = await openSpace(page).boundingBox();
-      const kayBox = await kay(page).boundingBox();
-      const point =
-        target === "centre"
-          ? { x: spaceBox.x + spaceBox.width / 2, y: spaceBox.y + spaceBox.height * 0.25 }
-          : { x: kayBox.x + kayBox.width / 2, y: kayBox.y + kayBox.height / 2 };
+      const point = {
+        x: spaceBox.x + spaceBox.width / 2,
+        y: spaceBox.y + spaceBox.height * (target === "upper" ? 0.25 : 0.75),
+      };
       const under = await page.evaluate(
         ({ x, y }) => document.elementFromPoint(x, y)?.tagName ?? "",
         point,
@@ -881,13 +841,15 @@ export const polishChecks = {
       await page.waitForTimeout(300);
     }
     const g7 = drops.every((d) => d.lanes === 1 && d.under !== "IMG");
+    // The three looks (ADR-135) ship a painting or the stencil, well past the sphere's bound.
+    const bound = 300_000;
     const g8 = litBorders.every((c) => c === olive);
     const transfer = await page.evaluate(
       () =>
         performance.getEntriesByType("resource").find((entry) => entry.name.includes("/splash/"))
           ?.transferSize ?? -1,
     );
-    const g10 = transfer > 0 && transfer <= 30_000;
+    const g10 = transfer > 0 && transfer <= bound;
     await context.close();
     ok &&= g2 && g7 && g8 && g10;
     return {
@@ -896,78 +858,17 @@ export const polishChecks = {
     };
   },
 
-  // Section 8: Kay.
+  // Section 8: Kay. The mascot left the canvas (ADR-135); only the avatar's face remains (H5).
   async H(browser) {
-    const notes = [];
-    let ok = true;
     const { page, context } = await openScenario(browser, {});
     await toEmpty(page);
-    const kayBox = await kay(page).boundingBox();
-    const space = await openSpace(page).boundingBox();
-    const right = space.x + space.width - (kayBox.x + kayBox.width);
-    const bottom = space.y + space.height - (kayBox.y + kayBox.height);
-    const h1 =
-      Math.abs(kayBox.width - 96) <= 2 && Math.abs(right - 24) <= 1 && Math.abs(bottom - 24) <= 1;
-    notes.push(`H1 ${round(kayBox.width)}px, ${round(right)} right, ${round(bottom)} bottom ${h1}`);
-    const alpha = await kay(page).evaluate((img) => {
-      const canvas = new OffscreenCanvas(img.naturalWidth, img.naturalHeight);
-      const context2d = canvas.getContext("2d");
-      context2d.drawImage(img, 0, 0);
-      return context2d.getImageData(0, 0, 1, 1).data[3];
-    });
-    const size = await page.evaluate(
-      () =>
-        performance
-          .getEntriesByType("resource")
-          .find((entry) => entry.name.endsWith("/kay/kay.webp"))?.transferSize ?? -1,
-    );
-    const h6 = alpha === 0 && size > 0 && size <= 60_000;
-    notes.push(`H6 corner alpha ${alpha}, ${size} bytes ${h6}`);
     const avatar = titleBar(page).getByRole("button", { name: "Account" }).locator("img");
     const h5 =
       (await avatar.getAttribute("src"))?.includes("kay-face") === true &&
       (await avatar.getAttribute("alt")) === "";
-    notes.push(`H5 ${h5}`);
-    ok &&= h1 && h5 && h6;
+    const gone = (await shown(page).locator('[data-slot="kay-mascot"]').count()) === 0;
     await context.close();
-
-    const overlaps = [];
-    for (const viewport of WIDTHS) {
-      const opened = await openScenario(browser, { viewport });
-      await toEmpty(opened.page);
-      const shownKay = await kay(opened.page).isVisible();
-      const spaceBox = await openSpace(opened.page).boundingBox();
-      if (shownKay) {
-        const k = await kay(opened.page).boundingBox();
-        for (const el of [
-          openSpace(opened.page).locator("p"),
-          openSpace(opened.page).getByRole("button"),
-        ]) {
-          const b = await el.boundingBox();
-          const hit =
-            k.x < b.x + b.width &&
-            b.x < k.x + k.width &&
-            k.y < b.y + b.height &&
-            b.y < k.y + k.height;
-          if (hit) overlaps.push(`${viewport.width} hits`);
-        }
-      } else if (spaceBox.width >= 480)
-        overlaps.push(`${viewport.width} hidden at ${spaceBox.width}`);
-      if (shownKay && spaceBox.width < 480)
-        overlaps.push(`${viewport.width} shown at ${spaceBox.width}`);
-      notes.push(`${viewport.width}: space ${round(spaceBox.width)} kay ${shownKay}`);
-      await opened.context.close();
-    }
-    const h2 = overlaps.length === 0;
-    const lanesOpen = await openScenario(browser, {});
-    await toLanes(lanesOpen.page);
-    const h3 = (await kay(lanesOpen.page).count()) === 0;
-    await lanesOpen.context.close();
-    ok &&= h2 && h3;
-    return {
-      ok,
-      detail: `${notes.join("; ")}; H2 ${h2} ${overlaps.join(",")}; H3 ${h3}; H4 see G7`,
-    };
+    return { ok: h5 && gone, detail: `H5 ${h5}; mascot gone ${gone}` };
   },
 
   // Section 9: dark mode. A to G loop over both themes; this adds I2 and I3.
@@ -1037,14 +938,9 @@ export const polishChecks = {
       const style = getComputedStyle(el);
       return `${style.transitionDuration} ${style.animationName}`;
     });
-    // Kay fades in by an animation, so its name is what reduced motion must clear.
-    const kayMotion = await kay(reduce.page).evaluate((el) => {
-      const style = getComputedStyle(el);
-      return `${style.transitionDuration} ${style.animationName}`;
-    });
-    const j3 = motion === "0s none" && kayMotion === "0s none";
+    const j3 = motion === "0s none";
     notes.push(
-      `J1 ${barRunning}|${emptyRunning}|${cycleRunning} same ${Buffer.compare(one, two) === 0}; J3 ${motion} / ${kayMotion}`,
+      `J1 ${barRunning}|${emptyRunning}|${cycleRunning} same ${Buffer.compare(one, two) === 0}; J3 ${motion}`,
     );
     await reduce.context.close();
     const moving = await openScenario(browser, { motion: "no-preference" });

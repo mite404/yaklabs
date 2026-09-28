@@ -1583,3 +1583,58 @@ the canvas is off screen or empty, so the bar never shifts. A mock with the cont
 row's leading edge was set aside for it.
 Proof: P13 (the phone's top row), P14 (the toggle in the title bar and the strip) and P18
 (Collapse all, kept across a reload) in `apps/web/scripts/workspace-check.mjs`.
+
+## ADR-135 - The empty canvas has three looks behind a debug switch, and Kay leaves it
+
+2026-09-28 - Accepted (Ethan: "first let's axe the yak character ... i like both the vitruvian
+(codex sheet) and the oil paintings, so i think having either option be toggleable is good").
+Amends ADR-113.
+Six looks were built on six branches for Ethan to compare: a cutting mat, a codex sheet, a
+Vitruvian sheet, the landscape under the dots, a clearing in it, and a hero. He marked three Figma
+frames ready for dev, "App Shell - Splash - Landscape", "- Abstract" and "- Vitruvian", and asked
+for those three, switchable, so the app carries all three behind a floating debug button at the
+window's bottom right, "Splash · <look>", a shadcn menu on Kay's tokens. The choice is kept in
+`kay.splash` and reaches the CSS as `<html data-splash>`, the way the theme does, so the splash and
+the switch share no prop; a `?splash=` in the address sets it for a screenshot run. The switch
+leaves with the choice.
+Landscape and Abstract are one construction with a different painting: the picture under a paper
+wash at the open space's edges, masked by an elliptical gradient to a clearing of plain paper
+behind the words, with the field's dots drawn over all of it. Ethan's Figma values: the landscape
+shows through at 11%, the abstract strokes at 18%, each a step more on the dark paper. Vitruvian
+is Atlas alone, the stencil from Ethan's file as a CSS mask filled with the ink at 30% (26% in the
+dark), his globe ringing the words and his feet taken out by a second mask; the frame has no circle
+and square, so neither does the code. Kay the mascot is gone from the canvas: Ethan had not asked
+for him, he came from the mock. His face stays as the avatar (ADR-114). The comparison page built
+for the six was never code in this repository and is not merged.
+The sphere drawing and `--splash-line` are gone; `--splash-wash-landscape`,
+`--splash-wash-abstract` and `--splash-figure` replace them, measured in tokens.test.ts.
+Not yet: which look ships, and the origin and licence of Atlas and the paintings (Q11).
+
+## ADR-136 - A new thread greets, the canvas is a raised sheet, and the trim is gone
+
+2026-09-28 - Accepted (Ethan, on seeing Kay's shipped app: "what i want is the landscape and oil
+brush strokes to appear when you start a new thread ... for the canvas view that's where we'll
+have the dots grid and the vitruvian man. i want the canvas' surface to have drop shadow around
+it"). Amends ADR-135 and ADR-113; supersedes ADR-112.
+Kay's own new tab opens with a greeting, and so does a new thread here: while a main thread has
+no turns, its scroll area shows the mark, the date, "Good afternoon" (with the first name once a
+visitor is signed in), Kay's line for the time of day, the projects, and three actions after the
+desktop app's, of which Open browser works and Open file and Open terminal wait for a web
+counterpart. Behind it is one of Ethan's paintings, the landscape or the abstract strokes, under
+its paper wash, with a clearing of plain paper behind the words that fades out in every direction;
+the debug switch now picks that painting, and the first turn takes the welcome away. The catalog's
+panel gains an `empty` slot for it and drops its gutters while the slot shows, so the art reaches
+the panel's edges; a lane passes nothing and stays blank.
+The empty canvas is one look now, Ethan's composed surface: a raised sheet of paper with a solid
+hairline edge and a shadow, the field's dots on it and the ground behind it plain, a clearing of
+paper behind the words, a sheet of construction lines drawn by `draw-atlas-lines.mjs` (circles
+concentric with the globe, spokes through its centre), and Atlas with his globe ringing the words.
+The coloured trim around the window's body (ADR-112) was an artefact of a selected layer in a
+Figma screenshot, never a design: it is gone, with its token and its predicate, in both themes.
+Not yet: projects as a real grouping ("we'll deal with that later"), a file and a terminal for
+the two waiting actions, and the pictures' origin and licence (Q11).
+Amended the same day (Ethan): the greeting follows the theme, not the clock, "Good morning" in
+the light theme and "Good evening" in the dark, both in the DOM with the theme's one shown; the
+construction lines fade to nothing towards the surface's edges and sit under the clearing, so
+their meeting point never fights the words; and both paintings share one `--splash-wash` and one
+clearing, so the abstract strokes read exactly as the landscape does.

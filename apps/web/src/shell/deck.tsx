@@ -18,6 +18,7 @@ import {
 import { trackHintLine } from "../components/divider";
 import { MainCanvas } from "../components/main-canvas";
 import { ThreadPane } from "../components/thread-pane";
+import { Welcome } from "../components/welcome";
 import { BrowserPane } from "./browser-pane";
 import { useShell, type Shell } from "./model";
 import { SPLIT, viewOf, type PaneKind, type View } from "./state";
@@ -82,7 +83,7 @@ function MainPane({ thread, hidden }: { thread: ThreadSummary; hidden: boolean }
       className="flex h-full min-w-0 justify-center p-4"
       style={{ ["--thread-height" as string]: "100%" }}
     >
-      <ThreadPane key={thread.id} thread={thread} />
+      <ThreadPane key={thread.id} thread={thread} welcome={<Welcome thread={thread} />} />
     </div>
   );
 }
