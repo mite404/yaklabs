@@ -3,6 +3,9 @@
    Optical-size cuts adjust letterforms between small labels and large headings. */
 @import "@fontsource-variable/inter/opsz.css";
 @import "@fontsource-variable/newsreader/opsz.css";
+/* Newsreader's italic, which the browser fetches only where italic text renders (the empty
+   canvas's second line), since font-synthesis is off below and a slanted upright is not it. */
+@import "@fontsource-variable/newsreader/opsz-italic.css";
 @import "./primitives.css";
 
 :root {
@@ -139,6 +142,17 @@
      a stroke stands 1.26:1 off the field in light and 1.36:1 in dark, visible without ever
      competing with the words */
   --splash-line: color-mix(in srgb, var(--ink) 12%, transparent);
+  /* the hero splash (splash option L3): the landscape under a moss wash deep enough that no
+     pixel of any painting can fail cream text; on a pure white pixel the wash lands at
+     luminance 0.139, where cream is 4.82:1, and on the painting's mean colour 8.1:1 */
+  --splash-hero-wash: color-mix(in srgb, var(--moss) 75%, transparent);
+  /* on the hero: its dashed edge, a line only (1.75:1 on the wash's brightest pixel), and the
+     button's outline, cream at 72%, which is 3.35:1 there */
+  --splash-hero-line: color-mix(in srgb, var(--yak-cream) 30%, transparent);
+  --splash-hero-rule: color-mix(in srgb, var(--yak-cream) 72%, transparent);
+  /* the carry's lit fill on the hero: the olive at low alpha, which shifts the wash's hue and
+     keeps cream at 5.35:1 on its brightest pixel */
+  --splash-hero-lit: color-mix(in srgb, var(--olive) 45%, transparent);
 
   --radius-card: 14px; /* the catalog card and the thread panel; shadcn owns --radius (ADR-082) */
   --space: 24px;
@@ -282,6 +296,11 @@ button:hover {
   /* Ethan's slate as the desk: 2.75:1 against the paper, 1.69:1 against the bar; a desk darker
      than the paper cannot reach 1.3:1, since black itself is 1.24:1 */
   --desk: var(--yak-slate);
+  /* the hero splash's wash, a step deeper in the dark: cream 5.96:1 on a white pixel under it
+     and 8.7:1 on the painting's mean, the button's outline 3.98:1 there; the lit olive is the
+     lifted one, so it takes a lower share, and cream on it stays 4.74:1 */
+  --splash-hero-wash: color-mix(in srgb, var(--moss) 82%, transparent);
+  --splash-hero-lit: color-mix(in srgb, var(--olive) 25%, transparent);
   --data: #b5b5ae; /* chart marks: 8.2:1 */
   --on-ink: var(--yak-night); /* 16.1:1 on the cream */
   --bubble-tint: color-mix(in srgb, var(--sage) 16%, var(--paper));

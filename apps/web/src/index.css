@@ -168,17 +168,56 @@
       var(--chrome-painting);
   }
 
-  /* The empty canvas's splash (ADR-113): the drawing is a mask filled with --splash-line, so it
-     themes with the ink and shows only its strokes, never the bounds of an image. It sits
-     behind the words, and it and Kay fade in once, with no fade under reduced motion. */
+  /* The empty canvas's splash (ADR-113) as the marketing sites' hero: the open space that holds
+     the splash is the landscape under a moss wash, and it wears the cream inks the way the
+     chrome does (tokens.css), so the copy, the button and the dashed edge come out cream with
+     no colours of their own. The wash is deep enough that cream clears 4.5:1 on a white pixel
+     (tokens.css), so no crop of the painting can fail the words; the moss under the painting
+     is the ground until the file arrives, or if it never does. The splash's presence is the
+     switch, so OpenSpace (canvas.tsx) needs no attribute for it. */
+  .open-space:has(> .splash) {
+    --ink: var(--yak-cream);
+    --hairline: var(--splash-hero-line);
+    --rule: var(--splash-hero-rule);
+    --focus: var(--yak-cream); /* the page's grey ring would sink into the wash */
+    background:
+      linear-gradient(var(--splash-hero-wash), var(--splash-hero-wash)),
+      url("/splash/landscape.webp") center / cover no-repeat,
+      var(--moss);
+  }
+  /* The hero's copy: the display serif at a size that follows the open space's width, 6% of
+     it, from 26px in a slim column to 36px on a wide canvas, set tight as the site sets its
+     headlines. */
+  .splash-copy {
+    font-size: clamp(1.625rem, 6cqi, 2.25rem);
+    line-height: 1.12;
+    letter-spacing: -0.01em;
+  }
+  /* The hero's button hovers to the site's filled cream button: a moss fill would vanish on
+     the moss wash. */
+  .open-space:has(> .splash) .btn {
+    --btn-hover-bg: var(--yak-cream);
+    --btn-hover-border: var(--yak-cream);
+    --btn-hover-ink: var(--yak-night); /* 16.1:1 */
+  }
+  /* The carry's lit fill on the hero: the olive at low alpha (tokens.css), a tint the inks
+     keep their ratios on, where the paper fill would have put cream on grey. */
+  .open-space[data-lit]:has(> .splash)::before {
+    background-color: var(--splash-hero-lit);
+  }
+  /* The splash's own layers sit behind the words and fade in once, with no fade under reduced
+     motion. The drawing layer is a vignette over the painting: the wash a shade deeper towards
+     the edges, as the painted bar darkens at its ends, so the words hold the centre. It only
+     darkens, so the inks on it only gain, and it is clear where the lit fill shows through. */
   .splash {
     position: absolute;
     inset: 0;
     z-index: -1;
+    border-radius: calc(var(--radius-card) - 1px); /* inside the open space's 1px edge */
+    overflow: hidden;
   }
   .splash-drawing {
-    background-color: var(--splash-line);
-    mask: url("/splash/sphere.svg") center / contain no-repeat;
+    background: radial-gradient(ellipse at center, transparent 55%, var(--splash-hero-wash));
   }
   .splash,
   .splash-in {

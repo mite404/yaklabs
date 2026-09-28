@@ -48,6 +48,9 @@ const ON_WASH: Pair[] = [
 ];
 // The splash's line, the ink at a share over nothing, as it lands on the canvas field (--bg).
 const SPLASH = { light: 1.26, dark: 1.36 };
+// The hero splash's wash on a pure white pixel of its painting, the brightest any picture can
+// hold: [cream on it, the button's outline on it, cream on the carry's lit fill over it].
+const HERO = { light: [4.82, 3.35, 5.35], dark: [5.96, 3.98, 4.74] };
 // No pixel of the decoded painting may be brighter than this (paint-chrome.mjs).
 const PAINTING_BOUND = 0.1;
 
@@ -174,5 +177,24 @@ describe("the window chrome's tokens", () => {
       return [name, Math.round(contrast(luminance(line), luminance(field)) * 100) / 100];
     });
     expect(Object.fromEntries(measured)).toEqual(SPLASH);
+  });
+
+  it("keep the hero splash's inks readable on its wash over a white pixel, lit or not", () => {
+    const white: Rgb = [255, 255, 255];
+    const on = (fg: Rgb, bg: Rgb) => Math.round(contrast(luminance(fg), luminance(bg)) * 100) / 100;
+    const measured = Object.entries(THEMES).map(([name, theme]) => {
+      const cream = colour("--yak-cream", theme);
+      const ground = colour("--splash-hero-wash", theme, white);
+      const outline = colour("--splash-hero-rule", theme, ground);
+      const lit = colour("--splash-hero-lit", theme, ground);
+      return [name, [on(cream, ground), on(outline, ground), on(cream, lit)]] as const;
+    });
+    const floors = measured.every(
+      ([, [text, outline, lit]]) => text >= 4.5 && outline >= 3 && lit >= 4.5,
+    );
+    expect({ measured: Object.fromEntries(measured), floors }).toEqual({
+      measured: HERO,
+      floors: true,
+    });
   });
 });

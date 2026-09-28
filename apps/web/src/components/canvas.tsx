@@ -14,7 +14,7 @@ import {
 import { useLanding, type Landing } from "./canvas-carry";
 import { panRow, usePan } from "./canvas-pan";
 import { LaneSeparator } from "./lane-separator";
-import { Kay, SplashDrawing } from "./splash";
+import { Kay, OpenSpaceCopy, SplashDrawing } from "./splash";
 import { displacement, useReorder, type LaneHandlers } from "./lane-reorder";
 
 /** One lane on the canvas: its name, the width it was left at (null: the default), its content. */
@@ -84,7 +84,9 @@ function Lane({
 // The open space at the end of the row: the whole canvas when it is empty, with the splash
 // behind its words, and a slimmer column once lanes exist, so there is always somewhere to drop
 // the next thing. It lights up when a carry would land there. The button is the catalog's own,
-// the one a card's "Show my work" uses.
+// the one a card's "Show my work" uses. While the splash is in it, the open space is the hero
+// (index.css): the painting is its ground and the copy is its headline. Only the border colour
+// transitions, so the ground cuts with the splash rather than fading after it.
 function OpenSpace({
   lit,
   splash,
@@ -98,14 +100,10 @@ function OpenSpace({
     <div
       data-ground=""
       data-lit={lit || undefined}
-      className="open-space @container relative isolate flex h-full min-w-[320px] flex-1 flex-col items-center justify-center gap-4 rounded-[var(--radius-card)] border border-dashed border-hairline p-6 text-center transition-colors data-lit:border-olive"
+      className="open-space @container relative isolate flex h-full min-w-[320px] flex-1 flex-col items-center justify-center gap-4 rounded-[var(--radius-card)] border border-dashed border-hairline p-6 text-center transition-[border-color] data-lit:border-olive"
     >
       {splash && <SplashDrawing />}
-      <p className="font-serif text-xl text-ink">
-        Drag a text selection or card
-        <br />
-        to start a new thread with context
-      </p>
+      <OpenSpaceCopy hero={splash} />
       <button type="button" className="btn btn-sm" data-blank="" onClick={onBlank}>
         Create blank thread
       </button>
