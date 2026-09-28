@@ -1691,3 +1691,7 @@ thread's strip, top-aligned with the row, so the two kinds read apart at a glanc
 action: Share, copy link and open page use the catalog's box-and-arrow, link and window icons
 (`@yaklabs/catalog/icons`) wherever they appear, and lucide keeps the actions the catalog has no
 icon for; the shell's Share2 (nodes) is gone.
+The canvas's empty prompt reads "Drag a text selection or UI card here" (it read "...or card / to
+start a new thread with context" in ADR-089). The gap between lanes is one step of the canvas's
+18px dot grid and a collapsed strip is two (36px, up from 32), with the dots anchored to the
+scrolling row, so every gap between collapsed lanes holds exactly one column of dots.
