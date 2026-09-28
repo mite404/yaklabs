@@ -42,7 +42,11 @@ describe("sealThread and openSealedThread (ADR-128)", () => {
     const { sealed, key } = await sealThread(shared);
     const other = await sealThread(shared);
     const damaged = sealed.slice();
-    damaged.set([sealed.at(-1) ^ 1], sealed.length - 1);
+    // The last byte, one bit flipped.
+    damaged.set(
+      sealed.subarray(-1).map((byte) => byte ^ 1),
+      sealed.length - 1,
+    );
     // A thread whose expiry is not an instant: sealed fine, refused on opening.
     const odd = await sealThread({ ...shared, expiresAt: "next week" });
     expect(await openSealedThread(sealed, other.key)).toBeUndefined();
