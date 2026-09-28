@@ -999,6 +999,23 @@ The first entries are ideas from before any code existed; the rest are parts of 
   menu. Lesson: when a layout change removes an element, search the checks for its selector
   before the run does it for you.
 
+### Half a pixel and an old clock: two bugs in the six-square glyph
+
+**The uneven gaps.** Six 3px squares with 1.5px gaps, centred in a 12px box, put the rows at
+y = 0, 4.5 and 9. A screen cannot light half a pixel, so each edge rounds: one gap came out 2px
+and the next 1px. It is the same as a film scan off by half a pixel of registration: nothing is
+wrong in any one frame, the misalignment only shows side by side. The fix is geometry that is
+whole numbers all the way down: 3px squares, 1px gaps, the glyph pinned 2px in and 1px down.
+
+**The broken wave after switching to six.** React keeps DOM nodes it can match by key. Going from
+4 to 6 squares, it reused four and made two new ones, and a CSS animation's clock starts when its
+element first runs it. Four squares were mid-loop, two started at zero; the wave fell apart. The
+fix is a key that includes the cell count, so a new count means all-new squares on one clock.
+Like re-slating every camera after a reset, not just the ones that were moved.
+
+`AgentWorking.browser.test.tsx` checks both: whole-pixel, even spacing, and one start time for
+every square after a switch. Both tests fail on the old code.
+
 ## 5. Director's Commentary
 
 ### The agent only states intent; the design system does the rest
