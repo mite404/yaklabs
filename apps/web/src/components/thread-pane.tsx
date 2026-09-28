@@ -1,6 +1,7 @@
 import { ChatThreadPanel } from "@yaklabs/catalog";
 import type { ThreadMessage } from "@yaklabs/catalog/thread";
 import type { ThreadId, ThreadSummary } from "@yaklabs/runtime";
+import { useSidebar } from "@yaklabs/ui/components/sidebar";
 import {
   useEffect,
   useRef,
@@ -127,6 +128,7 @@ function PendingFrame({ title, children }: { title: string; children: ReactNode 
 export function ThreadPane({ thread }: { thread: ThreadSummary }) {
   const runtime = useRuntime();
   const session = useSession();
+  const { isMobile } = useSidebar();
   const [turns, retry] = useTurns(thread.id);
   const host = useRef<HTMLDivElement>(null);
   const follow = useFocusFollows(host, turns);
@@ -140,6 +142,7 @@ export function ThreadPane({ thread }: { thread: ThreadSummary }) {
           onRename={(title) => {
             inBackground(runtime.rename({ kind: "thread", id: thread.id }, title), "Renaming");
           }}
+          cardsCarry={!isMobile}
         />
       ) : (
         <PendingFrame title={thread.title}>

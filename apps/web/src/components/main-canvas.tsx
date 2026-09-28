@@ -17,6 +17,7 @@ import {
   type ThreadSummary,
   type Workspace,
 } from "@yaklabs/runtime";
+import { useSidebar } from "@yaklabs/ui/components/sidebar";
 import { useEffect } from "react";
 import { inBackground, useRuntime } from "../runtime";
 import { Canvas, type LaneView } from "./canvas";
@@ -106,6 +107,7 @@ export function MainCanvas({
   visit: string;
 }) {
   const runtime = useRuntime();
+  const { isMobile } = useSidebar();
   const lanes = lanesOf(workspace, main);
   const threads = new Map(workspace.threads.map((thread) => [thread.id, thread] as const));
   // Each visit to a child's address opens its lane, a second click on a row the address already
@@ -137,6 +139,7 @@ export function MainCanvas({
       onCarry={(carried, at) => {
         land(runtime, main, carried, at);
       }}
+      reorderable={!isMobile}
     />
   );
 }

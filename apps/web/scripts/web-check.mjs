@@ -1923,6 +1923,56 @@ try {
     },
   );
 
+  await onOwnPage(
+    "on a phone a lane's title bar does not lift it, the grip is not shown, and the row still scrolls sideways",
+    "/t/t-001?scenario=demo",
+    { viewport: { width: 390, height: 844 } },
+    async (own) => {
+      const layout = own.getByRole("group", { name: "Layout" });
+      await layout.getByRole("button", { name: "Canvas" }).click();
+      const region = own
+        .locator('[role="tabpanel"]:not([inert])')
+        .getByRole("region", { name: "Compose canvas" });
+      await region.locator(":scope > article").nth(1).waitFor({ timeout: 15_000 });
+      const header = region.locator(".thread-header").first();
+      await header.scrollIntoViewIfNeeded();
+      const headerBox = await header.boundingBox();
+      await own.mouse.move(headerBox.x + headerBox.width / 2, headerBox.y + headerBox.height / 2);
+      await own.mouse.down();
+      await own.mouse.move(headerBox.x + headerBox.width / 2 + 40, headerBox.y + 30, {
+        steps: 6,
+      });
+      await own.waitForTimeout(150);
+      const liftedNothing = await own.evaluate(
+        () =>
+          document.querySelector("[data-ghost]") === null &&
+          document.documentElement.dataset.dragging === undefined,
+      );
+      await own.mouse.up();
+      await header.hover();
+      await own.waitForTimeout(250);
+      const affordance = await header.evaluate((el) => ({
+        cursor: getComputedStyle(el).cursor,
+        dots: getComputedStyle(el, "::after").content,
+      }));
+      const noGrip = affordance.cursor !== "grab" && affordance.dots === "none";
+      const noCardCarry = (await region.locator("[data-carry]").count()) === 0;
+      const scroll = await region.evaluate((el) => ({
+        before: el.scrollWidth > el.clientWidth,
+        moved: ((el.scrollLeft = 40), el.scrollLeft),
+      }));
+      return {
+        ok:
+          liftedNothing === true &&
+          noGrip &&
+          noCardCarry &&
+          scroll.before === true &&
+          scroll.moved === 40,
+        detail: `nothing lifted ${liftedNothing}; grip on hover: cursor ${affordance.cursor}, dots ${affordance.dots}; no data-carry in the canvas ${noCardCarry}; row scrollable ${scroll.before}, scrollLeft moved to ${scroll.moved}`,
+      };
+    },
+  );
+
   // On a phone the workspace shows one pane at a time, the one the Layout switch names, across
   // the whole width; the others stay mounted but inert, so a draft or a reply survives a switch.
   await onOwnPage(
