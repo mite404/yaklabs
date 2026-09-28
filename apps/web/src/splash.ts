@@ -1,13 +1,13 @@
 import { useState } from "react";
 
-/** The empty canvas's three looks (ADR-135), behind a debug switch while Ethan chooses. */
-export type SplashStyle = "landscape" | "abstract" | "vitruvian";
-/** The visitor's look and how to change it, as the window hands it to the switch. */
+/** The painting behind a new thread's welcome (ADR-136), behind a debug switch while Ethan chooses. */
+export type SplashStyle = "landscape" | "abstract";
+/** The visitor's painting and how to change it, as the window hands it to the switch. */
 export type SplashChoice = { style: SplashStyle; choose: (next: SplashStyle) => void };
 
 const KEY = "kay.splash";
 const PARAM = "splash";
-const STYLES: readonly SplashStyle[] = ["landscape", "abstract", "vitruvian"];
+const STYLES: readonly SplashStyle[] = ["landscape", "abstract"];
 
 // The choice for this visit, above any remount of the window, for when storage is refused.
 let held: SplashStyle | null = null;
@@ -16,8 +16,8 @@ let held: SplashStyle | null = null;
 export const splashStyleOf = (value: string | null | undefined): SplashStyle | null =>
   STYLES.find((each) => each === value) ?? null;
 
-// The look reaches the CSS as an attribute on <html>, the way the theme does, so the splash and
-// the switch need no prop between them: index.css draws the picture off `data-splash`.
+// The painting reaches the CSS as an attribute on <html>, the way the theme does, so the welcome
+// and the switch need no prop between them: index.css draws the picture off `data-splash`.
 function apply(style: SplashStyle): void {
   document.documentElement.dataset.splash = style;
 }

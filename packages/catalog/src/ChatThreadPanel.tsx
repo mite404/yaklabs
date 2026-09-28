@@ -545,6 +545,7 @@ export function ChatThreadPanel({
   headerActions,
   hostAsk,
   leading,
+  empty,
 }: {
   thread: Thread;
   width?: number;
@@ -558,6 +559,8 @@ export function ChatThreadPanel({
   headerActions?: ReactNode;
   hostAsk?: HostAsk;
   leading?: ReactNode;
+  /** What the scroll area shows while the thread has no turns, such as a welcome. */
+  empty?: ReactNode;
 }) {
   const { source, open } = dictationSetup(dictation);
   const [messages, setMessages] = useState(thread.messages);
@@ -623,7 +626,12 @@ export function ChatThreadPanel({
         onRename={onRename}
         actions={headerActions}
       />
-      <div className="thread-scroll" ref={scroller}>
+      <div
+        className="thread-scroll"
+        ref={scroller}
+        data-empty={messages.length === 0 && empty !== undefined ? "" : undefined}
+      >
+        {messages.length === 0 && empty}
         {messages.map((message) => (
           <Turn
             key={message.id}

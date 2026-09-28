@@ -164,8 +164,18 @@ function PendingFrame({
  * come from the snapshot, so a rename shows everywhere at once.
  * @param leading A control before the title in the title bar, such as a lane's collapse
  * (ADR-134); in the frame too while the turns come.
+ * @param welcome What the thread shows while it has no turns (ADR-136); the main pane's
+ * greeting, and nothing in a lane.
  */
-export function ThreadPane({ thread, leading }: { thread: ThreadSummary; leading?: ReactNode }) {
+export function ThreadPane({
+  thread,
+  leading,
+  welcome,
+}: {
+  thread: ThreadSummary;
+  leading?: ReactNode;
+  welcome?: ReactNode;
+}) {
   const runtime = useRuntime();
   const session = useSession();
   const { isMobile } = useSidebar();
@@ -188,6 +198,7 @@ export function ThreadPane({ thread, leading }: { thread: ThreadSummary; leading
           headerActions={<ThreadHeaderActions thread={thread} />}
           hostAsk={snooze}
           leading={leading}
+          empty={welcome}
         />
       ) : (
         <PendingFrame thread={thread} leading={leading}>

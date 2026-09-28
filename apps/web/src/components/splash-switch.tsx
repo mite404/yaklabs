@@ -13,15 +13,14 @@ import { splashStyleOf, type SplashChoice, type SplashStyle } from "../splash";
 const LOOKS: { value: SplashStyle; label: string }[] = [
   { value: "landscape", label: "Landscape" },
   { value: "abstract", label: "Abstract" },
-  { value: "vitruvian", label: "Vitruvian" },
 ];
 const labelOf = (style: SplashStyle): string =>
   LOOKS.find((each) => each.value === style)?.label ?? "";
 
 /**
- * The floating debug switch at the window's bottom right that picks the empty canvas's look
- * (ADR-135): the landscape, the abstract painting or Atlas. It is here while Ethan chooses
- * between the three, and leaves with the choice. On a phone it sits above the compose box.
+ * The floating debug switch at the window's bottom right that picks the painting behind a new
+ * thread's welcome (ADR-136): the landscape or the abstract strokes. It is here while Ethan
+ * chooses between the two, and leaves with the choice. On a phone it sits above the compose box.
  */
 export function SplashSwitch({ splash }: { splash: SplashChoice }) {
   return (
@@ -41,7 +40,7 @@ export function SplashSwitch({ splash }: { splash: SplashChoice }) {
         Splash · {labelOf(splash.style)}
       </DropdownMenuTrigger>
       <DropdownMenuContent side="top" align="end">
-        <DropdownMenuLabel>Empty canvas</DropdownMenuLabel>
+        <DropdownMenuLabel>New thread painting</DropdownMenuLabel>
         <DropdownMenuRadioGroup
           value={splash.style}
           onValueChange={(value) => {

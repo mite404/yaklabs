@@ -143,6 +143,9 @@
   --splash-wash-landscape: color-mix(in srgb, var(--paper) 89%, transparent);
   --splash-wash-abstract: color-mix(in srgb, var(--paper) 82%, transparent);
   --splash-figure: color-mix(in srgb, var(--ink) 30%, transparent);
+  /* the construction lines behind Atlas, the ink at 12%: 1.26:1 off the paper, so they read as
+     pencil under the figure and never as ground */
+  --splash-line: color-mix(in srgb, var(--ink) 12%, transparent);
 
   --radius-card: 14px; /* the catalog card and the thread panel; shadcn owns --radius (ADR-082) */
   --space: 24px;

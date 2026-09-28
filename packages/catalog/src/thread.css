@@ -125,6 +125,12 @@
   flex-direction: column;
   gap: 20px;
 }
+/* An empty thread showing its host's `empty` slot, such as a welcome, gives the slot the whole
+   area: no gutters and no reserved scrollbar, so its art can reach the panel's edges. */
+.thread-scroll[data-empty] {
+  padding: 0;
+  scrollbar-gutter: auto;
+}
 
 .turn p {
   margin: 0;
