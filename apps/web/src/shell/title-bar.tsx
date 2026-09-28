@@ -53,7 +53,7 @@ function SidebarToggle() {
  * at the sidebar's foot (ADR-121). It is green chrome, flat or painted (ADR-110,
  * ADR-115). On a phone it is two rows (ADR-116): the project's name and what never scrolls on
  * top, Collapse all among them, with a "⋯" for the thread and project; below, the views,
- * Thread, Browser and Canvas.
+ * Thread, Canvas and Browser.
  */
 export function TitleBar({ chrome }: Looks) {
   const shell = useShell();

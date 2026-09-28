@@ -1706,3 +1706,5 @@ that ADR-137 cut. The dialog is a shadcn-style primitive in `packages/ui`, its o
 shell's (`askSharePermissions`, after the snooze card) so it opens from a lane, a tab or the
 sidebar. The compose box and the cards cast a shadow to the right and bottom only, and every
 button beside `.btn` takes its corners from `--btn-radius` (4px), so Cancel and Done match.
+The layout switch offers Thread, Canvas, then Browser (it was Thread, Browser, Canvas): one array,
+`PANES`, orders the desktop switch and the phone's row alike.

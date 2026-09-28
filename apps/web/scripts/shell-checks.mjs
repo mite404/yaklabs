@@ -100,7 +100,7 @@ async function narrowBar(browser, { theme, width }) {
     m.overlaps.length === 0 &&
     m.outside.length === 0 &&
     m.namePx >= Math.min(m.nameFull, LEGIBLE_PX) &&
-    m.views.join("|") === "Thread|Browser|Canvas" &&
+    m.views.join("|") === "Thread|Canvas|Browser" &&
     m.below;
   await titleBar(page).screenshot({ path: shotPath(`P13-bar-${width}-${theme}`) });
   await layoutButton(page, "Canvas").click();
