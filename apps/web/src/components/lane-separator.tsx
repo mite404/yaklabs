@@ -177,7 +177,7 @@ export function LaneSeparator({
       {...value}
       tabIndex={0}
       data-dragging={dragging || undefined}
-      className={`lane-shift relative w-4 shrink-0 outline-none ${kind.look}`}
+      className={`lane-shift relative w-(--canvas-grid) shrink-0 outline-none ${kind.look}`}
       style={style}
       {...handlers}
       onKeyDown={(event) => {

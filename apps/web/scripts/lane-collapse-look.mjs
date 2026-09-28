@@ -6,7 +6,7 @@ import { BASE, shotPath } from "./lever.mjs";
 // Long enough to outgrow a strip down a 900px window, so its end has to give way to an ellipsis.
 export const LONG_TITLE =
   "Why supplier invoices and deliveries disagree at the northern warehouse, week by week, since June, and what the stores could do about it before the quarter closes";
-export const STRIP_PX = 32;
+export const STRIP_PX = 36;
 
 export const near = (a, b) => Math.abs(a - b) <= 1;
 // A box grown by 2px each way, so a measure of its ink takes in the paper around it.

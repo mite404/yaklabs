@@ -350,8 +350,14 @@
   /* The canvas is a dotted field (ADR-089): open ground that invites something to be put down. */
   .canvas {
     background-color: var(--bg);
+    /* One step of the dot grid. Everything on the row is a whole number of steps: the gap
+       between lanes is one, so it holds exactly one column of dots; a strip is two; the row
+       starts one in; a default lane is 31. The dots scroll with the row (`local`), so panning
+       never slides them out of step with the lanes. */
+    --canvas-grid: 18px;
     background-image: radial-gradient(var(--hairline) 1px, transparent 1px);
-    background-size: 18px 18px;
+    background-size: var(--canvas-grid) var(--canvas-grid);
+    background-attachment: local;
     /* The canvas fills the window's bottom right corner, which the window rounds at 12px
        inside its 1px border from md up (window.tsx), so the canvas rounds that corner the same
        way, and a carry's ring below follows the curve rather than being cut off by it. */
@@ -518,7 +524,7 @@
     width: var(--lane-width);
   }
   .lane[data-collapsed="true"] {
-    width: 32px;
+    width: calc(var(--canvas-grid) * 2);
   }
   .lane-strip-grip {
     display: none;

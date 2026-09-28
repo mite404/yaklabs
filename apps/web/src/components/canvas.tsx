@@ -212,7 +212,7 @@ export function Canvas({
       aria-label="Compose canvas"
       data-drop={landing === null ? undefined : ""}
       data-reorder={reorderable}
-      className="canvas relative flex h-full overflow-x-auto p-4"
+      className="canvas relative flex h-full overflow-x-auto px-(--canvas-grid) py-4"
       onWheel={panRow}
       onPointerDown={pan.onPointerDown}
       onPointerMove={pan.onPointerMove}

@@ -9,6 +9,8 @@ import path from "node:path";
 import { arg, chromium, ROOT } from "./harness.mjs";
 
 const BASE = arg("--base", "http://127.0.0.1:5173");
+// The gap between lanes: one step of the canvas's dot grid (index.css --canvas-grid).
+const LANE_GAP_PX = 18;
 const OUT = arg(
   "--out",
   path.join(ROOT, ".artifacts/web", new Date().toISOString().slice(0, 19).replaceAll(":", "-")),
@@ -498,7 +500,7 @@ try {
       lift.inPlace,
     `cursor ${grabHand}; ${JSON.stringify(lift)}`,
   );
-  await page.mouse.move(grip + laneWidths[0] + 16 + 60, titleBox.y + 30, { steps: 6 });
+  await page.mouse.move(grip + laneWidths[0] + LANE_GAP_PX + 60, titleBox.y + 30, { steps: 6 });
   await page.waitForTimeout(250);
   const slid = await page.evaluate(
     (expected) =>
@@ -506,12 +508,12 @@ try {
         new DOMMatrix(getComputedStyle(document.querySelector("[data-lifted]")).transform).e -
           expected,
       ) < 1,
-    laneWidths[1] + 16,
+    laneWidths[1] + LANE_GAP_PX,
   );
   record(
     "past a neighbour's centre the dimmed lane slides into the slot it would take",
     slid,
-    `expected a slide of ${Math.round(laneWidths[1] + 16)}px`,
+    `expected a slide of ${Math.round(laneWidths[1] + LANE_GAP_PX)}px`,
   );
   await page.mouse.move(grip + laneWidths[0] + laneWidths[1] + 32 + 60, titleBox.y + 30, {
     steps: 6,

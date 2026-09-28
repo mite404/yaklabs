@@ -29,18 +29,18 @@ export type LaneReports = {
 // A lane is a fixed column so the thread inside keeps one measure: this wide until its
 // separator is dragged, and never wider than the pane less a strip of ground, so its close
 // is always on screen and the ground beside it says there is more row to the right.
-const LANE_WIDTH = "min(560px, calc(100% - 48px))";
+const LANE_WIDTH = "min(calc(var(--canvas-grid) * 31), calc(100% - 48px))";
 
 // The lane's collapse, in the container it folds (ADR-134): the thread's or the card's title
 // bar while it is open, the head of its strip while it is collapsed. It says what it will do.
-// In the strip it is 24px, so its hover fill sits 3px from the strip's inner edge on every side
-// (the strip is 30px inside its border), instead of nearly touching the sides.
+// In the strip its hover fill sits 3px from the strip's inner edge on every side (the strip is
+// 34px inside its border, the button 28), instead of nearly touching the sides.
 function CollapseToggle({ collapsed, onClick }: { collapsed: boolean; onClick: () => void }) {
   return (
     <Button
       variant="ghost"
       size="icon-sm"
-      className={`rounded-[var(--radius)] text-soft-ink hover:text-ink ${collapsed ? "size-6" : ""}`}
+      className="rounded-[var(--radius)] text-soft-ink hover:text-ink"
       aria-label={collapsed ? "Expand lane" : "Collapse lane"}
       data-lane-toggle=""
       onClick={onClick}
