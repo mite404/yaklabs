@@ -186,7 +186,8 @@ export const canvasChecks = {
   async P2(browser) {
     const { page } = await openApp(browser);
     const lane = await makeLane(page, LONG_TITLE);
-    await lane.locator(".thread-title").click();
+    // At its start: a long title runs under the grip's veil mid-bar, which takes the press.
+    await lane.locator(".thread-title").click({ position: { x: 8, y: 8 } });
     const field = lane.locator(".thread-rename");
     await field.waitFor();
     const look = await field.evaluate((el) => {

@@ -62,10 +62,25 @@ describe("commandSchema checks the workspace's writes", () => {
   });
 
   it("refuses a thread lane whose id is not l-<threadId>", () => {
-    const lane = { id: "l-other", width: null, kind: "thread", threadId: "thread-a" };
+    const lane = {
+      id: "l-other",
+      width: null,
+      collapsed: false,
+      kind: "thread",
+      threadId: "thread-a",
+    };
     const arrange = { kind: "arrange", requestId: "r1", mainId: "profit", base: [] };
     expect(accepts({ ...arrange, lanes: [{ ...lane, id: "l-thread-a" }] })).toBe(true);
     expect(accepts({ ...arrange, lanes: [lane] })).toBe(false);
+  });
+
+  it("arranges a lane only with whether it is collapsed", () => {
+    const shared = { v: 1, kind: "catalog", payload: {} };
+    const card = { id: "c-1", width: null, kind: "card", card: shared, title: "Card" };
+    const arrange = { kind: "arrange", requestId: "r1", mainId: "profit", base: [] };
+    expect(accepts({ ...arrange, lanes: [{ ...card, collapsed: true }] })).toBe(true);
+    expect(accepts({ ...arrange, lanes: [card] })).toBe(false);
+    expect(accepts({ ...arrange, lanes: [{ ...card, collapsed: 1 }] })).toBe(false);
   });
 
   it("keeps a shell only when it is a JSON object", () => {

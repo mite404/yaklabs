@@ -38,6 +38,13 @@
   padding: 14px var(--thread-gutter);
   border-bottom: 1px solid var(--hairline);
 }
+/* A host's control before the title (ADR-134), such as a lane's collapse: first in the bar's
+   row, its glyph pulled back onto the text column's edge. */
+.thread-header > .header-leading {
+  display: flex;
+  flex-shrink: 0;
+  margin: -4px 0 -4px -7px;
+}
 /* The thread title is a display moment: brand serif (Newsreader). It keeps its own width, so a
    lane's bar stays free around it to lift the lane by (ADR-089), and shrinks when crowded. */
 .thread-header h2 {

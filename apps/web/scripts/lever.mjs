@@ -58,7 +58,7 @@ export async function openApp(browser, url = `${BASE}/`, { ready = ".thread-pane
   return { page, errors };
 }
 
-/** The darkest pixel and the mean in a box of the page, 0 (black) to 255 (white). */
+/** The darkest pixel, the lightest and the mean in a box of the page, 0 (black) to 255 (white). */
 export async function luminance(page, clip) {
   const png = await page.screenshot({ clip });
   return page.evaluate(async (b64) => {
@@ -69,13 +69,19 @@ export async function luminance(page, clip) {
     context.drawImage(bitmap, 0, 0);
     const { data } = context.getImageData(0, 0, bitmap.width, bitmap.height);
     let min = 255;
+    let max = 0;
     let sum = 0;
     for (let i = 0; i < data.length; i += 4) {
       const l = 0.2126 * data[i] + 0.7152 * data[i + 1] + 0.0722 * data[i + 2];
       sum += l;
       min = Math.min(min, l);
+      max = Math.max(max, l);
     }
-    return { min: Math.round(min), mean: Math.round(sum / (data.length / 4)) };
+    return {
+      min: Math.round(min),
+      max: Math.round(max),
+      mean: Math.round(sum / (data.length / 4)),
+    };
   }, png.toString("base64"));
 }
 

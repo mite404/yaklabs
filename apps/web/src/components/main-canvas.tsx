@@ -3,6 +3,7 @@ import type { Carried } from "@yaklabs/catalog/carry";
 import type { SharedCard } from "@yaklabs/catalog/share";
 import {
   closeLane,
+  collapseLane,
   insertLane,
   lanesOf,
   moveLane,
@@ -12,25 +13,27 @@ import {
   resizeLane,
   titleFor,
   type Lane,
+  type LaneId,
   type Runtime,
   type ThreadId,
   type ThreadSummary,
   type Workspace,
 } from "@yaklabs/runtime";
 import { useSidebar } from "@yaklabs/ui/components/sidebar";
-import { useEffect } from "react";
+import { useEffect, type ReactNode } from "react";
 import { inBackground, useRuntime } from "../runtime";
+import { arrangeFrom } from "./arrange";
 import { Canvas, type LaneView } from "./canvas";
 import { ThreadPane } from "./thread-pane";
 
 // What a thread started without a title is called until someone names it.
 const NEW_THREAD = "New thread";
 
-function Artifact({ card }: { card: SharedCard }) {
+function Artifact({ card, leading }: { card: SharedCard; leading: ReactNode }) {
   return card.kind === "interactive" ? (
-    <InteractiveCard payload={card.payload} turnId="canvas" onChoose={() => {}} />
+    <InteractiveCard payload={card.payload} turnId="canvas" onChoose={() => {}} leading={leading} />
   ) : (
-    <CatalogCard payload={card.payload} context="thread" />
+    <CatalogCard payload={card.payload} context="thread" leading={leading} />
   );
 }
 
@@ -38,8 +41,9 @@ function Artifact({ card }: { card: SharedCard }) {
 // thread the snapshot lacks is left out rather than drawn empty.
 function laneView(lane: Lane, threads: Map<string, ThreadSummary>): LaneView[] {
   if (lane.kind === "card") {
-    const { id, title, width, card } = lane;
-    return [{ id, title, width, node: <Artifact card={card} /> }];
+    const { id, title, width, collapsed, card } = lane;
+    const render = (leading: ReactNode) => <Artifact card={card} leading={leading} />;
+    return [{ id, title, width, collapsed, render }];
   }
   const thread = threads.get(lane.threadId);
   if (thread === undefined) return [];
@@ -48,19 +52,12 @@ function laneView(lane: Lane, threads: Map<string, ThreadSummary>): LaneView[] {
       id: lane.id,
       title: thread.title,
       width: lane.width,
-      node: <ThreadPane key={thread.id} thread={thread} />,
+      collapsed: lane.collapsed,
+      render: (leading: ReactNode) => (
+        <ThreadPane key={thread.id} thread={thread} leading={leading} />
+      ),
     },
   ];
-}
-
-// Sets the main thread's lanes to `edit` of the lanes the runtime holds right now, so two quick
-// edits build on each other instead of on the lanes this render saw.
-function arrangeFrom(runtime: Runtime, main: ThreadId, edit: (lanes: Lane[]) => Lane[]): void {
-  const now = runtime.state();
-  if (now.kind !== "ready") return;
-  const before = lanesOf(now.workspace, main);
-  const after = edit(before);
-  if (after !== before) inBackground(runtime.arrange(main, after), "Arranging the canvas");
 }
 
 // A child of `main` whose lane lands at `at`: a highlight's first line as its title and the
@@ -84,15 +81,43 @@ function land(runtime: Runtime, main: ThreadId, carried: Carried, at: number): v
     return;
   }
   const { card, title } = carried;
-  const lane: Lane = { id: newCardLaneId(), width: null, kind: "card", card, title };
+  const lane: Lane = {
+    id: newCardLaneId(),
+    width: null,
+    collapsed: false,
+    kind: "card",
+    card,
+    title,
+  };
   arrangeFrom(runtime, main, (current) => insertLane(current, at, lane));
+}
+
+// What the canvas's lanes report, each set through `arrange` on the lanes as they are now.
+function laneEdits(runtime: Runtime, main: ThreadId) {
+  const edit = (change: (lanes: Lane[]) => Lane[]) => {
+    arrangeFrom(runtime, main, change);
+  };
+  return {
+    onCollapse: (id: LaneId, collapsed: boolean) => {
+      edit((current) => collapseLane(current, id, collapsed));
+    },
+    onClose: (id: LaneId) => {
+      edit((current) => closeLane(current, id));
+    },
+    onMove: (id: LaneId, to: number) => {
+      edit((current) => moveLane(current, id, to));
+    },
+    onResize: (id: LaneId, px: number) => {
+      edit((current) => resizeLane(current, id, px));
+    },
+  };
 }
 
 /**
  * A main thread's compose canvas (ADR-089, ADR-092), drawn from the snapshot: its lanes, left
- * to right, each thread lane loading its own turns. Close, reorder, widths and a card dropped
- * between lanes all set the lanes through `arrange`; a highlight or Create blank thread makes
- * a child with its lane in place. Each visit to a child's address brings its lane into view and
+ * to right, each thread lane loading its own turns. Close, collapse, reorder, widths and a card
+ * dropped between lanes all set the lanes through `arrange`; a highlight or Create blank thread
+ * makes a child with its lane in place. Each visit to a child's address brings its lane into view and
  * flashes it, and gives the lane back first if it was closed.
  */
 export function MainCanvas({
@@ -122,17 +147,7 @@ export function MainCanvas({
       lanes={lanes.flatMap((lane) => laneView(lane, threads))}
       focus={focused?.id ?? null}
       visit={visit}
-      actions={{
-        onClose: (id) => {
-          arrangeFrom(runtime, main, (current) => closeLane(current, id));
-        },
-        onMove: (id, to) => {
-          arrangeFrom(runtime, main, (current) => moveLane(current, id, to));
-        },
-        onResize: (id, px) => {
-          arrangeFrom(runtime, main, (current) => resizeLane(current, id, px));
-        },
-      }}
+      actions={laneEdits(runtime, main)}
       onBlank={() => {
         startChild(runtime, main, lanes.length, "");
       }}

@@ -1,85 +1,14 @@
 import type { Carried } from "@yaklabs/catalog/carry";
 import type { LaneId } from "@yaklabs/runtime";
-import { Button } from "@yaklabs/ui/components/button";
-import { X } from "lucide-react";
-import {
-  Fragment,
-  useEffect,
-  useRef,
-  useState,
-  type CSSProperties,
-  type ReactNode,
-  type RefObject,
-} from "react";
+import { Fragment, useEffect, useRef, useState, type RefObject } from "react";
 import { useLanding, type Landing } from "./canvas-carry";
 import { panRow, usePan } from "./canvas-pan";
+import { Lane, type LaneReports, type LaneView } from "./lane";
+
+export type { LaneView } from "./lane";
+import { displacement, useReorder } from "./lane-reorder";
 import { LaneSeparator } from "./lane-separator";
 import { Kay, SplashDrawing } from "./splash";
-import { displacement, useReorder, type LaneHandlers } from "./lane-reorder";
-
-/** One lane on the canvas: its name, the width it was left at (null: the default), its content. */
-export type LaneView = { id: LaneId; title: string; width: number | null; node: ReactNode };
-
-// A lane is a fixed column so the thread inside keeps one measure: this wide until its
-// separator is dragged, and never wider than the pane less a strip of ground, so its close
-// is always on screen and the ground beside it says there is more row to the right.
-const LANE_WIDTH = "min(560px, calc(100% - 48px))";
-
-// The strip above a lane: its close, at the far end.
-function LaneStrip({ title, onClose }: { title: string; onClose: () => void }) {
-  return (
-    <div className="flex h-8 items-center justify-end">
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        className="rounded-[var(--radius)]"
-        aria-label={`Close ${title}`}
-        data-lane-close=""
-        onClick={onClose}
-      >
-        <X />
-      </Button>
-    </div>
-  );
-}
-
-function Lane({
-  lane,
-  width,
-  lifted,
-  style,
-  handlers,
-  onClose,
-}: {
-  lane: LaneView;
-  width: number | null;
-  lifted: boolean;
-  style: CSSProperties;
-  handlers: LaneHandlers;
-  onClose: (id: LaneId) => void;
-}) {
-  return (
-    // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- the pointer takes hold of the lane by its title bar; the keyboard moves it from the gap after it
-    <article
-      className="lane lane-shift flex h-full shrink-0 flex-col"
-      style={{ width: width ?? LANE_WIDTH, ...style }}
-      data-lane={lane.id}
-      data-lifted={lifted || undefined}
-      aria-label={lane.title}
-      {...handlers}
-    >
-      <LaneStrip
-        title={lane.title}
-        onClose={() => {
-          onClose(lane.id);
-        }}
-      />
-      <div className="min-h-0 flex-1" style={{ ["--thread-height" as string]: "100%" }}>
-        {lane.node}
-      </div>
-    </article>
-  );
-}
 
 // The open space at the end of the row: the whole canvas when it is empty, with the splash
 // behind its words, and a slimmer column once lanes exist, so there is always somewhere to drop
@@ -128,9 +57,8 @@ function DropMarker({ landing }: { landing: Landing | null }) {
   );
 }
 
-// What the lanes report: a close, a move to another slot, and a width kept.
-type LaneActions = {
-  onClose: (id: LaneId) => void;
+// What the lanes report: a collapse flipped, a close, a move to another slot, and a width kept.
+type LaneActions = LaneReports & {
   onMove: (id: LaneId, to: number) => void;
   onResize: (id: LaneId, px: number) => void;
 };
@@ -145,7 +73,7 @@ function LaneRow({
   actions: LaneActions;
   reorderable: boolean;
 }) {
-  const { onClose, onMove, onResize } = actions;
+  const { onMove, onResize } = actions;
   const reorder = useReorder(onMove, reorderable);
   // The width of the lane whose gap is being dragged, until the drag lets go and it is kept.
   const [resizing, setResizing] = useState<{ id: LaneId; px: number } | null>(null);
@@ -157,10 +85,11 @@ function LaneRow({
         lifted={reorder.drag?.move?.id === lane.id}
         style={{ transform: displacement(reorder.drag, index) }}
         handlers={reorder.laneFor(lane.id, index)}
-        onClose={onClose}
+        reports={actions}
       />
       <LaneSeparator
         title={lane.title}
+        resizable={!lane.collapsed}
         style={{ transform: displacement(reorder.drag, index) }}
         onResize={(px, kept) => {
           setResizing(kept ? null : { id: lane.id, px });
@@ -180,13 +109,14 @@ function laneIn(row: HTMLElement | null, id: LaneId): HTMLElement | null {
   return lane instanceof HTMLElement ? lane : null;
 }
 
-// Where the focus goes when the lane `id` closes with it: the next lane's close, else the one
-// before's, else Create blank thread.
+// Where the focus goes when the lane `id` closes with it: the next lane's close (its expand,
+// when it is collapsed and has no close), else the one before's, else Create blank thread.
 function focusAfter(row: HTMLElement, lanes: LaneView[], id: LaneId): Element | null {
   const at = lanes.findIndex((lane) => lane.id === id);
   const neighbour = lanes.slice(at + 1).at(0) ?? lanes.slice(0, at).at(-1);
   if (neighbour === undefined) return row.querySelector("[data-blank]");
-  return laneIn(row, neighbour.id)?.querySelector("[data-lane-close]") ?? null;
+  // The close comes first in an open lane; a collapsed one has only its expand.
+  return laneIn(row, neighbour.id)?.querySelector("[data-lane-close], [data-lane-toggle]") ?? null;
 }
 
 // Before the lane `id` closes, hands on the focus it holds, which would otherwise fall back to
@@ -233,7 +163,8 @@ function useFocusedLane(
 /**
  * The compose canvas (ADR-089): a row of lanes that grows to the right, with open space at
  * the end for the next thing. The gap after each lane drags the lane's width, a lane's title
- * bar drags it to another place in the row, and the ground drags to pan. The whole row takes a
+ * bar drags it to another place in the row, and the ground drags to pan. A lane collapses to a
+ * slim strip and back (ADR-133), and the whole strip drags it. The whole row takes a
  * carried card or highlight (ADR-091): while one is over it the pane shows it, and an ink
  * marker stands in the gap it would land in. On a phone the row is view-only (ADR-122): it
  * still scrolls sideways, but a lane's title bar no longer lifts it. The canvas keeps no lanes

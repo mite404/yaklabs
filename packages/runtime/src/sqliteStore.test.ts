@@ -123,6 +123,21 @@ describe("the store keeps lanes", () => {
   });
 });
 
+describe("the store keeps a collapsed lane (ADR-133)", () => {
+  it("keeps a collapsed lane collapsed, at its width, in a store opened on the same file", async () => {
+    const store = await openStore();
+    addChild(store, "child");
+    const lanes = [
+      { ...card, collapsed: true },
+      { ...threadLane(child), collapsed: true },
+    ];
+    store.arrange(main, lanes);
+    expect(lanesOf(store.workspace(), main)).toEqual(lanes);
+    store.arrange(main, [card, threadLane(child)]);
+    expect(lanesOf(store.workspace(), main).map((lane) => lane.collapsed)).toEqual([false, false]);
+  });
+});
+
 describe("the store keeps the shell and the bell", () => {
   it("keeps the latest shell whole", async () => {
     const store = await openStore();

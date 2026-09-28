@@ -18,6 +18,8 @@ export { applyMark } from "./marks";
 export type { ThreadMark } from "./marks";
 export {
   closeLane,
+  collapseLane,
+  collapseLanes,
   insertLane,
   lanesOf,
   latestMain,

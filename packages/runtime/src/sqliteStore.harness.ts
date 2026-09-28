@@ -37,6 +37,7 @@ const trendTurns: ThreadMessage[] = [
 export const card: Lane = {
   id: laneIdSchema.parse("c-1"),
   width: 420,
+  collapsed: false,
   kind: "card",
   card: { v: 1, kind: "interactive", payload: { title: "Profit" } },
   title: "Last week's profit",

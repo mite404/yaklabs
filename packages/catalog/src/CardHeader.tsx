@@ -23,6 +23,7 @@ function carryCard(event: PointerEvent<HTMLElement>, card: SharedCard, title: st
  * actions on the right, such as a badge or the share button. A flush line separates the
  * header from the card's body, edge to edge.
  * @param eyebrow A small line above the title (page context only).
+ * @param leading A control before the title, such as a host's collapse (ADR-134).
  * @param actions Right-aligned controls, e.g. <ShareButton />.
  * @param drag When set, the header is the handle that carries the whole card out of its
  * thread (ADR-089), with the same envelope a share link holds; the card rides the pointer,
@@ -31,11 +32,13 @@ function carryCard(event: PointerEvent<HTMLElement>, card: SharedCard, title: st
 export function CardHeader({
   title,
   eyebrow,
+  leading,
   actions,
   drag,
 }: {
   title: ReactNode;
   eyebrow?: ReactNode;
+  leading?: ReactNode;
   actions?: ReactNode;
   drag?: { card: SharedCard; title: string };
 }) {
@@ -51,6 +54,7 @@ export function CardHeader({
             }
       }
     >
+      {leading !== undefined && <div className="header-leading">{leading}</div>}
       <div className="card-heading-text">
         {eyebrow && <p className="eyebrow">{eyebrow}</p>}
         <h2>{title}</h2>

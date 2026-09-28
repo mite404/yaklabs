@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   closeLane,
+  collapseLane,
+  collapseLanes,
   insertLane,
   laneIdSchema,
   lanesOf,
@@ -57,6 +59,7 @@ const child = (parentId: string): Place => ({ kind: "child", parentId: t(parentI
 const card: Lane = {
   id: laneIdSchema.parse("c-1"),
   width: null,
+  collapsed: false,
   kind: "card",
   card: { v: 1, kind: "catalog", payload: {} },
   title: "Card",
@@ -198,6 +201,36 @@ describe("lane edits are idempotent list edits", () => {
     const once = resizeLane(lanes, lane("b"), width);
     expect(once.map((each) => each.width)).toEqual([null, width, null]);
     expect(resizeLane(once, lane("b"), width)).toEqual(once);
+  });
+});
+
+describe("collapsing lanes (ADR-133)", () => {
+  it.each([
+    ["collapses", true],
+    ["expands", false],
+  ])("%s one lane and leaves the rest", (_, collapsed) => {
+    const flipped = lanes.map((each) => ({ ...each, collapsed: !collapsed }));
+    const once = collapseLane(flipped, lane("b"), collapsed);
+    expect(once.map((each) => each.collapsed)).toEqual([!collapsed, collapsed, !collapsed]);
+    expect(collapseLane(once, lane("b"), collapsed)).toEqual(once);
+    expect(collapseLane(once, lane("x"), collapsed)).toEqual(once);
+  });
+
+  it.each([
+    ["collapses", true],
+    ["expands", false],
+  ])("%s every lane, keeping their order and widths", (_, collapsed) => {
+    const mixed = collapseLane(resizeLane(lanes, lane("a"), 400), lane("c"), true);
+    const once = collapseLanes(mixed, collapsed);
+    expect(once.map((each) => each.collapsed)).toEqual([collapsed, collapsed, collapsed]);
+    expect(ids(once)).toEqual(ids(mixed));
+    expect(once.map((each) => each.width)).toEqual([400, null, null]);
+    expect(collapseLanes(once, collapsed)).toEqual(once);
+  });
+
+  it("opens a new or reopened lane expanded", () => {
+    expect(threadLane(t("x")).collapsed).toBe(false);
+    expect(reopenLane(lanes, t("x")).at(-1)?.collapsed).toBe(false);
   });
 });
 

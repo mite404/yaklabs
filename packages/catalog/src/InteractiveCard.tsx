@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { CardHeader } from "./CardHeader";
 import { BAR_RADIUS, CatalogCard } from "./CatalogCard";
@@ -36,6 +36,7 @@ function sharedMax(selection: InteractiveSelection): number {
  * chart and the agent's sentence update instantly without calling the model. Each choice
  * is reported through `onChoose` so it can ride along with the next message (ADR-030).
  * @param shareable Show the share button (ADR-064); off on the public page itself.
+ * @param leading A host's control before the title, such as a lane's collapse (ADR-134).
  */
 export function InteractiveCard({
   payload,
@@ -43,6 +44,7 @@ export function InteractiveCard({
   onChoose,
   shareable = true,
   draggable = false,
+  leading,
 }: {
   payload: unknown;
   turnId: string;
@@ -50,6 +52,7 @@ export function InteractiveCard({
   shareable?: boolean;
   /** Let the header carry the card out, as onto the compose canvas (ADR-089). */
   draggable?: boolean;
+  leading?: ReactNode;
 }) {
   const result = resolveInteractive(payload);
   const initial =
@@ -62,7 +65,8 @@ export function InteractiveCard({
   // Always starts collapsed: the answer earns trust on its own, the steps are there on demand (ADR-036).
   const [showWork, setShowWork] = useState(false);
   // An invalid payload gets the same honest catalog-limit card as any other rejection.
-  if (result.kind === "rejected") return <CatalogCard payload={null} context="thread" />;
+  if (result.kind === "rejected")
+    return <CatalogCard payload={null} context="thread" leading={leading} />;
 
   const { props } = result.selection;
   const stops = props.control.stops;
@@ -83,6 +87,7 @@ export function InteractiveCard({
     <section className="card interactive-card" data-context="thread">
       <CardHeader
         title={props.title}
+        leading={leading}
         actions={shareable && <ShareButton card={{ v: 1, kind: "interactive", payload }} />}
         drag={
           draggable

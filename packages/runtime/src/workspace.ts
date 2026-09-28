@@ -68,12 +68,16 @@ export const threadShareSchema = z.object({
 // Null width means the default column.
 const widthSchema = z.number().positive().nullable();
 
-/** One lane; a thread lane's id is always `l-<threadId>`. */
+/**
+ * One lane; a thread lane's id is always `l-<threadId>`. A collapsed lane is a slim strip that
+ * keeps its width for when it opens again (ADR-133).
+ */
 export const laneSchema = z.discriminatedUnion("kind", [
   z
     .object({
       id: laneIdSchema,
       width: widthSchema,
+      collapsed: z.boolean(),
       kind: z.literal("thread"),
       threadId: threadIdSchema,
     })
@@ -81,6 +85,7 @@ export const laneSchema = z.discriminatedUnion("kind", [
   z.object({
     id: laneIdSchema,
     width: widthSchema,
+    collapsed: z.boolean(),
     kind: z.literal("card"),
     card: sharedCardSchema,
     title: z.string(),
@@ -172,9 +177,9 @@ export function threadLaneId(threadId: ThreadId): LaneId {
   return laneIdSchema.parse(`l-${threadId}`);
 }
 
-/** A thread's lane at the default width. */
+/** A thread's lane at the default width, expanded. */
 export function threadLane(threadId: ThreadId): Lane {
-  return { id: threadLaneId(threadId), width: null, kind: "thread", threadId };
+  return { id: threadLaneId(threadId), width: null, collapsed: false, kind: "thread", threadId };
 }
 
 /** A fresh id for a card lane the page opens. */
@@ -238,6 +243,16 @@ export function mergeLanes(current: Lane[], base: LaneId[], lanes: Lane[]): Lane
 /** The lane `id` at `width` px; null puts it back to the default column. */
 export function resizeLane(lanes: Lane[], id: LaneId, width: number | null): Lane[] {
   return lanes.map((lane) => (lane.id === id ? { ...lane, width } : lane));
+}
+
+/** The lane `id` collapsed to its strip, or expanded again at the width it had (ADR-133). */
+export function collapseLane(lanes: Lane[], id: LaneId, collapsed: boolean): Lane[] {
+  return lanes.map((lane) => (lane.id === id ? { ...lane, collapsed } : lane));
+}
+
+/** Every lane collapsed to its strip, or every lane expanded, in the same order (ADR-133). */
+export function collapseLanes(lanes: Lane[], collapsed: boolean): Lane[] {
+  return lanes.map((lane) => ({ ...lane, collapsed }));
 }
 
 /**

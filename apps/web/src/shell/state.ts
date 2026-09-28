@@ -1,6 +1,7 @@
 import {
   latestMain,
   threadIdSchema,
+  lanesOf,
   type Located,
   type ThreadId,
   type ThreadSummary,
@@ -276,4 +277,18 @@ export function onScreen(ws: Workspace, at: Located | null): OnScreen {
   return thread === undefined
     ? { name: null, thread: null }
     : { name: project?.name ?? null, thread };
+}
+
+/**
+ * What Collapse all offers for the thread on screen (ADR-134): to collapse its canvas's lanes
+ * while any is open, and to expand them once all are collapsed.
+ */
+export type FoldOffer = { main: ThreadId; collapse: boolean };
+
+/** Collapse all's offer, or null while the canvas is off screen or holds no lanes. */
+export function foldOffer(ws: Workspace, state: ShellState, at: Located | null): FoldOffer | null {
+  if (at === null || viewOf(state, at.main).pane !== "canvas") return null;
+  const lanes = lanesOf(ws, at.main);
+  if (lanes.length === 0) return null;
+  return { main: at.main, collapse: lanes.some((lane) => !lane.collapsed) };
 }

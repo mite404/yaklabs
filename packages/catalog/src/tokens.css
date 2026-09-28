@@ -625,6 +625,20 @@ h1 span {
 .card-heading h2 {
   font-size: 21px;
 }
+/* A host's control before the title (ADR-134), such as a lane's collapse: first in the row, its
+   glyph pulled back onto the heading's edge, and the title straight after it. A card with no
+   header carries it at its top. */
+.card-heading > .header-leading,
+.card.state > .header-leading {
+  display: flex;
+  flex-shrink: 0;
+  align-self: center;
+  margin-left: -7px;
+}
+.card-heading > .header-leading + .card-heading-text {
+  min-width: 0;
+  margin-right: auto;
+}
 .card-heading .eyebrow {
   font-size: 9px;
   margin-bottom: 10px;

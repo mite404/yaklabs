@@ -1,7 +1,8 @@
 import type { Database } from "@sqlite.org/sqlite-wasm";
 import { describe, expect, it, onTestFinished } from "vitest";
 import type { LegacyCanvas } from "./protocol";
-import { migrate, migrationSteps, planV2, type V1Row } from "./schema";
+import { migrate, migrationSteps } from "./schema";
+import { planV2, type V1Row } from "./v2Plan";
 import { openDatabase } from "./sqliteStore";
 import { threadIdSchema, threadLane } from "./workspace";
 
@@ -109,18 +110,18 @@ describe("planV2", () => {
 });
 
 describe("migrate", () => {
-  it("brings a new database to version 3, and leaves it there on a second run", async () => {
+  it("brings a new database to version 4, and leaves it there on a second run", async () => {
     const db = await freshDatabase();
     migrate(db);
-    expect(db.selectValue("pragma user_version")).toBe(3);
+    expect(db.selectValue("pragma user_version")).toBe(4);
   });
 
   it("refuses a database newer than this build", async () => {
     const db = await freshDatabase();
-    db.exec("pragma user_version = 4");
+    db.exec("pragma user_version = 5");
     expect(() => {
       migrate(db);
-    }).toThrow("The database is at version 4, newer than this build");
+    }).toThrow("The database is at version 5, newer than this build");
   });
 });
 
@@ -154,7 +155,7 @@ describe("the 2 → 3 step (ADR-132)", () => {
   it("adds the marks and the shares and leaves every v2 row as it was", async () => {
     const db = await atVersion2();
     const [before, threads] = [v2Rows(db), threadRows(db)];
-    migrate(db);
+    migrate(db, undefined, migrationSteps.slice(0, 3));
     expect(db.selectValue("pragma user_version")).toBe(3);
     expect(v2Rows(db)).toEqual(before);
     expect(threadRows(db)).toEqual(threads);
@@ -200,8 +201,8 @@ describe("the 2 → 3 step survives a crash", () => {
     expect(db.selectValues("select name from pragma_table_info('conversations')")).not.toContain(
       "pinned_at",
     );
-    migrate(db);
-    migrate(db);
+    migrate(db, undefined, migrationSteps.slice(0, 3));
+    migrate(db, undefined, migrationSteps.slice(0, 3));
     expect(db.selectValue("pragma user_version")).toBe(3);
     expect([v2Rows(db), threadRows(db)]).toEqual(before);
     expect(db.selectObjects("pragma foreign_key_check")).toEqual([]);
@@ -222,6 +223,27 @@ describe("the v3 schema keeps shares on their thread", () => {
     expect(() => {
       share("nowhere");
     }).toThrow(/FOREIGN KEY constraint failed/);
+  });
+});
+
+describe("the 3 → 4 step (ADR-133)", () => {
+  it("keeps a v3 canvas's lanes, each expanded", async () => {
+    const db = await openDatabase({ kind: "memory" });
+    onTestFinished(() => {
+      db.close();
+    });
+    migrate(db, undefined, migrationSteps.slice(0, 3));
+    db.exec("insert into projects values ('p', 'P', '2026-09-26T10:00:00.000Z')");
+    insertThread(db, "main", "p", null);
+    insertThread(db, "kid", null, "main");
+    insertLane(db, "main", 0, "l-kid", "kid");
+    insertLane(db, "main", 1, "c-1");
+    migrate(db);
+    expect(db.selectValue("pragma user_version")).toBe(4);
+    expect(db.selectObjects("select id, width, collapsed from lanes order by seq")).toEqual([
+      { id: "l-kid", width: null, collapsed: 0 },
+      { id: "c-1", width: null, collapsed: 0 },
+    ]);
   });
 });
 
@@ -285,5 +307,15 @@ describe("the v2 schema keeps lanes on their own main", () => {
     expect(() => {
       db.exec("update lanes set seq = 5");
     }).toThrow("Lanes are replaced, never edited");
+  });
+
+  it("keeps whether a lane is collapsed as a yes or a no", async () => {
+    const db = await freshDatabase();
+    insertLane(db, "main", 0, "c-1");
+    expect(db.selectValue("select collapsed from lanes")).toBe(0);
+    expect(() => {
+      db.exec(`insert into lanes (main_id, seq, id, card_json, title, collapsed)
+               values ('main', 1, 'c-2', '{}', 'Card', 2)`);
+    }).toThrow(/CHECK constraint failed/);
   });
 });

@@ -3,7 +3,8 @@ import type { Database } from "@sqlite.org/sqlite-wasm";
 import type { ThreadMessage } from "@yaklabs/catalog/thread";
 import { z } from "zod";
 import { threadMessageSchema } from "./protocol";
-import { migrate, migrationSteps, PROFIT } from "./schema";
+import { migrate, migrationSteps } from "./schema";
+import { PROFIT } from "./v2Plan";
 import { openDatabase, openSqliteStore } from "./sqliteStore";
 import { ensureStarter } from "./store";
 import { dumpDatabase, v1Legacy, writeV1 } from "./testing";
@@ -33,6 +34,7 @@ const crashingSteps: typeof migrationSteps = [
     throw new Error("crashed before commit");
   },
   migrationSteps[2],
+  migrationSteps[3],
 ];
 
 async function saveThenReopen(name: string, turn: ThreadMessage) {
