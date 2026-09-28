@@ -98,7 +98,7 @@ function OpenSpace({
     <div
       data-ground=""
       data-lit={lit || undefined}
-      className="open-space @container relative isolate flex h-full min-w-[320px] flex-1 flex-col items-center justify-center gap-4 rounded-[var(--radius-card)] border border-dashed border-hairline p-6 text-center transition-colors data-lit:border-olive"
+      className="open-space relative isolate flex h-full min-w-[320px] flex-1 flex-col items-center justify-center gap-4 rounded-[var(--radius-card)] border border-dashed border-hairline p-6 text-center transition-colors data-lit:border-olive"
     >
       {splash && <SplashDrawing />}
       <p className="font-serif text-xl text-ink">

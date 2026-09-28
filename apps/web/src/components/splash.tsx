@@ -1,13 +1,21 @@
-// The splash on an empty canvas (ADR-113): a line drawing behind the words, and Kay at the
-// bottom right, over them. Both are pictures only: hidden from the tree, and a press or a carried
-// card goes through them to the ground. Bottom to top: the dotted field, the carry's lit fill
-// (the open space's ::before), the drawing, the words and the button, Kay.
+// The splash on an empty canvas (ADR-113): the cutting mat's furniture and Atlas behind the
+// words, and Kay at the bottom right, over them. All of it is pictures only: hidden from the
+// tree, and a press or a carried card goes through them to the ground. Bottom to top: the mat's
+// grid, the carry's lit fill (the open space's ::before), the mat's lines, rulers and circles,
+// Atlas, the words and the button, Kay.
 
-/** The line drawing behind an empty canvas's words, drawn in `--splash-line` so it themes. */
+/**
+ * The drawing behind an empty canvas's words: the mat's centre lines, diagonals, rulers and
+ * construction circles in `--splash-line`, and Atlas holding his globe around the words in
+ * `--splash-figure`, every piece a mask filled with a token so it themes.
+ */
 export function SplashDrawing() {
   return (
     <div data-slot="canvas-splash" aria-hidden="true" className="splash pointer-events-none">
-      <div data-slot="splash-drawing" className="splash-drawing absolute inset-6" />
+      <div className="splash-lines absolute inset-0" />
+      <div className="splash-rulers absolute inset-0" />
+      <div data-slot="splash-circles" className="splash-circles absolute" />
+      <div data-slot="splash-drawing" className="splash-drawing absolute" />
     </div>
   );
 }

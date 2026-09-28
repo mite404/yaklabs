@@ -168,17 +168,138 @@
       var(--chrome-painting);
   }
 
-  /* The empty canvas's splash (ADR-113): the drawing is a mask filled with --splash-line, so it
-     themes with the ink and shows only its strokes, never the bounds of an image. It sits
-     behind the words, and it and Kay fade in once, with no fade under reduced motion. */
+  /* The empty canvas's splash (ADR-113): a cutting mat's furniture and Atlas, every piece a
+     mask or a gradient filled with a token, so it themes with the ink and shows only its
+     strokes, never the bounds of an image. It sits behind the words, and it and Kay fade in
+     once, with no fade under reduced motion. The open space is a size container so the pieces
+     can take the space's height in cqh, which a percentage cannot give a width. */
+  .open-space {
+    container-type: size;
+  }
   .splash {
     position: absolute;
     inset: 0;
     z-index: -1;
+    overflow: hidden; /* the diagonals run to the corners; the circles never past the rulers */
+    border-radius: inherit;
+    /* The container units measure the open space's content box; its padding box, which this
+       layer fills, is 50px wider and taller (24px of padding and 1px of border a side). The
+       construction's centre sits in the gap between the copy (56px) and the button (31px), 12px
+       under the group's middle, so the horizontal centre line crosses neither. */
+    --splash-centre: calc(50cqh + 37px);
+    /* Atlas's height: two thirds of the open space, never so short that his globe (0.283 of his
+       height in radius) fails to ring the 269px copy, never so tall that his feet, which fade out
+       by 0.9 of his height, reach the bottom ruler. His globe's centre is 0.302 down his box. */
+    --splash-figure-h: min(max(calc(66cqh + 33px), 500px), calc(83cqh - 20px));
   }
-  .splash-drawing {
+  /* The centre lines and the two diagonals, 1px each, through the construction's centre. They
+     run the whole space, so they are fainter than the circles, or the cross would be the mat. */
+  .splash-lines {
+    --mark: color-mix(in srgb, var(--splash-line) 60%, transparent);
+    background-image:
+      linear-gradient(var(--mark), var(--mark)), linear-gradient(var(--mark), var(--mark)),
+      linear-gradient(
+        45deg,
+        transparent calc(50% - 0.5px),
+        var(--mark) calc(50% - 0.5px) calc(50% + 0.5px),
+        transparent calc(50% + 0.5px)
+      ),
+      linear-gradient(
+        -45deg,
+        transparent calc(50% - 0.5px),
+        var(--mark) calc(50% - 0.5px) calc(50% + 0.5px),
+        transparent calc(50% + 0.5px)
+      );
+    background-size:
+      1px 100%,
+      100% 1px,
+      100% 100%,
+      100% 100%;
+    background-position:
+      50% 0,
+      0 var(--splash-centre),
+      0 12px,
+      0 12px;
+    background-repeat: no-repeat;
+  }
+  /* A ruler band inside each edge: a tick every cell, longer every 5 and longest every 10, and a
+     baseline on the first grid line in, 19px from the edge. The ticks sit on the mat's grid
+     lines, which start 17px before the open space (the canvas's 16px padding and the space's 1px
+     border), so a cell's tick is 1px in and the fifth cell's, on a heavy line, 73px in. */
+  .splash-rulers {
+    background-image:
+      repeating-linear-gradient(to right, var(--splash-line) 0 1px, transparent 1px 18px),
+      repeating-linear-gradient(to right, var(--splash-line) 0 1px, transparent 1px 90px),
+      repeating-linear-gradient(to right, var(--splash-line) 0 1px, transparent 1px 180px),
+      repeating-linear-gradient(to right, var(--splash-line) 0 1px, transparent 1px 18px),
+      repeating-linear-gradient(to right, var(--splash-line) 0 1px, transparent 1px 90px),
+      repeating-linear-gradient(to right, var(--splash-line) 0 1px, transparent 1px 180px),
+      repeating-linear-gradient(to bottom, var(--splash-line) 0 1px, transparent 1px 18px),
+      repeating-linear-gradient(to bottom, var(--splash-line) 0 1px, transparent 1px 90px),
+      repeating-linear-gradient(to bottom, var(--splash-line) 0 1px, transparent 1px 180px),
+      repeating-linear-gradient(to bottom, var(--splash-line) 0 1px, transparent 1px 18px),
+      repeating-linear-gradient(to bottom, var(--splash-line) 0 1px, transparent 1px 90px),
+      repeating-linear-gradient(to bottom, var(--splash-line) 0 1px, transparent 1px 180px),
+      linear-gradient(var(--splash-line), var(--splash-line)),
+      linear-gradient(var(--splash-line), var(--splash-line)),
+      linear-gradient(var(--splash-line), var(--splash-line)),
+      linear-gradient(var(--splash-line), var(--splash-line));
+    background-size:
+      100% 4px,
+      100% 7px,
+      100% 10px,
+      100% 4px,
+      100% 7px,
+      100% 10px,
+      4px 100%,
+      7px 100%,
+      10px 100%,
+      4px 100%,
+      7px 100%,
+      10px 100%,
+      100% 1px,
+      100% 1px,
+      1px 100%,
+      1px 100%;
+    background-position:
+      1px 0,
+      73px 0,
+      73px 0,
+      1px 100%,
+      73px 100%,
+      73px 100%,
+      0 1px,
+      0 73px,
+      0 73px,
+      100% 1px,
+      100% 73px,
+      100% 73px,
+      0 19px,
+      0 calc(100% - 19px),
+      19px 0,
+      calc(100% - 19px) 0;
+    background-repeat: no-repeat;
+  }
+  /* The construction circles, concentric with the globe: a box three globe radii wide (0.85 of
+     Atlas's height), held inside the side rulers on a narrow space. */
+  .splash-circles {
+    --size: min(calc(0.85 * var(--splash-figure-h)), 100cqw);
+    width: var(--size);
+    height: var(--size);
+    left: calc(50cqw + 25px - var(--size) / 2);
+    top: calc(var(--splash-centre) - var(--size) / 2);
     background-color: var(--splash-line);
-    mask: url("/splash/sphere.svg") center / contain no-repeat;
+    mask: url("/splash/mat-circles.svg") center / contain no-repeat;
+  }
+  /* Atlas, a step stronger than the mat so he reads as the drawing and the mat as the ground. */
+  .splash-drawing {
+    left: 50%;
+    top: calc(var(--splash-centre) - 0.302 * var(--splash-figure-h));
+    height: var(--splash-figure-h);
+    aspect-ratio: 635 / 1081;
+    transform: translateX(-50%);
+    background-color: var(--splash-figure);
+    mask: url("/splash/atlas.webp") center / contain no-repeat;
   }
   .splash,
   .splash-in {
