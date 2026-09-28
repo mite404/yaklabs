@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" fill="none" stroke="#000" stroke-linecap="round">
+<!-- The mat's construction circles, concentric with the globe Atlas holds: the box is three globe
+     radii wide, so one radius is 333 units. A dotted circle at 1.5 radii, two solid at 1.32 and
+     1.12, and a small one below the centre, over his hands. -->
+<circle cx="500" cy="500" r="496" stroke-width="2.4" stroke-dasharray="0 7"/>
+<circle cx="500" cy="500" r="440" stroke-width="2"/>
+<circle cx="500" cy="500" r="373" stroke-width="2"/>
+<circle cx="500" cy="707" r="93" stroke-width="2"/>
+</svg>
