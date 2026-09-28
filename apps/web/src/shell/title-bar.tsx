@@ -2,7 +2,6 @@ import { SidebarTrigger, useSidebar } from "@yaklabs/ui/components/sidebar";
 import { useRuntimeState } from "../runtime";
 import { Account, type Looks } from "./account";
 import { Bell } from "./bell";
-import { DataMarker } from "./data-marker";
 import { LayoutSwitch } from "./layout-switch";
 import { useShell } from "./model";
 import { SIDEBAR_ID } from "./sidebar";
@@ -48,11 +47,11 @@ function SidebarToggle() {
 
 /**
  * The window's one title bar, across its whole width: decorative traffic lights, the sidebar
- * toggle and the open threads at the left; at the right where the data lives, the layout, the
- * bell, and the account in the corner (ADR-094). It is green chrome, flat or painted (ADR-110,
- * ADR-115). On a phone it is two rows (ADR-116): the project's name and what never scrolls on
- * top, with a "⋯" for the thread and project; below, the views, Thread, Browser and Canvas.
- * The account moves to the sidebar's foot on a phone instead (ADR-121).
+ * toggle and the open threads at the left; at the right, the layout, the bell, and the account
+ * in the corner (ADR-094). It is green chrome, flat or painted (ADR-110, ADR-115). On a phone it
+ * is two rows (ADR-116): the project's name and what never scrolls on top, with a "⋯" for the
+ * thread and project; below, the views, Thread, Browser and Canvas. The account moves to the
+ * sidebar's foot on a phone instead (ADR-121).
  */
 export function TitleBar({ theme, chrome }: Looks) {
   const shell = useShell();
@@ -63,14 +62,13 @@ export function TitleBar({ theme, chrome }: Looks) {
       data-slot="title-bar"
       inert={isMobile && openMobile}
       data-chrome={chrome.style}
-      className="chrome-surface flex h-11 shrink-0 items-center gap-2 pr-3 select-none max-md:grid max-md:h-auto max-md:grid-cols-[auto_minmax(0,1fr)_repeat(3,auto)] max-md:grid-rows-[44px_auto] max-md:gap-x-1 max-md:gap-y-0 max-md:px-2 max-md:pb-1.5"
+      className="chrome-surface flex h-11 shrink-0 items-center gap-2 pr-3 select-none max-md:grid max-md:h-auto max-md:grid-cols-[auto_minmax(0,1fr)_repeat(2,auto)] max-md:grid-rows-[44px_auto] max-md:gap-x-1 max-md:gap-y-0 max-md:px-2 max-md:pb-1.5"
     >
       <TrafficLights />
       <SidebarToggle />
       <ProjectName shell={shell} />
       <TabStrip shell={shell} starting={starting} />
       <div className="flex shrink-0 items-center gap-2 max-md:contents">
-        <DataMarker />
         <LayoutSwitch shell={shell} />
         <Bell shell={shell} />
         {!isMobile && <Account theme={theme} chrome={chrome} />}
