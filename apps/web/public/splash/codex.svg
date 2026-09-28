@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000" fill="none" stroke="#000" stroke-linecap="round">
+<g stroke-width="1.3" stroke-opacity=".55">
+<circle cx="500" cy="500" r="404.5"/>
+<circle cx="500" cy="500" r="154.5"/>
+<circle cx="345.5" cy="500" r="95.5"/>
+<circle cx="654.5" cy="500" r="95.5"/>
+<circle cx="500" cy="345.5" r="95.5"/>
+<circle cx="500" cy="654.5" r="95.5"/>
+<path d="M0 0L1000 1000M1000 0L0 1000"/>
+</g>
+<path stroke-width="1.3" d="M0 500H1000"/>
+<path stroke-width="1.1" d="M0 490V510M25 496V504M50 496V504M75 496V504M100 496V504M125 490V510M150 496V504M175 496V504M200 496V504M225 496V504M250 490V510M750 490V510M775 496V504M800 496V504M825 496V504M850 496V504M875 490V510M900 496V504M925 496V504M950 496V504M975 496V504M1000 490V510"/>
+</svg>
