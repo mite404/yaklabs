@@ -168,20 +168,85 @@
       var(--chrome-painting);
   }
 
-  /* The empty canvas's splash (ADR-113): the drawing is a mask filled with --splash-line, so it
-     themes with the ink and shows only its strokes, never the bounds of an image. It sits
-     behind the words, and it and Kay fade in once, with no fade under reduced motion. */
+  /* The empty canvas's splash (ADR-113, ADR-135): a picture behind the words, in one of three
+     looks by <html data-splash> (splash.ts). The landscape or the abstract painting sit at the
+     open space's edges and fade to the paper in the middle, so the words sit on plain paper
+     without a plate; Atlas stands behind the words with his globe ringing them, faded out at
+     the feet. The open space turns paper while it holds the splash, so a clearing is the app's
+     paper and not the brighter field, and the carry's lit fill still shows there, between the
+     paper and the picture. A :has() keeps the switch in CSS, off OpenSpace. The splash fades in
+     once, with no fade under reduced motion. */
+  .open-space:has(> .splash) {
+    background-color: var(--paper);
+  }
   .splash {
     position: absolute;
     inset: 0;
     z-index: -1;
+    border-radius: calc(var(--radius-card) - 1px); /* inside the open space's 1px border */
+    overflow: hidden; /* Atlas's faded feet run past the bottom edge */
+    container-type: size; /* the picture measures the open space in cq units */
   }
+  /* The field's dots go on over the picture and the paper alike, drawn here since the open
+     space's paper covers the canvas's own. They start 1rem and 1px up and left, the canvas's
+     padding and the open space's border, so they fall on the field's grid outside. */
+  .splash::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(var(--hairline) 1px, transparent 1px) calc(-1rem - 1px)
+      calc(-1rem - 1px) / 18px 18px;
+  }
+  /* A painting under its wash, masked to a clearing: an ellipse of the open space's own
+     proportions, clear to 35% of its half width and height and full at 95%, so the fade is
+     long and has no edge. The gradient's box is the open space or 48rem by 16rem, whichever
+     is larger, centred (Chromium takes no max() in the ellipse's own size), so the clearing is
+     always wider than the two-line copy: a narrow open space keeps the words on paper and
+     shows the picture above and below them. The landscape is the look of a page with no
+     attribute yet. */
   .splash-drawing {
-    background-color: var(--splash-line);
-    mask: url("/splash/sphere.svg") center / contain no-repeat;
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(var(--splash-wash-landscape), var(--splash-wash-landscape)),
+      url("/splash/landscape.webp") center / cover no-repeat;
+    mask-image: radial-gradient(ellipse 50% 50% at center, transparent 35%, black 95%);
+    mask-size: max(100%, 48rem) max(100%, 16rem);
+    mask-position: center;
+    mask-repeat: no-repeat;
   }
-  .splash,
-  .splash-in {
+  html[data-splash="abstract"] .splash-drawing {
+    background:
+      linear-gradient(var(--splash-wash-abstract), var(--splash-wash-abstract)),
+      url("/splash/abstract.webp") center / cover no-repeat;
+  }
+  /* Atlas: a stencil (black strokes on alpha) as a mask filled with --splash-figure, so he
+     themes with the ink and shows no bounds. He stands 98% of the open space tall, centred,
+     with his globe's centre (28.4% down his file) at the open space's middle, so the globe
+     rings the words and the button, and a second mask, solid to 55% and gone at the bottom,
+     takes his feet out before the edge. */
+  html[data-splash="vitruvian"] .splash-drawing {
+    inset: auto;
+    top: calc(50% - 0.284 * 98cqh);
+    left: 50%;
+    height: 98cqh;
+    aspect-ratio: 635 / 1081;
+    translate: -50% 0;
+    background: var(--splash-figure);
+    mask-image: url("/splash/atlas.webp"), linear-gradient(black 55%, transparent);
+    mask-size: 100% 100%;
+    mask-position: center;
+    mask-repeat: no-repeat;
+    mask-composite: intersect;
+  }
+  /* Under a 330px content box (a phone) Atlas would be a smudge behind the button, so he stays
+     away. The query reads the splash layer, sized as the open space is. */
+  @container (max-width: 329px) {
+    html[data-splash="vitruvian"] .splash-drawing {
+      display: none;
+    }
+  }
+  .splash {
     animation: splash-in 150ms ease-out;
   }
   @keyframes splash-in {
@@ -190,8 +255,7 @@
     }
   }
   @media (prefers-reduced-motion: reduce) {
-    .splash,
-    .splash-in {
+    .splash {
       animation: none;
     }
   }

@@ -138,10 +138,14 @@
   /* the trim around the window's body (Q5 to Q7): olive until Ethan picks, 6.57:1 against the
      bright paper; never the focus grey, so it cannot read as a ring (ADR-053) */
   --trim: var(--olive);
-  /* the splash's line drawing on an empty canvas: the ink at 12%, which follows the theme, so
-     a stroke stands 1.26:1 off the field in light and 1.36:1 in dark, visible without ever
-     competing with the words */
-  --splash-line: color-mix(in srgb, var(--ink) 12%, transparent);
+  /* the splash's three looks (ADR-135). The paintings sit under a wash of the paper: the
+     landscape shows through at 11% and the abstract strokes at 18%, Ethan's Figma values, so
+     either reads as a picture under the field, never a photograph on it; the words sit in the
+     clearing, on plain paper. Atlas is the ink at 30%, Ethan's Figma value: 1.84:1 off the
+     paper in light, so he reads as a sketch without competing with the words */
+  --splash-wash-landscape: color-mix(in srgb, var(--paper) 89%, transparent);
+  --splash-wash-abstract: color-mix(in srgb, var(--paper) 82%, transparent);
+  --splash-figure: color-mix(in srgb, var(--ink) 30%, transparent);
 
   --radius-card: 14px; /* the catalog card and the thread panel; shadcn owns --radius (ADR-082) */
   --space: 24px;
@@ -293,6 +297,11 @@ button:hover {
   --bubble-line: color-mix(in srgb, var(--sage) 45%, var(--paper)); /* 3.2:1 */
   --shadow: color-mix(in srgb, black 40%, transparent);
   --shadow-strong: color-mix(in srgb, black 60%, transparent);
+  /* the splash's paintings show a step more on the dark paper (20% and 28%), where a daylight
+     picture sits back anyway; Atlas is the cream at 26%, 2.21:1 off the dark paper */
+  --splash-wash-landscape: color-mix(in srgb, var(--paper) 80%, transparent);
+  --splash-wash-abstract: color-mix(in srgb, var(--paper) 72%, transparent);
+  --splash-figure: color-mix(in srgb, var(--ink) 26%, transparent);
   --warn-bg: #3a3320; /* derived: the warm notice, deepened */
   --warn-ink: #eddcaa; /* 9.2:1 on it */
   --record: #d7573f; /* the recording dot, lifted to 4.3:1 */
