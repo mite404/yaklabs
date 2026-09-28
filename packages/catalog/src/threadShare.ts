@@ -2,7 +2,7 @@ import { z } from "zod";
 import type { ThreadMessage } from "./thread";
 
 /**
- * A whole thread made public for a while (ADR-128): its title, its turns, and when the link
+ * A whole thread made public for a while (ADR-129): its title, its turns, and when the link
  * stops working. Card payloads stay opaque here; each card's own check runs before it renders.
  */
 export type SharedThread = { v: 1; title: string; messages: ThreadMessage[]; expiresAt: string };
@@ -62,7 +62,7 @@ function fromBase64Url(encoded: string): Uint8Array<ArrayBuffer> {
 }
 
 /**
- * Seals a thread for the server (ADR-128): AES-GCM under a fresh 256-bit key, the nonce first
+ * Seals a thread for the server (ADR-129): AES-GCM under a fresh 256-bit key, the nonce first
  * and the ciphertext after it. The server keeps only `sealed`; the link carries `key`.
  */
 export async function sealThread(

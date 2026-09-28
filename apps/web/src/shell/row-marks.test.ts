@@ -26,7 +26,7 @@ function thread(marks: Partial<ThreadSummary>): ThreadSummary {
   };
 }
 
-describe("rowLook (ADR-124 to ADR-126)", () => {
+describe("rowLook (ADR-125 to ADR-127)", () => {
   it("reads a thread with no marks as it always has", () => {
     expect(rowLook(thread({}))).toEqual({
       ink: "text-soft-ink",

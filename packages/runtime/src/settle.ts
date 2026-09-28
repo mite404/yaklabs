@@ -1,8 +1,8 @@
 import type { ThreadId } from "./workspace";
 
-/** How long a main can sit untouched before it settles into the archive (ADR-126). */
+/** How long a main can sit untouched before it settles into the archive (ADR-127). */
 export const IDLE_MS = 14 * 24 * 60 * 60 * 1000;
-/** How long the page offers Undo after a delete (ADR-127). */
+/** How long the page offers Undo after a delete (ADR-128). */
 export const UNDO_MS = 10_000;
 /** When a tombstone goes for good: the undo window, and a grace for an Undo already in flight. */
 export const PURGE_AFTER_MS = UNDO_MS + 5000;
@@ -65,7 +65,7 @@ function idleCandidate(row: SettleRow): boolean {
 }
 
 /**
- * One settling pass over the workspace (ADR-125 to ADR-128), as data: the snoozes that are due
+ * One settling pass over the workspace (ADR-126 to ADR-129), as data: the snoozes that are due
  * wake, mains idle for `IDLE_MS` archive, tombstones past the undo window go for good (every
  * one at start, since no Undo outlives the page that offered it), and expired shares drop.
  * A snooze woken in this pass is not archived in it; the wake restarts its idle clock.

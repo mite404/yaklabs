@@ -272,7 +272,7 @@ describe("resume", () => {
 // The title of the thread the phone's menu acts on, or null.
 const titleOf = (at: Located | null) => onScreen(WS, at).thread?.title ?? null;
 
-describe("onScreen (ADR-116, ADR-123)", () => {
+describe("onScreen (ADR-116, ADR-124)", () => {
   it("names the main on screen and its project", () => {
     expect(onScreen(WS, { main: PROFIT, focus: null }).name).toBe("Demo store");
     expect(titleOf({ main: PROFIT, focus: null })).toBe(PROFIT);
@@ -287,7 +287,7 @@ describe("onScreen (ADR-116, ADR-123)", () => {
   });
 });
 
-describe("awayFrom (ADR-127)", () => {
+describe("awayFrom (ADR-128)", () => {
   const doc: ShellState = { version: 1, tabs: [PROFIT, REFUNDS], views: {}, read: [] };
 
   it("closes a deleted main's tab and goes to its neighbour, as Close does", () => {

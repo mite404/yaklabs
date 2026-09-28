@@ -28,7 +28,7 @@ export function timeoutSchedule(delay: number, callback: () => void): () => void
 }
 
 /**
- * The settling passes for one store (ADR-125 to ADR-128): a snooze due wakes, an idle main
+ * The settling passes for one store (ADR-126 to ADR-129): a snooze due wakes, an idle main
  * archives, a tombstone past its window goes, an expired share drops. After each pass it waits
  * for the next moment something falls due, at most a day. A pass the timer runs that changes
  * the workspace calls `onChange`; one that fails is logged, and the next write settles again.

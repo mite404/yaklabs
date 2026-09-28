@@ -53,7 +53,7 @@ const threadSummarySchema = z.object({
 });
 
 /**
- * A thread made public for a while (ADR-128): the link carries its key, so it stays on the
+ * A thread made public for a while (ADR-129): the link carries its key, so it stays on the
  * device; the revoke token takes it down before it expires.
  */
 export const threadShareSchema = z.object({

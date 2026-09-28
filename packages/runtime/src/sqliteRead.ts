@@ -10,7 +10,7 @@ import { threadIdSchema, workspaceSchema, type ThreadId, type Workspace } from "
 const PREVIEW_LENGTH = 80;
 
 const PROJECTS = "select id, name, created_at as createdAt from projects order by created_at, id";
-// The threads the page sees: not deleted, and not the sub-thread of a deleted main (ADR-127).
+// The threads the page sees: not deleted, and not the sub-thread of a deleted main (ADR-128).
 const LIVE = `
   c.deleted_at is null
   and (c.parent_id is null

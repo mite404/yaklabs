@@ -93,7 +93,7 @@ function useFocusFollows(host: RefObject<HTMLElement | null>, turns: Turns): Foc
 }
 
 // Puts the focus on the snooze card's first tile when it opens, once the menu that opened it
-// has handed the focus back to its trigger, so a keyboard can answer it at once (ADR-125).
+// has handed the focus back to its trigger, so a keyboard can answer it at once (ADR-126).
 function useFocusCard(host: RefObject<HTMLElement | null>, open: boolean): void {
   useEffect(() => {
     const frame = requestAnimationFrame(() => {

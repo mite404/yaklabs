@@ -1,6 +1,6 @@
 import type { Database } from "@sqlite.org/sqlite-wasm";
 
-// Step 2 → 3 (ADR-129): a thread's marks, its tombstone and its idle clock, and the shares the
+// Step 2 → 3 (ADR-130): a thread's marks, its tombstone and its idle clock, and the shares the
 // device made public. Each column is null until something sets it; `touched_at` null reads as
 // the thread's `updated_at`. Adding columns keeps every row, and the step's one transaction
 // takes them back on a crash, so a rerun starts from the same v2 file.

@@ -42,7 +42,7 @@ describe("planSettle wakes snoozes", () => {
   });
 });
 
-describe("planSettle archives idle mains (ADR-126)", () => {
+describe("planSettle archives idle mains (ADR-127)", () => {
   it("archives a main idle for the whole window, and not one touched inside it", () => {
     const idle = row("idle", IDLE_MS);
     const fresh = row("fresh", IDLE_MS - 1);
@@ -79,7 +79,7 @@ describe("planSettle archives idle mains (ADR-126)", () => {
   });
 });
 
-describe("planSettle purges tombstones (ADR-127)", () => {
+describe("planSettle purges tombstones (ADR-128)", () => {
   it("purges a tombstone once the undo window and its grace have passed", () => {
     const old = row("old", DAY, { deletedAt: before(PURGE_AFTER_MS) });
     const recent = row("recent", DAY, { deletedAt: before(PURGE_AFTER_MS - 1) });
@@ -92,7 +92,7 @@ describe("planSettle purges tombstones (ADR-127)", () => {
   });
 });
 
-describe("planSettle drops expired shares (ADR-128)", () => {
+describe("planSettle drops expired shares (ADR-129)", () => {
   it("drops a share at its expiry, and keeps one still live", () => {
     const shares = [
       { id: "s-old", expiresAt: NOW },

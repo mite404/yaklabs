@@ -150,7 +150,7 @@ const threadRows = (db: Database) =>
     "select id, title, created_at, updated_at, project_id, parent_id, draft from conversations order by id",
   );
 
-describe("the 2 → 3 step (ADR-129)", () => {
+describe("the 2 → 3 step (ADR-130)", () => {
   it("adds the marks and the shares and leaves every v2 row as it was", async () => {
     const db = await atVersion2();
     const [before, threads] = [v2Rows(db), threadRows(db)];

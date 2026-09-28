@@ -62,7 +62,7 @@
   text-decoration: underline dotted var(--rule);
   text-underline-offset: 4px;
 }
-/* The host's actions at the bar's end (ADR-123): pulled into the bar's padding, so a button
+/* The host's actions at the bar's end (ADR-124): pulled into the bar's padding, so a button
    taller than the title's line never makes the bar taller. */
 .thread-header-actions {
   display: flex;

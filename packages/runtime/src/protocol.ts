@@ -139,7 +139,7 @@ export const commandSchema = z.discriminatedUnion("kind", [
     base: z.array(laneIdSchema),
   }),
   z.object({ kind: z.literal("saveShell"), requestId: idSchema, shell: shellStateSchema }),
-  // The thread menu's writes (ADR-123): a pin, a snooze or an archive; a delete and its undo;
+  // The thread menu's writes (ADR-124): a pin, a snooze or an archive; a delete and its undo;
   // and the device's record of a thread made public, and its end.
   z.object({
     kind: z.literal("mark"),

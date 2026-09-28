@@ -1,12 +1,12 @@
 // oxlint-disable no-await-in-loop -- a check drives one browser step at a time, in order
-// The thread menu's checks (ADR-123 to ADR-127) on the real app's demo scenario: every check
+// The thread menu's checks (ADR-124 to ADR-128) on the real app's demo scenario: every check
 // opens its own browser context, so no check sees another's data.
 import { BASE, openApp } from "./lever.mjs";
 
 // A thread header's padding and its rule: its height is its title's line and these, so actions
 // that make it taller show as a difference.
 const HEADER_FRAME_PX = 14 * 2 + 1;
-// The menu's items, in Ethan's order (ADR-123).
+// The menu's items, in Ethan's order (ADR-124).
 const ITEMS = ["Copy thread URL", "Share thread", "Pin thread", "Snooze", "Archive", "Delete"];
 const DEMO = `${BASE}/?scenario=demo`;
 
@@ -130,7 +130,7 @@ export const threadActionChecks = {
       .filter({ hasText: "Refund audit" })
       .locator('[data-mark="archived"]')
       .waitFor({ state: "detached" });
-    // --faint-ink, #64645e, against the soft ink of a live row (ADR-126).
+    // --faint-ink, #64645e, against the soft ink of a live row (ADR-127).
     const ok =
       last &&
       archived.marks.includes("archived") &&

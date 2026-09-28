@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // oxlint-disable no-await-in-loop, no-console -- a lever drives one step at a time and reports on stdout
-// The thread actions menu, on the real app (ADR-123 to ADR-128): the checks A1 to A8, or with
+// The thread actions menu, on the real app (ADR-124 to ADR-129): the checks A1 to A8, or with
 // --shots its pictures, light and dark, a desktop and a 390px phone. It waits on the tree and
 // the tabs, never on the data marker, which may leave the title bar on its own.
 //

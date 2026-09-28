@@ -25,13 +25,13 @@ import type { ComponentProps } from "react";
 import { useShell, type Shell } from "./model";
 import { wakeText } from "./snooze";
 
-/** The label every "⋯" for a thread carries, in its title bar or the phone's (ADR-123). */
+/** The label every "⋯" for a thread carries, in its title bar or the phone's (ADR-124). */
 export const THREAD_ACTIONS = "Thread actions";
 
 // What each item acts on: the shell's verbs and the thread.
 type ItemProps = { shell: Shell; thread: ThreadSummary };
 
-// Pin names what it would do now: Pin thread, or Unpin thread (ADR-124).
+// Pin names what it would do now: Pin thread, or Unpin thread (ADR-125).
 function PinItem({ shell, thread }: ItemProps) {
   const pinned = thread.pinnedAt !== null;
   return (
@@ -46,7 +46,7 @@ function PinItem({ shell, thread }: ItemProps) {
   );
 }
 
-// Snooze opens the card; a snoozed thread's item says when it wakes (ADR-125).
+// Snooze opens the card; a snoozed thread's item says when it wakes (ADR-126).
 function SnoozeItem({ shell, thread, before }: ItemProps & { before?: () => void }) {
   return (
     <DropdownMenuItem
@@ -66,7 +66,7 @@ function SnoozeItem({ shell, thread, before }: ItemProps & { before?: () => void
   );
 }
 
-// Archive names what it would do now: Archive, or Unarchive (ADR-126).
+// Archive names what it would do now: Archive, or Unarchive (ADR-127).
 function ArchiveItem({ shell, thread }: ItemProps) {
   const archived = thread.archivedAt !== null;
   return (
@@ -82,7 +82,7 @@ function ArchiveItem({ shell, thread }: ItemProps) {
 }
 
 /**
- * The thread menu's items (ADR-123), in Ethan's order: Copy thread URL, Share thread, Pin,
+ * The thread menu's items (ADR-124), in Ethan's order: Copy thread URL, Share thread, Pin,
  * Snooze, Archive, then Delete apart. Pin and Archive name what they would do now. Delete keeps
  * ink for its words, which the red does not clear on a dark menu (ADR-065); its icon is red.
  * @param beforeSnooze Runs before the snooze card opens, to bring the thread into view.
@@ -142,7 +142,7 @@ function ThreadMenuButton({ shell, thread }: { shell: Shell; thread: ThreadSumma
   );
 }
 
-// The pin in a pinned thread's title bar (ADR-124); pressing it unpins.
+// The pin in a pinned thread's title bar (ADR-125); pressing it unpins.
 function PinnedMark({ shell, thread }: { shell: Shell; thread: ThreadSummary }) {
   return (
     <Tooltip>
@@ -168,7 +168,7 @@ function PinnedMark({ shell, thread }: { shell: Shell; thread: ThreadSummary }) 
 }
 
 /**
- * What a thread's title bar carries at its end (ADR-123, ADR-124): the pin when it is pinned,
+ * What a thread's title bar carries at its end (ADR-124, ADR-125): the pin when it is pinned,
  * and on a desktop the "⋯". A phone keeps its "⋯" in the window's top row instead, the only
  * place it has for one. Nothing until the shell is ready.
  */

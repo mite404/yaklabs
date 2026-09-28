@@ -10,19 +10,19 @@ import { inBackground, reasonOf } from "../runtime";
 import { wakeText } from "./snooze";
 import { awayFrom, type ShellState } from "./state";
 
-/** What the thread's menu does (ADR-123), besides Share. */
+/** What the thread's menu does (ADR-124), besides Share. */
 export type ThreadVerbs = {
   /** Copies the thread's address, its scenario kept, and says so. */
   copyUrl(id: ThreadId): void;
-  /** Pins or unpins; the view stays where it is (ADR-124). */
+  /** Pins or unpins; the view stays where it is (ADR-125). */
   pin(id: ThreadId, pinned: boolean): void;
-  /** Opens the snooze card in the thread (ADR-125); null closes it. */
+  /** Opens the snooze card in the thread (ADR-126); null closes it. */
   askSnooze(id: ThreadId | null): void;
-  /** Snoozes until an instant, or wakes with null, and says when (ADR-125). */
+  /** Snoozes until an instant, or wakes with null, and says when (ADR-126). */
   snooze(id: ThreadId, until: string | null): void;
-  /** Archives or unarchives, with Undo; the view stays where it is (ADR-126). */
+  /** Archives or unarchives, with Undo; the view stays where it is (ADR-127). */
   archive(id: ThreadId, archived: boolean): void;
-  /** Deletes a thread and its sub-threads, with Undo while the worker keeps its tombstone (ADR-127). */
+  /** Deletes a thread and its sub-threads, with Undo while the worker keeps its tombstone (ADR-128). */
   remove(id: ThreadId): void;
 };
 
@@ -78,7 +78,7 @@ function removeWithUndo(deps: ThreadDeps, id: ThreadId): void {
   });
 }
 
-/** The thread menu's verbs over the runtime (ADR-123 to ADR-127). */
+/** The thread menu's verbs over the runtime (ADR-124 to ADR-128). */
 export function threadVerbs(deps: ThreadDeps): ThreadVerbs {
   const { runtime, threads, href, setSnoozing } = deps;
   return {

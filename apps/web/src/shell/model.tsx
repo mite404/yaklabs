@@ -39,7 +39,7 @@ export type Shell = ShellVerbs & {
   /** Where "/" goes, or null when nothing is open. */
   resumeTo: ThreadId | null;
   unread: number;
-  /** The thread whose snooze card is open, if any (ADR-125). */
+  /** The thread whose snooze card is open, if any (ADR-126). */
   snoozing: ThreadId | null;
 };
 
@@ -119,7 +119,7 @@ function useGo(): Go {
   );
 }
 
-// A thread's address as a whole URL, its scenario kept, for Copy thread URL (ADR-123).
+// A thread's address as a whole URL, its scenario kept, for Copy thread URL (ADR-124).
 function useHref(): (id: ThreadId) => string {
   const { pathTo } = usePaths();
   return useCallback((id: ThreadId) => new URL(pathTo(id), window.location.href).href, [pathTo]);

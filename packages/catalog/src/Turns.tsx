@@ -47,7 +47,7 @@ export function UserTurn({ message, ref }: { message: UserMessage; ref?: Ref<HTM
  * reply is still streaming in, the turn is marked busy for assistive technology.
  * @param cardsCarry Whether a card's header carries it out onto the canvas (ADR-089).
  * @param shareable Whether a card offers its own share link; not on a page already shared
- * (ADR-064, ADR-128).
+ * (ADR-064, ADR-129).
  */
 export function AgentTurn({
   message,

@@ -5,7 +5,7 @@ import type { Settled } from "./store";
 import { applyMark, type ThreadMark } from "./marks";
 import type { ThreadId, ThreadShare, ThreadSummary } from "./workspace";
 
-// The store's writes for the thread menu (ADR-123 to ADR-128): marks, tombstones, the settling
+// The store's writes for the thread menu (ADR-124 to ADR-129): marks, tombstones, the settling
 // pass and the device's record of public shares. Each runs inside the caller's transaction.
 
 const SET_MARKS = `
@@ -46,7 +46,7 @@ export function markThread(db: Database, id: ThreadId, change: ThreadMark, now: 
 }
 
 /**
- * Puts a tombstone on a live thread (ADR-127).
+ * Puts a tombstone on a live thread (ADR-128).
  * @throws For a thread that is unknown or deleted already.
  */
 export function removeThread(db: Database, id: ThreadId, now: string): void {

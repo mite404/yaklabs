@@ -24,7 +24,7 @@
   /* Body and all secondary text, one step lighter than headings: the value in the site's
      shared brand.css (ADR-057), where its pages differ (#4a4a47, #5c5c57). 6.4:1 on paper. */
   --soft-ink: #565650;
-  /* An archived thread (ADR-126): soft ink a step toward the paper, as dim as text may go on
+  /* An archived thread (ADR-127): soft ink a step toward the paper, as dim as text may go on
      the sidebar's hover fill. 5.17:1 on paper, 4.67:1 on paper-deep. */
   --faint-ink: #64645e;
   --blue: #95aac8; /* text selection */

@@ -29,7 +29,7 @@ function useChoices(thread: ThreadSummary, asking: boolean): Ready | null {
 }
 
 /**
- * The snooze card for a thread (ADR-125) while the thread menu has it open: the agent's card,
+ * The snooze card for a thread (ADR-126) while the thread menu has it open: the agent's card,
  * named Snooze, with the tiles `snoozeChoices` finds and a field for any time. Undefined while
  * it is closed.
  */
