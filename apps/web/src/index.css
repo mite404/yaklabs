@@ -129,27 +129,6 @@
     content-visibility: hidden;
   }
 
-  /* The trim (ADR-112): a line in --trim around the window's body, under the bar and down both
-     sides to the bottom, drawn over the edge so it takes no layout and no box below it moves. */
-  .window-trim::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    z-index: 30;
-    box-shadow: inset 0 0 0 2px var(--trim);
-    pointer-events: none;
-    /* A layer of its own: laid over the body in the page's layer, it made Chromium composite
-       what lies under it differently, and a dark-mode fill came out a level off. */
-    will-change: transform;
-  }
-  /* A window with a frame rounds its bottom corners at 12px less its 1px border; the trim bends
-     with them rather than being cut off where the corner clips it. */
-  @media (width >= 48rem) {
-    .window-trim::after {
-      border-radius: 0 0 11px 11px;
-    }
-  }
-
   /* The painted bar (ADR-115): the painting under a subtle green wash, darkest at the ends
      where the traffic lights and the account sit, over the painting's mean colour. Its soft ink
      is a step brighter than the flat bar's, since the painting is lighter than the flat green. */

@@ -408,7 +408,8 @@ export const polishChecks = {
     };
   },
 
-  // Section 3: the trim.
+  // Section 3: the trim. Gone (ADR-136): the window's body draws no coloured line, in either
+  // theme, and no token names one.
   async C(browser) {
     const notes = [];
     let ok = true;
@@ -416,45 +417,15 @@ export const polishChecks = {
       const { page, context } = await openScenario(browser, { theme });
       const body = page.locator('[data-slot="window-body"]');
       const look = await body.evaluate((el) => getComputedStyle(el, "::after").boxShadow);
-      const trim = await tokenColour(page, "--trim");
-      const c1 = look.includes("2px") && look.includes(trim);
-      const bright = rgbOf(await tokenColour(page, "--bg"));
-      const bar = await barColour(page);
-      const c2 = Math.max(ratio(rgbOf(trim), bright), ratio(rgbOf(trim), bar)) >= 3;
-      await page.locator("body").focus();
-      const atRest = await body.evaluate((el) => getComputedStyle(el, "::after").boxShadow);
-      await shown(page).getByRole("textbox").first().focus();
-      const focused = await body.evaluate((el) => getComputedStyle(el, "::after").boxShadow);
-      const c3 =
-        atRest === focused &&
-        trim !== (await tokenColour(page, "--focus")) &&
-        trim !== (await tokenColour(page, "--ring"));
-      ok &&= c1 && c2 && c3;
-      notes.push(
-        `${theme}: C1 ${c1}; C2 ${round(Math.max(ratio(rgbOf(trim), bright), ratio(rgbOf(trim), bar)))}; C3 ${c3}`,
+      const declared = await page.evaluate(() =>
+        getComputedStyle(document.documentElement).getPropertyValue("--trim").trim(),
       );
+      const c1 = look === "none" && declared === "";
+      ok &&= c1;
+      notes.push(`${theme}: body ::after ${look}, --trim "${declared}" ${c1}`);
       await context.close();
     }
-    const base = readBaseline().json.light.bar.boxes;
-    const grown = await openScenario(browser, { viewport: GROWN });
-    const now = await boxesOf(grown.page);
-    const c4 =
-      same(shift(now.tabpanel), base.tabpanel) &&
-      same(shift(now.sidebar), base.sidebar) &&
-      same(now.tabs.map(shift), base.tabs);
-    await grown.context.close();
-    const narrow = await openScenario(browser, { viewport: { width: 767, height: 900 } });
-    const width = (await narrow.page.locator('[data-slot="window-body"]').boundingBox()).width;
-    const drawn = await narrow.page
-      .locator('[data-slot="window-body"]')
-      .evaluate((el) => getComputedStyle(el, "::after").boxShadow.includes("2px"));
-    const c5 = width === 767 && drawn;
-    await narrow.context.close();
-    ok &&= c4 && c5;
-    return {
-      ok,
-      detail: `${notes.join("; ")}; C4 boxes as baseline ${c4}; C5 ${width}px drawn ${drawn}`,
-    };
+    return { ok, detail: notes.join("; ") };
   },
 
   // Section 4: the tabs on the bar.

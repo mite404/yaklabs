@@ -57,7 +57,7 @@ function Workspace({ children }: { children: ReactNode }) {
 /**
  * The app drawn as a desktop window (ADR-094): a rounded frame on a desk of its own with a
  * margin around it, full-bleed on a narrow screen (ADR-111). The green title bar runs its whole
- * width (ADR-110); below it, framed by the trim, the sidebar (shadcn's sidebar-16 pattern) and,
+ * width (ADR-110); below it, the sidebar (shadcn's sidebar-16 pattern) and,
  * inset like Kay's content pane, the workspace.
  */
 export function Window({ theme, children }: { theme: ThemeChoice; children: ReactNode }) {
@@ -86,7 +86,7 @@ export function Window({ theme, children }: { theme: ThemeChoice; children: Reac
           })}
         >
           <TitleBar theme={theme} chrome={chrome} />
-          <div data-slot="window-body" className="window-trim relative flex min-h-0 flex-1">
+          <div data-slot="window-body" className="relative flex min-h-0 flex-1">
             <AppSidebar theme={theme} chrome={chrome} />
             <Workspace>{children}</Workspace>
           </div>

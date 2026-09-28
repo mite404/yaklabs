@@ -30,12 +30,10 @@ const LIGHT: Pair[] = [
   ["--desk", "--yak-paper-bright", 1.54, 1.3],
   ["--desk", "--paper", 1.43, 1.3],
   ["--desk", "--chrome", 6.3, 1.5],
-  ["--trim", "--yak-paper-bright", 6.57, 3],
 ];
 const DARK: Pair[] = [
   ["--desk", "--paper", 2.75, 1.3],
   ["--desk", "--chrome", 1.69, 1.5],
-  ["--trim", "--paper", 5.79, 3],
 ];
 const WASHES: Wash[] = [
   ["--chrome-line", "--chrome", 1.63, 1],
