@@ -1433,5 +1433,21 @@ The existing record had nowhere honest to put it: the shell document is the page
 outlive a closed lane, and folding it into `width` would give one column two meanings. The
 1 → 2 step keeps writing only the columns v2 had, so a finished step never changes. A collapsed
 lane keeps its width for when it opens, and a closed lane that reopens comes back expanded.
+Where the controls sit is ADR-125.
 Proof: `packages/runtime/src/schema.test.ts` migrates a v2 canvas to v3 with its lanes expanded
 and refuses a flag other than 0 or 1; `sqliteStore.test.ts` reads a collapsed lane back.
+
+## ADR-125 - A lane's collapse lives in what it folds, and Collapse all in the title bar
+
+2026-09-28 - Accepted (Ethan: "the collapse/expand for a thread or card should live within the
+container of that element. the collapse all/expand all should be part of the title bar on
+desktop. on mobile it should be in the top row, not the second row"). Extends ADR-124, ADR-116.
+A lane's collapse sits first in the thread's or the card's own title bar, and at the head of the
+strip once collapsed, as GitButler's does; the catalog's headers take it through a `leading`
+slot, so they stay the catalog's. Collapse all sits in the title bar beside the layout on a
+desktop, and in the phone's top row beside the bell, never the row of views. It collapses every
+lane while any is open and expands them all once none is, and it stays in place, disabled, while
+the canvas is off screen or empty, so the bar never shifts. A mock with the control at the lane
+row's leading edge was set aside for it.
+Proof: P13 (the phone's top row), P14 (the toggle in the title bar and the strip) and P18
+(Collapse all, kept across a reload) in `apps/web/scripts/workspace-check.mjs`.

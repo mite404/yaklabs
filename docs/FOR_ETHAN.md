@@ -93,6 +93,15 @@ plan behind it yet, so it and the logic behind it are deleted outright, not just
 (ADR-123, amending ADR-096 and ADR-116). He may ask for a delineation again once there is
 something worth delineating.
 
+Then the canvas got busy. It keeps cards and child threads side by side so Ethan can refer back
+without scrolling, but six open lanes leave room for about one. Following GitButler's collapsible
+stacks, any lane now folds to a 32px strip: its expand at the head, the six-dot grip always
+showing, and the title turned to read top to bottom. The whole strip drags, and the fold is kept
+with the lane in SQLite, so it survives a reload (ADR-124, schema v3). A first mock put Collapse
+all at the start of the lane row; Ethan moved it into the title bar, beside the layout on a
+desktop and in the phone's top row, and moved each lane's own toggle into the thread's or card's
+title bar, inside the thing it folds (ADR-125).
+
 ## 2. Cast & Crew
 
 The first entries are ideas from before any code existed; the rest are parts of the running app.
@@ -167,6 +176,15 @@ The first entries are ideas from before any code existed; the rest are parts of 
   bare again. Kay stands in the corner like a mascot on a studio lot, and the drawing behind the
   words is a stencil, a mask the ink shines through, so it re-lights for dark mode on its own
   (ADR-113).
+- **The collapsed strip** (`LaneStrip` in `apps/web/src/components/lane.tsx`) is a collapsed
+  track in the timeline. Premiere lets you fold a track to a sliver that still shows its name, so
+  the edit stays in view without its thumbnails eating the screen. The strip is that sliver: the
+  track's name runs down it, the grip says it can still be dragged to another slot, and the clip
+  inside is only hidden, not unloaded, so a half-typed draft is there when it unfolds (ADR-124).
+- **Collapse all** (`apps/web/src/shell/collapse-all.tsx`) is the "collapse all tracks" button
+  on the timeline's header, not on any one track. It reads the room first (`foldOffer` in
+  `apps/web/src/shell/state.ts`): collapse while any lane is open, expand once none is, and wait,
+  greyed out, while the canvas is off screen (ADR-125).
 
 ## 3. Behind the Scenes
 
@@ -337,6 +355,17 @@ The first entries are ideas from before any code existed; the rest are parts of 
   mask filled with `--splash-line`, only the strokes exist, and the ink's own theme colours them.
   The Atlas figure in the mock was too soft to trace, so the stencil is an original sphere on a
   stand until the source file comes (ADR-113).
+- **A column for the fold, not a corner of someone else's record.** Whether a lane is collapsed
+  could have lived in the shell document, which needs no migration. But the shell is the page's
+  scratchpad and would remember a fold for a lane that was since closed, and folding it into
+  `width` (say, a negative width) gives one column two meanings. It is a `collapsed` column, 0 or
+  1, added by schema step 2 to 3, which starts every existing lane open. The 1 to 2 step keeps its
+  own insert with only the columns v2 had: a finished migration never changes (ADR-124).
+- **A slot in the catalog's headers, not a button floated over them.** The toggle could have been
+  positioned from the lane over the header's left edge, touching no catalog file. It would have
+  been tied to each header's padding and height, and to both the thread's bar and the card's. A
+  `leading` prop on `CardHeader`, `CatalogCard`, `InteractiveCard` and `ChatThreadPanel` lets the
+  host hand in the control; the catalog lays it out and still owns its headers (ADR-125).
 - **The query picks the bar, and storage keeps it.** The app's links keep only `?scenario=`, so
   `?chrome=painting` would vanish on the first click. Rather than teach every link a second
   parameter, the page reads it once and stores it, the way the sidebar remembers open or closed.
@@ -796,6 +825,19 @@ The first entries are ideas from before any code existed; the rest are parts of 
   scroller keeps 32px of `scroll-padding` for its edge fade, and a tab exactly as wide as the
   scroller has no room for it. Below 768px that padding is now zero. Lesson: when a size refuses
   to change, ask what it is measured against before changing the number.
+
+- **"The first button" found a new first button.** A thread that fails to open shows Try again,
+  and pressing it keeps the focus there by querying the pending frame for `button`. The lane's new
+  toggle also sits in that frame's title bar, earlier in the page, so the focus landed on the
+  toggle. The web lever caught it ("Try again in Last week's sales; in Saturday leads..."). Try
+  again now carries `data-retry` and the query asks for that. Lesson: a selector that names an
+  element's kind instead of its job breaks the day a sibling of the same kind moves in.
+- **The ghost that lost its grip.** A lifted strip's floating copy is appended to `<body>`, and
+  the grip's dots were only drawn inside `[data-reorder="true"]`, the canvas. The copy rode the
+  pointer without its grip. The grip is now drawn inside `.lane-ghost` too.
+- **A width without a unit.** Moving the lane's width into a CSS custom property,
+  `--lane-width`, sent 423 instead of 423px: React adds `px` to `width: 423`, never to a custom
+  property. Lesson: custom properties are strings, so write the unit yourself.
 
 ## 5. Director's Commentary
 
@@ -1532,3 +1574,39 @@ and the answer was set aside, because the 44px rule was meant for the desktop an
 asked what a phone should be. A measurement settles the question you put to it; it cannot tell
 you that you asked the wrong one. When the question is "what should this be?", put a working
 build in the person's hand, as the picture of Amp's two rows did here, before you optimise.
+
+### Name the job, not the kind: selectors are casting calls
+
+A query is a casting call. `[data-pending] button` asks for "any actor in a costume"; it worked
+while one actor wore one. The day the lane's collapse toggle joined the scene in the same costume,
+the call went to the wrong person, and the focus followed.
+
+```ts
+// apps/web/src/components/thread-pane.tsx: where the focus rests while a thread opens or fails.
+const REST: Record<Turns["kind"], string> = {
+  loading: "[data-pending]",
+  failed: "[data-pending] [data-retry]", // Try again, not a lane's collapse in the title bar
+  open: ".compose-box textarea",
+};
+```
+
+```mermaid
+flowchart LR
+  P[Try again pressed] --> F{thread fails again}
+  F --> Q1["query: [data-pending] button"]
+  F --> Q2["query: [data-pending] [data-retry]"]
+  Q1 --> T[first match: the collapse toggle in the title bar]
+  Q2 --> R[Try again]
+  T --> X[focus leaves the place you were]
+  R --> OK[focus stays where you pressed]
+```
+
+The same idea runs through the lane: the reorder grip is `[data-collapsed="true"]`, the strip's
+parts are `[data-lane-strip-title]` and `[data-lane-strip-grip]`, and the focus hand-off asks for
+`[data-lane-close], [data-lane-toggle]`. Each names what the element is for, so adding a second
+button anywhere nearby cannot recast the scene.
+
+Senior-engineer takeaway: when code finds an element to act on, find it by its role in the story
+(a data attribute or an accessible name), never by its tag or its position. And keep a check that
+drives the real flow, like the web lever did here, because a wrong match compiles and renders
+fine.
