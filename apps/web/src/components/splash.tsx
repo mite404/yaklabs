@@ -1,20 +1,27 @@
-// The splash on an empty canvas (ADR-113): a line drawing behind the words, and Kay at the
-// bottom right, over them. Both are pictures only: hidden from the tree, and a press or a carried
-// card goes through them to the ground. Bottom to top: the dotted field, the carry's lit fill
-// (the open space's ::before), the drawing, the words and the button, Kay.
+// The splash on an empty canvas (ADR-113): a Vitruvian sheet behind the words, and Kay at the
+// bottom right, over them. All of it is pictures only: hidden from the tree, and a press or a
+// carried card goes through them to the ground. Bottom to top: the dotted field, the carry's lit
+// fill (the open space's ::before), the sheet, the words and the button, Kay.
 
-/** The line drawing behind an empty canvas's words, drawn in `--splash-line` so it themes. */
+/**
+ * The drawing behind an empty canvas's words: Leonardo's circle in a square, scaled to the
+ * open space, with the dots cleared inside the circle and Atlas standing in it, his globe
+ * concentric with the circle. The sheet's lines are `--splash-line` and the figure
+ * `--splash-figure`, masks filled with tokens, so the whole drawing themes.
+ */
 export function SplashDrawing() {
   return (
     <div data-slot="canvas-splash" aria-hidden="true" className="splash pointer-events-none">
-      <div data-slot="splash-drawing" className="splash-drawing absolute inset-6" />
+      <div className="splash-clearing" />
+      <div className="splash-sheet" />
+      <div data-slot="splash-drawing" className="splash-drawing" />
     </div>
   );
 }
 
 /**
- * Kay at the bottom right of an empty canvas. He stays away from an open space under 480px, a
- * content box under 430px, where he would crowd the words.
+ * Kay at the bottom right of an empty canvas, under the sheet's square. He stays away from an
+ * open space under 480px, a content box under 430px, where he would crowd the words.
  */
 export function Kay() {
   return (

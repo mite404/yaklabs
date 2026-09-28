@@ -65,6 +65,14 @@
   initial-value: 0px;
 }
 
+/* The splash clearing's colour: registered so the carry's tint can fade in, as the lit fill's
+   does, inside a gradient. */
+@property --clearing {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: transparent;
+}
+
 @layer components {
   /* shadcn draws its controls with utilities on top of Tailwind's preflight, and the catalog
      styles bare elements over that preflight (tokens.css): a button gets a paper fill, a
@@ -168,17 +176,74 @@
       var(--chrome-painting);
   }
 
-  /* The empty canvas's splash (ADR-113): the drawing is a mask filled with --splash-line, so it
+  /* The empty canvas's splash (ADR-113): a Vitruvian sheet, masks filled with tokens, so it
      themes with the ink and shows only its strokes, never the bounds of an image. It sits
-     behind the words, and it and Kay fade in once, with no fade under reduced motion. */
+     behind the words, and it and Kay fade in once, with no fade under reduced motion.
+     The layer is a size container so its parts measure the open space's shorter side (cqmin)
+     and the square stays square, its circle a true circle, at every width. */
   .splash {
     position: absolute;
     inset: 0;
     z-index: -1;
+    container-type: size;
+    /* The square: the shorter side less the open space's own padding. Read by the children,
+       where the units resolve against this layer. */
+    --side: calc(100cqmin - 48px);
   }
-  .splash-drawing {
+  /* Where Kay shows (his own query, splash.tsx), the square stops short of him: either above
+     his box or to its left, whichever leaves the larger square. The queries name the open
+     space, since the splash layer is a container itself and would answer for its children. */
+  @container open-space (min-width: 430px) {
+    .splash {
+      --side: min(calc(100cqmin - 48px), max(calc(100cqh - 286px), calc(100cqw - 256px)));
+    }
+  }
+  /* On a phone (a content box under 330px) the circle would cross the words, so the square keeps
+     only a hair of margin, and Atlas, who would be a smudge behind the button, stays away. */
+  @container open-space (max-width: 329px) {
+    .splash {
+      --side: calc(100cqmin - 16px);
+    }
+    .splash-drawing {
+      display: none;
+    }
+  }
+  /* The clearing: the field's own colour, solid at the centre and gone at the circle's rim, so
+     the dots fade away inside the circle and stay outside it. It paints in --clearing, which
+     follows the carry's lit fill, since a solid disc here would otherwise hide that fill. */
+  .splash-clearing {
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(
+      circle calc(var(--side) * 0.47) at center,
+      var(--clearing) 40%,
+      transparent 100%
+    );
+    transition: --clearing 150ms ease;
+  }
+  /* The sheet: Leonardo's square, the circle inside it and the protractor between the two
+     (draw-vitruvian.mjs), sized to the square and centred. */
+  .splash-sheet {
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    width: var(--side);
+    height: var(--side);
     background-color: var(--splash-line);
-    mask: url("/splash/sphere.svg") center / contain no-repeat;
+    mask: url("/splash/vitruvian.svg") center / contain no-repeat;
+  }
+  /* Atlas, a step stronger than the sheet so he reads as the drawing. He stands eight tenths
+     of the square tall, which keeps his feet inside the circle, and is shifted by the distance
+     from his image's centre to his globe's, so the globe is concentric with the circle. */
+  .splash-drawing {
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    height: calc(var(--side) * 0.8);
+    aspect-ratio: 635 / 1081;
+    translate: 1.23% 20.59%;
+    background-color: var(--splash-figure);
+    mask: url("/splash/atlas.webp") center / contain no-repeat;
   }
   .splash,
   .splash-in {
@@ -196,7 +261,15 @@
     }
   }
   /* The open space lights up under a carry (ADR-091) on a layer below the splash drawing, so the
-     drawing stays on top of the fill, as the words do. */
+     drawing stays on top of the fill, as the words do. The splash's clearing paints the same
+     colour the fill makes over the field, so a carry tints the whole open space alike. */
+  .open-space {
+    container-name: open-space;
+    --clearing: var(--field);
+  }
+  .open-space[data-lit] {
+    --clearing: color-mix(in srgb, var(--paper-deep) 60%, var(--field));
+  }
   .open-space::before {
     content: "";
     position: absolute;
@@ -209,9 +282,11 @@
     background-color: color-mix(in srgb, var(--paper-deep) 60%, transparent);
   }
 
-  /* The canvas is a dotted field (ADR-089): open ground that invites something to be put down. */
+  /* The canvas is a dotted field (ADR-089): open ground that invites something to be put down.
+     Its colour is --field, so the splash's clearing can paint the same ground. */
   .canvas {
-    background-color: var(--bg);
+    --field: var(--bg);
+    background-color: var(--field);
     background-image: radial-gradient(var(--hairline) 1px, transparent 1px);
     background-size: 18px 18px;
     /* The canvas fills the window's bottom right corner, which the window rounds at 12px
@@ -246,7 +321,7 @@
   /* A carry over the canvas (ADR-091) shows on the whole pane, where the eye is, not only on
      the open space at the far end: a ring in the hover green and the ground a shade deeper. */
   .canvas[data-drop] {
-    background-color: color-mix(in srgb, var(--paper-deep) 55%, var(--bg));
+    --field: color-mix(in srgb, var(--paper-deep) 55%, var(--bg));
     box-shadow: inset 0 0 0 2px var(--olive);
   }
   /* A focused child's lane says where it is once, as it comes into view. */

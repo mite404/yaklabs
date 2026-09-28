@@ -1,10 +1,11 @@
 # The canvas splash drawing
 
-- `sphere.svg` is an original line drawing made for this repo: a sphere with its meridians,
-  parallels and ecliptic on a desk stand, over golden-ratio construction lines. No licence is
-  needed.
-- It is drawn as a CSS mask filled with `--splash-line`, so only the strokes show and the
-  drawing themes with the ink.
-- It stands in for the Atlas figure in Ethan's mock until the source and its licence arrive
-  (Q11 in `docs/reference/shell-polish/tasks.md`). A vector of that figure drops in here with
-  its strokes in black on transparent.
+- `atlas.webp` (635x1081, lossless, about 74 KB) is the Atlas figure holding the globe, supplied
+  by Ethan from his own file: a stencil of black strokes on nothing, fading out towards the
+  feet. Where it comes from and under what licence is still to be confirmed (Q11 in
+  `docs/reference/shell-polish/tasks.md`).
+- `vitruvian.svg` is an original drawing made for this repo by
+  `apps/web/scripts/draw-vitruvian.mjs`: Leonardo's square with a circle inside it and a
+  protractor of ticks between the two. No licence is needed.
+- Both are drawn as CSS masks, the sheet filled with `--splash-line` and the figure with
+  `--splash-figure`, so only the strokes show and the drawing themes with the ink.
