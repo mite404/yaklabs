@@ -40,8 +40,8 @@ async function gatewayApp() {
   return gateway;
 }
 
-// Answers the page's /api/shares requests from the gateway app, signed in as the lever.
-async function serveShares(context) {
+/** Answers the page's /api/shares requests from the gateway app, signed in as the lever. */
+export async function serveShares(context) {
   const { app } = await gatewayApp();
   await context.route(`${BASE}/api/shares**`, async (route) => {
     const request = route.request();

@@ -27,10 +27,12 @@ export async function openDemo(browser, options = {}) {
   return page;
 }
 
-// Opens a thread from its sidebar row and waits until its own tab panel is the one shown, with
-// its turns in: for a moment after the address changes, the old panel is not inert yet, and a
-// locator resolved then would hold the old thread's controls.
-async function openThread(page, title) {
+/**
+ * Opens a thread from its sidebar row and waits until its own tab panel is the one shown, with
+ * its turns in: for a moment after the address changes, the old panel is not inert yet, and a
+ * locator resolved then would hold the old thread's controls.
+ */
+export async function openThread(page, title) {
   await rowsOf(page).filter({ hasText: title }).first().click();
   const panel = page.locator(`[role="tabpanel"]:not([inert])[aria-label="${title}"]`);
   await panel.locator(".compose-box textarea").first().waitFor();
@@ -175,12 +177,14 @@ export const threadActionChecks = {
     const row = await rowOf(page, serviceDesk);
     await headerOf(page).getByRole("button", { name: "Thread actions" }).click();
     const snooze = (await page.getByRole("menuitem", { name: /^Snooze/ }).innerText()).trim();
+    // Its name as a screen reader hears it: the wake time joined by a comma.
+    const named = await page.getByRole("menuitem", { name: /^Snooze, \w{3} \d+:\d{2}$/ }).count();
     const ok =
       JSON.stringify(tiles) ===
         JSON.stringify(["In 1 hour", "Tomorrow", "Next week", "Keep it awake"]) &&
       row.marks.includes("snoozed") &&
       JSON.stringify(await rowTitles(page)) === JSON.stringify(before) &&
-      /^Snooze\s+\w{3} \d/.test(snooze) &&
+      named === 1 &&
       focused.includes("In 1 hour");
     return {
       ok,
