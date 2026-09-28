@@ -1695,3 +1695,14 @@ The canvas's empty prompt reads "Drag a text selection or UI card here" (it read
 start a new thread with context" in ADR-089). The gap between lanes is one step of the canvas's
 18px dot grid and a collapsed strip is two (36px, up from 32), with the dots anchored to the
 scrolling row, so every gap between collapsed lanes holds exactly one column of dots.
+Also amended the same day (Ethan): the account leaves the title bar for the foot of the sidebar,
+open and collapsed, so the bell is the bar's right-most control (this moves ADR-094's corner and
+extends ADR-121's phone placement to the desktop). The Share options end with a divider and
+"Share permissions", which opens a dialog after Amp's: the thread's URL with copy and open, a
+Workspace row, a Public Access row and a status box. Public Access is the real feature, wired to
+the same verbs as the lifetimes (No access, 1 hour, 6 hours, 1 day, 7 days). Workspace is a
+disabled "Create Workspace" that says it is not in the web build, since a team needs a backend
+that ADR-137 cut. The dialog is a shadcn-style primitive in `packages/ui`, its open state is the
+shell's (`askSharePermissions`, after the snooze card) so it opens from a lane, a tab or the
+sidebar. The compose box and the cards cast a shadow to the right and bottom only, and every
+button beside `.btn` takes its corners from `--btn-radius` (4px), so Cancel and Done match.
