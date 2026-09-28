@@ -73,7 +73,7 @@ describe("Ethan's v1 database in the private file system", () => {
     const reply = await inFreshWorker({ kind: "migrate-v1", name: freshName("v1") });
     const run = migrationSchema.parse(reply).result;
     expect(run.v1.user_version).toBe(1);
-    expect(run.once.user_version).toBe(2);
+    expect(run.once.user_version).toBe(3);
     expect(run.twice).toEqual(run.once);
     expect(run.crash).toBe("crashed before commit");
     expect(run.afterCrash).toEqual(run.v1);
@@ -89,7 +89,7 @@ describe("Ethan's v1 database in the private file system", () => {
       { id: "demo-store", name: "Demo store", created_at: "2026-09-26T10:03:00.000Z" },
     ]);
     expect(once["table conversations"]).toMatchObject([
-      { id: "profit", project_id: "demo-store", parent_id: null, draft: "" },
+      { id: "profit", project_id: "demo-store", parent_id: null, draft: "", deleted_at: null },
       { id: "thread-mfx1a2b-q7k2", project_id: null, parent_id: "profit", draft: "" },
       { id: "thread-mfx1b9c-z3p8", project_id: null, parent_id: "profit", draft: "" },
     ]);

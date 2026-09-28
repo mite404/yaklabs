@@ -18,3 +18,5 @@ storybook-static/
 .claude/worktrees/
 .artifacts/
 __screenshots__/
+# Vitest browser mode saves a failed test's screenshot beside the package.
+.vitest-attachments/

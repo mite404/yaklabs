@@ -56,11 +56,12 @@ export function decodeCard(hash: string): SharedCard | undefined {
 /**
  * The public link for one card (ADR-064): the standalone share page with the card in its
  * fragment. Inside Storybook it points at the Share/Public page story, so it works there
- * and in a published Storybook; in the app it points at share.html beside the app.
+ * and in a published Storybook; in the app it points at the site's /share.html, from any
+ * address (a thread's /t/... included).
  */
 export function shareLink(card: SharedCard, at: LinkBase = window.location): string {
   const fragment = encodeCard(card);
   if (at.pathname.endsWith("/iframe.html"))
     return `${at.origin}${at.pathname}?id=share-public-page--from-link&viewMode=story#${fragment}`;
-  return `${new URL("share.html", at.href).href.split("#")[0]}#${fragment}`;
+  return `${new URL("/share.html", at.href).href}#${fragment}`;
 }

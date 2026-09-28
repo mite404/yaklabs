@@ -2,7 +2,7 @@ import type { AgentEvent } from "@yaklabs/catalog/agent";
 import { createLabAgent } from "@yaklabs/catalog/labAgent";
 import { onTestFinished } from "vitest";
 import { createAgentLoop, type LoopHost } from "./agentLoop";
-import { fixedMint } from "./mint";
+import { fixedMint, type Mint } from "./mint";
 import type { Command, Notice } from "./protocol";
 import { openSqliteStore } from "./sqliteStore";
 import { ensureStarter } from "./store";
@@ -39,18 +39,37 @@ export const child = (requestId: string, draft = ""): Command => ({
 // The lab stand-in with no pauses, so a reply streams at once.
 const quickLab = () => createLabAgent({ replyDelayMs: 0, wordMs: 0 });
 
+// A timer the test fires by hand: the delay the loop last asked for, and its callback.
+type HandTimer = { delay: number | null; fire: () => void };
+
+/** A mint whose clock the test moves: `clock.at` is what `now()` reads. */
+export function movableMint(start: Date = asked): { mint: Mint; clock: { at: Date } } {
+  const clock = { at: start };
+  return { mint: { ...fixedMint(start), now: () => new Date(clock.at) }, clock };
+}
+
 /**
  * A loop on a fresh memory store holding the starter's profit thread, with every notice it
- * posts collected in order; the store closes when the test ends.
+ * posts collected in order; the store closes when the test ends. Its settling timer never runs
+ * on its own: `timer` holds the delay last asked for, and firing it runs the pass.
  */
-export async function startLoop(createAgent: LoopHost["createAgent"] = quickLab) {
+export async function startLoop(
+  createAgent: LoopHost["createAgent"] = quickLab,
+  mint: Mint = fixedMint(asked),
+) {
   const notices: Notice[] = [];
   const store = await openSqliteStore({ kind: "memory" });
   onTestFinished(() => {
     store.close();
   });
-  const mint = fixedMint(asked);
-  ensureStarter(store, mint.now().toISOString());
+  ensureStarter(store, asked.toISOString());
+  let pending: (() => void) | null = null;
+  const timer: HandTimer = {
+    delay: null,
+    fire: () => {
+      pending?.();
+    },
+  };
   const run = createAgentLoop({
     post: (notice) => {
       notices.push(notice);
@@ -58,8 +77,16 @@ export async function startLoop(createAgent: LoopHost["createAgent"] = quickLab)
     open: () =>
       Promise.resolve({ store, source: { kind: "device", storage: "memory" }, mint, faults: {} }),
     createAgent,
+    schedule: (delay, callback) => {
+      timer.delay = delay;
+      pending = callback;
+      return () => {
+        timer.delay = null;
+        pending = null;
+      };
+    },
   });
-  return { notices, store, run };
+  return { notices, store, run, timer };
 }
 
 /** The notices' kinds, with a run of one kind folded into one beat: state, chunk, state, done. */

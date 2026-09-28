@@ -85,3 +85,33 @@ it("gives every card in the thread a share button, and the public page none", ()
   expect(page).not.toContain('aria-label="Share this card"');
   expect(page).toContain("Only this view is shared, not the conversation.");
 });
+
+it("puts the host's actions at the end of the title bar", () => {
+  const html = renderToStaticMarkup(
+    <ChatThreadPanel
+      thread={threads.trend}
+      headerActions={<button type="button">Thread actions</button>}
+    />,
+  );
+  expect(html).toMatch(
+    /<header class="thread-header"><h2>.*<\/h2><div class="thread-header-actions"><button type="button">Thread actions<\/button><\/div><\/header>/,
+  );
+});
+
+it("shows the host's own question in the dock, named by the host, over the agent's", () => {
+  const question = {
+    question: "When should this thread come back?",
+    options: [{ label: "In 1 hour" }],
+    answer: { placeholder: "Or type a time" },
+    elsewhere: "Keep it awake",
+  };
+  const html = renderToStaticMarkup(
+    <ChatThreadPanel
+      thread={threads.awaiting}
+      hostAsk={{ label: "Snooze", question, onAnswer: () => {}, onDismiss: () => {} }}
+    />,
+  );
+  expect(html).toContain('aria-label="Snooze"');
+  expect(html).toContain("When should this thread come back?");
+  expect(html).not.toContain("Request a forecast view");
+});

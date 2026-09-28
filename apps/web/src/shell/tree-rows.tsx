@@ -1,10 +1,11 @@
 import type { ThreadSummary } from "@yaklabs/runtime";
 import { SidebarMenuButton } from "@yaklabs/ui/components/sidebar";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@yaklabs/ui/components/tooltip";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { AlarmClock, Archive, ChevronDown, ChevronRight, Pin, type LucideIcon } from "lucide-react";
 import { useState, type ReactElement } from "react";
 import { Link } from "react-router";
 import { usePaths } from "../runtime";
+import { rowLook, type Mark, type RowLook } from "./row-marks";
 
 // A row: the hover fill stays inside the sidebar's padding, with the site's 4px corners.
 const ROW = "h-8 rounded-[var(--radius)] text-sm";
@@ -20,6 +21,22 @@ const THREAD_ROW = `${ROW} pl-6 pr-2`;
 // none of them holds an action of its own; each takes it back for its title.
 const NO_ACTION = "group-has-data-[sidebar=menu-action]/menu-item:pr-2";
 
+// Each mark's icon: a pin, a clock, a closed filebox.
+const MARK_ICONS: Record<Mark, LucideIcon> = {
+  pinned: Pin,
+  snoozed: AlarmClock,
+  archived: Archive,
+};
+
+// The marks at the row's left, before its title; the icons say to the eye what `spoken` says
+// to a screen reader.
+function Marks({ marks }: { marks: Mark[] }) {
+  return marks.map((mark) => {
+    const Icon = MARK_ICONS[mark];
+    return <Icon key={mark} aria-hidden="true" data-mark={mark} className="size-3.5! shrink-0" />;
+  });
+}
+
 // How many threads a fold holds, as its button names them: "2 threads", "1 thread".
 const threadCount = (count: number): string => `${count} ${count === 1 ? "thread" : "threads"}`;
 
@@ -33,16 +50,24 @@ function isCut(row: Element | undefined): boolean {
   return label !== null && label.scrollWidth > label.clientWidth;
 }
 
-// A row whose label may be cut short: the whole name shows beside it, and only when it is cut.
-// The cut is measured as the tooltip asks to open, so the first hover and a keyboard focus
-// count as much as a second hover.
-function Named({ name, row }: { name: string; row: ReactElement }) {
+// A row whose label may be cut short: the whole name shows beside it, and only when it is cut,
+// unless `always` (a snoozed row, whose tooltip says when it wakes). The cut is measured as the
+// tooltip asks to open, so the first hover and a keyboard focus count as much as a second hover.
+function Named({
+  name,
+  row,
+  always = false,
+}: {
+  name: string;
+  row: ReactElement;
+  always?: boolean;
+}) {
   const [open, setOpen] = useState(false);
   return (
     <Tooltip
       open={open}
       onOpenChange={(next, { trigger }) => {
-        setOpen(next && isCut(trigger));
+        setOpen(next && (always || isCut(trigger)));
       }}
     >
       <TooltipTrigger render={row} />
@@ -73,6 +98,45 @@ function FoldChevron({ open }: { open: boolean }): ReactElement {
   );
 }
 
+// A row's words after any "↳": its marks, its title, and the marks as a screen reader hears them.
+function RowWords({ thread, look }: { thread: ThreadSummary; look: RowLook }): ReactElement {
+  return (
+    <>
+      <Marks marks={look.marks} />
+      <span data-label="" className={LABEL}>
+        {thread.title}
+      </span>
+      <span className="sr-only">{look.spoken}</span>
+    </>
+  );
+}
+
+// The fold arrow's own button on a main's row, named by how many threads it hides or shows.
+// `relative z-10` lifts it over the row's stretched link, so it still receives its own clicks.
+function FoldButton({
+  open,
+  count,
+  title,
+  onToggle,
+}: {
+  open: boolean;
+  count: number;
+  title: string;
+  onToggle: () => void;
+}): ReactElement {
+  return (
+    <button
+      type="button"
+      aria-expanded={open}
+      aria-label={`${open ? "Hide" : "Show"} the ${threadCount(count)} in ${title}`}
+      onClick={onToggle}
+      className="relative z-10 flex h-5 w-5 shrink-0 items-center justify-center rounded-[var(--radius)] border-0 bg-transparent p-0 text-soft-ink outline-hidden ring-sidebar-ring hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2"
+    >
+      <FoldChevron open={open} />
+    </button>
+  );
+}
+
 /**
  * A main thread with sub-threads: the stretched-link pattern (Bootstrap's recipe), so a click
  * anywhere on the row still opens the thread while a separate button folds the children, and
@@ -96,34 +160,26 @@ function FoldableMainRow({
   onToggle: () => void;
 }): ReactElement {
   const { pathTo } = usePaths();
+  const look = rowLook(thread);
   return (
     <Named
-      name={thread.title}
+      name={look.tooltip}
+      always={look.alwaysTip}
       row={
         <div
           data-slot="thread-row"
           data-active={active || undefined}
-          className={`${THREAD_ROW} group/fold relative flex items-center gap-2 text-soft-ink hover:bg-sidebar-accent hover:text-sidebar-accent-foreground active:bg-sidebar-accent active:text-sidebar-accent-foreground data-active:bg-sidebar-accent data-active:font-medium data-active:text-ink`}
+          className={`${THREAD_ROW} group/fold relative flex items-center gap-2 ${look.ink} hover:bg-sidebar-accent hover:text-sidebar-accent-foreground active:bg-sidebar-accent active:text-sidebar-accent-foreground data-active:bg-sidebar-accent data-active:font-medium data-active:text-ink`}
         >
           <Link
             to={pathTo(thread.id)}
             aria-current={active ? "page" : undefined}
             data-thread="main"
-            className="min-w-0 text-inherit outline-hidden after:absolute after:inset-0 after:rounded-[var(--radius)] focus-visible:after:ring-2 focus-visible:after:ring-sidebar-ring"
+            className="flex min-w-0 items-center gap-2 text-inherit outline-hidden after:absolute after:inset-0 after:rounded-[var(--radius)] focus-visible:after:ring-2 focus-visible:after:ring-sidebar-ring"
           >
-            <span data-label="" className={LABEL}>
-              {thread.title}
-            </span>
+            <RowWords thread={thread} look={look} />
           </Link>
-          <button
-            type="button"
-            aria-expanded={open}
-            aria-label={`${open ? "Hide" : "Show"} the ${threadCount(count)} in ${thread.title}`}
-            onClick={onToggle}
-            className="relative z-10 flex h-5 w-5 shrink-0 items-center justify-center rounded-[var(--radius)] border-0 bg-transparent p-0 text-soft-ink outline-hidden ring-sidebar-ring hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2"
-          >
-            <FoldChevron open={open} />
-          </button>
+          <FoldButton open={open} count={count} title={thread.title} onToggle={onToggle} />
           <span
             data-slot="thread-count"
             aria-hidden="true"
@@ -139,8 +195,10 @@ function FoldableMainRow({
 
 /**
  * A thread row: a link named by its title, indented under its project. A main with sub-threads
- * takes `fold`, with how many it holds, and becomes a {@link FoldableMainRow} instead; a child reads "↳ title", one
- * step further in than its main.
+ * takes `fold`, with how many it holds, and becomes a {@link FoldableMainRow} instead; a child
+ * reads "↳ title", one step further in than its main. A pin, a clock or a closed filebox stands
+ * before the title of a pinned, snoozed or archived thread, and an archived one is dimmed until
+ * it is the one open (ADR-127 to ADR-129).
  */
 export function ThreadRow({
   thread,
@@ -165,25 +223,25 @@ export function ThreadRow({
       />
     );
   }
+  const look = rowLook(thread);
   return (
     <Named
-      name={thread.title}
+      name={look.tooltip}
+      always={look.alwaysTip}
       row={
         <SidebarMenuButton
           render={<Link to={pathTo(thread.id)} />}
           isActive={active}
           aria-current={active ? "page" : undefined}
           data-thread={kind}
-          className={`${THREAD_ROW} ${NO_ACTION} text-soft-ink data-active:text-ink`}
+          className={`${THREAD_ROW} ${NO_ACTION} ${look.ink} data-active:text-ink`}
         >
           {kind === "child" && (
-            <span aria-hidden="true" className="shrink-0 text-soft-ink">
+            <span aria-hidden="true" className="shrink-0">
               ↳
             </span>
           )}
-          <span data-label="" className={LABEL}>
-            {thread.title}
-          </span>
+          <RowWords thread={thread} look={look} />
         </SidebarMenuButton>
       }
     />

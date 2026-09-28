@@ -24,7 +24,7 @@ describe("commandSchema checks what crosses into the worker", () => {
   });
 
   it("rejects a command whose kind it does not know", () => {
-    expect(accepts({ kind: "delete", requestId: "r1", threadId: "profit" })).toBe(false);
+    expect(accepts({ kind: "shred", requestId: "r1", threadId: "profit" })).toBe(false);
   });
 
   it("rejects a send whose event is malformed", () => {
@@ -75,6 +75,41 @@ describe("commandSchema checks the workspace's writes", () => {
   });
 });
 
+const mark = (change: unknown) => ({ kind: "mark", requestId: "r1", threadId: "profit", change });
+
+describe("commandSchema checks the thread menu's writes (ADR-126)", () => {
+  const share = {
+    id: "s1",
+    threadId: "profit",
+    link: "https://kay.example/share.html#t=s1.key",
+    revokeToken: "r",
+    createdAt: "2026-09-28T10:00:00.000Z",
+    expiresAt: "2026-09-28T11:00:00.000Z",
+  };
+
+  it("marks with a pin, a snooze instant or an archive, and never with nothing", () => {
+    expect(accepts(mark({ pinned: true }))).toBe(true);
+    expect(accepts(mark({ snoozedUntil: "2026-09-29T09:00:00.000Z" }))).toBe(true);
+    expect(accepts(mark({ snoozedUntil: null, archived: false }))).toBe(true);
+    expect(accepts(mark({ snoozedUntil: "tomorrow" }))).toBe(false);
+    expect(accepts(mark({}))).toBe(false);
+  });
+
+  it("deletes and restores by thread", () => {
+    expect(accepts({ kind: "delete", requestId: "r1", threadId: "profit" })).toBe(true);
+    expect(accepts({ kind: "restore", requestId: "r1", threadId: "profit" })).toBe(true);
+    expect(accepts({ kind: "restore", requestId: "r1" })).toBe(false);
+  });
+
+  it("keeps a share with an absolute link, and forgets one by id", () => {
+    expect(accepts({ kind: "share", requestId: "r1", share })).toBe(true);
+    expect(accepts({ kind: "share", requestId: "r1", share: { ...share, link: "/share" } })).toBe(
+      false,
+    );
+    expect(accepts({ kind: "unshare", requestId: "r1", shareId: "s1" })).toBe(true);
+  });
+});
+
 describe("noticeSchema", () => {
   it("rejects a stored turn with an unknown role", () => {
     const messages = [{ id: "s1", role: "system", text: "Hi", time: "9:00" }];
@@ -90,6 +125,7 @@ describe("noticeSchema", () => {
       lanes: {},
       shell: null,
       notifications: [],
+      shares: [],
     };
     const source = { kind: "device", storage: "opfs" };
     const state = { kind: "state", source, workspace, replying: [] };

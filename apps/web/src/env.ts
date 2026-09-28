@@ -17,8 +17,11 @@ export type AuthSource =
   | { kind: "none" }
   | { kind: "workos"; clientId: string; redirectUri: string };
 
-/** The running build's configuration, with no half-set states. */
-export type Env = { agent: AgentSource; auth: AuthSource };
+/**
+ * The running build's configuration, with no half-set states. `shareBase` is where public
+ * threads are kept: the gateway, on the site's own origin unless a URL is given (ADR-131).
+ */
+export type Env = { agent: AgentSource; auth: AuthSource; shareBase: string };
 
 /**
  * Parses the build's variables once, at the boundary. A gateway with no URL shares the
@@ -28,16 +31,16 @@ export type Env = { agent: AgentSource; auth: AuthSource };
  */
 export function parseEnv(raw: Record<string, unknown>, origin: string): Env {
   const vars = rawSchema.parse(raw); // → typed, defaulted variables
+  const shareBase = vars.VITE_GATEWAY_URL ?? origin;
   const agent: AgentSource =
-    vars.VITE_AGENT === "lab"
-      ? { kind: "lab" }
-      : { kind: "gateway", baseUrl: vars.VITE_GATEWAY_URL ?? origin };
-  if (vars.VITE_AUTH === "none") return { agent, auth: { kind: "none" } };
+    vars.VITE_AGENT === "lab" ? { kind: "lab" } : { kind: "gateway", baseUrl: shareBase };
+  if (vars.VITE_AUTH === "none") return { agent, auth: { kind: "none" }, shareBase };
   if (vars.VITE_WORKOS_CLIENT_ID === undefined || vars.VITE_WORKOS_REDIRECT_URI === undefined) {
     throw new Error("VITE_AUTH=workos needs VITE_WORKOS_CLIENT_ID and VITE_WORKOS_REDIRECT_URI");
   }
   return {
     agent,
+    shareBase,
     auth: {
       kind: "workos",
       clientId: vars.VITE_WORKOS_CLIENT_ID,

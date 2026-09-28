@@ -18,5 +18,8 @@
   // as a secret. Nothing environment-specific is written here, and keep_vars stops a deploy from
   // replacing what the dashboard holds (a value named under `vars` would be replaced).
   "keep_vars": true,
+  // Public threads, sealed, each deleted by KV when its share ends (ADR-131). No id: the first
+  // deploy creates the namespace (Wrangler's automatic provisioning).
+  "kv_namespaces": [{ "binding": "SHARES" }],
   "observability": { "enabled": true },
 }

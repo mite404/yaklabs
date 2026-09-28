@@ -1455,3 +1455,100 @@ it in the side nav bar it should not be rearranged ... that's bad UI." The recen
 is creation order, newest first: mains stay newest created first, and at Ethan's word children
 now list the same way under their main. Opening, closing or dragging a lane never moves a row,
 and nothing in the sidebar sorts by activity. The canvas keeps its own lane order.
+
+## ADR-126 - A thread's actions live in one menu, in its own title bar
+
+2026-09-28 - Accepted (Ethan's brief). Replaces the placeholder items in the phone's "⋯" of
+ADR-116.
+Every thread has one "Thread actions" menu with exactly six items, in Ethan's order: Copy thread
+URL, Share thread, Pin thread, Snooze, Archive, then Delete apart below a rule. Pin and Archive
+name what they would do now (Unpin thread, Unarchive), and Share and Snooze say their state at
+the item's end ("Private" or "Until Tue 16:50", "Tue 9:00"), which the item's accessible name
+carries too ("Snooze, Tue 9:00"). On a desktop the "⋯" sits at the end of the thread's own title
+bar, in the main pane and on every lane, with a failed or opening thread's frame keeping it; the
+title keeps its own width, so a lane's bar stays free to lift by (ADR-089). Below 768px the
+thread's bar has none, and the one "⋯" is in the window's top row, where ADR-116 put it. The
+menu is shadcn's DropdownMenu on Kay's tokens. Delete keeps ink for its words and only its icon
+is red, since the red on a dark menu measures 3.85:1 against the 4.5:1 text needs (ADR-065).
+
+## ADR-127 - Pin lifts a thread to the top of its own list
+
+2026-09-28 - Accepted (Ethan).
+A pinned main leads its project's mains, and a pinned sub-thread leads its main's sub-threads;
+several pinned keep creation order among themselves (ADR-125), and unpinning puts the row back
+where it was. A pin icon stands before the title in the sidebar, and a filled pin in the
+thread's title bar, on a lane too, is itself the Unpin button, with a tooltip that says so.
+Pinning never moves the view. A pinned thread never auto-archives (ADR-129), and archiving one
+unpins it.
+
+## ADR-128 - Snooze asks when on the thread's own ask card, and wakes with a notice
+
+2026-09-28 - Accepted (Ethan: a snoozed thread keeps its place and strength, marked by a
+clock).
+Snooze opens the same ask card the agent uses (AwaitingInputCard, labelled "Snooze") in the
+thread, with the focus on its first tile: first any dates the thread's own words name ("by
+Friday"), then In 1 hour, Tomorrow (9:00) and Next week, a field for a typed time ("Friday
+3pm"), and Keep it awake, which reads Wake it now once it is snoozed. The host's ask stands in
+for the agent's question while it is open. A snoozed thread stays in its place at full strength
+with an alarm clock before its title, and its tooltip and the menu say when it wakes. When the
+time comes, the settling pass (ADR-129) clears the snooze and posts a bell notice, "Back from
+snooze: <title>", and the wake restarts its idle clock. A time at or before now is refused.
+
+## ADR-129 - Archive settles a thread to the bottom, dimmed, and idle threads settle on their own
+
+2026-09-28 - Accepted (Ethan: "an archived thread should settle to the bottom of the list (still
+ordered by recency) within a project ... dimmed text and a closed filebox icon"; auto-settle
+after 14 days, built now).
+An archived thread sinks below the live ones in its own list, keeps creation order among the
+archived, and shows a closed filebox before a dimmed title, full ink again while it is the one
+open. The dim is a new token, `--faint-ink`: #64645e on paper (5.17:1, 4.67:1 on paper-deep)
+and #92938f in the dark (5.46:1, 4.60:1), so an archived title still clears 4.5:1 (ADR-065).
+A main untouched for 14 days archives by itself; its sub-threads' activity counts as its own,
+and pinned and snoozed threads are exempt. A new message in a thread unarchives it and its main.
+The rule is one pure `planSettle` in the runtime, run as the worker starts, after every write,
+and on a timer set for the next thing due, at most a day away, so a page left open still
+settles. Archiving clears a pin and a snooze; pinning or snoozing unarchives.
+
+## ADR-130 - Delete hides at once and offers Undo, backed by a tombstone
+
+2026-09-28 - Accepted (Ethan: an undo toast, not a confirm).
+A confirm dialog trains click-through; Undo catches the slip one row below Archive. Delete marks
+the thread, and a main's sub-threads with it, deleted in SQLite and hides them at once; the
+page leaves the thread if it was on it and shows "Deleted <title>" with Undo for 10 seconds.
+Undo clears the mark and returns to the thread. A settling pass purges a tombstone 15 seconds
+after the delete (the window plus a grace for an Undo in flight), and every tombstone as the
+worker starts, since no Undo outlives the page that offered it. Deleting a thread also takes
+down its public pages and its sub-threads' (ADR-131).
+
+## ADR-131 - Share makes a thread public for a set time, sealed on the device
+
+2026-09-28 - Accepted (Ethan: "since the philosophy of this app is data privacy i think we
+should be explicit about how long the sharing last since its a public site"; chose encrypted,
+stored, with a TTL). Extends ADR-064, which shares one card in the link itself.
+Share thread opens "Make public for" 1 hour, 3 hours, 1 day or 7 days. The page seals the
+thread's title and turns with AES-GCM under a fresh key; the gateway gets only the ciphertext
+(at most 1 MB, signed-in visitors only) and keeps it in the SHARES KV namespace with that
+lifetime as its `expirationTtl`, so an ended link is gone from the store, not merely refused.
+The link is `/share.html#t=<id>.<key>`: the key rides in the fragment, which no request carries,
+so the server never holds what it would need to read the thread. The gateway answers with a
+revoke token and keeps only its SHA-256; the device keeps the link and the token. While public,
+the item says until when, and the submenu offers the end, Copy public link, Open public page,
+Stop sharing, and a new link in place of the old, which is revoked. The public page leads with
+"Shared from Kay until <time>; after that this link stops working" above a read-only thread. A
+build with no share server says so and records nothing. The contract (`SHARE_TTLS`,
+`shareCreatedSchema`) lives in the gateway and the runtime re-exports it, since the web app
+cannot depend on the gateway, whose build already depends on the web app's. A card's own link,
+copied from a thread's address, now resolves against the site's root; it had resolved to
+`/t/share.html`.
+
+## ADR-132 - Schema v3 records marks, tombstones and shares
+
+2026-09-28 - Accepted.
+Migration 3 adds `pinned_at`, `snoozed_until`, `archived_at`, `deleted_at` and `touched_at` to a
+thread, each null until set (a null `touched_at` reads as the thread's `updated_at`), and a
+`shares` table (id, thread, link,
+revoke token, created and expires, with `expires_at > created_at` checked), in one transaction
+as every step is (ADR-099). The snapshot carries the three marks on each thread and the shares
+newest first, filtered to threads still shown; deleted threads and their sub-threads never
+reach it. `touched_at` moves with a message, a mark and a wake, so a thread just unarchived or
+woken is not archived again at once.

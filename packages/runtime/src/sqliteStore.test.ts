@@ -1,84 +1,24 @@
-import type { ThreadMessage } from "@yaklabs/catalog/thread";
 import type { Database } from "@sqlite.org/sqlite-wasm";
 import { describe, expect, it, onTestFinished, vi } from "vitest";
 import { openDatabase, openSqliteStore } from "./sqliteStore";
-import { ensureStarter, type NewThread, type Store } from "./store";
-import { netProfitChoice, profitThread } from "./testing";
 import {
-  laneIdSchema,
-  lanesOf,
-  projectIdSchema,
-  threadIdSchema,
-  threadLane,
-  type Lane,
-  type Place,
-} from "./workspace";
-
-const at = (minute: number) => `2026-09-26T10:${String(minute).padStart(2, "0")}:00.000Z`;
-const t = (id: string) => threadIdSchema.parse(id);
-const store1 = projectIdSchema.parse("store");
-const [main, child, other] = [t("main"), t("child"), t("other")];
-
-// The profit thread plus the user's next turn, which carries a card choice and a file.
-const turns: ThreadMessage[] = [
-  ...profitThread.messages,
-  {
-    id: "u2",
-    role: "user",
-    text: "Why is Saturday so high?",
-    time: "10:03",
-    attachments: [netProfitChoice],
-    files: [{ id: "u2-f1", label: "till-roll.png" }],
-  },
-];
-const trendTurns: ThreadMessage[] = [
-  { id: "u1", role: "user", text: "How did the café's service desk do?", time: "9:02" },
-];
-const card: Lane = {
-  id: laneIdSchema.parse("c-1"),
-  width: 420,
-  kind: "card",
-  card: { v: 1, kind: "interactive", payload: { title: "Profit" } },
-  title: "Last week's profit",
-};
-
-function thread(id: string, place: Place, minute: number, messages: ThreadMessage[] = []) {
-  const stamp = at(minute);
-  const fresh: NewThread = {
-    id: t(id),
-    title: id,
-    place,
-    createdAt: stamp,
-    updatedAt: stamp,
-    draft: "",
-    messages,
-  };
-  return fresh;
-}
-
-// A fresh, empty in-memory store, closed when the test ends.
-async function openEmpty(): Promise<Store> {
-  const store = await openSqliteStore({ kind: "memory" });
-  onTestFinished(() => {
-    store.close();
-  });
-  return store;
-}
-
-// A fresh store holding one project with two mains, "main" (the profit turns) and "other"
-// (the service desk's).
-async function openStore(): Promise<Store> {
-  const store = await openEmpty();
-  store.addProject({ id: store1, name: "Demo store", createdAt: at(0) });
-  store.addThread(thread("main", { kind: "main", projectId: store1 }, 1, turns));
-  store.addThread(thread("other", { kind: "main", projectId: store1 }, 2, trendTurns));
-  return store;
-}
-
-const addChild = (store: Store, id: string, laneAt?: number) => {
-  store.addThread(thread(id, { kind: "child", parentId: main }, 3), laneAt);
-};
-const found = (store: Store, query: string) => store.search(query).map((each) => each.id);
+  addChild,
+  at,
+  card,
+  child,
+  found,
+  main,
+  openEmpty,
+  openStore,
+  other,
+  store1,
+  t,
+  thread,
+  turns,
+} from "./sqliteStore.harness";
+import { ensureStarter } from "./store";
+import { profitThread } from "./testing";
+import { lanesOf, threadLane } from "./workspace";
 
 describe("the store keeps threads", () => {
   it("starts empty", async () => {
@@ -89,6 +29,7 @@ describe("the store keeps threads", () => {
       lanes: {},
       shell: null,
       notifications: [],
+      shares: [],
     });
   });
 

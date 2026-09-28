@@ -21,7 +21,6 @@ import {
   setPane,
   setSplit,
   stepBrowser,
-  threadActions,
   unreadCount,
   unsaved,
   viewOf,
@@ -42,7 +41,17 @@ const DOCS = pageAddressSchema.parse("https://docs.example/kay");
 
 function thread(threadId: ThreadId, place: Place, updatedAt: string): ThreadSummary {
   const createdAt = "2026-09-20T09:00:00.000Z";
-  return { id: threadId, title: threadId, place, createdAt, updatedAt, preview: "", draft: "" };
+  const marks = { pinnedAt: null, snoozedUntil: null, archivedAt: null };
+  return {
+    id: threadId,
+    title: threadId,
+    place,
+    createdAt,
+    updatedAt,
+    preview: "",
+    draft: "",
+    ...marks,
+  };
 }
 
 // Three mains, the profit one with a child whose reply is the newest thing in the workspace.
@@ -60,6 +69,7 @@ const WS: Workspace = {
     { id: "n-1", threadId: REFUNDS, text: "Needs you", at: "2026-09-21T12:00:00.000Z" },
     { id: "n-2", threadId: TREND, text: "Ready", at: "2026-09-21T11:00:00.000Z" },
   ],
+  shares: [],
 };
 
 const OPEN: ShellState = { version: 1, tabs: [PROFIT, REFUNDS, TREND], views: {}, read: [] };
@@ -253,28 +263,5 @@ describe("resume", () => {
   });
   it("finds nothing with no tabs open", () => {
     expect(resume({ ...OPEN, tabs: [] }, WS, null)).toBeNull();
-  });
-});
-
-describe("threadActions", () => {
-  it("names the project of the main on screen, and closes that main", () => {
-    expect(threadActions(WS, { main: PROFIT, focus: null })).toEqual({
-      name: "Demo store",
-      projectId: STORE,
-      closes: PROFIT,
-    });
-  });
-  it("names the main's project while a child of it is in focus", () => {
-    expect(threadActions(WS, { main: PROFIT, focus: SATURDAY }).name).toBe("Demo store");
-  });
-  it("acts on nothing with nothing on screen", () => {
-    expect(threadActions(WS, null)).toEqual({ name: null, projectId: undefined, closes: null });
-  });
-  it("names no project for a thread the workspace lacks, but still closes its tab", () => {
-    expect(threadActions(WS, { main: id("gone"), focus: null })).toEqual({
-      name: null,
-      projectId: undefined,
-      closes: id("gone"),
-    });
   });
 });

@@ -1,6 +1,7 @@
 import type { BindingSpec, Database } from "@sqlite.org/sqlite-wasm";
 import { z } from "zod";
 import type { LegacyCanvas } from "./protocol";
+import { migrateToV3 } from "./schemaV3";
 import {
   projectIdSchema,
   threadIdSchema,
@@ -244,12 +245,16 @@ export function planV2(rows: V1Row[], legacy: LegacyCanvas | undefined): V2Plan 
   };
 }
 
-/** The steps from each `user_version` to the next: 0 → 1 is the v1 schema, 1 → 2 the rebuild. */
+/**
+ * The steps from each `user_version` to the next: 0 → 1 is the v1 schema, 1 → 2 the rebuild,
+ * 2 → 3 the marks, tombstones and shares.
+ */
 export const migrationSteps = [
   (db: Database) => {
     db.exec(V1_DDL);
   },
   migrateToV2,
+  migrateToV3,
 ] as const satisfies readonly Step[];
 
 /**

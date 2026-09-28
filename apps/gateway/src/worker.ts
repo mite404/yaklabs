@@ -2,16 +2,32 @@ import Anthropic from "@anthropic-ai/sdk";
 import { z } from "zod";
 import { createApp, type AppType } from "./app";
 import { workOsVerifier } from "./auth";
+import { randomToken, type ShareStore } from "./shares";
 
 // The Worker's bindings: `WORKOS_CLIENT_ID` is a var in wrangler.jsonc, `ANTHROPIC_API_KEY` a
-// secret (`wrangler secret put`); `.dev.vars` supplies both under `wrangler dev`.
-type Env = { ANTHROPIC_API_KEY: string; WORKOS_CLIENT_ID: string };
+// secret (`wrangler secret put`); `.dev.vars` supplies both under `wrangler dev`. `SHARES` is
+// the KV namespace public threads live in (ADR-131).
+type Env = { ANTHROPIC_API_KEY: string; WORKOS_CLIENT_ID: string; SHARES: KVNamespace };
 
 // Both must be set, and a WorkOS client id (not its API key) must go in the client id slot.
 const envSchema = z.object({
   ANTHROPIC_API_KEY: z.string().min(1),
   WORKOS_CLIENT_ID: z.string().startsWith("client_"),
 });
+
+// Shares in Cloudflare KV, which deletes each at its `expirationTtl` (ADR-131).
+function kvShares(kv: KVNamespace): ShareStore {
+  type Meta = { expiresAt: string; revokeHash: string };
+  return {
+    put: (id, { bytes, expiresAt, revokeHash }, ttlSeconds) =>
+      kv.put(id, bytes, { expirationTtl: ttlSeconds, metadata: { expiresAt, revokeHash } }),
+    get: async (id) => {
+      const { value, metadata } = await kv.getWithMetadata<Meta>(id, "arrayBuffer");
+      return value === null || metadata === null ? null : { bytes: value, ...metadata };
+    },
+    delete: (id) => kv.delete(id),
+  };
+}
 
 // One app per isolate: the JWKS cache and the SDK client live as long as the isolate does.
 let app: AppType | undefined;
@@ -23,6 +39,7 @@ const appFor = (env: Env): AppType => {
     verifyToken: workOsVerifier(WORKOS_CLIENT_ID),
     // Pinned so an `ANTHROPIC_LOG=debug` binding cannot log request bodies (ADR-085).
     anthropic: new Anthropic({ apiKey: ANTHROPIC_API_KEY, logLevel: "warn" }),
+    shares: { store: kvShares(env.SHARES), now: () => new Date(), newToken: randomToken },
   });
 };
 

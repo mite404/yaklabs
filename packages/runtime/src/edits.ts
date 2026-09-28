@@ -1,3 +1,4 @@
+import { applyMark, type ThreadMark } from "./marks";
 import type { RenameTarget } from "./protocol";
 import {
   lanesOf,
@@ -38,4 +39,40 @@ export function arranged(mainId: ThreadId, lanes: Lane[], base: LaneId[]): Edit 
 /** The page's shell, whole, over any earlier one. */
 export function withShell(shell: ShellState): Edit {
   return (ws) => ({ ...ws, shell });
+}
+
+/**
+ * The thread with a pin, a snooze or an archive on it, stamped `now` by the page's clock until
+ * the worker's own stamp arrives. A mark the worker will refuse shows nothing.
+ */
+export function marked(id: ThreadId, change: ThreadMark, now: string): Edit {
+  return (ws) => {
+    try {
+      return {
+        ...ws,
+        threads: ws.threads.map((each) => (each.id === id ? applyMark(each, change, now) : each)),
+      };
+    } catch {
+      return ws;
+    }
+  };
+}
+
+/** The workspace without a deleted thread, its sub-threads, and the notes and shares naming them. */
+export function removed(id: ThreadId): Edit {
+  return (ws) => {
+    const gone = new Set<string>(
+      ws.threads
+        .filter(
+          (each) => each.id === id || (each.place.kind === "child" && each.place.parentId === id),
+        )
+        .map((each) => each.id),
+    );
+    return {
+      ...ws,
+      threads: ws.threads.filter((each) => !gone.has(each.id)),
+      notifications: ws.notifications.filter((each) => !gone.has(each.threadId)),
+      shares: ws.shares.filter((each) => !gone.has(each.threadId)),
+    };
+  };
 }
