@@ -103,13 +103,12 @@ function RailPlaces({ hrefTo, onLab }: { hrefTo: (path: "/" | "/lab") => string;
 /**
  * The sidebar below the title bar (shadcn's sidebar-16 pattern), one navigation landmark.
  * Collapsed it is today's 56px rail of places; open it names them and lists the projects. The
- * account and the theme live in the title bar; on a phone, where the bar has no room for the
- * account, it sits at the sidebar's foot instead, outside the navigation landmark (ADR-121).
+ * account and the theme sit at its foot, outside the navigation landmark, in the rail too
+ * (ADR-121).
  */
 export function AppSidebar({ theme, chrome }: Looks) {
   const { hrefTo } = usePaths();
   const { pathname } = useLocation();
-  const { isMobile } = useSidebar();
   useSheetClosesOnArrival();
   return (
     <Sidebar
@@ -129,11 +128,9 @@ export function AppSidebar({ theme, chrome }: Looks) {
           <ProjectTree />
         </SidebarContent>
       </div>
-      {isMobile && (
-        <SidebarFooter>
-          <Account theme={theme} chrome={chrome} side="top" align="start" />
-        </SidebarFooter>
-      )}
+      <SidebarFooter>
+        <Account theme={theme} chrome={chrome} side="top" align="start" />
+      </SidebarFooter>
     </Sidebar>
   );
 }

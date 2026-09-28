@@ -1,6 +1,6 @@
 import { SidebarTrigger, useSidebar } from "@yaklabs/ui/components/sidebar";
 import { useRuntimeState } from "../runtime";
-import { Account, type Looks } from "./account";
+import type { Looks } from "./account";
 import { Bell } from "./bell";
 import { CollapseAll } from "./collapse-all";
 import { LayoutSwitch } from "./layout-switch";
@@ -48,14 +48,14 @@ function SidebarToggle() {
 
 /**
  * The window's one title bar, across its whole width: decorative traffic lights, the sidebar
- * toggle and the open threads at the left; at the right, the layout, Collapse all (ADR-134),
- * the bell, and the account in the corner (ADR-094). It is green chrome, flat or painted
- * (ADR-110, ADR-115). On a phone it is two rows (ADR-116): the project's name and what never
- * scrolls on top, Collapse all among them, with a "⋯" for the thread and project; below, the
- * views, Thread, Browser and Canvas. The account moves to the sidebar's foot on a phone
- * instead (ADR-121).
+ * toggle and the open threads at the left; at the right, the layout, Collapse all (ADR-134)
+ * and the bell, which is the last control in the corner. The account is not in the bar: it sits
+ * at the sidebar's foot (ADR-121). It is green chrome, flat or painted (ADR-110,
+ * ADR-115). On a phone it is two rows (ADR-116): the project's name and what never scrolls on
+ * top, Collapse all among them, with a "⋯" for the thread and project; below, the views,
+ * Thread, Browser and Canvas.
  */
-export function TitleBar({ theme, chrome }: Looks) {
+export function TitleBar({ chrome }: Looks) {
   const shell = useShell();
   const starting = useRuntimeState().kind === "starting";
   const { isMobile, openMobile } = useSidebar();
@@ -74,7 +74,6 @@ export function TitleBar({ theme, chrome }: Looks) {
         <LayoutSwitch shell={shell} />
         <CollapseAll shell={shell} />
         <Bell shell={shell} />
-        {!isMobile && <Account theme={theme} chrome={chrome} />}
         <ThreadMenu shell={shell} />
       </div>
     </header>
