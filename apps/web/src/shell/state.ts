@@ -2,8 +2,8 @@ import {
   latestMain,
   threadIdSchema,
   type Located,
-  type ProjectId,
   type ThreadId,
+  type ThreadSummary,
   type Workspace,
 } from "@yaklabs/runtime";
 import { z } from "zod";
@@ -165,6 +165,21 @@ export function closeTab(
   return { state: { ...state, tabs }, next: tabs.at(at) ?? tabs.at(at - 1) ?? null };
 }
 
+/**
+ * Where the page goes when a thread it may show is deleted (ADR-127): a main's tab closes, and
+ * if it was on screen the page goes where `closeTab` says; a child in focus gives way to its
+ * main; otherwise `next` is undefined and the page stays where it is.
+ */
+export function awayFrom(
+  state: ShellState,
+  at: Located | null,
+  id: ThreadId,
+): { state: ShellState; next: ThreadId | null | undefined } {
+  const closed = closeTab(state, id);
+  if (at?.main === id) return closed;
+  return { state: closed.state, next: at?.focus === id ? at.main : undefined };
+}
+
 /** Shows `pane` beside a main thread. */
 export function setPane(state: ShellState, main: ThreadId, pane: PaneKind): ShellState {
   const view = viewOf(state, main);
@@ -244,20 +259,21 @@ export function resume(
   return latestMain(open) ?? null;
 }
 
-/** The project the thread on screen belongs to, and which tab closing it would close. */
-export type ThreadActions = {
-  name: string | null;
-  projectId: ProjectId | undefined;
-  closes: ThreadId | null;
-};
+/** The thread the address names and its project's name, as the phone's bar shows them. */
+export type OnScreen = { name: string | null; thread: ThreadSummary | null };
 
 /**
- * What the phone bar's "⋯" and project name act on (ADR-116): the project of the thread on
- * screen, or none with nothing on screen or a thread the workspace lacks.
+ * What the phone bar's "⋯" and project name act on (ADR-116, ADR-123): the thread the address
+ * names (a child in focus, else its main) and its main's project; nulls with nothing on screen
+ * or a thread the workspace lacks.
  */
-export function threadActions(ws: Workspace, at: Located | null): ThreadActions {
-  const thread = ws.threads.find((each) => each.id === at?.main); // → ThreadSummary | undefined
-  const projectId = thread?.place.kind === "main" ? thread.place.projectId : undefined;
+export function onScreen(ws: Workspace, at: Located | null): OnScreen {
+  const byId = new Map(ws.threads.map((each) => [each.id, each] as const));
+  const main = at === null ? undefined : byId.get(at.main); // → ThreadSummary | undefined
+  const thread = at === null || at.focus === null ? main : byId.get(at.focus);
+  const projectId = main?.place.kind === "main" ? main.place.projectId : undefined;
   const project = ws.projects.find((each) => each.id === projectId); // → Project | undefined
-  return { name: project?.name ?? null, projectId: project?.id, closes: at?.main ?? null };
+  return thread === undefined
+    ? { name: null, thread: null }
+    : { name: project?.name ?? null, thread };
 }

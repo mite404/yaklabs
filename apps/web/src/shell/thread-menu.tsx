@@ -1,16 +1,9 @@
 import { Button } from "@yaklabs/ui/components/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@yaklabs/ui/components/dropdown-menu";
+import { DropdownMenu, DropdownMenuTrigger } from "@yaklabs/ui/components/dropdown-menu";
 import { Ellipsis } from "lucide-react";
 import type { Shell } from "./model";
-import { threadActions } from "./state";
+import { onScreen } from "./state";
+import { THREAD_ACTIONS, ThreadActionsContent } from "./thread-actions-menu";
 
 /** The name of the project on screen, where a phone's bar shows it in place of the tabs. */
 export function ProjectName({ shell }: { shell: Shell | null }) {
@@ -19,7 +12,7 @@ export function ProjectName({ shell }: { shell: Shell | null }) {
       data-slot="project-name"
       className="min-w-0 truncate px-1 text-sm font-medium text-ink md:hidden"
     >
-      {shell === null ? null : threadActions(shell.workspace, shell.active).name}
+      {shell === null ? null : onScreen(shell.workspace, shell.active).name}
     </span>
   );
 }
@@ -33,7 +26,7 @@ function MoreTrigger({ disabled }: { disabled: boolean }) {
         <Button
           variant="ghost"
           size="icon"
-          aria-label="Thread and project actions"
+          aria-label={THREAD_ACTIONS}
           className="rounded-[var(--radius)] text-soft-ink hover:text-ink md:hidden"
         />
       }
@@ -43,55 +36,32 @@ function MoreTrigger({ disabled }: { disabled: boolean }) {
   );
 }
 
-// The menu once the shell is ready: the thread on screen and its project.
-function MoreMenu({ shell }: { shell: Shell }) {
-  const actions = threadActions(shell.workspace, shell.active);
-  return (
-    <DropdownMenu>
-      <MoreTrigger disabled={false} />
-      <DropdownMenuContent align="end" className="w-56">
-        <DropdownMenuGroup>
-          <DropdownMenuLabel>{actions.name ?? "Threads"}</DropdownMenuLabel>
-          <DropdownMenuItem
-            onClick={() => {
-              shell.newThread(actions.projectId);
-            }}
-          >
-            New thread
-          </DropdownMenuItem>
-          <DropdownMenuItem
-            disabled={actions.closes === null}
-            onClick={() => {
-              if (actions.closes !== null) shell.close(actions.closes);
-            }}
-          >
-            Close this thread
-          </DropdownMenuItem>
-        </DropdownMenuGroup>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem
-          onClick={() => {
-            shell.newProject();
-          }}
-        >
-          New project
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-}
-
 /**
- * The phone bar's "⋯": what can be done to the thread on screen and its project, which on a
- * desktop live in the tab strip and the sidebar (ADR-116).
+ * The phone bar's "⋯" (ADR-116, ADR-123): the thread menu for the thread the address names,
+ * a child in focus or else its main. A desktop has it in each thread's own title bar instead.
+ * Nothing on screen leaves it disabled. Snoozing a main that another view hides first shows
+ * the thread, where the snooze card opens.
  */
 export function ThreadMenu({ shell }: { shell: Shell | null }) {
-  if (shell === null) {
+  const thread = shell === null ? null : onScreen(shell.workspace, shell.active).thread;
+  if (shell === null || thread === null) {
     return (
       <DropdownMenu>
         <MoreTrigger disabled />
       </DropdownMenu>
     );
   }
-  return <MoreMenu shell={shell} />;
+  const { active } = shell;
+  return (
+    <DropdownMenu>
+      <MoreTrigger disabled={false} />
+      <ThreadActionsContent
+        shell={shell}
+        thread={thread}
+        beforeSnooze={() => {
+          if (active !== null && active.focus === null) shell.setPane(active.main, "thread");
+        }}
+      />
+    </DropdownMenu>
+  );
 }

@@ -22,9 +22,10 @@ import {
   type PaneKind,
   type ShellState,
 } from "./state";
+import { threadVerbs, type ThreadVerbs } from "./thread-verbs";
 
-/** What the shell can change: tabs, threads, projects, panes and the bell. */
-export type ShellVerbs = {
+/** What the shell can change: tabs, threads, projects, panes, the bell and the thread menu. */
+export type ShellVerbs = ThreadVerbs & {
   /** Goes to a thread's address, main or child; the address keeps the scenario. */
   open(id: ThreadId): void;
   /** Closes a tab; the one on screen gives way to its right neighbour, else its left, else home. */
@@ -43,8 +44,16 @@ export type ShellVerbs = {
 /** Goes to a thread's address, or home for null. */
 export type Go = (to: ThreadId | null) => void;
 
-// What the verbs need: the runtime, where the page is, and how to go somewhere else.
-type Deps = { runtime: Runtime; workspace: Workspace; active: Located | null; go: Go };
+// What the verbs need: the runtime, where the page is, how to go somewhere else, a thread's
+// whole address, and the snooze card's switch.
+type Deps = {
+  runtime: Runtime;
+  workspace: Workspace;
+  active: Located | null;
+  go: Go;
+  href: (id: ThreadId) => string;
+  setSnoozing: (id: ThreadId | null) => void;
+};
 
 // What a project started from the shell is called until someone names it.
 const NEW_PROJECT = "New project";
@@ -117,11 +126,13 @@ async function newProjectIn(runtime: Runtime): Promise<ProjectId> {
 
 /** The shell's verbs over the document the runtime keeps, as the page shows it in `doc`. */
 export function verbs(deps: Deps, doc: ShellState): ShellVerbs {
-  const { runtime, workspace, active, go } = deps;
+  const { runtime, workspace, active, go, href, setSnoozing } = deps;
   const change = (update: (current: ShellState) => ShellState) => {
     edit(runtime, active, update);
   };
+  const threads = workspace.threads;
   return {
+    ...threadVerbs({ runtime, threads, active, doc, go, href, change, setSnoozing }),
     open: (id) => {
       go(id);
     },
