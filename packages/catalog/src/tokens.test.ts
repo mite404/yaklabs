@@ -48,6 +48,12 @@ const ON_WASH: Pair[] = [
 ];
 // The splash's line, the ink at a share over nothing, as it lands on the canvas field (--bg).
 const SPLASH = { light: 1.26, dark: 1.36 };
+// The splash figure's ink, a sepia at a share over nothing, as it lands on the sheet (--paper):
+// a step off it, so the figure shows, and never near the words' floor.
+const SPLASH_INK: Record<keyof typeof SPLASH, Wash> = {
+  light: ["--splash-ink", "--paper", 1.52, 1.2],
+  dark: ["--splash-ink", "--paper", 1.71, 1.2],
+};
 // No pixel of the decoded painting may be brighter than this (paint-chrome.mjs).
 const PAINTING_BOUND = 0.1;
 
@@ -163,7 +169,9 @@ describe("the window chrome's tokens", () => {
       readable: Math.min(...ratios) >= 4.5,
     }).toEqual({ mean: facts.mean, withinBound: true, readable: true });
   });
+});
 
+describe("the canvas splash's tokens", () => {
   it("draw the splash's line faintly off the field in either theme", () => {
     const share = Number(/(\d+)%/.exec(ROOT.get("--splash-line") ?? "")?.[1]) / 100;
     const measured = Object.entries(THEMES).map(([name, theme]) => {
@@ -174,5 +182,13 @@ describe("the window chrome's tokens", () => {
       return [name, Math.round(contrast(luminance(line), luminance(field)) * 100) / 100];
     });
     expect(Object.fromEntries(measured)).toEqual(SPLASH);
+  });
+
+  it("draw the splash figure's ink a step off the sheet in either theme, and no more", () => {
+    const off = (["light", "dark"] as const).flatMap((name) =>
+      misses([SPLASH_INK[name]], THEMES[name], "--paper").map((miss) => `${name}: ${miss}`),
+    );
+    const ratios = (["light", "dark"] as const).map((name) => SPLASH_INK[name][2]);
+    expect({ off, faint: ratios.every((ratio) => ratio <= 2) }).toEqual({ off: [], faint: true });
   });
 });

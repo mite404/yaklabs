@@ -139,6 +139,11 @@
      a stroke stands 1.26:1 off the field in light and 1.36:1 in dark, visible without ever
      competing with the words */
   --splash-line: color-mix(in srgb, var(--ink) 12%, transparent);
+  /* the splash figure's ink, a warm sepia in the manner of a Leonardo sheet: the rust pulled
+     towards the ink, then laid at 30% over nothing, so a stroke stands 1.52:1 off the sheet
+     (--paper) it lies on in light; the dark block lays it again */
+  --splash-sepia: color-mix(in srgb, var(--rust) 70%, var(--ink));
+  --splash-ink: color-mix(in srgb, var(--splash-sepia) 30%, transparent);
 
   --radius-card: 14px; /* the catalog card and the thread panel; shadcn owns --radius (ADR-082) */
   --space: 24px;
@@ -283,6 +288,9 @@ button:hover {
      than the paper cannot reach 1.3:1, since black itself is 1.24:1 */
   --desk: var(--yak-slate);
   --data: #b5b5ae; /* chart marks: 8.2:1 */
+  /* the splash figure's ink: the rust pulled towards the cream, which keeps it warm on the dark
+     sheet, laid at 30% over nothing: 1.71:1 off the sheet (--paper) */
+  --splash-ink: color-mix(in srgb, var(--splash-sepia) 30%, transparent);
   --on-ink: var(--yak-night); /* 16.1:1 on the cream */
   --bubble-tint: color-mix(in srgb, var(--sage) 16%, var(--paper));
   --bubble-tint-strong: color-mix(in srgb, var(--sage) 30%, var(--paper));
