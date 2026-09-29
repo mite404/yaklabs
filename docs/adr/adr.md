@@ -1745,3 +1745,42 @@ over the slide's last 120ms (derived; design pillars, rule 26).
 Amended 2026-09-29: pressing the open Canvas in the layout switch closes it back to the thread
 (Ethan), and so does pressing the open Browser, so the switch reads one way for both side panes
 (derived). The thread pressed again stays.
+
+## ADR-139 - The rail stays on the desktop, and the projects panel extends from its edge
+
+2026-09-29 - Proposed (Ethan: "the projects and their threads need to extend from the collapsed
+sidenav bar. that way the icons are still accessible as navigation while still being able to look
+at projects and thread histories", and "as it stands now the thread panel covers the navigation
+icons"). Amends ADR-093, ADR-094, ADR-121 and ADR-138 once accepted.
+On a desktop (768px and wider) the icon rail is the app's navigation and is drawn in every state,
+never moving, collapsing or blinking: Kay, the five places not built yet, Documentation and the
+Lab as 40px squares, each naming itself in an ink pill whatever the panel is doing, with the
+Account at its foot. It is its own column (`rail.tsx`, `data-slot="rail"`), no longer the
+sidebar's collapsed state.
+The projects and their threads are a second column, shadcn's offcanvas `Sidebar`, extending from
+the rail's right edge. Docked (`kay.sidebar` is "open"), it pushes the workspace and resizes from
+its right edge, with the first tab 4px past that edge. Closed, only the rail shows, and the panel
+slides out from behind the rail's edge on the peek's triggers and timing (ADR-138) and back the
+same way. A stage around the panel and the workspace clips it at the rail's edge (`overflow:
+clip`, the gate of design pillars rule 22), so the panel never covers a rail glyph, and the rail's
+echo that the old peek slid over is gone.
+One `SidebarProvider` still owns docked or closed, and `kay.sidebar-width` with its 208, 256 and
+480px now names the panel alone. The rail's places are a navigation landmark named "Places" and
+the panel's tree one named "Sidebar"; neither holds the other, and the Account sits outside both.
+Closing the panel with focus inside it hands focus to Toggle sidebar first; focus on a rail place
+never holds a peek, while a menu open in the rail or the panel does; the closed panel is inert,
+out of the tab order and the accessibility tree. The phone keeps ADR-121's drawer as one labelled
+column: the place rows with "Soon", then the tree, then the Account.
+Ethan has not answered these yet; each is built with the default after the arrow, for him to
+change:
+
+- What the landmarks and the toggle are called → the rail "Places", the panel "Sidebar", the
+  toggle "Toggle sidebar".
+- Whether a line divides the rail from the docked panel → none: both are the shell's paper.
+- Whether a phone gets the rail too → no rail below 768px; the drawer keeps its labelled rows.
+- How a pin and an unpin move → shadcn's 200ms linear, the panel, the workspace and the tabs in
+  lockstep; the peek keeps 220ms of `cubic-bezier(0.32, 0.72, 0, 1)`.
+- Whether reduced motion pins at once → yes: a pin and an unpin are instant (rule 24).
+- Whether Documentation's pill says it opens elsewhere → yes: an ArrowUpRight after its name.
+- What a window too short for every place does → the places scroll with no scrollbar, and the
+  Account stays at the rail's foot.
