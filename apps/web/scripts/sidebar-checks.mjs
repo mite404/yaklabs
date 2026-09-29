@@ -4,11 +4,13 @@ import { BASE, shotPath } from "./lever.mjs";
 
 const DEMO = `${BASE}/?scenario=demo`;
 const DESK = { width: 1440, height: 900 };
-// The peek's slide and its curve (index.css), and its timing (peek.ts).
+// The peek's slide, out and back alike, and its curve (index.css), and its timing (peek.ts).
 const SLIDE_MS = 220;
 const DRAWER = "cubic-bezier(0.32, 0.72, 0, 1)";
 const OPEN_MS = 80;
 const CLOSE_MS = 250;
+// The instants a slide is seeked to: every 20ms, and the last millisecond before it ends.
+const SEEK_STEPS = [0, 20, 40, 60, 80, 100, 120, 140, 160, 180, 200, SLIDE_MS - 1];
 // The tabs start this far past the sidebar's edge (title-bar.tsx).
 const TAB_INSET = 4;
 const TOGGLE = 'header [data-sidebar="trigger"]';
@@ -75,6 +77,53 @@ const transitions = (page) =>
         ),
       ),
   );
+
+// Catches the container's transitions as they start in `phase`, seeks them to each of `steps`
+// and reads the panel's edge (its right past the window's inner left, in CSS px) and opacity.
+// One synchronous pass, so no frame is drawn and no timer runs between the seeks; the last
+// seek leaves the slide a millisecond from its end, to finish on its own.
+const seekSlide = (page, phase, steps) =>
+  page.evaluate(
+    ([want, at]) =>
+      new Promise((done) => {
+        const sidebar = document.querySelector('[data-slot="sidebar"]');
+        const panel = document.querySelector('[data-slot="sidebar-container"]');
+        const frame = document.querySelector('[data-slot="window"]');
+        const inner = frame.getBoundingClientRect().left + frame.clientLeft;
+        const tick = () => {
+          const running = panel.getAnimations();
+          if ((sidebar.dataset.peek ?? "rail") !== want || running.length === 0) {
+            requestAnimationFrame(tick);
+            return;
+          }
+          const timings = running.map((a) => {
+            const { duration, delay, easing } = a.effect.getTiming();
+            return [a.transitionProperty, duration, delay, easing].join(" ");
+          });
+          const width = panel.getBoundingClientRect().width;
+          const frames = at.map((ms) => {
+            for (const a of running) a.currentTime = ms;
+            const edge = panel.getBoundingClientRect().right - inner;
+            return { ms, edge, opacity: Number(getComputedStyle(panel).opacity) };
+          });
+          done({ timings, width, frames });
+        };
+        tick();
+      }),
+    [phase, steps],
+  );
+
+// The share of a slide's travel drawn at full strength: each step's move weighted by opacity.
+function seenShare(frames) {
+  let travel = 0;
+  let seen = 0;
+  for (let i = 1; i < frames.length; i++) {
+    const move = Math.abs(frames[i].edge - frames[i - 1].edge);
+    travel += move;
+    seen += move * Math.min(frames[i].opacity, frames[i - 1].opacity);
+  }
+  return seen / travel;
+}
 
 // Samples the first tab's offset from the sidebar's edge on every frame for `ms`.
 function sampleOffsets(page, ms) {
@@ -401,5 +450,46 @@ export const sidebarChecks = {
       await context.close();
     }
     return { ok, detail: notes.join("; ") };
+  },
+
+  // The peek slides back as it slides out: the same 220ms on the drawer curve both ways, seeked
+  // to the same instants (the back's edge mirrors the out's within 1% of the panel's width). The
+  // window's frame clips the panel, so the way back stays at 0.9 or more while its edge is more
+  // than 2px from home, and fades out only as it lands, the rail taking its place.
+  async P24(browser) {
+    const { context, page } = await openDesk(browser);
+    await page.mouse.move(900, 500);
+    const outward = seekSlide(page, "open", SEEK_STEPS);
+    await page.mouse.move(28, 650, { steps: 3 });
+    const out = await outward;
+    await page.waitForTimeout(SLIDE_MS + 200);
+    const homeward = seekSlide(page, "leaving", SEEK_STEPS);
+    await page.mouse.move(900, 500);
+    const back = await homeward;
+    await page.waitForTimeout(SLIDE_MS + 200);
+    const rested = await phaseOf(page);
+    await context.close();
+    const slide = `transform ${SLIDE_MS} 0 ${DRAWER}`;
+    const miss = Math.max(
+      ...out.frames.map((f, i) =>
+        Math.abs(f.edge / out.width - (1 - back.frames[i].edge / back.width)),
+      ),
+    );
+    const away = back.frames.filter((f) => f.edge > 2);
+    const dimmest = Math.min(...away.map((f) => f.opacity));
+    const landed = back.frames.at(-1).opacity;
+    const ok =
+      out.timings.includes(slide) &&
+      back.timings.includes(slide) &&
+      miss < 0.01 &&
+      away.length > 0 &&
+      dimmest >= 0.9 &&
+      landed < 0.1 &&
+      rested === "rail";
+    const trace = back.frames.map((f) => `${f.ms}:${round(f.edge)}@${round(f.opacity)}`).join(" ");
+    return {
+      ok,
+      detail: `out [${out.timings.join(", ")}]; back [${back.timings.join(", ")}]; curve miss ${round(miss * 100)}%; back dimmest ${round(dimmest)} while more than 2px out, ${round(landed)} as it lands, then ${rested}; travel seen out ${round(seenShare(out.frames))}, back ${round(seenShare(back.frames))}; back ${trace}`,
+    };
   },
 };
