@@ -481,15 +481,31 @@ function useRecap(input: {
   };
 }
 
-// Jump so the evidence lands vertically centered, every time (ADR-022 eye trace).
+// Each glowing turn's timer, so a later jump can clear the glow early.
+const flashTimers = new WeakMap<HTMLElement, number>();
+
+function clearFlash(turn: HTMLElement): void {
+  window.clearTimeout(flashTimers.get(turn));
+  flashTimers.delete(turn);
+  delete turn.dataset.flash;
+}
+
+// Jump so the evidence lands vertically centered, every time (ADR-022 eye trace). Only the turn
+// jumped to last glows: stepping through matches moves the glow rather than leaving a trail, and
+// a second jump to the same turn starts its glow over.
 function flashTurn(scroller: HTMLElement | null, turnId: string): void {
   const turn = scroller?.querySelector<HTMLElement>(`[data-turn-id="${CSS.escape(turnId)}"]`);
   if (!scroller || !turn) return;
   centerInScroller(scroller, turn);
+  scroller.querySelectorAll<HTMLElement>("[data-flash]").forEach(clearFlash);
+  void turn.offsetWidth; // a style flush, so the glow's animation starts over
   turn.dataset.flash = "true";
-  window.setTimeout(() => {
-    delete turn.dataset.flash;
-  }, FLASH_MS);
+  flashTimers.set(
+    turn,
+    window.setTimeout(() => {
+      clearFlash(turn);
+    }, FLASH_MS),
+  );
 }
 
 // After a card or a modal hands back control, the caret returns to the compose box.

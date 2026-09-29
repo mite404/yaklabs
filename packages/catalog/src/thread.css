@@ -716,6 +716,13 @@
     animation: none;
   }
 }
+/* Without the glow's fade, a jumped-to turn holds the glow's first frame until it clears, so the
+   eye still finds it. */
+@media (prefers-reduced-motion: reduce) {
+  .turn[data-flash] {
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--focus) 25%, transparent);
+  }
+}
 
 /* Catalog cards inside a thread drop page-level framing: the question is already the
    user turn above, and component names are developer vocabulary (ADR-023). */
