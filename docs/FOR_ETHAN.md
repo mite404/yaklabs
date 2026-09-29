@@ -1951,9 +1951,13 @@ with six stops.
 
 The tree (Storybook: Motion/Agent tree) is a second glyph on the same clock and palette: Kay's
 three pills, a crest of green running down them, left then right, and the base holding solid for
-the last 30% of the loop. It borrows a trick from side-scrolling games and car shots on a
-soundstage: the runner stays put and the background scrolls, and the eye reads motion the other
-way. Light falling down the branches, again and again, reads as climbing up.
+a beat. Then the base slides down under the icon's bottom edge, and as it is half clipped the top
+branch starts to glow. It borrows a trick from side-scrolling games and car shots on a
+soundstage: the car stays put and the background scrolls, so the eye reads motion the other way.
+It is also a cheat, the good kind: only the base moves. It is the one pill lit when the slide
+starts, so moving it alone reads as the whole tree dropping away. Once it is out of frame it
+jumps home, invisible, and fades back in where it began, like a stagehand resetting a prop
+during a blackout.
 
 Senior-engineer takeaway: when motion must stay in sync, derive every actor from one clock. A
 second keyframe track would drift the moment someone changed one duration and not the other.
