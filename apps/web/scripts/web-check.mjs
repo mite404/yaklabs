@@ -1241,10 +1241,11 @@ try {
         const top = [
           '[aria-label="Toggle sidebar"]',
           '[aria-label^="Notifications"]',
-          '[aria-label="Thread actions"]',
+          // The bar's own "⋯", not the hidden tab strip's (ADR-138).
+          '[aria-label="Thread actions"]:not(.chrome-pill *)',
         ].map((selector) => takesTap(bar.querySelector(selector)));
         const views = [...bar.querySelectorAll('[role="group"][aria-label="Layout"] button')].map(
-          takesTap,
+          (el) => takesTap(el),
         );
         return {
           project: bar.querySelector('[data-slot="project-name"]').textContent,
