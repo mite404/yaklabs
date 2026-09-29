@@ -479,8 +479,8 @@ export const sidebarChecks = {
     const dimmest = Math.min(...away.map((f) => f.opacity));
     const landed = back.frames.at(-1).opacity;
     const ok =
-      out.timings.includes(slide) &&
-      back.timings.includes(slide) &&
+      out.timings.includes(slide) === true &&
+      back.timings.includes(slide) === true &&
       miss < 0.01 &&
       away.length > 0 &&
       dimmest >= 0.9 &&
