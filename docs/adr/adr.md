@@ -1728,7 +1728,7 @@ icons name themselves in an ink pill (13:1 against the shell).
 
 2026-09-29 - Accepted (Ethan: "components in the thread section of Storybook", in every main
 thread and the scripted demo). Builds on ADR-022's jump-to-centre and ADR-138.
-Every thread with turns carries a small bar over the top-right corner of its turns: Search this
+Every thread with turns carries a small bar at the right just above its compose box: Search this
 thread, and Your requests. Search matches a turn's own words, not the cards it carries, ignoring
 case; Enter steps to the next match and Shift+Enter back, both wrapping, and the count reads
 "4 matches" until one is showing, then "2 of 4". Escape on any of its controls closes it and
@@ -1741,11 +1741,17 @@ The bar lives in the catalog (`ReadingTools.tsx`, `threadReading.ts`), mounted b
 thread panel itself, so the web app's main pane, its lanes and the Storybook all get it with no
 wiring in the host. It is built from the catalog's own primitives (IconButton, Menu, `.field`),
 not shadcn: the catalog and its Storybook have no Tailwind, and bringing them in is a separate
-decision. The bar is paper with a hairline and the menu's 8px corners, 20px in from the edge, and
-fades in with the pointer on the thread over 150ms on the strong ease-out, like a lane's menu;
-a keyboard and a touch screen see it at once. It stands over the turns rather than in a title
-bar, since a main thread has none (ADR-138); on a main pane that corner can cover the end of a
-request bubble scrolled to the top while the bar shows.
+decision. The bar is paper with a hairline and the menu's 8px corners, and fades in with the
+pointer on the thread over 150ms on the strong ease-out, like a lane's menu; a keyboard and a
+touch screen see it at once. It stands over the conversation rather than in a title bar, since a
+main thread has none (ADR-138).
+Amended the same day (Ethan): the bar moved from the turns' top-right corner to the right just
+above the compose box, its right edge on the box's and 8px clear of it, and 8px clear of a docked
+question or recap when one is up (the dock learns `--dock-space` from the panel). Its list of
+requests opens upward. It floats over the conversation's resting gap, so the newest turn still
+rests 20px above the box (pillar 12), and while the bar shows it covers that turn's bottom-right
+corner. Reserving room for it instead, so the turns rest 20px above the bar, was shown to Ethan
+side by side and awaits his call.
 The turns now take a tab stop (`region "Messages"`) once there are any, with the focus ring
 inside the panel's clip, so a keyboard can scroll a thread of plain words; axe had flagged it on
 the first text-only fixture. The Menu primitive gained an item `id` (two requests can share a

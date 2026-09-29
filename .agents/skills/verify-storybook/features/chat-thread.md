@@ -59,7 +59,8 @@ Preconditions:
 - **Reading tools.** Load `thread-reading-tools--overview` (`Thread/Reading tools`).
   `group "Reading tools"` holds `button "Search this thread"` and `button "Your requests"`.
   Click Your requests: `menu "Your requests"` lists one `menuitem` per request, e.g.
-  `Which day had t…9:04`; pick one and that turn gets `data-flash` and lands centred. Alt-click
+  `Which day had t…9:04` (it opens upward, from the bar above the compose box); pick one and that
+  turn gets `data-flash` and lands centred. Alt-click
   the button: no menu, the latest request glows. Click Search: `searchbox "Search this thread"`
   takes the focus; type `margin` and `status` reads `4 matches`, Enter makes it `1 of 4`,
   Shift+Enter wraps to `4 of 4`, Escape closes it and focuses the search button again. The
