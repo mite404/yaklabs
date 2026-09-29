@@ -1,6 +1,4 @@
-import { CatalogCard, InteractiveCard } from "@yaklabs/catalog";
 import type { Carried } from "@yaklabs/catalog/carry";
-import type { SharedCard } from "@yaklabs/catalog/share";
 import {
   closeLane,
   collapseLane,
@@ -24,32 +22,11 @@ import { useEffect, type ReactNode } from "react";
 import { inBackground, useRuntime } from "../runtime";
 import { arrangeFrom } from "./arrange";
 import { Canvas, type LaneView } from "./canvas";
+import { CanvasCard } from "./canvas-card";
 import { ThreadPane } from "./thread-pane";
 
 // What a thread started without a title is called until someone names it.
 const NEW_THREAD = "New thread";
-
-function Artifact({
-  card,
-  leading,
-  trailing,
-}: {
-  card: SharedCard;
-  leading: ReactNode;
-  trailing: ReactNode;
-}) {
-  return card.kind === "interactive" ? (
-    <InteractiveCard
-      payload={card.payload}
-      turnId="canvas"
-      onChoose={() => {}}
-      leading={leading}
-      trailing={trailing}
-    />
-  ) : (
-    <CatalogCard payload={card.payload} context="thread" leading={leading} trailing={trailing} />
-  );
-}
 
 // A lane as the canvas draws it: a child thread, or a card opened large. A thread lane whose
 // thread the snapshot lacks is left out rather than drawn empty.
@@ -57,7 +34,7 @@ function laneView(lane: Lane, threads: Map<string, ThreadSummary>): LaneView[] {
   if (lane.kind === "card") {
     const { id, title, width, collapsed, card } = lane;
     const render = (leading: ReactNode, trailing: ReactNode) => (
-      <Artifact card={card} leading={leading} trailing={trailing} />
+      <CanvasCard card={card} leading={leading} trailing={trailing} />
     );
     return [{ id, title, width, collapsed, kind: "card", render }];
   }

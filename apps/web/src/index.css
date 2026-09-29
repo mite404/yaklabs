@@ -406,20 +406,6 @@ html[data-dragging="sidebar"] * {
     box-shadow: 0 0 1.5rem 0.75rem var(--clearing);
   }
 
-  /* The open space lights up under a carry (ADR-091) on a layer below the splash drawing, so the
-     drawing stays on top of the fill, as the words do. */
-  .open-space::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    z-index: -2;
-    border-radius: inherit;
-    transition: background-color 150ms ease;
-  }
-  .open-space[data-lit]::before {
-    background-color: color-mix(in srgb, var(--paper-deep) 60%, transparent);
-  }
-
   /* The canvas is a dotted field (ADR-089): open ground that invites something to be put down. */
   .canvas {
     background-color: var(--bg);
@@ -428,6 +414,8 @@ html[data-dragging="sidebar"] * {
        starts one in; a default lane is 31. The dots scroll with the row (`local`), so panning
        never slides them out of step with the lanes. */
     --canvas-grid: 18px;
+    container-type: inline-size;
+    --lane-default-width: min(calc(var(--canvas-grid) * 31), calc(100cqw - 48px));
     background-image: radial-gradient(var(--hairline) 1px, transparent 1px);
     background-size: var(--canvas-grid) var(--canvas-grid);
     background-attachment: local;
@@ -460,11 +448,30 @@ html[data-dragging="sidebar"] * {
   html[data-dragging="ground"] .canvas {
     cursor: grabbing;
   }
-  /* A carry over the canvas (ADR-091) shows on the whole pane, where the eye is, not only on
-     the open space at the far end: a ring in the hover green and the ground a shade deeper. */
+  /* Availability starts at lift; only hovering a slot changes the ground and adds a preview. */
+  html[data-carrying] .canvas,
+  html[data-dragging="lane"] .canvas {
+    box-shadow: inset 0 0 0 2px var(--olive);
+  }
   .canvas[data-drop] {
     background-color: color-mix(in srgb, var(--paper-deep) 55%, var(--bg));
-    box-shadow: inset 0 0 0 2px var(--olive);
+  }
+  [data-drop-preview] {
+    position: absolute;
+    inset: 16px auto 16px 0;
+    width: var(--lane-default-width);
+    pointer-events: none;
+    opacity: 0.35;
+  }
+  [data-drop-preview] .card {
+    margin: 0;
+  }
+  [data-drop-preview] * {
+    animation: none !important;
+  }
+  html[data-carrying] .drag-hint::before,
+  html[data-dragging="lane"] .drag-hint::before {
+    opacity: 0;
   }
   /* A focused child's lane says where it is once, as it comes into view. */
   .lane[data-flash] :is(.thread-panel, .card, .lane-strip) {

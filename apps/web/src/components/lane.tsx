@@ -26,11 +26,6 @@ export type LaneReports = {
   onClose: (id: LaneId) => void;
 };
 
-// A lane is a fixed column so the thread inside keeps one measure: this wide until its
-// separator is dragged, and never wider than the pane less a strip of ground, so its close
-// is always on screen and the ground beside it says there is more row to the right.
-const LANE_WIDTH = "min(calc(var(--canvas-grid) * 31), calc(100% - 48px))";
-
 // The lane's collapse, in the container it folds (ADR-134): the thread's or the card's title
 // bar while it is open, the head of its strip while it is collapsed. It says what it will do.
 // In the strip it is 24px, not the bar's 28: the strip's 14px corner arc curves in under a 28px
@@ -178,7 +173,10 @@ export function Lane({
     <article
       ref={article}
       className={`lane lane-shift flex ${heightOf(lane)} shrink-0 flex-col`}
-      style={{ ["--lane-width" as string]: width === null ? LANE_WIDTH : `${width}px`, ...style }}
+      style={{
+        ["--lane-width" as string]: width === null ? "var(--lane-default-width)" : `${width}px`,
+        ...style,
+      }}
       data-lane={lane.id}
       data-collapsed={lane.collapsed}
       data-kind={lane.kind}
