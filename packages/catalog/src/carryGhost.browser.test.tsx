@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { cdp } from "vitest/browser";
 import { armCarry, type Carried } from "./carry";
 import "./tokens.css";
+import "./primitives.css";
 import "./thread.css";
 
 // The DevTools session the playwright provider opens. The provider declares it this way, but
