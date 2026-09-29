@@ -287,6 +287,22 @@ Timing claims ("half clipped as the branch is half faded", "no two squares share
 browser test that seeks the animation and measures it; a screenshot of one good frame proves
 little, since each frame of a broken loop can look fine on its own.
 
+## Verification workbench exceptions
+
+The Pixels workbench uses neon green (`#39ff14`) for changed pixels. Comparator proof uses red
+(`#ff0000`) for its deliberately introduced mistakes (Ethan). These diagnostic colors are not
+product status colors. Their roles live in `apps/verify/src/diff-palette.ts`; grayscale supplies
+unchanged context. Older evidence keeps its original overlay color rather than rewriting artifacts.
+
+Workbench density uses five-sixths of `--space` for its primary spacing, about 17% less than the
+24px token (derived from Ethan's request for roughly 15% more room). The viewer height is 17 times
+`--space`, or 408px. Typography keeps the existing 12px annotations and 13px compact controls;
+display sizes use 28px for the heading and 24px for the selected component. Image zoom and the 4×
+inspector are not scaled with the surrounding interface (derived).
+The Pixels results list displays up to ten complete rows before scrolling (Ethan). Its height
+follows
+the rendered rows so source-path wrapping and font changes do not hide entries (derived).
+
 ## Open questions
 
 - Whether the stepped slider, dictation controls, links and the primary button should move from
