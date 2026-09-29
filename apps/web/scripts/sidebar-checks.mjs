@@ -404,8 +404,9 @@ export const sidebarChecks = {
     return { ok: results.every((r) => r.ok), detail: results.map((r) => r.note).join("; ") };
   },
 
-  // No motion where motion is not wanted: reduced motion peeks by a fade alone, and a key's
-  // pin or unpin (Enter on the toggle, Ctrl+B) moves nothing.
+  // No motion where motion is not wanted: reduced motion peeks by a fade alone, a key's pin or
+  // unpin (Enter on the toggle, Ctrl+B) moves nothing, and under reduced motion neither does a
+  // pointer's.
   async P20(browser) {
     const reduced = await openDesk(browser, { motion: "reduce" });
     await reduced.page.mouse.move(900, 500);
@@ -422,10 +423,18 @@ export const sidebarChecks = {
     await keys.page.keyboard.press("Control+b");
     const shortcut = await keys.page.evaluate(pinTransitions);
     await keys.context.close();
+    // Under reduced motion a pointer's pin and unpin are instant too (design pillars, rule 24).
+    const still = await openDesk(browser, { side: "open", motion: "reduce" });
+    const clicks = [];
+    for (let click = 0; click < 2; click++) {
+      await still.page.locator(TOGGLE).click();
+      clicks.push(await still.page.evaluate(pinTransitions));
+    }
+    await still.context.close();
     const fadeOnly = fade.length > 0 && fade.every((each) => each.startsWith("opacity"));
     return {
-      ok: fadeOnly && enter === 0 && shortcut === 0,
-      detail: `reduced motion [${fade.join(", ")}]; width, left and min-width transitions after Enter ${enter}, after Ctrl+B ${shortcut}`,
+      ok: fadeOnly && enter === 0 && shortcut === 0 && clicks.every((n) => n === 0),
+      detail: `reduced motion [${fade.join(", ")}]; width, left and min-width transitions after Enter ${enter}, after Ctrl+B ${shortcut}, after a click to unpin and to pin under reduced motion ${clicks.join(" and ")}`,
     };
   },
 
