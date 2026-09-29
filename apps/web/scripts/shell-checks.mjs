@@ -356,6 +356,56 @@ export const shellChecks = {
     };
   },
 
+  // The layout switch closes a side pane pressed again: Canvas or Browser, by the pointer or by
+  // Space, goes back to the thread alone, filling its tab; the thread pressed again stays.
+  async P9b(browser) {
+    const { page } = await onThreadPage(browser);
+    const pressed = () =>
+      page
+        .getByRole("group", { name: "Layout" })
+        .locator('button[aria-pressed="true"]')
+        .getAttribute("aria-label");
+    const threadShare = () =>
+      page.locator('[role="tabpanel"]:not([inert])').evaluate((tab) => {
+        const thread = tab.querySelector('[data-slot="resizable-panel"]');
+        return Math.round(
+          (thread.getBoundingClientRect().width / tab.getBoundingClientRect().width) * 100,
+        );
+      });
+    // The demo's thread opens beside its canvas; start from the thread alone.
+    await layoutButton(page, "Thread").click();
+    const steps = [];
+    const step = async (label, act) => {
+      await act();
+      await page.waitForTimeout(300);
+      steps.push({ label, pressed: await pressed(), share: await threadShare() });
+    };
+    await step("Canvas", () => layoutButton(page, "Canvas").click());
+    await step("Canvas again", () => layoutButton(page, "Canvas").click());
+    await step("Browser", () => layoutButton(page, "Browser").click());
+    await step("Browser again", () => layoutButton(page, "Browser").click());
+    await step("Thread again", () => layoutButton(page, "Thread").click());
+    await layoutButton(page, "Canvas").focus();
+    await step("Space on Canvas", () => page.keyboard.press("Space"));
+    await step("Space on Canvas again", () => page.keyboard.press("Space"));
+    const want = [
+      ["Canvas", false],
+      ["Thread", true],
+      ["Browser", false],
+      ["Thread", true],
+      ["Thread", true],
+      ["Canvas", false],
+      ["Thread", true],
+    ];
+    const ok = steps.every(
+      (each, i) => each.pressed === want[i][0] && (each.share === 100) === want[i][1],
+    );
+    return {
+      ok,
+      detail: steps.map((each) => `${each.label}: ${each.pressed} (${each.share}%)`).join("; "),
+    };
+  },
+
   async P10(browser) {
     const { page } = await onThreadPage(browser);
     await layoutButton(page, "Browser").click();
