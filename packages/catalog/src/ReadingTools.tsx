@@ -1,4 +1,12 @@
-import { useId, useRef, useState, type KeyboardEvent, type MouseEvent } from "react";
+import {
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type MouseEvent,
+  type RefObject,
+} from "react";
 import { IconButton } from "./IconButton";
 import { BookmarkIcon, CloseIcon, SearchIcon, StepIcon } from "./icons";
 import { Menu, type MenuItem, type TriggerProps } from "./Menu";
@@ -125,11 +133,50 @@ function SearchBar({
   );
 }
 
+// Calls `fold` on the first pointer move outside `bar`; the bar's own list counts as inside.
+// Returns the function that stops listening.
+function foldWhenAway(bar: RefObject<HTMLElement | null>, fold: () => void): () => void {
+  const away = (event: PointerEvent) => {
+    if (!(event.target instanceof Node && bar.current?.contains(event.target) === true)) fold();
+  };
+  document.addEventListener("pointermove", away);
+  return () => {
+    document.removeEventListener("pointermove", away);
+  };
+}
+
+// Whether the pointer is on `bar`, for unfolding it. Leaving sets it false, and so does the first
+// move anywhere outside it: a list that closes under the pointer takes the pointer's target away
+// with it, and the browser then sends the bar no leave at all.
+function usePointerIn(bar: RefObject<HTMLElement | null>) {
+  const [pointerIn, setPointerIn] = useState(false);
+  useEffect(
+    () =>
+      pointerIn
+        ? foldWhenAway(bar, () => {
+            setPointerIn(false);
+          })
+        : undefined,
+    [bar, pointerIn],
+  );
+  return {
+    pointerIn,
+    onPointerEnter: () => {
+      setPointerIn(true);
+    },
+    onPointerLeave: () => {
+      setPointerIn(false);
+    },
+  };
+}
+
 /**
- * A thread's reading tools, floating above its compose box: search the thread's words and step
- * through the turns that hold them, or jump back to any request the user sent, listed by its
- * first 15 characters and its time. An Alt-click on the bookmark goes straight to the latest
- * request. Where a jump lands, and how it shows, is the host's.
+ * A thread's reading tools, floating above its compose box. At rest the bar is one Search button;
+ * with the pointer on it, a keyboard in it, or either tool open, it unfolds leftward to show every
+ * tool. Search the thread's words and step through the turns that hold them, or jump back to any
+ * request the user sent, listed by its first 15 characters and its time. An Alt-click on the
+ * bookmark goes straight to the latest request. Where a jump lands, and how it shows, is the
+ * host's.
  * @param messages The thread's turns as they stand now, including ones sent since it opened.
  * @param onJump Brings the turn with this id into view.
  */
@@ -141,6 +188,8 @@ export function ReadingTools({
   onJump: (turnId: string) => void;
 }) {
   const [searching, setSearching] = useState(false);
+  const bar = useRef<HTMLFieldSetElement>(null);
+  const { pointerIn, ...pointerHandlers } = usePointerIn(bar); // → unfolds the bar (thread.css)
   const searchButton = useRef<HTMLButtonElement>(null);
   const searchId = useId();
   const requests = requestsOf(messages); // → Request[], oldest first
@@ -152,13 +201,26 @@ export function ReadingTools({
 
   return (
     <fieldset
+      ref={bar}
       className="reading-tools"
       aria-label="Reading tools"
       data-open={searching ? "" : undefined}
+      data-unfolded={pointerIn ? "" : undefined}
+      {...pointerHandlers}
     >
       {searching && (
         <SearchBar id={searchId} messages={messages} onJump={onJump} onClose={closeSearch} />
       )}
+      {/* Folded away until the bar is in use (thread.css); left of Search, so the bar grows
+          leftward and the button under the pointer stays put. */}
+      <span className="reading-more">
+        <Menu
+          label={BOOKMARKS}
+          placement="above-end"
+          items={bookmarkItems(requests, onJump)}
+          trigger={bookmarkTrigger(requests.at(-1)?.id, onJump)}
+        />
+      </span>
       <IconButton
         ref={searchButton}
         label="Search this thread"
@@ -171,12 +233,6 @@ export function ReadingTools({
       >
         <SearchIcon />
       </IconButton>
-      <Menu
-        label={BOOKMARKS}
-        placement="above-end"
-        items={bookmarkItems(requests, onJump)}
-        trigger={bookmarkTrigger(requests.at(-1)?.id, onJump)}
-      />
     </fieldset>
   );
 }

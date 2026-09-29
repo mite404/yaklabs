@@ -78,7 +78,6 @@
 .reading-tools {
   display: flex;
   align-items: center;
-  gap: 2px;
   min-inline-size: 0; /* a fieldset's default is its content's width */
   margin: 0;
   padding: 2px;
@@ -92,6 +91,7 @@
   align-items: center;
   gap: 2px;
   min-width: 0;
+  margin-inline-end: 2px;
 }
 .reading-search .field {
   width: 200px;
@@ -116,21 +116,50 @@
   min-width: 0;
   padding: 0;
 }
-/* Faded until the pointer is on the thread, the way a lane's menu waits in its title bar: kept
-   in the tab order and the accessibility tree, and shown at once to a keyboard. A touch screen
-   has no hover to reveal it by, so it stays. */
+/* The tools beside Search, open by default: a touch screen has no hover to unfold them by. The
+   2px before Search lives inside the track, so it folds away with them. */
+.reading-more {
+  display: grid;
+  grid-template-columns: 1fr;
+}
+.reading-more > .menu-anchor {
+  min-width: 0;
+  overflow: hidden;
+}
+.reading-more .icon-btn {
+  margin-inline-end: 2px; /* a margin, not padding: padding could not fold below 2px */
+}
+/* The fold clips anything past the tools' edges, the focus ring included, so the bar's rings sit
+   inside their buttons, as an awaiting tile's does; Search matches so the two read alike. */
+.reading-tools .icon-btn:focus-visible {
+  outline-offset: -2px;
+}
+/* With a fine pointer the bar rests as Search alone and unfolds leftward while the pointer is on
+   it (data-unfolded, set from its pointer events so a story's synthetic hover can prove it), a
+   keyboard is in it, or search or the list of requests is open. Focus counts only when the last
+   input was not a pointer (ADR-053): a menu hands focus back to its trigger after a click, which
+   the browser calls focus-visible, and the bar would stay unfolded after the pointer left. The track clips from 0fr to 1fr
+   rather than scaling (pillar 22), over 150ms on the strong ease-out, as a lane's menu fades.
+   Folded, the tools are hidden, so a keyboard skips them until it reaches the bar; visibility
+   waits out the fold so the clip finishes first. */
 @media (hover: hover) and (pointer: fine) {
-  .reading-tools {
-    opacity: 0;
-    transition: opacity 150ms cubic-bezier(0.23, 1, 0.32, 1);
+  .reading-more {
+    grid-template-columns: 0fr;
+    visibility: hidden;
+    transition:
+      grid-template-columns 150ms cubic-bezier(0.23, 1, 0.32, 1),
+      visibility 0s linear 150ms;
   }
-  .thread-panel:hover .reading-tools,
-  .reading-tools:focus-within,
-  .reading-tools[data-open],
-  .reading-tools:has([aria-expanded="true"]) {
-    opacity: 1;
+  .reading-tools:is([data-unfolded], [data-open], :has([aria-expanded="true"])) .reading-more,
+  :root:not([data-input="pointer"]) .reading-tools:has(:focus-visible) .reading-more {
+    grid-template-columns: 1fr;
+    visibility: visible;
+    transition: grid-template-columns 150ms cubic-bezier(0.23, 1, 0.32, 1);
   }
-  .reading-tools:focus-within {
+}
+@media (prefers-reduced-motion: reduce) {
+  .reading-more,
+  .reading-tools .reading-more {
     transition: none;
   }
 }

@@ -30,6 +30,12 @@ function parts(canvasElement: HTMLElement) {
   return { scroller, tools: within(tools) };
 }
 
+// The bookmark, once the pointer on Search has unfolded the bar to show it.
+async function unfold(tools: ReturnType<typeof parts>["tools"]) {
+  await userEvent.hover(tools.getByRole("button", { name: "Search this thread" }));
+  return tools.findByRole("button", { name: "Your requests" });
+}
+
 // Whether the turn with this id glows and sits in the middle of the visible thread, or, when
 // the thread cannot scroll that far (a turn near either end), in full view at that end.
 async function expectLandedOn(scroller: HTMLElement, turnId: string) {
@@ -65,25 +71,54 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 /**
- * Search and request bookmarks float at the right just above the compose box. With a mouse they
- * wait, faded, until the pointer is on the thread; a keyboard finds them at once.
+ * The reading tools float at the right just above the compose box. At rest they are one Search
+ * button; the pointer on it unfolds the bar leftward to show the bookmark too.
  */
 export const Overview: Story = {};
 
 /**
+ * The bar rests as Search alone and unfolds while the pointer is on it, then folds again. Search
+ * never moves: the bookmark opens to its left.
+ */
+export const FoldsToSearch: Story = {
+  play: async ({ canvasElement }) => {
+    const { tools } = parts(canvasElement);
+    const search = tools.getByRole("button", { name: "Search this thread" });
+    await expect(tools.queryByRole("button", { name: "Your requests" })).toBeNull();
+    const before = search.getBoundingClientRect().left;
+
+    await unfold(tools);
+    await expect(search.getBoundingClientRect().left).toBe(before);
+
+    await userEvent.unhover(search);
+    await userEvent.hover(canvasElement.ownerDocument.body);
+    await waitFor(async () => {
+      await expect(tools.queryByRole("button", { name: "Your requests" })).toBeNull();
+    });
+  },
+};
+
+/**
  * The bookmark lists every request the user sent by its first 15 characters and its time; the
- * full request shows on hover. Picking one centers that turn and makes it glow.
+ * full request shows on hover. Picking one centers that turn and makes it glow, and the bar folds
+ * back to Search once the pointer moves on.
  */
 export const JumpToARequest: Story = {
   play: async ({ canvasElement }) => {
     const { scroller, tools } = parts(canvasElement);
-    await userEvent.click(tools.getByRole("button", { name: "Your requests" }));
+    await userEvent.click(await unfold(tools));
     const list = within(document.body).getByRole("menu", { name: "Your requests" });
     const items = within(list).getAllByRole("menuitem");
     await expect(items).toHaveLength(ASKED.length);
     await expect(items[1]).toHaveTextContent("Which day had t…9:04");
     await userEvent.click(items[3]);
     await expectLandedOn(scroller, "ask-3");
+
+    // The list closed under the pointer, so no leave reached the bar; moving on still folds it.
+    await userEvent.hover(scroller);
+    await waitFor(async () => {
+      await expect(tools.queryByRole("button", { name: "Your requests" })).toBeNull();
+    });
   },
 };
 
@@ -95,7 +130,7 @@ export const AltClickForTheLatest: Story = {
     // One session, so the held Alt is still down when the click lands.
     const user = userEvent.setup();
     await user.keyboard("{Alt>}");
-    await user.click(tools.getByRole("button", { name: "Your requests" }));
+    await user.click(await unfold(tools));
     await user.keyboard("{/Alt}");
     await expect(within(document.body).queryByRole("menu")).toBeNull();
     await expectLandedOn(scroller, `ask-${ASKED.length - 1}`);
