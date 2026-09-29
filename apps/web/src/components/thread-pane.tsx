@@ -1,6 +1,5 @@
 import { ChatThreadPanel } from "@yaklabs/catalog";
-import type { ThreadMessage } from "@yaklabs/catalog/thread";
-import type { Runtime, ThreadId, ThreadSummary } from "@yaklabs/runtime";
+import type { Runtime, ThreadSummary } from "@yaklabs/runtime";
 import { useSidebar } from "@yaklabs/ui/components/sidebar";
 import {
   useEffect,
@@ -15,14 +14,7 @@ import { useSession } from "../session";
 import { useSnoozeCard } from "../shell/snooze-card";
 import { ThreadHeaderActions } from "../shell/thread-actions-menu";
 import { QuietButton } from "./quiet-button";
-
-// A thread's turns as the worker hands them over: on their way, here, or refused.
-type Turns =
-  | { kind: "loading" }
-  | { kind: "open"; messages: ThreadMessage[] }
-  | { kind: "failed"; reason: string };
-
-const LOADING: Turns = { kind: "loading" };
+import { LOADING, turnsBefore, type Turns } from "./turns";
 
 // Where the focus rests in a thread, by what it shows: the frame while its turns come, Try
 // again when they cannot (the frame's body, not its title bar's actions), the compose box once
@@ -36,12 +28,15 @@ const REST: Record<Turns["kind"], string> = {
 // What a thread's host listens with to know whether the focus is in it.
 type FocusHandlers = { onFocus: () => void; onBlur: (event: FocusEvent) => void };
 
-// Asks the worker for the thread's turns once per thread, and again on each retry.
-function useTurns(id: ThreadId): [Turns, () => void] {
+// The thread's turns: none at once for a thread the snapshot says holds none, else asked of the
+// worker while they are loading, which a retry goes back to. What a thread starts with is read
+// once, as its pane mounts, so the turns it gains while on screen never send it back to the
+// frame; the pane is keyed by the thread's id, so it never changes threads.
+function useTurns(thread: ThreadSummary): [Turns, () => void] {
   const runtime = useRuntime();
-  const [attempt, setAttempt] = useState(0);
-  const [turns, setTurns] = useState<{ key: string; turns: Turns }>({ key: "", turns: LOADING });
-  const key = `${id}#${attempt}`;
+  const { id } = thread;
+  const [turns, setTurns] = useState(() => turnsBefore(thread)); // → Turns
+  const asking = turns.kind === "loading";
   useEffect(() => {
     let live = true;
     const load = async () => {
@@ -51,17 +46,17 @@ function useTurns(id: ThreadId): [Turns, () => void] {
       } catch (error: unknown) {
         next = { kind: "failed", reason: reasonOf(error) };
       }
-      if (live) setTurns({ key, turns: next });
+      if (live) setTurns(next);
     };
-    void load();
+    if (asking) void load();
     return () => {
       live = false;
     };
-  }, [runtime, id, key]);
+  }, [runtime, id, asking]);
   const retry = () => {
-    setAttempt((n) => n + 1);
+    setTurns(LOADING);
   };
-  return [turns.key === key ? turns.turns : LOADING, retry];
+  return [turns, retry];
 }
 
 // Whether the focus waits in `pane` for somewhere to rest: dropped to the page as the part that
@@ -186,11 +181,13 @@ function barActions(thread: ThreadSummary, trailing: ReactNode, bare: boolean): 
 }
 
 /**
- * One thread in the catalog's panel, its turns loaded from the worker. While they come, and
- * when they cannot, the thread keeps its frame and title bar, with a quiet line or the reason
- * and Try again inside. Focus in the thread stays in it as it changes: from Try again to the
- * frame, and on to Try again again or to the compose box. The title and the opening draft
- * come from the snapshot, so a rename shows everywhere at once.
+ * One thread in the catalog's panel, its turns loaded from the worker; one the snapshot says
+ * holds none opens empty at once, with nothing to wait for. While they come, and when they
+ * cannot, the thread keeps its frame and title bar, with a quiet line or the reason and Try
+ * again inside. Focus in the thread stays in it as it changes: from Try again to the frame, and
+ * on to Try again again or to the compose box. The title and the opening draft come from the
+ * snapshot, so a rename shows everywhere at once. Key it by the thread's id: it reads what it
+ * starts with once, as it mounts.
  * @param leading A control before the title in the title bar, such as a lane's collapse
  * (ADR-134); in the frame too while the turns come.
  * @param trailing A control at the title bar's far end, after the thread's own actions, such as
@@ -217,7 +214,7 @@ export function ThreadPane({
   const runtime = useRuntime();
   const session = useSession();
   const { isMobile } = useSidebar();
-  const [turns, retry] = useTurns(thread.id);
+  const [turns, retry] = useTurns(thread);
   const host = useRef<HTMLDivElement>(null);
   const follow = useFocusFollows(host, turns);
   const snooze = useSnoozeCard(thread);
