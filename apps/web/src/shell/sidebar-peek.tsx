@@ -1,5 +1,6 @@
 import { useSidebar } from "@yaklabs/ui/components/sidebar";
 import {
+  useCallback,
   useEffect,
   useLayoutEffect,
   useReducer,
@@ -14,10 +15,12 @@ import {
   isOut,
   nextPeek,
   peekIntent,
+  putsAway,
   RESTING,
   type PeekAction,
   type PeekIntent,
   type PeekPhase,
+  type PeekState,
 } from "./peek";
 
 // A pointer that hovers: a peek on hover means nothing to a touch screen.
@@ -101,11 +104,21 @@ export function handFocusToToggle(): void {
   document.querySelector<HTMLElement>(TOGGLE)?.focus();
 }
 
-// Closes the peek on Escape; focus in the panel goes to the toggle first, since the panel's rows
-// leave the page with it, while focus on the rail stays where it is.
-function closeOnEscape(intent: PeekIntent): void {
-  handFocusToToggle();
-  intent.close(true);
+// The peek, the peek as last drawn (for the listeners and timers that outlive a render), and
+// the way to step it. A step that puts the panel away (Escape, a visit by a key, the end of a
+// slide back) first hands focus in it to the toggle: an away panel is inert, and focus on a row
+// that turns inert would drop to the page's body, however the row was reached.
+function usePeek() {
+  const [peek, dispatch] = useReducer(nextPeek, RESTING);
+  const latest = useRef(peek);
+  useLayoutEffect(() => {
+    latest.current = peek;
+  }, [peek]);
+  const step = useCallback((action: PeekAction) => {
+    if (putsAway(latest.current, action)) handFocusToToggle();
+    dispatch(action);
+  }, []);
+  return { peek, latest, step };
 }
 
 // Wires the page's pointer, keys and focus to the peek's timing while the panel can peek, and
@@ -116,14 +129,10 @@ function usePeekIntent(
     container,
     rail,
   }: { container: RefObject<HTMLDivElement | null>; rail: RefObject<HTMLDivElement | null> },
-  phase: PeekPhase,
+  latest: RefObject<PeekState>,
   dispatch: Dispatch<PeekAction>,
 ): RefObject<PeekIntent | null> {
-  const current = useRef(phase);
   const intent = useRef<PeekIntent | null>(null);
-  useLayoutEffect(() => {
-    current.current = phase;
-  }, [phase]);
   useEffect(() => {
     const panel = container.current;
     if (!enabled || panel === null) {
@@ -132,17 +141,17 @@ function usePeekIntent(
     }
     const hosts = { panel, rail: rail.current };
     const peek = peekIntent({
-      phase: () => current.current,
+      phase: () => latest.current.phase,
       held: () => isHeld(hosts),
       dispatch,
     });
     intent.current = peek;
-    const unlisten = listen(peek, hosts, () => isOut(current.current));
+    const unlisten = listen(peek, hosts, () => isOut(latest.current.phase));
     return () => {
       unlisten();
       intent.current = null;
     };
-  }, [enabled, container, rail, dispatch]);
+  }, [enabled, container, rail, latest, dispatch]);
   return intent;
 }
 
@@ -159,7 +168,7 @@ function listen(peek: PeekIntent, hosts: PeekHosts, out: () => boolean): () => v
   };
   const onKey = (event: KeyboardEvent) => {
     peek.input(true);
-    if (out() && escapes(event)) closeOnEscape(peek);
+    if (out() && escapes(event)) peek.close(true);
   };
   const onFocusOut = () => {
     setTimeout(peek.release);
@@ -245,7 +254,7 @@ function useClosesOnArrival(intent: RefObject<PeekIntent | null>): void {
  * strip just past the rail, and slides back 250ms after the pointer leaves them all, the rail
  * and the panel alike. A menu either opened, or keyboard focus in the panel (not on the rail,
  * which stays), holds it out; Escape, a visit to a thread and docking the panel close it. A
- * key's close is drawn with no motion.
+ * key's close is drawn with no motion. Focus in the panel moves to the toggle as it goes away.
  * @param rail The rail it slides from.
  */
 export function useSidebarPeek(
@@ -255,11 +264,11 @@ export function useSidebarPeek(
   const { state, isMobile } = useSidebar();
   const hovers = useSyncExternalStore(subscribeHover, canHover, () => false);
   const enabled = state === "collapsed" && !isMobile && hovers;
-  const [peek, dispatch] = useReducer(nextPeek, RESTING);
-  const intent = usePeekIntent(enabled, { container, rail }, peek.phase, dispatch);
-  useSettle(container, peek, dispatch);
+  const { peek, latest, step } = usePeek();
+  const intent = usePeekIntent(enabled, { container, rail }, latest, step);
+  useSettle(container, peek, step);
   useClosesOnArrival(intent);
-  const onTransitionEnd = useLeave(peek.phase, dispatch);
+  const onTransitionEnd = useLeave(peek.phase, step);
   return { ...peek, enabled, onTransitionEnd };
 }
 

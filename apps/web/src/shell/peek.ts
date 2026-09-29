@@ -59,6 +59,16 @@ export function nextPeek(state: PeekState, action: PeekAction): PeekState {
   return action.type === "hide" ? hidden(state, action.instant) : STEPS[action.type](state);
 }
 
+/**
+ * Whether an action puts the panel away behind the rail: a key's close, or the end of the slide
+ * back. Resting puts nothing away, since it follows what stops the peek, such as docking, which
+ * keeps the panel in view.
+ */
+export function putsAway(state: PeekState, action: PeekAction): boolean {
+  if (action.type === "rest" || state.phase === "away") return false;
+  return nextPeek(state, action).phase === "away"; // → true for a key's close or "left"
+}
+
 /** What the host tells the peek's timing. */
 export type PeekIntent = {
   /** The pointer moved; `inZone` says whether it is on a place that peeks. */

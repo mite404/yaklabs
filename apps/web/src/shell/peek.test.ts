@@ -4,6 +4,7 @@ import {
   PEEK_CLOSE_MS,
   PEEK_OPEN_MS,
   peekIntent,
+  putsAway,
   RESTING,
   type PeekAction,
   type PeekPhase,
@@ -56,6 +57,35 @@ describe("nextPeek", () => {
       [RESTING, { type: "settled" }],
     ];
     for (const [state, action] of cases) expect(nextPeek(state, action)).toBe(state);
+  });
+});
+
+describe("putsAway", () => {
+  it("is a key's close from any phase that shows the panel", () => {
+    for (const phase of ["entering", "open", "leaving"] as const) {
+      expect(putsAway(at(phase), { type: "hide", instant: true })).toBe(true);
+    }
+  });
+
+  it("is the end of the slide back", () => {
+    expect(putsAway(at("leaving"), { type: "left" })).toBe(true);
+  });
+
+  it("is not a slide back's start, a show, or a step drawn while away", () => {
+    const cases: [PeekState, PeekAction][] = [
+      [at("open"), { type: "hide", instant: false }],
+      [at("leaving"), { type: "show" }],
+      [at("entering"), { type: "entered" }],
+      [RESTING, { type: "hide", instant: true }],
+      [at("away", true), { type: "settled" }],
+    ];
+    for (const [state, action] of cases) expect(putsAway(state, action)).toBe(false);
+  });
+
+  it("is not a rest, which leaves a docked panel in view", () => {
+    for (const phase of ["entering", "open", "leaving"] as const) {
+      expect(putsAway(at(phase), { type: "rest" })).toBe(false);
+    }
   });
 });
 
