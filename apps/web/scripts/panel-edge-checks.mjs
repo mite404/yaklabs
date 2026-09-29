@@ -4,7 +4,7 @@
 // oxlint-disable no-await-in-loop -- one pointer drives one page, so each step waits for the last
 import { BASE } from "./lever.mjs";
 import { throughPeek, WIDTHS } from "./panel-frame-checks.mjs";
-import { openDesk } from "./sidebar-checks.mjs";
+import { openDesk, PANEL_EASE, PIN_MS } from "./sidebar-checks.mjs";
 
 const THEMES = ["light", "dark"];
 // The tabs start this far past the docked panel's edge, and right after the toggle with it
@@ -207,6 +207,19 @@ const missesOf = (frames) =>
 const midWay = (frames, rail) =>
   frames.filter((f) => f.main > rail && f.main < rail + DEFAULT_PX).length;
 
+// Runs in the page: the pin's running transitions (the gap, the panel and the title bar's lead),
+// as property, duration and easing.
+function pinTimings() {
+  const moving = new Set(["width", "left", "min-width"]);
+  return document
+    .getAnimations()
+    .filter((a) => moving.has(a.transitionProperty))
+    .map((a) => {
+      const { duration, easing } = a.effect.getTiming();
+      return [a.transitionProperty, duration, easing].join(" ");
+    });
+}
+
 // P31 in one theme: a pointer's unpin of the docked panel and its pin, each a click with no rest
 // (the pointer stays on the toggle between them, which keeps the peek from starting): once
 // held at fixed instants, then sampled on every frame as it plays.
@@ -229,10 +242,13 @@ async function pinBehindRail(browser, theme) {
   for (const way of ["unpin", "pin"]) {
     const sampled = sampleEdges(page, PIN_SAMPLE_MS);
     await toggle.click();
+    const timings = await page.evaluate(pinTimings);
     const frames = await sampled;
-    ok &&= missesOf(frames) === 0;
+    const onClock =
+      timings.length >= 3 && timings.every((t) => t.endsWith(`${PIN_MS} ${PANEL_EASE}`));
+    ok &&= missesOf(frames) === 0 && onClock;
     notes.push(
-      `${theme} ${way} played: ${missesOf(frames)} of ${frames.length} frames off, ${midWay(frames, rail)} mid-way`,
+      `${theme} ${way} played: ${missesOf(frames)} of ${frames.length} frames off, ${midWay(frames, rail)} mid-way, [${timings.join(", ")}]`,
     );
     await page.waitForTimeout(300);
   }

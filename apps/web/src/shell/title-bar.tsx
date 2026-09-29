@@ -54,7 +54,7 @@ function SidebarToggle() {
 // it as it is dragged, as ChatGPT's desktop app does: both read `--sidebar-width`. Closed, the
 // rail alone is narrower than the lights and the toggle, so the tabs start right after the
 // toggle, and a peek over the workspace leaves them there. Docking or closing eases this width
-// over the panel's own 200ms, on the same linear curve, so the two edges move as one, and like
+// over the panel's own 250ms, on the same curve (index.css), so the two edges move as one, and like
 // the panel it moves at once for a key, a drag or reduced motion. On a phone it stands aside and
 // the bar's grid places the toggle itself (ADR-116).
 function Lead() {
@@ -63,7 +63,7 @@ function Lead() {
     <div
       data-slot="title-lead"
       data-state={state}
-      className="flex shrink-0 items-center gap-2 transition-[min-width] duration-200 ease-linear group-data-instant/sidebar-wrapper:transition-none motion-reduce:transition-none max-md:contents md:min-w-[calc(var(--rail-width)+var(--sidebar-width)-4px)] md:data-[state=collapsed]:min-w-[calc(var(--rail-width)-4px)]"
+      className="flex shrink-0 items-center gap-2 transition-[min-width] duration-(--panel-pin) ease-(--panel-ease) group-data-instant/sidebar-wrapper:transition-none motion-reduce:transition-none max-md:contents md:min-w-[calc(var(--rail-width)+var(--sidebar-width)-4px)] md:data-[state=collapsed]:min-w-[calc(var(--rail-width)-4px)]"
     >
       <TrafficLights />
       <SidebarToggle />

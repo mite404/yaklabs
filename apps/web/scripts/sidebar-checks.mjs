@@ -5,10 +5,15 @@ import { BASE, shotPath } from "./lever.mjs";
 
 const DEMO = `${BASE}/?scenario=demo`;
 const DESK = { width: 1440, height: 900 };
-// The peek's slide, out and back alike, and its curve (index.css), and its timing (peek.ts).
+// The panel's motion (index.css) and the peek's timing (peek.ts).
 /** The peek's slide, out and back alike, in ms (index.css). */
 export const SLIDE_MS = 220;
-const DRAWER = "cubic-bezier(0.32, 0.72, 0, 1)";
+/** The pin and the unpin by the toggle, in ms (index.css). */
+export const PIN_MS = 250;
+/** The one curve the peek's slide and the pin share (index.css, Ethan's sketch). */
+export const PANEL_EASE = "cubic-bezier(0.34, 1, 1, 1)";
+// The last share of the panel's travel back, where the tail fade may dim it as it lands.
+const LANDING_SHARE = 0.05;
 /** How long the pointer rests before the peek opens, in ms (peek.ts). */
 export const OPEN_MS = 80;
 /** How long the peek waits after the pointer leaves before it closes, in ms (peek.ts). */
@@ -291,7 +296,7 @@ async function peekByPointer(page) {
   const hot = await phaseOf(page);
   const ok =
     passed === "away" &&
-    slide.includes(`transform ${SLIDE_MS} ${DRAWER}`) &&
+    slide.includes(`transform ${SLIDE_MS} ${PANEL_EASE}`) &&
     before.tab === during.tab &&
     before.edge === during.edge &&
     panel.width >= 208 &&
@@ -522,10 +527,11 @@ export const sidebarChecks = {
     return { ok, detail: notes.join("; ") };
   },
 
-  // The peek slides back as it slides out: the same 220ms on the drawer curve both ways, seeked
+  // The peek slides back as it slides out: the same 220ms on the panel's curve both ways, seeked
   // to the same instants (the back's edge, past the rail's, mirrors the out's within 1% of the
   // panel's width). The stage clips the panel at the rail's edge, so the way back stays at 0.9 or
-  // more while its edge is more than 2px from home, and fades out only as it lands. Notes the
+  // more until its last 5% of travel (Ethan's curve lands gently, so the tail fade covers its
+  // last few pixels), and fades out only as it lands. Notes the
   // share of the 40px past the rail that the landing frame would change at full strength, the
   // tail fade's job (design pillars, rule 26).
   async P24(browser) {
@@ -541,13 +547,13 @@ export const sidebarChecks = {
     await page.waitForTimeout(SLIDE_MS + 200);
     const rested = await phaseOf(page);
     await context.close();
-    const slide = `transform ${SLIDE_MS} 0 ${DRAWER}`;
+    const slide = `transform ${SLIDE_MS} 0 ${PANEL_EASE}`;
     const miss = Math.max(
       ...out.frames.map((f, i) =>
         Math.abs(f.edge / out.width - (1 - back.frames[i].edge / back.width)),
       ),
     );
-    const away = back.frames.filter((f) => f.edge > 2);
+    const away = back.frames.filter((f) => f.edge > back.width * LANDING_SHARE);
     const dimmest = Math.min(...away.map((f) => f.opacity));
     const landed = back.frames.at(-1).opacity;
     const ok =
@@ -568,7 +574,7 @@ export const sidebarChecks = {
     }
     return {
       ok,
-      detail: `out [${out.timings.join(", ")}]; back [${back.timings.join(", ")}]; curve miss ${round(miss * 100)}%; back dimmest ${round(dimmest)} while more than 2px out, ${round(landed)} as it lands, then ${rested}; travel seen out ${round(seenShare(out.frames))}, back ${round(seenShare(back.frames))}; back ${trace}; the landing frame against rest, in the 40px past the rail: ${tails.join(", ")}`,
+      detail: `out [${out.timings.join(", ")}]; back [${back.timings.join(", ")}]; curve miss ${round(miss * 100)}%; back dimmest ${round(dimmest)} before its last ${LANDING_SHARE * 100}% of travel, ${round(landed)} as it lands, then ${rested}; travel seen out ${round(seenShare(out.frames))}, back ${round(seenShare(back.frames))}; back ${trace}; the landing frame against rest, in the 40px past the rail: ${tails.join(", ")}`,
     };
   },
 };

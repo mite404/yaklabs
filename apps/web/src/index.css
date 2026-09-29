@@ -82,10 +82,28 @@
   }
 }
 
+/* The projects panel's motion (ADR-139, design pillars rule 26): one curve for the peek and the
+   pin, fast out of the gate and easing into place (Ethan's sketch, cubic-bezier(0.34, 1.11, 1,
+   1), its first handle held at 1 so the panel never passes its mark). The peek slides in 220ms,
+   the pin by the toggle in 250ms (Ethan). */
+:root {
+  --panel-ease: cubic-bezier(0.34, 1, 1, 1);
+  --panel-peek: 220ms;
+  --panel-pin: 250ms;
+}
+/* The pin and the unpin by the toggle: the gap that pushes the workspace and the panel sliding
+   behind the rail move on one clock with the title bar's lead that carries the tabs
+   (title-bar.tsx), so their edges meet on every frame. Only the duration and the curve: a key, a
+   drag and reduced motion still turn the transition off (transition-property, the utilities'). */
+[data-slot="sidebar-gap"],
+[data-slot="sidebar-container"] {
+  transition-duration: var(--panel-pin);
+  transition-timing-function: var(--panel-ease);
+}
 /* The projects panel's peek (sidebar-peek.tsx, ADR-139): closed, the panel slides out over the
    workspace from behind the rail's edge, the shell's own paper with a hairline at its right
-   edge and the softest shadow past it, and slides back the same way: both over 220ms on the iOS
-   drawer curve (Ethan), one `--peek-slide`, so the two cannot drift apart. Transitions, so a
+   edge and the softest shadow past it, and slides back the same way: both over 220ms on the
+   panel's curve (Ethan), one `--peek-slide`, so the two cannot drift apart. Transitions, so a
    pointer that returns mid-way turns it back from where it is.
    The stage's overflow clip is the gate at the rail's edge (design pillars, rule 22): the panel
    passes behind it and never covers the rail, so the fade hides no motion. Out, it fades in over
@@ -99,7 +117,7 @@
    Outside every layer on purpose: the container's own `transition-[left,right,width]` is a
    utility, which a layered rule cannot outrank. */
 [data-slot="sidebar"][data-peek] > [data-slot="sidebar-container"] {
-  --peek-slide: transform 220ms cubic-bezier(0.32, 0.72, 0, 1);
+  --peek-slide: transform var(--panel-peek) var(--panel-ease);
   z-index: 20;
   box-shadow:
     1px 0 0 var(--hairline),
