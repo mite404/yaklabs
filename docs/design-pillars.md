@@ -125,8 +125,8 @@ hover starts to feel sluggish.
 ### 27. A place not built yet keeps its name, and says so
 
 A place in the rail that the web build does not have yet stays in the rail, named in its pill and
-in the open sidebar and reached by keyboard, but it opens nothing and says "Coming soon", as the
-splash switch's Bonsai does (ADR-094, amended).
+in the phone drawer's row and reached by keyboard, but it opens nothing and says "Coming soon", as
+the splash switch's Bonsai does (ADR-094, amended; ADR-139).
 It is drawn in faint ink, never at reduced opacity: the 45% of a disabled button (rule 8) takes a
 rail glyph to 2.0:1 on paper, under rule 16's 3:1.
 It has no hover fill and no step to ink, since there is nothing to press, so the fill still means
@@ -138,7 +138,7 @@ The rail checks' P23 and P25 measure all of this in both themes.
 | Glyph and name | `--faint-ink`, an archived row's: 5.17:1 on paper, 5.46:1 dark | derived |
 | Hover | none: no fill, no step to ink, the arrow cursor | derived |
 | Pill | name, then "· Coming soon", `--on-ink` 72% over `--ink` (rule 4): 7.6:1, 6.9:1 | derived |
-| Open row | "Soon" after the name, 12px: all a 208px sidebar fits beside "Automations" | derived |
+| Drawer row | "Soon" after the name, 12px: all a 208px sidebar fit beside "Automations" | derived |
 | Screen reader | a button, `aria-disabled`, described as "Coming soon" | derived |
 
 ## Data visualisation
@@ -243,6 +243,7 @@ behind each rule below is told in `docs/FOR_ETHAN.md`.
 | Sidebar peek slide, out and back (rule 26) | 220ms | `cubic-bezier(0.32, 0.72, 0, 1)` | Ethan |
 | Sidebar peek fade in, at the slide's start | 120ms | `cubic-bezier(0.23, 1, 0.32, 1)` | derived |
 | Sidebar peek fade back, to the slide's end | 120ms | `cubic-bezier(0.68, 0, 0.77, 0)` | derived |
+| Sidebar pin and unpin (the panel behind the rail, workspace and tabs in step) | 200ms; none under reduced motion (rule 24) | `linear` | css (shadcn's sidebar) |
 
 ### 18. A working indicator reads as steady work, never an alert
 
@@ -312,21 +313,23 @@ Timing claims ("half clipped as the branch is half faded", "no two squares share
 browser test that seeks the animation and measures it; a screenshot of one good frame proves
 little, since each frame of a broken loop can look fine on its own.
 
-### 26. A panel slides back the way it slid out, and the window's edge clips it
+### 26. A panel slides back the way it slid out, and the rail's edge clips it
 
-The sidebar's peek slides out from the window's edge and back to it on one curve and one
-duration, 220ms of `cubic-bezier(0.32, 0.72, 0, 1)` both ways (Ethan).
-The window's frame clips the panel where it slides off (`overflow: hidden`), the way rule 22's
-shapes pass their gate, so the fade hides no motion (derived).
+The projects panel's peek slides out from behind the rail's edge and back behind it on one curve
+and one duration, 220ms of `cubic-bezier(0.32, 0.72, 0, 1)` both ways (Ethan).
+The stage beside the rail clips the panel at the rail's edge (`overflow: clip`, never `hidden`,
+so no focus or scroll into view can scroll it), the way rule 22's shapes pass their gate: the
+panel never covers the rail's places, and the fade hides no motion (derived, ADR-139).
 Out, it fades in over the slide's first 120ms; back, it keeps full strength and fades over the
 slide's last 120ms, starting 100ms in, on the fade-in's curve played backwards (derived): still
 0.97 when its edge is 3px from home.
-That tail fade takes away only the hairline and shadow left at the window's edge, which would
-otherwise vanish in one frame as the rail takes the panel's place: 19% of the rail's pixels in
-the light theme, 13% in the dark.
+That tail fade takes away only the soft shadow and the hairline across the workspace's corner,
+which would otherwise vanish in one frame as the panel lands: 2.5% of the 40px strip past the
+rail's edge in either theme, the landing frame at full strength against rest (derived).
 The first way back faded on the slide's own front-loaded curve over 160ms: at 0.32 after 33ms,
 with its edge still 83px out, it read as no motion at all.
-The sidebar checks' P24 seeks both directions to the same instants and holds them to this.
+The sidebar checks' P24 seeks both directions to the same instants, holds them to this and
+measures that share; P29 and P30 hold the rail still, and its edge its own, at every such frame.
 
 ## Open questions
 
