@@ -8,7 +8,7 @@ Sources are marked: **css** (declared in yaklabs.ai's stylesheet), **derived** (
 No brand colour is sampled from screenshots or recordings: the screen used had a blue-light filter,
 and filters and colour profiles shift pixels (ADR-051).
 Decisions behind these rules live in `docs/adr/adr.md` (ADR-033 to ADR-035); tokens live in
-`catalog-lab/src/tokens.css`.
+`packages/catalog/src/tokens.css`.
 
 ## Colour
 
