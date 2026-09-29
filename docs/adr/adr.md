@@ -1723,3 +1723,31 @@ instant. Its edge takes the canvas divider's handle (drag, arrows, Home and End,
 reset, the width kept as `kay.sidebar-width`), and the first tab starts 4px past that edge from the
 same width variable, as in the ChatGPT desktop app, so it follows a drag on every frame. Rail
 icons name themselves in an ink pill (13:1 against the shell).
+
+## ADR-139 - A thread's reading tools float over its turns
+
+2026-09-29 - Accepted (Ethan: "components in the thread section of Storybook", in every main
+thread and the scripted demo). Builds on ADR-022's jump-to-centre and ADR-138.
+Every thread with turns carries a small bar over the top-right corner of its turns: Search this
+thread, and Your requests. Search matches a turn's own words, not the cards it carries, ignoring
+case; Enter steps to the next match and Shift+Enter back, both wrapping, and the count reads
+"4 matches" until one is showing, then "2 of 4". Escape on any of its controls closes it and
+hands the focus back to its button. Your requests lists every message the user sent, oldest
+first, by its first 15 characters (code points, so an emoji is never split) and its time, the full
+text on hover; an Alt-click (Option on a Mac) on the button skips the list and goes to the latest
+request. Every jump is the recap's jump (ADR-022): the turn lands centred and glows, and only the
+last turn jumped to glows. Under reduced motion the glow holds its first frame until it clears.
+The bar lives in the catalog (`ReadingTools.tsx`, `threadReading.ts`), mounted by the chat
+thread panel itself, so the web app's main pane, its lanes and the Storybook all get it with no
+wiring in the host. It is built from the catalog's own primitives (IconButton, Menu, `.field`),
+not shadcn: the catalog and its Storybook have no Tailwind, and bringing them in is a separate
+decision. The bar is paper with a hairline and the menu's 8px corners, 20px in from the edge, and
+fades in with the pointer on the thread over 150ms on the strong ease-out, like a lane's menu;
+a keyboard and a touch screen see it at once. It stands over the turns rather than in a title
+bar, since a main thread has none (ADR-138); on a main pane that corner can cover the end of a
+request bubble scrolled to the top while the bar shows.
+The turns now take a tab stop (`region "Messages"`) once there are any, with the focus ring
+inside the panel's clip, so a keyboard can scroll a thread of plain words; axe had flagged it on
+the first text-only fixture. The Menu primitive gained an item `id` (two requests can share a
+label), a quiet `detail` at the right, and a height capped at the viewport, past which it
+scrolls. The unmounted draft in `apps/web/src/demo/` is gone.
