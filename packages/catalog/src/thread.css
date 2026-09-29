@@ -196,6 +196,15 @@
   gap: 12px;
 }
 
+/* A reply's iterator running with nothing to show yet: the working glyph and a quiet line,
+   in the thread's muted ink so it reads as a wait, not a turn with something to say. */
+.turn-pending {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--soft-ink);
+}
+
 /* The dock stacks the recap above the compose box without affecting the compose
    box's position: the recap is absolutely placed and overlays the conversation. */
 .thread-dock {

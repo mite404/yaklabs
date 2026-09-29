@@ -433,6 +433,42 @@ export const ReplyFails: Story = {
   },
 };
 
+// An agent whose iterator never yields: the wait stays on screen instead of ending on its own,
+// so the indicator can be seen rather than caught mid-blink. It ends only if the panel unmounts.
+const thinkingAgent: Agent = {
+  respond(_event, signal) {
+    return {
+      [Symbol.asyncIterator]() {
+        return {
+          next: () =>
+            new Promise<IteratorResult<string>>((resolve) => {
+              signal.addEventListener(
+                "abort",
+                () => {
+                  resolve({ value: "", done: true });
+                },
+                {
+                  once: true,
+                },
+              );
+            }),
+        };
+      },
+    };
+  },
+};
+
+/** A reply's iterator running with nothing to show yet (ADR-041): the working glyph and a quiet,
+ *  factual line - never a guessed tool name, since the real runtime has no tool events. */
+export const ReplyThinking: Story = {
+  args: { thread: threads.trend, agent: thinkingAgent },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.type(canvas.getByRole("textbox", { name: "Message" }), "And next week?{Enter}");
+    await expect(await canvas.findByText("Thinking…")).toBeVisible();
+  },
+};
+
 // Highlights the first agent paragraph and rests the pointer on it until the thread shows the
 // open hand.
 async function readyHighlight(canvasElement: HTMLElement) {
