@@ -13,8 +13,8 @@ type AgentTreeProps = {
 
 /**
  * Kay's three-pill glyph as an "agent working" indicator: green runs down the branches, left
- * then right, and the base holds solid for a beat before the next climb starts at the top.
- * Holds still under reduced motion.
+ * then right, the base holds solid for a beat, then slides down out of view as the next climb
+ * starts at the top. Holds still under reduced motion.
  */
 export function AgentTree({ duration = 1500, label = "Agent working" }: AgentTreeProps) {
   const style: StyleWithVars = { "--working-duration": `${duration}ms` }; // number → "1500ms"
