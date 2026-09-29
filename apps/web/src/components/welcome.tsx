@@ -5,7 +5,7 @@ import { Button } from "@yaklabs/ui/components/button";
 import { FileText, Folder, Globe, Plus, Terminal } from "lucide-react";
 import { env } from "../env";
 import { useShell } from "../shell/model";
-import { KayMark } from "../shell/sidebar";
+import { KayMark } from "../shell/rail-places";
 import type { PaneKind } from "../shell/state";
 import { WelcomeArt } from "./splash";
 import { SplashSwitch } from "./splash-switch";
