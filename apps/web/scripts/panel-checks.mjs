@@ -4,6 +4,7 @@
 import { collect } from "./lever.mjs";
 import { panelEdgeChecks } from "./panel-edge-checks.mjs";
 import { panelFrameChecks } from "./panel-frame-checks.mjs";
+import { panelReachChecks } from "./panel-reach-checks.mjs";
 import { placeOf, RAIL_PLACES } from "./rail-places.mjs";
 import { CLOSE_MS, openDesk, peek, phaseOf, SLIDE_MS } from "./sidebar-checks.mjs";
 
@@ -151,7 +152,13 @@ const focusChecks = {
 
 /**
  * The workspace lever's checks of the projects panel beside the rail, by id: where focus goes,
- * how the rail holds (panel-frame-checks.mjs) and where the panel sits (panel-edge-checks.mjs).
+ * how the rail holds (panel-frame-checks.mjs), where the panel sits (panel-edge-checks.mjs)
+ * and what reaches it (panel-reach-checks.mjs).
  * @throws {Error} When two of them name a check with the same id.
  */
-export const panelChecks = collect(focusChecks, panelFrameChecks, panelEdgeChecks);
+export const panelChecks = collect(
+  focusChecks,
+  panelFrameChecks,
+  panelEdgeChecks,
+  panelReachChecks,
+);
