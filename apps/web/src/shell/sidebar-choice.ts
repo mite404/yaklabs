@@ -5,7 +5,7 @@
 import { cssVars } from "@yaklabs/ui/lib/utils";
 import { useState, type CSSProperties } from "react";
 import type { SidebarWidth } from "./sidebar";
-import { handFocusToToggle } from "./sidebar-peek";
+import { handFocusToToggle } from "./peek-page";
 import { parseStoredWidth, SIDEBAR_DEFAULT_PX, widthValue } from "./sidebar-width";
 
 // The visitor's own choice of an open or a collapsed sidebar.

@@ -2,6 +2,7 @@
 // keyboard focus goes as the panel closes or peeks away, and what focus holds a peek.
 // oxlint-disable no-await-in-loop -- one keyboard drives one page, so each step waits for the last
 import { collect } from "./lever.mjs";
+import { panelDividerChecks } from "./panel-divider-checks.mjs";
 import { panelEdgeChecks } from "./panel-edge-checks.mjs";
 import { panelFrameChecks } from "./panel-frame-checks.mjs";
 import { panelReachChecks } from "./panel-reach-checks.mjs";
@@ -242,13 +243,15 @@ const focusChecks = {
 
 /**
  * The workspace lever's checks of the projects panel beside the rail, by id: where focus goes,
- * how the rail holds (panel-frame-checks.mjs), where the panel sits (panel-edge-checks.mjs)
- * and what reaches it (panel-reach-checks.mjs).
+ * how the rail holds (panel-frame-checks.mjs), where the panel sits (panel-edge-checks.mjs),
+ * the line that parts it from the rail (panel-divider-checks.mjs) and what reaches it
+ * (panel-reach-checks.mjs).
  * @throws {Error} When two of them name a check with the same id.
  */
 export const panelChecks = collect(
   focusChecks,
   panelFrameChecks,
   panelEdgeChecks,
+  panelDividerChecks,
   panelReachChecks,
 );

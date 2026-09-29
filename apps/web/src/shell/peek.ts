@@ -85,6 +85,14 @@ export type PeekIntent = {
   dispose: () => void;
 };
 
+// What the peek's timing reads from its host, and where its actions go.
+type PeekHost = {
+  phase: () => PeekPhase;
+  held: () => boolean;
+  dispatch: (action: PeekAction) => void;
+  still?: () => boolean;
+};
+
 // One pending timer at a time: starting another replaces it.
 function oneTimer() {
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -109,17 +117,7 @@ function oneTimer() {
  * @param still Whether motion is reduced: every close is then drawn with no motion, as a key's
  * is, since there is no slide back to wait for (design pillars, rule 24).
  */
-export function peekIntent({
-  phase,
-  held,
-  dispatch,
-  still = () => false,
-}: {
-  phase: () => PeekPhase;
-  held: () => boolean;
-  dispatch: (action: PeekAction) => void;
-  still?: () => boolean;
-}): PeekIntent {
+export function peekIntent({ phase, held, dispatch, still = () => false }: PeekHost): PeekIntent {
   let hovered: boolean | null = null; // → unknown until the pointer first moves
   let suppressed = true;
   let keyboard = false;

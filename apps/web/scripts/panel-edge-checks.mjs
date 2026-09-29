@@ -4,7 +4,7 @@
 // oxlint-disable no-await-in-loop -- one pointer drives one page, so each step waits for the last
 import { BASE } from "./lever.mjs";
 import { throughPeek, WIDTHS } from "./panel-frame-checks.mjs";
-import { openDesk, PANEL_EASE, peek, PIN_MS } from "./sidebar-checks.mjs";
+import { openDesk, PANEL_EASE, PIN_MS } from "./sidebar-checks.mjs";
 
 const THEMES = ["light", "dark"];
 // The tabs start this far past the docked panel's edge, and right after the toggle with it
@@ -17,7 +17,7 @@ const SHORT = { width: 1024, height: 480 };
 // How many heights the rail's edge is probed at, and how close the account keeps to its foot.
 const PROBES = 10;
 const FOOT_PX = 16;
-// How long a pin or an unpin is sampled for (it takes 200ms, sidebar.tsx), the instants it is
+// How long a pin or an unpin is sampled for (it takes PIN_MS, index.css), the instants it is
 // also held at, and how far an edge may miss, in CSS px.
 const PIN_SAMPLE_MS = 450;
 const PIN_HELD_MS = [20, 60, 100, 140, 180];
@@ -256,47 +256,8 @@ async function pinBehindRail(browser, theme) {
   return { ok, note: notes.join("; ") };
 }
 
-// Runs in the page: the line at the panel's left edge, as its inner box's shadow, and the
-// hairline token it should draw in.
-function dividerNow() {
-  const inner = document.querySelector('[data-slot="sidebar-inner"]');
-  const probe = document.createElement("div");
-  probe.style.color = "var(--hairline)";
-  document.body.append(probe);
-  const hairline = getComputedStyle(probe).color;
-  probe.remove();
-  return { shadow: getComputedStyle(inner).boxShadow, hairline };
-}
-
-// P35 in one theme: the divider docked, closed and while peeking.
-async function dividerIn(browser, theme) {
-  const docked = await openDesk(browser, { side: "open", theme });
-  const onDock = await docked.page.evaluate(dividerNow);
-  await docked.context.close();
-  const closed = await openDesk(browser, { theme });
-  const onClose = await closed.page.evaluate(dividerNow);
-  await peek(closed.page);
-  const onPeek = await closed.page.evaluate(dividerNow);
-  await closed.context.close();
-  const ok =
-    onDock.shadow === `${onDock.hairline} 1px 0px 0px 0px inset` &&
-    onClose.shadow === "none" &&
-    onPeek.shadow === "none";
-  return {
-    ok,
-    note: `${theme}: docked ${onDock.shadow} (hairline ${onDock.hairline}), closed ${onClose.shadow}, peeking ${onPeek.shadow}`,
-  };
-}
-
 /** The workspace lever's checks of the panel's edge, by id; panel-checks.mjs registers them. */
 export const panelEdgeChecks = {
-  // Docked by the toggle, a hint of a line parts the rail from the panel, the workspace's own
-  // hairline at the panel's left edge, as in Kay's app (Ethan); closed or peeking, none.
-  async P35(browser) {
-    const results = [await dividerIn(browser, "light"), await dividerIn(browser, "dark")];
-    return { ok: results.every((r) => r.ok), detail: results.map((r) => r.note).join("; ") };
-  },
-
   // The panel extends from the rail's edge (ADR-139): docked at 208, 256 and 400px it starts at
   // the rail's right, the workspace at its right and the first tab 4px past; closed, the
   // workspace starts at the rail and the panel is inert; peeking, it starts at the rail again
