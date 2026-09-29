@@ -9,17 +9,19 @@
 //   node apps/web/scripts/workspace-check.mjs [--base URL] [--storybook URL] [--only P1,P4] [--out dir]
 import { canvasChecks } from "./canvas-checks.mjs";
 import { laneCollapseChecks } from "./lane-collapse-checks.mjs";
-import { run } from "./lever.mjs";
+import { collect, run } from "./lever.mjs";
 import { shellChecks } from "./shell-checks.mjs";
 import { sidebarChecks } from "./sidebar-checks.mjs";
 import { welcomeChecks } from "./welcome-checks.mjs";
 import { welcomeFrameChecks } from "./welcome-frame-checks.mjs";
 
-await run({
-  ...canvasChecks,
-  ...shellChecks,
-  ...laneCollapseChecks,
-  ...welcomeChecks,
-  ...welcomeFrameChecks,
-  ...sidebarChecks,
-});
+await run(
+  collect(
+    canvasChecks,
+    shellChecks,
+    laneCollapseChecks,
+    welcomeChecks,
+    welcomeFrameChecks,
+    sidebarChecks,
+  ),
+);
