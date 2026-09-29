@@ -102,6 +102,17 @@ const intent = () =>
     },
   });
 
+// The same timing with motion reduced.
+const stillIntent = () =>
+  peekIntent({
+    phase: () => phase,
+    held: () => held,
+    dispatch: (action) => {
+      actions.push(action);
+    },
+    still: () => true,
+  });
+
 beforeEach(() => {
   vi.useFakeTimers();
   phase = "away";
@@ -110,6 +121,25 @@ beforeEach(() => {
 });
 afterEach(() => {
   vi.useRealTimers();
+});
+
+describe("peekIntent, under reduced motion", () => {
+  it("closes with no motion once the pointer has been away", () => {
+    const peek = stillIntent();
+    phase = "open";
+    peek.point(true);
+    peek.point(false);
+    vi.advanceTimersByTime(PEEK_CLOSE_MS);
+    expect(actions).toEqual([{ type: "hide", instant: true }]);
+  });
+
+  it("closes with no motion on a visit made by the pointer", () => {
+    const peek = stillIntent();
+    phase = "open";
+    peek.input(false);
+    peek.arrive();
+    expect(actions).toEqual([{ type: "hide", instant: true }]);
+  });
 });
 
 describe("peekIntent, opening", () => {

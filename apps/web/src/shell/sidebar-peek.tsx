@@ -25,6 +25,8 @@ import {
 
 // A pointer that hovers: a peek on hover means nothing to a touch screen.
 const FINE_HOVER = "(hover: hover) and (pointer: fine)";
+// Reduced motion: the peek comes and goes with no slide and no fade (index.css).
+const REDUCED_MOTION = "(prefers-reduced-motion: reduce)";
 // A slide back (220ms, index.css) that never reports its end, a transition cut short, still
 // settles by then.
 const LEAVE_FALLBACK_MS = 400;
@@ -144,6 +146,7 @@ function usePeekIntent(
       phase: () => latest.current.phase,
       held: () => isHeld(hosts),
       dispatch,
+      still: () => window.matchMedia(REDUCED_MOTION).matches,
     });
     intent.current = peek;
     const unlisten = listen(peek, hosts, () => isOut(latest.current.phase));

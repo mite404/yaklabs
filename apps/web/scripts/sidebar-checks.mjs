@@ -409,9 +409,9 @@ export const sidebarChecks = {
     return { ok: results.every((r) => r.ok), detail: results.map((r) => r.note).join("; ") };
   },
 
-  // No motion where motion is not wanted: reduced motion peeks by a fade alone, a key's pin or
-  // unpin (Enter on the toggle, Ctrl+B) moves nothing, and under reduced motion neither does a
-  // pointer's.
+  // No motion where motion is not wanted: under reduced motion the peek neither slides nor fades
+  // and goes the moment its grace ends, a key's pin or unpin (Enter on the toggle, Ctrl+B) moves
+  // nothing, and under reduced motion neither does a pointer's.
   async P20(browser) {
     const reduced = await openDesk(browser, { motion: "reduce" });
     await reduced.page.mouse.move(900, 500);
@@ -420,6 +420,9 @@ export const sidebarChecks = {
       () => document.querySelector('[data-slot="sidebar"]').dataset.peek === "open",
     );
     const fade = await transitions(reduced.page);
+    await reduced.page.mouse.move(900, 500, { steps: 3 });
+    await reduced.page.waitForTimeout(CLOSE_MS + 100);
+    const gone = await phaseOf(reduced.page);
     await reduced.context.close();
     const keys = await openDesk(browser, { side: "open" });
     await keys.page.locator(TOGGLE).focus();
@@ -436,10 +439,14 @@ export const sidebarChecks = {
       clicks.push(await still.page.evaluate(pinTransitions));
     }
     await still.context.close();
-    const fadeOnly = fade.length > 0 && fade.every((each) => each.startsWith("opacity"));
     return {
-      ok: fadeOnly && enter === 0 && shortcut === 0 && clicks.every((n) => n === 0),
-      detail: `reduced motion [${fade.join(", ")}]; width, left and min-width transitions after Enter ${enter}, after Ctrl+B ${shortcut}, after a click to unpin and to pin under reduced motion ${clicks.join(" and ")}`,
+      ok:
+        fade.length === 0 &&
+        gone === "away" &&
+        enter === 0 &&
+        shortcut === 0 &&
+        clicks.every((n) => n === 0),
+      detail: `reduced motion peek: transitions [${fade.join(", ")}], ${gone} ${CLOSE_MS + 100}ms after the pointer left; width, left and min-width transitions after Enter ${enter}, after Ctrl+B ${shortcut}, after a click to unpin and to pin under reduced motion ${clicks.join(" and ")}`,
     };
   },
 

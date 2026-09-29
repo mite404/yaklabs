@@ -106,15 +106,19 @@ function oneTimer() {
  * `PEEK_CLOSE_MS`, unless `held` (focus or a menu inside it), and at once if it comes back. A
  * pin, an unpin or a close waits for the pointer to leave before it can peek again, so the
  * toggle a pointer has just clicked never peeks under it.
+ * @param still Whether motion is reduced: every close is then drawn with no motion, as a key's
+ * is, since there is no slide back to wait for (design pillars, rule 24).
  */
 export function peekIntent({
   phase,
   held,
   dispatch,
+  still = () => false,
 }: {
   phase: () => PeekPhase;
   held: () => boolean;
   dispatch: (action: PeekAction) => void;
+  still?: () => boolean;
 }): PeekIntent {
   let hovered: boolean | null = null; // → unknown until the pointer first moves
   let suppressed = true;
@@ -125,7 +129,7 @@ export function peekIntent({
   };
   const closeSoon = () => {
     timer.start(PEEK_CLOSE_MS, () => {
-      if (!held()) dispatch({ type: "hide", instant: false });
+      if (!held()) dispatch({ type: "hide", instant: still() });
     });
   };
   const close = (instant: boolean) => {
@@ -152,7 +156,7 @@ export function peekIntent({
     },
     close,
     arrive() {
-      if (isOut(phase())) close(keyboard);
+      if (isOut(phase())) close(keyboard || still());
     },
     dispose: timer.stop,
   };
