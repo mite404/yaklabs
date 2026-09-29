@@ -13,6 +13,11 @@ import { ProjectName, ThreadMenu } from "./thread-menu";
 // a phone the window is full-bleed, not a window, so they go; on the green bar they need no ring.
 const LIGHTS = ["close", "minimise", "zoom"] as const;
 
+// Each light keeps its 12px slot, 20px from the next, and draws 14px over it (Ethan: 2px
+// larger), a pixel past the slot on every side: it grows about its own centre, 6px stay
+// between lights, and the toggle and the tabs after them do not move (ADR-094).
+const LIGHT = "size-3.5 -m-px rounded-full";
+
 function TrafficLights() {
   return (
     <div
@@ -21,11 +26,7 @@ function TrafficLights() {
       className="flex shrink-0 gap-2 pr-2 pl-4 max-md:hidden"
     >
       {LIGHTS.map((light) => (
-        <span
-          key={light}
-          className="size-3 rounded-full"
-          style={{ background: `var(--traffic-${light})` }}
-        />
+        <span key={light} className={LIGHT} style={{ background: `var(--traffic-${light})` }} />
       ))}
     </div>
   );
