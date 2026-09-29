@@ -85,9 +85,10 @@ type TabProps = {
   plus: RefObject<HTMLButtonElement | null>;
 };
 
-// The name a typed title asks for: trimmed, or null when it is empty or the name it has.
-function nextTitle(typed: string, current: string): string | null {
-  const next = typed.trim(); // → the title without stray spaces
+// The name a typed title asks for: trimmed, or null when it was dropped (Escape), is empty, or
+// is the name it has.
+function nextTitle(typed: string | null, current: string): string | null {
+  const next = typed?.trim() ?? ""; // → the title without stray spaces, "" when dropped
   return next === "" || next === current ? null : next;
 }
 
@@ -138,7 +139,7 @@ function TabTitleField({
 function useRenameThread(thread: ThreadSummary): (typed: string | null) => void {
   const runtime = useRuntime();
   return (typed) => {
-    const title = typed === null ? null : nextTitle(typed, thread.title); // → the new name, or null to keep the old
+    const title = nextTitle(typed, thread.title); // → the new name, or null to keep the old
     if (title !== null) {
       inBackground(runtime.rename({ kind: "thread", id: thread.id }, title), "Renaming");
     }
@@ -206,6 +207,7 @@ function Tab({ thread, shell, hover, renaming, plus }: TabProps) {
   const editing = renaming.id === thread.id;
   const rename = useRenameThread(thread);
   const wantFocus = useRefocusAfterRename(thread.id, editing);
+  const icon = <Icon className="size-3.5 shrink-0" aria-hidden="true" />;
   // A tab closed under the pointer never hears it leave, so its hover would come back with it.
   useEffect(
     () => () => {
@@ -225,7 +227,7 @@ function Tab({ thread, shell, hover, renaming, plus }: TabProps) {
       {editing ? (
         <TabTitleField
           title={thread.title}
-          icon={<Icon className="size-3.5 shrink-0" aria-hidden="true" />}
+          icon={icon}
           onDone={(typed, refocusTab) => {
             wantFocus(refocusTab);
             rename(typed);
@@ -236,7 +238,7 @@ function Tab({ thread, shell, hover, renaming, plus }: TabProps) {
         <TabButton
           thread={thread}
           hover={hover}
-          icon={<Icon className="size-3.5 shrink-0" aria-hidden="true" />}
+          icon={icon}
           onRename={() => {
             renaming.set(thread.id);
           }}
