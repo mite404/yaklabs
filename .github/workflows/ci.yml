@@ -65,3 +65,36 @@ jobs:
         with:
           name: storybook-static
           path: apps/storybook/storybook-static/
+
+  design-verification:
+    runs-on: ubuntu-latest
+    # Baselines identify Debian 12 separately from Ubuntu and macOS rasterization.
+    container: node:26.10.0-bookworm
+    timeout-minutes: 30
+    env:
+      HOME: /root
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Trust the runner-mounted checkout
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+      - uses: pnpm/action-setup@v4
+      - run: pnpm install --frozen-lockfile
+      - name: Install the three browser engines
+        run: pnpm --filter verify exec playwright install --with-deps chromium firefox webkit
+      - name: Compare the foundation matrix
+        run: pnpm verify run
+      - name: Exercise the review interface
+        if: success() || failure()
+        run: pnpm --filter verify test:review
+      - name: Upload design evidence even when comparison fails
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: design-verification
+          path: |
+            .artifacts/verify/runs/
+            .artifacts/verify/review-check/
+          include-hidden-files: true
+          if-no-files-found: error
