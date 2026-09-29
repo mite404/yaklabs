@@ -11,5 +11,6 @@ import { canvasChecks } from "./canvas-checks.mjs";
 import { laneCollapseChecks } from "./lane-collapse-checks.mjs";
 import { run } from "./lever.mjs";
 import { shellChecks } from "./shell-checks.mjs";
+import { welcomeChecks } from "./welcome-checks.mjs";
 
-await run({ ...canvasChecks, ...shellChecks, ...laneCollapseChecks });
+await run({ ...canvasChecks, ...shellChecks, ...laneCollapseChecks, ...welcomeChecks });

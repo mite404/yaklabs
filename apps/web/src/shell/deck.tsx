@@ -75,9 +75,18 @@ function Retain({
 
 // The main thread, on the pane itself: no window of its own, its text centred at the thread's
 // measure and its welcome reaching the pane's edges. Only a lane on the canvas is a window.
-// Hidden on a phone while the browser or the canvas has the width, it stays mounted but inert,
+// The layout it is in goes to the welcome, which offers its painting switch only when the thread
+// has the window to itself. Hidden on a phone while the browser or the canvas has the width, it stays mounted but inert,
 // like a retained pane.
-function MainPane({ thread, hidden }: { thread: ThreadSummary; hidden: boolean }) {
+function MainPane({
+  thread,
+  pane,
+  hidden,
+}: {
+  thread: ThreadSummary;
+  pane: PaneKind;
+  hidden: boolean;
+}) {
   return (
     <div
       inert={hidden}
@@ -85,7 +94,12 @@ function MainPane({ thread, hidden }: { thread: ThreadSummary; hidden: boolean }
       className="h-full min-w-0"
       style={{ ["--thread-height" as string]: "100%" }}
     >
-      <ThreadPane key={thread.id} thread={thread} welcome={<Welcome thread={thread} />} bare />
+      <ThreadPane
+        key={thread.id}
+        thread={thread}
+        welcome={<Welcome thread={thread} pane={pane} />}
+        bare
+      />
     </div>
   );
 }
@@ -158,7 +172,7 @@ function Workspace(beside: Beside) {
         collapsedSize="0"
         collapsedThreshold={`${SPLIT.min}`}
       >
-        <MainPane thread={thread} hidden={narrow && view.pane !== "thread"} />
+        <MainPane thread={thread} pane={view.pane} hidden={narrow && view.pane !== "thread"} />
       </ResizablePanel>
       {/* Above the panes, so nothing positioned in them can cover its hit area. */}
       <ResizableHandle

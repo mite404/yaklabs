@@ -3,8 +3,6 @@ import { cssVars } from "@yaklabs/ui/lib/utils";
 import { useState, type ReactNode } from "react";
 import { useChrome } from "../chrome";
 import { useMatch } from "react-router";
-import { SplashSwitch } from "../components/splash-switch";
-import { useSplash } from "../splash";
 import type { ThemeChoice } from "../theme";
 import { SharePermissions } from "./share-permissions";
 import { AppSidebar } from "./sidebar";
@@ -64,7 +62,6 @@ function Workspace({ children }: { children: ReactNode }) {
 export function Window({ theme, children }: { theme: ThemeChoice; children: ReactNode }) {
   const [open, setOpen] = useState(readSidebarOpen);
   const chrome = useChrome();
-  const splash = useSplash();
   return (
     <>
       <div data-slot="desk" aria-hidden="true" className="fixed inset-0 bg-[var(--desk)]" />
@@ -94,7 +91,6 @@ export function Window({ theme, children }: { theme: ThemeChoice; children: Reac
         </SidebarProvider>
       </div>
       <SharePermissions />
-      <SplashSwitch splash={splash} />
     </>
   );
 }
