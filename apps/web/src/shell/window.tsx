@@ -1,67 +1,12 @@
 import { SidebarProvider, useSidebar } from "@yaklabs/ui/components/sidebar";
-import { cssVars } from "@yaklabs/ui/lib/utils";
-import { useState, type ReactNode } from "react";
+import type { ReactNode } from "react";
 import { useChrome } from "../chrome";
 import { useMatch } from "react-router";
 import type { ThemeChoice } from "../theme";
 import { SharePermissions } from "./share-permissions";
-import { AppSidebar, type SidebarWidth } from "./sidebar";
-import { parseStoredWidth, SIDEBAR_DEFAULT_PX, widthValue } from "./sidebar-width";
+import { AppSidebar } from "./sidebar";
+import { sidebarVars, useSidebarOpen, useSidebarWidth } from "./sidebar-choice";
 import { TitleBar } from "./title-bar";
-
-// The visitor's own choice of an open or a collapsed sidebar, kept like the theme.
-const SIDEBAR_KEY = "kay.sidebar";
-// The width the visitor dragged the sidebar to, in CSS px.
-const WIDTH_KEY = "kay.sidebar-width";
-// A window this wide opens with the sidebar open, until the visitor chooses.
-const WIDE_PX = 1280;
-
-// Read before the first paint, so the sidebar never jumps; a browser that refuses storage
-// decides by the window's width.
-function readSidebarOpen(): boolean {
-  try {
-    const stored = localStorage.getItem(SIDEBAR_KEY); // → "open" | "closed" | null
-    if (stored === "open" || stored === "closed") return stored === "open";
-  } catch {
-    // Private windows may refuse storage.
-  }
-  return window.innerWidth >= WIDE_PX;
-}
-
-function rememberSidebar(open: boolean): void {
-  try {
-    localStorage.setItem(SIDEBAR_KEY, open ? "open" : "closed");
-  } catch {
-    // The choice holds for this visit.
-  }
-}
-
-// Read before the first paint too, so the sidebar and the tabs never jump to a kept width.
-function readSidebarWidth(): number {
-  try {
-    const kept = parseStoredWidth(localStorage.getItem(WIDTH_KEY)); // → px | null
-    if (kept !== null) return kept;
-  } catch {
-    // Private windows may refuse storage.
-  }
-  return SIDEBAR_DEFAULT_PX;
-}
-
-// The sidebar's width, kept like whether it is open.
-function useSidebarWidth(): SidebarWidth {
-  const [width, setWidth] = useState(readSidebarWidth);
-  return {
-    width,
-    onWidth: (px) => {
-      setWidth(px);
-      try {
-        localStorage.setItem(WIDTH_KEY, String(px));
-      } catch {
-        // The width holds for this visit.
-      }
-    },
-  };
-}
 
 // The workspace beside the sidebar, inset like Kay's content pane, with the deck and the route
 // in one grid cell. It is the page's main landmark, except on /lab, whose workbench brings its
@@ -90,7 +35,7 @@ function Workspace({ children }: { children: ReactNode }) {
  * inset like Kay's content pane, the workspace.
  */
 export function Window({ theme, children }: { theme: ThemeChoice; children: ReactNode }) {
-  const [open, setOpen] = useState(readSidebarOpen);
+  const choice = useSidebarOpen();
   const sized = useSidebarWidth();
   const chrome = useChrome();
   return (
@@ -101,19 +46,10 @@ export function Window({ theme, children }: { theme: ThemeChoice; children: Reac
         className="fixed inset-0 flex flex-col overflow-hidden bg-paper md:inset-4 md:rounded-[12px] md:border md:border-hairline md:shadow-[0_8px_32px_var(--shadow)]"
       >
         <SidebarProvider
-          open={open}
-          onOpenChange={(next) => {
-            setOpen(next);
-            rememberSidebar(next);
-          }}
+          open={choice.open}
+          onOpenChange={choice.onOpenChange}
           className="min-h-0 flex-1 flex-col transition-transform duration-300 ease-out motion-reduce:transition-none max-md:data-mobile-open:translate-x-(--sidebar-width-mobile)"
-          style={cssVars({
-            // Read by the sidebar and by the title bar, whose tabs start at the sidebar's edge.
-            "--sidebar-width": widthValue(sized.width),
-            "--sidebar-width-icon": "3.5rem",
-            // On a phone the drawer takes most of the width and leaves the page's edge in view.
-            "--sidebar-width-mobile": "min(85vw, 20rem)",
-          })}
+          style={sidebarVars(sized.width)}
         >
           <TitleBar theme={theme} chrome={chrome} />
           <div data-slot="window-body" className="relative flex min-h-0 flex-1">
