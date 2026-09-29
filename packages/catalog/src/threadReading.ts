@@ -51,7 +51,7 @@ export function stepMatch(
 }
 
 /** What the search's counter says: how many turns match, and which one is showing. */
-export function matchStatus(matches: string[], current: string | undefined): string {
+export function matchStatus(matches: string[], current?: string): string {
   if (matches.length === 0) return "No matches";
   const at = current === undefined ? -1 : matches.indexOf(current);
   if (at === -1) return matches.length === 1 ? "1 match" : `${matches.length} matches`;
