@@ -1726,3 +1726,6 @@ icons name themselves in an ink pill (13:1 against the shell).
 Amended 2026-09-29: the peek slides back as it slides out, 220ms on the drawer curve both ways
 (Ethan). The window's frame clips it, so it keeps full strength on the way back and fades only
 over the slide's last 120ms (derived; design pillars, rule 26).
+Amended 2026-09-29: pressing the open Canvas in the layout switch closes it back to the thread
+(Ethan), and so does pressing the open Browser, so the switch reads one way for both side panes
+(derived). The thread pressed again stays.
