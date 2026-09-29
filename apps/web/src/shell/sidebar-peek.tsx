@@ -31,6 +31,9 @@ const LEAVE_FALLBACK_MS = 400;
 const TOGGLE = 'header [data-sidebar="trigger"]';
 const ZONES = `${TOGGLE}, [data-slot="sidebar-hot-zone"], [data-slot="sidebar-container"]`;
 const RAIL_BUTTONS = '[data-slot="sidebar-container"] :is(a, button)';
+// What the collapsed rail hides: the project rows and the resize edge.
+const HIDDEN_WHEN_CLOSED =
+  '[data-slot="sidebar-container"] :is([data-slot="sidebar-content"], [data-slot="sidebar-resize"])';
 
 /** The peek as the sidebar draws it. */
 export type SidebarPeek = {
@@ -226,6 +229,17 @@ export function useSidebarPeek(panel: RefObject<HTMLDivElement | null>): Sidebar
   useClosesOnArrival(intent);
   const onTransitionEnd = useLeave(peek.phase, dispatch);
   return { ...peek, enabled, onTransitionEnd };
+}
+
+/**
+ * Moves keyboard focus to the title bar's toggle when it sits on something the closing sidebar
+ * hides, so closing it never drops focus to the page's body. Call it before the sidebar closes:
+ * a focused element that stops being drawn loses focus on the spot.
+ */
+export function handFocusToToggle(): void {
+  const at = document.activeElement; // → Element | null
+  if (at === null || at.closest(HIDDEN_WHEN_CLOSED) === null) return;
+  document.querySelector<HTMLElement>(TOGGLE)?.focus();
 }
 
 /**

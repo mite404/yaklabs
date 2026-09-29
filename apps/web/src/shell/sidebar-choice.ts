@@ -4,6 +4,7 @@
 import { cssVars } from "@yaklabs/ui/lib/utils";
 import { useState, type CSSProperties } from "react";
 import type { SidebarWidth } from "./sidebar";
+import { handFocusToToggle } from "./sidebar-peek";
 import { parseStoredWidth, SIDEBAR_DEFAULT_PX, widthValue } from "./sidebar-width";
 
 // The visitor's own choice of an open or a collapsed sidebar.
@@ -42,12 +43,16 @@ function readSidebarWidth(): number {
   return SIDEBAR_DEFAULT_PX;
 }
 
-/** Whether the sidebar is open, as the visitor last chose, and the way to choose again. */
+/**
+ * Whether the sidebar is open, as the visitor last chose, and the way to choose again. Closing
+ * it first hands keyboard focus on what it hides to the title bar's toggle.
+ */
 export function useSidebarOpen(): { open: boolean; onOpenChange: (open: boolean) => void } {
   const [open, setOpen] = useState(readSidebarOpen);
   return {
     open,
     onOpenChange: (next) => {
+      if (!next) handFocusToToggle();
       setOpen(next);
       rememberSidebar(next);
     },
