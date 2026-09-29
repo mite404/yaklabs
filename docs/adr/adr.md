@@ -1753,12 +1753,13 @@ Amended 2026-09-29: pressing the open Canvas in the layout switch closes it back
 
 ## ADR-139 - The rail stays on the desktop, and the projects panel extends from its edge
 
-2026-09-29 - Proposed (Ethan: "the projects and their threads need to extend from the collapsed
+2026-09-29 - Accepted (Ethan: "the projects and their threads need to extend from the collapsed
 sidenav bar. that way the icons are still accessible as navigation while still being able to look
 at projects and thread histories", and "as it stands now the thread panel covers the navigation
-icons"). Amends ADR-093, ADR-094, ADR-121 and ADR-138 once accepted.
+icons"). Amends ADR-093, ADR-094, ADR-121 and ADR-138.
 On a desktop (768px and wider) the icon rail is the app's navigation and is drawn in every state,
-never moving, collapsing or blinking: Kay, the five places not built yet, Documentation and the
+never moving, collapsing or blinking: Kay, the five places out of the demo's scope, Documentation
+and the
 Lab as 40px squares, each naming itself in an ink pill whatever the panel is doing, with the
 Account at its foot. It is its own column (`rail.tsx`, `data-slot="rail"`), no longer the
 sidebar's collapsed state.
@@ -1776,20 +1777,33 @@ Closing the panel with focus inside it hands focus to Toggle sidebar first, howe
 or Cmd+B, Escape, a thread opened from a peeking row, or the slide back); focus on a rail place
 never holds a peek, while a menu open in the rail or the panel does; the closed panel is inert,
 out of the tab order and the accessibility tree. The phone keeps ADR-121's drawer as one labelled
-column: the place rows with "Soon", then the tree, then the Account.
-Ethan has not answered these yet; each is built with the default after the arrow, for him to
-change:
+column: the place rows with "Out of demo scope", then the tree, then the Account.
+Ethan answered the defaults it was built with, the same day:
 
-- What the landmarks and the toggle are called → the rail "Places", the panel "Sidebar", the
-  toggle "Toggle sidebar".
-- Whether a line divides the rail from the docked panel → none: both are the shell's paper.
-- Whether a phone gets the rail too → no rail below 768px; the drawer keeps its labelled rows.
-- How a pin and an unpin move → shadcn's 200ms linear, the panel, the workspace and the tabs in
-  lockstep; the peek keeps 220ms of `cubic-bezier(0.32, 0.72, 0, 1)`.
-- Whether reduced motion pins at once → yes: a pin and an unpin are instant (rule 24).
-- Whether Documentation's pill says it opens elsewhere → yes: an ArrowUpRight after its name.
-- What a window too short for every place does → the places scroll with no scrollbar, and the
-  Account stays at the rail's foot.
+- The landmarks and the toggle keep their names, the rail "Places", the panel "Sidebar", the
+  toggle "Toggle sidebar" ("names yes that's fine").
+- Docked by the toggle, a hint of a line parts the rail from the panel, the workspace's hairline
+  at the panel's left edge, as in Kay's own app; a peek draws none ("ONLY SHOW the dividing line
+  on toggle, don't show it on peek"). P35 holds both.
+- A phone is out of scope ("skip the mobile app. this is a desktop app"): no rail below 768px,
+  and the drawer stays as built, not extended.
+- A pin and an unpin move over 250ms, the panel, the workspace and the tabs in lockstep, on
+  Ethan's curve, and the peek keeps its 220ms on the same curve ("set the click to 250ms ... use
+  similar curve for both the peek and the toggle. DO NOT change the length of the animation or
+  the keyframes, only the curve"). Read off his sketch as `cubic-bezier(0.34, 1.11, 1, 1)`, it
+  would pass its mark by 0.8px, so its first handle is held at 1: `cubic-bezier(0.34, 1, 1, 1)`,
+  `--panel-ease` beside `--panel-peek` (220ms) and `--panel-pin` (250ms) in `index.css`. P19,
+  P24 and P31 read them.
+- Under reduced motion nothing slides: a pin and an unpin are instant, and the peek comes and
+  goes with no slide and no fade, whatever closes it ("add reduced motion to opening/closing the
+  panel"; rule 24). P20 holds both.
+- Documentation's pill keeps its ArrowUpRight, and the places' pills their hints ("the pill hints
+  for places. keep it it looks great").
+- A window too short for every place scrolls the places with no scrollbar, the Account at the
+  rail's foot ("icon scroll that's fine").
+- The rail's order and places stay as they are ("current rail icon placement is good"), Memory
+  keeps lucide's Brain ("keep lucide's brain icon for memory"), and pressing the open Browser
+  closes it as Canvas does ("browser toggle is great, keep it").
 
 Found while building it, the same day. Docked, the old sidebar drew every glyph on the page with
 coloured subpixel smoothing, and collapsed with greyscale: its one avatar sat inside the
