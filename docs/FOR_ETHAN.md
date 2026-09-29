@@ -1920,7 +1920,7 @@ is olive, nearly clear is sage.
 ```css
 /* packages/catalog/src/motion.css */
 .agent-working {
-  --working-duration: 1500ms; /* one knob; Storybook scrubs it */
+  --working-duration: 2000ms; /* one knob; Storybook scrubs it */
   /* a head start of 75% is the same as a lag of 25%, and never shows a blank first frame */
   --working-lag: calc(var(--working-duration) * -0.75);
 }
@@ -1933,7 +1933,7 @@ is olive, nearly clear is sage.
 sequenceDiagram
   participant L as Left column
   participant R as Right column
-  Note over L,R: one 1500ms cycle, same keyframes
+  Note over L,R: one 2000ms cycle, same keyframes
   L->>L: 0-25% fade in, sage → moss
   R->>R: 25-50% fade in (25% behind)
   L->>L: 25-35% hold solid, then 35-65% fade out
@@ -1953,6 +1953,16 @@ and it sits clear for the rest, so the wave lands before the next one starts. A 
 separates steady work from an alarm; an alarm never pauses. The Speeds story plays 650, 850, 1200,
 1350 and 1500ms side by side, because
 timing is a taste call that is easier to defend with the alternatives on screen than in words.
+
+Colour got its own track later. A second animation on each square walks through seven brand
+greens, one per loop, and jumps only while the square is clear, so every flash is one shade from
+its first frame to its last. Each square starts somewhere else in the seven. The starting points
+were solved, not guessed: the wave's right column already runs a shade ahead and the six-square
+orbit's middle-left square one behind, so a hand-picked set had two squares matching in every
+loop. A browser test now checks all four layouts: every loop, every square a different green,
+all seven taking a turn. It is a lighting board with seven gels on a wheel per lamp: the cue
+stays the same, but each lamp comes up in a different colour every time, so the eye never
+catches the pattern.
 
 The orbit variant runs on the same clock. Clockwise order is data, a table of each square's
 place in the lap (`CLOCKWISE_STEP` in `AgentWorking.tsx`), and CSS turns that place into a delay:
