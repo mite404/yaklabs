@@ -8,13 +8,14 @@
 // Every check opens its own browser context, so none sees another's data or stored look.
 import { BASE, shotPath, sidebarDrawn } from "./lever.mjs";
 
-// The looks that have their assets, in the switch's order; Bonsai is listed and waits.
-const LOOKS = ["landscape", "abstract", "vitruvian"];
+/** The looks that have their assets, in the switch's order; Bonsai is listed and waits. */
+export const LOOKS = ["landscape", "abstract", "vitruvian"];
 const THEMES = ["light", "dark"];
 // WCAG AA for body text: the words against the worst pixel of the painting behind them.
 const AA = 4.5;
 
-const panelOf = (page) => page.locator('[role="tabpanel"]:not([inert])');
+/** The tab panel on screen; the others are kept, inert. */
+export const panelOf = (page) => page.locator('[role="tabpanel"]:not([inert])');
 const switchOf = (page) => panelOf(page).locator('[data-slot="splash-switch"]');
 const menuOf = (page) => page.getByRole("menu");
 const layoutButton = (page, name) =>
@@ -23,13 +24,18 @@ const labelOf = (look) => look[0].toUpperCase() + look.slice(1);
 
 /**
  * The demo at a desktop size in a fresh context. `stored` is what `kay.splash` holds before the
- * app boots, and `query` is added to the address.
+ * app boots, `query` is added to the address, `motion` is the page's reduced-motion preference,
+ * and `prepare` gets the context before the page opens.
  */
-async function openDemo(browser, { theme = "light", query = "", stored = null } = {}) {
+export async function openDemo(
+  browser,
+  { theme = "light", query = "", stored = null, motion = "reduce", prepare = async () => {} } = {},
+) {
   const context = await browser.newContext({
     viewport: { width: 1440, height: 900 },
-    reducedMotion: "reduce",
+    reducedMotion: motion,
   });
+  await prepare(context);
   await context.addInitScript(
     ([chosen, look]) => {
       // Runs in every frame, and a sandboxed one has no storage to write to.
@@ -56,8 +62,8 @@ async function openDemo(browser, { theme = "light", query = "", stored = null } 
   return { page, context, errors };
 }
 
-// Starts a new thread from the sidebar and waits for its welcome.
-async function startThread(page) {
+/** Starts a new thread from the sidebar and waits for its welcome. */
+export async function startThread(page) {
   await page
     .locator('[data-slot="sidebar"]')
     .getByRole("button", { name: "New thread in Demo store" })
