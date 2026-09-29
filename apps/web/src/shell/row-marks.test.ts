@@ -18,6 +18,7 @@ function thread(marks: Partial<ThreadSummary>): ThreadSummary {
     createdAt: AT,
     updatedAt: AT,
     preview: "",
+    turnCount: 0,
     draft: "",
     pinnedAt: null,
     snoozedUntil: null,

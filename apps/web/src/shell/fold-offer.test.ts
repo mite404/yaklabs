@@ -20,6 +20,7 @@ function withLanes(collapsed: boolean[]): Workspace {
         createdAt: AT,
         updatedAt: AT,
         preview: "",
+        turnCount: 0,
         draft: "",
         pinnedAt: null,
         snoozedUntil: null,

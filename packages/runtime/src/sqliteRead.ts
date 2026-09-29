@@ -16,12 +16,14 @@ const LIVE = `
   and (c.parent_id is null
        or (select p.deleted_at from conversations p where p.id = c.parent_id) is null)
 `;
-// Every live thread, oldest first, with the text of its latest message for the preview.
+// Every live thread, oldest first, with the text of its latest message for the preview and how
+// many messages it holds.
 const THREADS = `
   select c.id, c.title, c.project_id, c.parent_id, c.created_at, c.updated_at, c.draft,
     c.pinned_at, c.snoozed_until, c.archived_at,
     coalesce((select m.text from messages m where m.conversation_id = c.id
-              order by m.seq desc limit 1), '') as last_text
+              order by m.seq desc limit 1), '') as last_text,
+    (select count(*) from messages m where m.conversation_id = c.id) as turn_count
   from conversations c where ${LIVE} order by c.created_at, c.id
 `;
 const LANES = `
@@ -57,6 +59,7 @@ const threadRowSchema = z.object({
   snoozed_until: z.string().nullable(),
   archived_at: z.string().nullable(),
   last_text: z.string(),
+  turn_count: z.number(),
 });
 const settleRowSchema = z.object({
   id: threadIdSchema,
@@ -107,6 +110,7 @@ function fromThreadRow(row: Record<string, SqlValue>) {
     created_at,
     updated_at,
     last_text,
+    turn_count,
     pinned_at,
     snoozed_until,
     archived_at,
@@ -122,6 +126,7 @@ function fromThreadRow(row: Record<string, SqlValue>) {
     createdAt: created_at,
     updatedAt: updated_at,
     preview: toPreview(last_text),
+    turnCount: turn_count,
     pinnedAt: pinned_at,
     snoozedUntil: snoozed_until,
     archivedAt: archived_at,

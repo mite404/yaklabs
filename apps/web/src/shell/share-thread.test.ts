@@ -28,6 +28,7 @@ const thread: ThreadSummary = {
   createdAt: NOW.toISOString(),
   updatedAt: NOW.toISOString(),
   preview: "",
+  turnCount: 0,
   draft: "",
   pinnedAt: null,
   snoozedUntil: null,

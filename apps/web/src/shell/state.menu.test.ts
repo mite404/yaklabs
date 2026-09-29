@@ -29,6 +29,7 @@ function thread(threadId: ThreadId, place: Place): ThreadSummary {
     createdAt: AT,
     updatedAt: AT,
     preview: "",
+    turnCount: 0,
     draft: "",
     ...marks,
   };

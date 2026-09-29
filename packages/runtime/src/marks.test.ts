@@ -11,6 +11,7 @@ const base: ThreadSummary = {
   createdAt: at("09:02"),
   updatedAt: at("09:02"),
   preview: "",
+  turnCount: 0,
   draft: "",
   pinnedAt: null,
   snoozedUntil: null,

@@ -63,6 +63,18 @@ describe("the store keeps threads", () => {
   });
 });
 
+describe("the store counts turns", () => {
+  it("lists how many turns each thread holds, 0 for one that has none", async () => {
+    const store = await openStore();
+    addChild(store, "child");
+    const counts = () =>
+      Object.fromEntries(store.workspace().threads.map((each) => [each.id, each.turnCount]));
+    expect(counts()).toEqual({ main: turns.length, other: 1, child: 0 });
+    store.changeTranscript(child, (now) => ({ ...now, messages: turns.slice(0, 1) }));
+    expect(counts()).toEqual({ main: turns.length, other: 1, child: 1 });
+  });
+});
+
 describe("the store renames", () => {
   it("renames a project and a thread, and refuses one it does not hold", async () => {
     const store = await openStore();
