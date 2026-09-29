@@ -269,9 +269,11 @@ behind each rule below is told in `docs/FOR_ETHAN.md`.
 | Agent working glyph (wave, orbit) | 2000ms loop | `linear` fades | Ethan |
 | Agent tree glyph | 2000ms loop | `linear` fades, `cubic-bezier(0.4, 0, 0.6, 1)` scroll | Ethan |
 | Sidebar peek slide, out and back (rule 26) | 220ms | `cubic-bezier(0.17, 1.02, 0.58, 1)` (`--panel-ease`) | Ethan |
-| Sidebar peek fade in, at the slide's start | 120ms | `cubic-bezier(0.23, 1, 0.32, 1)` | derived |
+| Sidebar peek out, the panel's strength | none: full strength from the first frame, as a pin | none | Ethan |
 | Sidebar peek fade back, to the slide's end | 120ms | `cubic-bezier(0.68, 0, 0.77, 0)` | derived |
-| Sidebar peek rows, leaving at the slide back's start | 120ms | `cubic-bezier(0.23, 1, 0.32, 1)` | derived (Ethan's report) |
+| Sidebar rows, leaving on a peek's way back or an unpin | 60ms (`--rows-leave`), at 0 by the curve's 75% mark | `cubic-bezier(0.23, 1, 0.32, 1)` | derived (Ethan) |
+| Sidebar rows, a pointer turning a peek back mid-way | 120ms | `cubic-bezier(0.23, 1, 0.32, 1)` | derived |
+| The peek's edge through a pin from a peek | held, then off at the pin's last frame (a 0s step after `--panel-pin`) | none, steps | Ethan |
 | The rail's divider through a pin and an unpin | on at the pin's first frame; off at the unpin's last (a 0s step after `--panel-pin`) | none, steps | Ethan |
 | Sidebar pin and unpin (the panel behind the rail, workspace and tabs in step) | 250ms (`--panel-pin`); none under reduced motion (rule 24) | `cubic-bezier(0.17, 1.02, 0.58, 1)` (`--panel-ease`) | Ethan |
 | Sidebar peek under reduced motion (rule 24) | none: no slide and no fade | none | Ethan |
@@ -355,14 +357,18 @@ the rest of the time is the settle.
 The stage beside the rail clips the panel at the rail's edge (`overflow: clip`, never `hidden`,
 so no focus or scroll into view can scroll it), the way rule 22's shapes pass their gate: the
 panel never covers the rail's places, and the fade hides no motion (derived, ADR-139).
-Out, it fades in over the slide's first 120ms; back, it keeps full strength and fades over the
-slide's last 120ms, starting 100ms in, on the fade-in's curve played backwards (derived): still
-0.97 when its edge is 2px from home.
-Its rows go first, as a title's type goes before its bar: back, the panel's content fades from
-the slide's first frame on the fade-in's 120ms and curve, so it is gone before the last tenth of
-the way home, and no row's end (a count, an ellipsis, a "+") is left in the sliver beside the rail,
-where it read as text outside the panel (Ethan). The paper, the hairline and the shadow stay
-solid, so the slide still reads.
+Out, it slides at full strength from the first frame, as a pin does, its edge's hairline and
+shadow drawn at once (Ethan); a fade-in let the workspace's border show through it and drew the
+panel's edge slowly. Back, it keeps full strength and fades over the slide's last 120ms,
+starting 100ms in, on the strong ease-out played backwards (derived): still 0.97 when its edge
+is 2px from home.
+Its rows go first, as a title's type goes before its bar, on a peek's way back and on an unpin
+alike: they fade from the first frame on the strong ease-out and are at 0 once the panel has
+covered three quarters of its way home (60ms, the curve's 75% mark at 27% of the peek's 220ms),
+so no row is left as the panel lands (Ethan). The paper and its edge stay solid, so the slide
+still reads. Opening, the rows are there from the first frame.
+A pin while the panel peeks moves only the workspace, sliding under the panel: the peek's edge
+holds through it until the workspace's rounded border is under it (Ethan).
 Docked by the toggle, the line that parts the rail from the panel is the rail's own right edge,
 not the panel's left: it is there on the pin's first frame, the panel sliding out from behind
 it, and it stays through an unpin until the panel is home (Ethan). A line on the panel's edge

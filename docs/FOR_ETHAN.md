@@ -2559,3 +2559,47 @@ value for the delay, then steps. A transition runs on the rules of the state it 
 the off state carries the delay and the on state carries none, and one line of CSS plays the
 pin backwards for the unpin with no JavaScript. In film terms: the door frame is dressed before
 the actor walks through it, and struck only after they have left the shot.
+
+### Keep the frame dressed while the set moves
+
+Three small tells made the panel's motion feel unconsidered, and they had one root: something
+that should have been on screen for the whole move was only there for part of it.
+
+- **The peek faded in.** For its first frames the panel was see-through, so the workspace's
+  border showed through it and the panel's own edge line drew in slowly. The toggle never faded,
+  which is why it read as sliding out from under the rail. The peek now slides out solid.
+- **A pin from a peek dropped its edge.** Clicking the toggle while peeking moves only the
+  workspace, which slides under the panel. The peek's edge line vanished at the click, and the
+  workspace's rounded border only crept out from under the panel as the curve settled. The edge
+  now holds for the pin's 250ms, the same delayed-step trick as the rail's divider.
+- **The rows lingered on the way home.** They now fade in 60ms and are gone once the panel has
+  three quarters of the trip behind it, on the peek and on the toggle alike.
+
+```css
+/* apps/web/src/index.css - a pin from a peek: the edge holds while the workspace moves under it */
+[data-slot="sidebar"][data-state="expanded"] > [data-slot="sidebar-container"] {
+  transition-property: left, right, width, box-shadow, clip-path;
+  transition-duration: var(--panel-pin), var(--panel-pin), var(--panel-pin), 0s, 0s;
+  transition-delay: 0s, 0s, 0s, var(--panel-pin), var(--panel-pin);
+}
+```
+
+```mermaid
+gantt
+  title A pin from a peek, in ms
+  dateFormat x
+  axisFormat %L
+  section Before
+  Peek edge                 :crit, 0, 1
+  Workspace slides under    :0, 250
+  Rounded border creeps out :crit, 150, 250
+  section After
+  Peek edge held            :0, 250
+  Workspace slides under    :0, 250
+```
+
+One catch in that rule: naming `transition-property` in plain CSS outranks the layered Tailwind
+utilities that turn transitions off for a key press, a drag and reduced motion. So each of those
+gets its own `transition: none` again, and P20 and P21 check that a key, a drag and reduced
+motion still move nothing. The film habit underneath: a door frame stays dressed while the dolly
+moves past it, and is struck only once the shot is over.

@@ -1836,6 +1836,26 @@ hairline and its shadow slide home solid. P24 seeks the rows with the slide and 
 2% over the last 10% of the way back; it fails on the old stylesheet with the rows at full
 strength to the end.
 
+Amended again the same day (Ethan, from a recording: "on peek i want the drawer to slide out
+from under the navbar spine just like how it does w/ the toggle btn", the lines' draws "slow
+enough to feel glitchy", and "the fade of the thread list as the drawer is almost all the way
+close just needs to be at 0 opacity at that point"). Three changes:
+
+- The peek slides out at full strength from its first frame, as a pin does. Its 120ms fade-in
+  let the workspace's left border and rounded corner show through the panel, and drew the
+  panel's own edge over those frames.
+- A pin while the panel peeks moves only the workspace, under the panel. The peek's edge, its
+  hairline and shadow, now holds through the pin's 250ms by a delayed 0s transition, where it had
+  gone at the click and left a plain edge while the workspace's rounded border crept out from
+  under the panel as the curve settled.
+- On the peek's way back and on an unpin alike, the rows fade in 60ms on the strong ease-out
+  (`--rows-leave`), at 0 once the panel has covered three quarters of its way home; the toggle's
+  close had no fade at all, and the peek's 120ms left them faint for two or three frames.
+
+P24 holds the peek solid on the way out and the rows at 0 over the last quarter of the way back;
+P36 holds the rows full through a pin and at 0 over an unpin's last quarter; P37 holds the edge
+on every frame of a pin from a peek. All three fail on the old stylesheet.
+
 ## ADR-140 - Every hover label is the rail's ink pill
 
 2026-09-29 - Accepted (Ethan: "also "unpin thread" hover needs to match our design language. do
