@@ -155,8 +155,9 @@ function PendingFrame({
   );
 }
 
-// What the frame says while the turns are not here: that the thread is opening, or why it
-// could not open, with Try again.
+// What the frame says while the turns are not here: that the thread is opening, a line that
+// steps in only once the wait is long enough to notice (index.css), or why it could not open,
+// with Try again.
 function PendingWords({
   title,
   turns,
@@ -166,7 +167,13 @@ function PendingWords({
   turns: Exclude<Turns, { kind: "open" }>;
   retry: () => void;
 }) {
-  if (turns.kind === "loading") return <p className="text-soft-ink">Opening {title}…</p>;
+  if (turns.kind === "loading") {
+    return (
+      <p className="text-soft-ink" data-pending-line="">
+        Opening {title}…
+      </p>
+    );
+  }
   return (
     <>
       <p className="text-ink">{title} could not be opened.</p>
@@ -206,11 +213,11 @@ function barActions(thread: ThreadSummary, trailing: ReactNode, bare: boolean): 
 /**
  * One thread in the catalog's panel, its turns loaded from the worker; one the snapshot says
  * holds none opens empty at once, with nothing to wait for. While they come, and when they
- * cannot, the thread keeps its frame and title bar, with a quiet line or the reason and Try
- * again inside. Focus in the thread stays in it as it changes: from Try again to the frame, and
- * on to Try again again or to the compose box. The title and the opening draft come from the
- * snapshot, so a rename shows everywhere at once. Key it by the thread's id: it reads what it
- * starts with once, as it mounts.
+ * cannot, the thread keeps its frame and title bar, with a quiet line (shown only once the wait
+ * is long enough to notice) or the reason and Try again inside. Focus in the thread stays in it
+ * as it changes: from Try again to the frame, and on to Try again again or to the compose box.
+ * The title and the opening draft come from the snapshot, so a rename shows everywhere at once.
+ * Key it by the thread's id: it reads what it starts with once, as it mounts.
  * @param leading A control before the title in the title bar, such as a lane's collapse
  * (ADR-134); in the frame too while the turns come.
  * @param trailing A control at the title bar's far end, after the thread's own actions, such as

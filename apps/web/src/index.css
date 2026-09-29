@@ -185,6 +185,19 @@ html[data-dragging="sidebar"] * {
     grid-template-columns: minmax(0, 1fr);
   }
 
+  /* A thread still opening says so only once the wait is long enough to notice: around 100ms
+     reads as instant (design-pillars.md rule 9, derived), so a quicker open goes from the bare
+     frame to its turns with no line flashing past. The line is in the tree from the first
+     frame, hidden, and steps in with no fade; a hold, not motion, so reduced motion keeps it. */
+  [data-pending-line] {
+    animation: pending-line 0s 100ms both;
+  }
+  @keyframes pending-line {
+    from {
+      visibility: hidden;
+    }
+  }
+
   /* An edge of the tab strip with tabs past it fades out, so the tab the edge cuts reads as
      one more to scroll to rather than a clipped label. The fade follows the scroll; a strip
      whose tabs fit has no scroll timeline, so the animation is idle and nothing fades. */

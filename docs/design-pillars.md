@@ -216,6 +216,7 @@ behind each rule below is told in `docs/FOR_ETHAN.md`.
 | Button fill and text on hover (rule 8) | 150ms | `ease` | css |
 | Menu opening | 120ms | `ease-out` | derived |
 | Modal fade, then rise | 160ms, 200ms | `ease-out` | derived |
+| A loading thread's "Opening ..." line | shown after 100ms | none, steps in | derived (rule 9) |
 | Agent working glyph (wave, orbit) | 2000ms loop | `linear` fades | Ethan |
 | Agent tree glyph | 2000ms loop | `linear` fades, `cubic-bezier(0.4, 0, 0.6, 1)` scroll | Ethan |
 | Sidebar peek slide, out and back (rule 26) | 220ms | `cubic-bezier(0.32, 0.72, 0, 1)` | Ethan |
