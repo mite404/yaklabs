@@ -146,6 +146,16 @@ before any code changed, fixed at its root, and then handed to a second agent wh
 to prove the fix wrong. One of those skeptics caught a flash the first fix had missed, on the
 Vitruvian look, and the merge caught a check that had quietly replaced another.
 
+Then Ethan used the peek and saw what it cost him: "as it stands now the thread panel covers the
+navigation icons". The rail was the sidebar folded up, so opening the projects meant sliding the
+whole sidebar, rail and all, over the workspace. He asked for the projects and their threads to
+extend from the collapsed rail instead, so the icons stay navigation while the threads are open.
+The rail became its own column that never moves, and the projects became a second column that
+docks beside it or slides out from behind its edge. Think of a camera gate: the rail is the gate's
+frame, bolted to the camera, and the panel is film passing behind it. The frame is never in the
+way of the picture, and the picture never slides over the frame (ADR-139, Proposed until Ethan
+answers its questions).
+
 ## 2. Cast & Crew
 
 The first entries are ideas from before any code existed; the rest are parts of the running app.
@@ -175,11 +185,21 @@ The first entries are ideas from before any code existed; the rest are parts of 
   alone, under the same lights, before it goes on stage.
 - **The ui package** (`packages/ui`) is the paint shop: shadcn primitives mixed only from Kay's
   tokens, so anything an agent builds comes out in the house colours (ADR-082).
-- **The rail** was the corridor outside the theatre: the mark on the door, one icon per room, and
-  at the far end the light switch and the cloakroom. It is now the sidebar folded to 56px, and it
-  keeps only the rooms: the Kay mark, drawn from the polygon meetkay.ai declares (ADR-095),
-  Documentation and Lab. The light switch and the cloakroom moved into the account menu at the
-  title bar's far right.
+- **The rail** (`apps/web/src/shell/rail.tsx`) is the camera gate's frame. It was the corridor
+  outside the theatre, then the sidebar folded to 56px; now it is its own 56px column, drawn in
+  every state and never moving (ADR-139). It keeps the rooms, a navigation landmark named Places:
+  the Kay mark, drawn from the polygon meetkay.ai declares (ADR-095), the five rooms still being
+  built, Documentation and Lab, each naming itself in an ink pill whatever the panel is doing.
+  The cloakroom, the account with the light switch (the theme) in its menu, sits at its foot.
+- **The stage** (`[data-slot="stage"]` in `window.tsx`) is the gate's aperture: the box beside
+  the rail that holds the projects panel and the workspace, and clips at the rail's edge. It
+  clips (`overflow: clip`), never hides, because `hidden` makes a scroll container, and a focus
+  or a scroll into view could then roll the film sideways through the gate.
+- **The projects panel** (`sidebar.tsx`) is the film. It is shadcn's offcanvas Sidebar holding
+  the project tree, a landmark named Sidebar. Docked, it pushes the workspace and resizes from its
+  edge; closed, it waits behind the gate, inert, and the peek (`sidebar-peek.tsx`, timed by
+  `peek.ts`) pulls it through and back when the pointer rests on the toggle, the rail's empty
+  stretch or the strip just past it.
 - **The compose canvas** is the cutting-room wall: pull a line out of the thread and pin it up to
   start a new cut, drag a card over to see it at size, and there is always bare wall to the right
   for the next idea (ADR-089). The pins move: take a lane by its grip and the others shuffle
@@ -387,7 +407,17 @@ The first entries are ideas from before any code existed; the rest are parts of 
   is a `SidebarMenuAction`. Each would otherwise have been a primitive to build, style and make
   accessible by hand, and AGENTS.md already says new components come from shadcn. The project rows
   follow Conductor's: "name >" when folded, and no chevron on an open one until the pointer is on
-  it (ADR-093).
+  it (ADR-093). ADR-139 later took the rail out of it, and the Sidebar is now `offcanvas`.
+- **Our own rail beside shadcn's offcanvas Sidebar, not sidebar-09.** shadcn has a block with a
+  rail and a panel nested inside one icon Sidebar. It would have needed slot overrides and an
+  icon-group trick for the rail, turned `--sidebar-width` into a sum of two widths, and kept the
+  pin that pops and reflows the rows. A plain column for the rail and the stock offcanvas panel
+  beside it gave each part one owner and kept the vendored primitive nearly as shipped (ADR-139).
+- **One SidebarProvider, not two.** A second provider for the rail looks tidy until you read the
+  vendored one: it hard-codes the `sidebar_state` cookie and a window-wide Cmd/Ctrl+B handler, so
+  two providers would both toggle on one key press, and every `useSidebar()` would answer from
+  whichever provider happened to be nearest. The rail needs no state of its own; it reads only
+  whether this is a phone and which route is open.
 - **Scenarios write through the store, never around it.** A fixture poured straight into the
   page's state could show something the app can never reach, such as a grandchild thread or a lane
   on another main's canvas. Each scenario fills a fresh in-memory SQLite through the store's own
@@ -1103,6 +1133,52 @@ the runner spread its check collections into one object, so the second W6 replac
 without a word: a green run that never ran the corners check. They are W6, W7 and W8 now, and
 `collect()` in `lever.mjs` throws on a duplicate id. Lesson: an object spread is a last-writer-wins
 merge; anything keyed by name needs a guard, not a hope.
+
+### The film that ran over the gate
+
+**The panel that covered the rail.** Ethan's report was one sentence: the thread panel covers the
+navigation icons. Seeked frame by frame, the peek slid the whole sidebar in from the window's
+edge, and for most of its 220ms every rail glyph's centre was drawn by the sliding panel, its
+own copy of each glyph 12px to the left of the rail's. A decorative echo of the rail sat beneath
+to hide the seam, which is a patch over the wrong shape. The rail now never moves and the panel
+passes behind a clip at its edge; P29 and P30 read the rail's glyphs, pixels and edge at twelve
+held frames of the slide. Lesson: when a fix needs a decoy of the thing it covers, the thing
+should not be covered.
+
+**Ctrl+B dropped focus on the floor.** With keyboard focus on a project row or the resize edge,
+Ctrl+B closed the sidebar and focus landed on `body`: the next Tab started from the top of the
+page. A focused element that stops being drawn simply loses focus. Closing now hands focus to
+Toggle sidebar first (`handFocusToToggle`), before the rows go. P27 was red before the fix.
+Lesson: anything that hides what the user is on owes them a new place to stand.
+
+**The rail's focus held the panel out.** Tab to Kay, rest the pointer on the rail until the panel
+peeks, move away: the panel stayed out for good, because keyboard focus anywhere in the peek held
+it, and the rail counted as the peek. The rail stays whether the panel is out or not, so its
+focus now holds nothing; focus in the panel, or a menu open in either, still does. P28 was red
+before the fix, "held past 870ms".
+
+**Off canvas, but still on the call sheet.** shadcn's offcanvas sidebar slides its rows off to
+the left and leaves them there, tabbable and read by screen readers, just out of sight. The
+vendored container is now `inert` while it is away, so Tab, the accessibility tree and
+find-in-page all skip it. The check had its own trap: Playwright's role queries do not treat
+`inert` as hidden, so P32 asks the browser itself for its accessibility tree (over CDP) and walks
+60 real Tabs. Without the fix, the closed panel's rows were Tab stops.
+
+**The avatar that decided how every letter was drawn, again.** The pixel audit before and after
+found that the old sidebar drew every glyph on the page with coloured subpixel fringes while it
+was open, and greyscale while it was folded: the one avatar sat inside the sidebar's stacking
+context, so its blend never reached the window's layer, and folded, the rail's echo carried a
+second avatar outside it (the same mechanism as the first avatar blooper). The rail's avatar sits
+in plain flow, so the text is greyscale in every state now. The cost is honest: the folded rail
+is not bit for bit the old one, about 140 antialiased pixels at up to 23 levels, with every
+glyph on the same pixel. Lesson: when a screenshot changes where nothing moved, measure which
+pixels, then ask what layer they were drawn in.
+
+**The drawer that closed itself in a test.** The phone check opened the drawer on `/`, and the
+drawer shut again on its own, sometimes. `/` moves on to a thread, and any arrival closes the
+drawer (ADR-121), so a click that beat the redirect was undone by it. The check now starts on a
+thread's own address and waits for the drawer's open state, not a timer. Lesson: a flaky check is
+usually a race the product really has; find which two things are racing before adding a wait.
 
 ## 5. Director's Commentary
 
@@ -2261,3 +2337,46 @@ flowchart TB
 On set, a stand-in takes the lead's marks for lighting, not the lead's lines. The copies here
 now do the same: they stand where the ancestors stood for the selectors, and leave the measuring
 to boxes that have a body.
+
+### Hide the cut in the gate: a step that moves nothing
+
+The peek slides the panel with `transform`, but a closed panel is parked with `left` (shadcn's
+offcanvas). So the slide back has to end with a switch from one to the other. Done with motion
+on, the switch would play `left` as a second slide. Done at the one moment both describe the same
+pixels, with motion off, nobody can see it:
+
+```ts
+// apps/web/src/shell/peek.ts - when the slide back ends, the rest step is marked instant
+left: (state) => (state.phase === "leaving" ? { phase: "away", instant: true } : state),
+```
+
+```css
+/* apps/web/src/index.css - a step marked instant runs no transition at all */
+[data-slot="sidebar-container"][data-peek-instant] {
+  transition: none;
+}
+/* leaving ends at   left: 0    + translateX(-100%)   → the panel sits one width to the left
+   away starts at    left: -W   + no transform        → the same pixels, behind the rail's edge */
+```
+
+```mermaid
+sequenceDiagram
+  participant P as Pointer
+  participant T as peekIntent (timing)
+  participant R as nextPeek (reducer)
+  participant C as Panel (CSS)
+  P->>T: leaves the rail and the panel
+  T->>T: waits 250ms, the grace
+  T->>R: hide
+  R->>C: phase "leaving": transform to -100%, fade late
+  C-->>R: transitionend, the last of two
+  R->>C: phase "away", instant: data-peek-instant, transition none
+  Note over C: left -W with no transform: the same pixels as translateX(-100%) at left 0
+  C->>R: box read (useSettle), then "settled"
+  R->>C: instant off; parked behind the rail's edge, inert
+```
+
+The film version is a cut hidden in the gate: two shots join on the frame where the camera
+whip-pans through black, and the audience sees one move. The engineering rule underneath: when
+two mechanisms own the same property at different times, hand over on a frame where their
+outputs agree, and turn the motion off for exactly that frame.
