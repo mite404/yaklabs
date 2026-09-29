@@ -16,8 +16,8 @@ type AgentTreeProps = {
  * then right, the base holds solid for a beat, then slides down out of view as the next climb
  * starts at the top. Holds still under reduced motion.
  */
-export function AgentTree({ duration = 1500, label = "Agent working" }: AgentTreeProps) {
-  const style: StyleWithVars = { "--working-duration": `${duration}ms` }; // number → "1500ms"
+export function AgentTree({ duration = 2000, label = "Agent working" }: AgentTreeProps) {
+  const style: StyleWithVars = { "--working-duration": `${duration}ms` }; // number → "2000ms"
   // <output> is a live status region, so the label is announced once when it appears.
   return (
     <output className="agent-tree" aria-label={label} style={style}>
