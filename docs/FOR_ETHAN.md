@@ -1977,10 +1977,13 @@ a beat. Then the base slides down under the icon's bottom edge, and as it is hal
 branch fades in over the same beat, on the same curve, one pill leaving as the other arrives. It
 borrows a trick from side-scrolling games and car shots on a
 soundstage: the car stays put and the background scrolls, so the eye reads motion the other way.
-It is also a cheat, the good kind: only the base moves. It is the one pill lit when the slide
-starts, so moving it alone reads as the whole tree dropping away. Once it is out of frame it
-jumps home, invisible, and fades back in where it began, like a stagehand resetting a prop
-during a blackout.
+It is also a cheat, the good kind: only the two lit pills move. The base scrolls out under the
+bottom edge while the top branch scrolls in over the top edge, both 4px on the same curve, so
+they read as one strip of film passing the gate, and the eye supplies the rest of the tree.
+Equal distance matters: the base only needed 3px to leave, but at 3px against the branch's 4px
+the two would drift apart and the strip would tear. Once the base is out of frame it jumps
+home, invisible, and fades back in where it began, like a stagehand resetting a prop during a
+blackout.
 
 Senior-engineer takeaway: when motion must stay in sync, derive every actor from one clock. A
 second keyframe track would drift the moment someone changed one duration and not the other.
