@@ -33,9 +33,12 @@ const PANEL = '[data-slot="sidebar-container"]';
 // included) and its account show their names and menu instead, so only its empty stretch peeks.
 const ZONES = `${TOGGLE}, [data-slot="sidebar-hot-zone"], [data-slot="rail"], ${PANEL}`;
 const RAIL_QUIET = '[data-slot="rail"] :is([role="navigation"], button)';
-// What holds the peek out: keyboard focus, or a menu open from a trigger (a menu's popup sits
-// outside the rail and the panel, so the pointer leaving for it must not close the panel).
-const HOLDS = ':focus-visible, [aria-haspopup="menu"][aria-expanded="true"]';
+// What holds the peek out: a menu open from a trigger in the rail or the panel (its popup sits
+// outside both, so the pointer leaving for it must not close the panel), and keyboard focus in
+// the panel, whose rows would leave with it. Focus on a rail place holds nothing: the rail stays
+// either way, so the panel can go.
+const MENU_OPEN = '[aria-haspopup="menu"][aria-expanded="true"]';
+const FOCUS_IN_PANEL = ":focus-visible";
 
 /** The peek as the panel draws it. */
 export type SidebarPeek = {
@@ -74,9 +77,11 @@ function inPeekZone(target: EventTarget | null, out: boolean): boolean {
 const hostsOf = ({ panel, rail }: PeekHosts): HTMLElement[] =>
   rail === null ? [panel] : [panel, rail];
 
-// Whether something in the panel or the rail keeps the panel out.
+// Whether something keeps the panel out: a menu open in the panel or the rail, or keyboard
+// focus in the panel.
 function isHeld(hosts: PeekHosts): boolean {
-  return hostsOf(hosts).some((host) => host.querySelector(HOLDS) !== null);
+  const menuOpen = hostsOf(hosts).some((host) => host.querySelector(MENU_OPEN) !== null);
+  return menuOpen || hosts.panel.querySelector(FOCUS_IN_PANEL) !== null;
 }
 
 // Escape closes the peek, unless a menu has it: the menu closes itself first.
@@ -238,8 +243,9 @@ function useClosesOnArrival(intent: RefObject<PeekIntent | null>): void {
  * closed on a desktop, it slides out from behind the rail's edge over the workspace once the
  * pointer rests on the title bar's toggle, on the rail off its places and account, or on the
  * strip just past the rail, and slides back 250ms after the pointer leaves them all, the rail
- * and the panel alike. Keyboard focus in either, or a menu either opened, holds it out; Escape,
- * a visit to a thread and docking the panel close it. A key's close is drawn with no motion.
+ * and the panel alike. A menu either opened, or keyboard focus in the panel (not on the rail,
+ * which stays), holds it out; Escape, a visit to a thread and docking the panel close it. A
+ * key's close is drawn with no motion.
  * @param rail The rail it slides from.
  */
 export function useSidebarPeek(

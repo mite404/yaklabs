@@ -303,8 +303,8 @@ async function peekByPointer(page) {
 }
 
 // P19's keyboard and menu half: the account menu at the rail's foot holds the peek out with the
-// pointer away; Escape closes it at once; one landmark named Sidebar and one named Places while
-// it peeks.
+// pointer away, and its closing lets go, focus back on the account; Escape closes the peek at
+// once; one landmark named Sidebar and one named Places while it peeks.
 async function peekHolds(page) {
   await peek(page);
   const landmarks = await page.getByRole("navigation", { name: "Sidebar" }).count();
@@ -313,11 +313,15 @@ async function peekHolds(page) {
   await page.mouse.move(900, 300);
   await page.waitForTimeout(CLOSE_MS + 300);
   const held = await phaseOf(page);
-  // The first Escape closes the menu, which hands focus back to the account; the next closes
-  // the peek.
+  // Escape closes the menu, which hands focus back to the account; focus on the rail holds
+  // nothing, so with the pointer away the peek goes after the grace.
   await page.keyboard.press("Escape");
   await page.getByRole("menu").waitFor({ state: "detached" });
   const focus = await page.evaluate(() => document.activeElement?.getAttribute("aria-label"));
+  await page.waitForTimeout(CLOSE_MS + SLIDE_MS + 200);
+  const released = await phaseOf(page);
+  // Out again, Escape closes it at once, with no motion.
+  await peek(page);
   await page.keyboard.press("Escape");
   const escaped = await phaseOf(page);
   const running = await transitions(page);
@@ -326,9 +330,11 @@ async function peekHolds(page) {
       landmarks === 1 &&
       places === 1 &&
       held === "open" &&
+      focus === "Account" &&
+      released === "rail" &&
       escaped === "rail" &&
       running.length === 0,
-    note: `landmarks named Sidebar ${landmarks}, Places ${places}; menu up, pointer away: ${held}; menu closed, focus on ${focus}; Escape: ${escaped}, running [${running.join(", ")}]`,
+    note: `landmarks named Sidebar ${landmarks}, Places ${places}; menu up, pointer away: ${held}; menu closed, focus on ${focus}, then ${released}; Escape: ${escaped}, running [${running.join(", ")}]`,
   };
 }
 
