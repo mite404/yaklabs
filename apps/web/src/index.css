@@ -101,10 +101,26 @@
   transition-timing-function: var(--panel-ease);
 }
 /* Docked by the toggle, a hint of a line parts the rail from the panel, as in Kay's own app: the
-   panel's left edge in the workspace's own hairline. A peek draws none, so it reads as a glance,
-   not a column. On the panel's own edge, the line slides with it behind the rail's clip. */
-[data-slot="sidebar"][data-state="expanded"] [data-slot="sidebar-inner"] {
-  box-shadow: inset 1px 0 0 var(--hairline);
+   rail's right edge in the workspace's own hairline. It is the rail's, not the panel's, so it is
+   drawn from the first frame of a pin, the panel sliding out from behind it (on the panel's own
+   edge it stayed behind the clip until the last frame, and crept in like a fade, Ethan), and it
+   holds through an unpin until the panel is home behind it: the pin played backwards. A key's
+   change and reduced motion have no slide to wait for. A peek draws none, so it reads as a
+   glance, not a column. */
+[data-slot="rail"] {
+  transition: box-shadow 0s var(--panel-pin);
+}
+[data-slot="sidebar-wrapper"]:has([data-slot="sidebar"][data-state="expanded"]) [data-slot="rail"] {
+  box-shadow: inset -1px 0 0 var(--hairline);
+  transition: none;
+}
+[data-slot="sidebar-wrapper"][data-instant] [data-slot="rail"] {
+  transition: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-slot="rail"] {
+    transition: none;
+  }
 }
 
 /* The projects panel's peek (sidebar-peek.tsx, ADR-139): closed, the panel slides out over the
