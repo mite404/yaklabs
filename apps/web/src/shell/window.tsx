@@ -53,8 +53,11 @@ export function Window({ theme, children }: { theme: ThemeChoice; children: Reac
         >
           <TitleBar theme={theme} chrome={chrome} />
           <div data-slot="window-body" className="relative flex min-h-0 flex-1">
-            <AppSidebar theme={theme} chrome={chrome} {...sized} />
-            <Workspace>{children}</Workspace>
+            {/* The stage: the sidebar's containing block, beside the workspace it sits over. */}
+            <div data-slot="stage" className="relative flex min-h-0 min-w-0 flex-1">
+              <AppSidebar theme={theme} chrome={chrome} {...sized} />
+              <Workspace>{children}</Workspace>
+            </div>
           </div>
         </SidebarProvider>
       </div>
