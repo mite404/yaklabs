@@ -2,6 +2,7 @@ import type { Carried } from "@yaklabs/catalog/carry";
 import type { LaneId } from "@yaklabs/runtime";
 import { Fragment, useEffect, useRef, useState, type RefObject } from "react";
 import { useLanding, type Landing } from "./canvas-carry";
+import { CanvasCard } from "./canvas-card";
 import { panRow, usePan } from "./canvas-pan";
 import { Lane, type LaneReports, type LaneView } from "./lane";
 
@@ -12,22 +13,26 @@ import { SplashDrawing } from "./splash";
 
 // The open space at the end of the row: the whole canvas when it is empty, with the splash
 // behind its words, and a slimmer column once lanes exist, so there is always somewhere to drop
-// the next thing. It lights up when a carry would land there. The button is the catalog's own,
+// the next thing. It steps aside for an incoming lane. The button is the catalog's own,
 // the one a card's "Show my work" uses.
 function OpenSpace({
-  lit,
+  receiving,
   splash,
   onBlank,
 }: {
-  lit: boolean;
+  receiving: boolean;
   splash: boolean;
   onBlank: () => void;
 }) {
   return (
     <div
       data-ground=""
-      data-lit={lit || undefined}
-      className="open-space @container relative isolate flex h-full min-w-[320px] flex-1 flex-col items-center justify-center gap-4 rounded-[var(--radius-card)] border border-dashed border-hairline p-6 text-center transition-colors data-lit:border-olive"
+      style={{
+        transform: receiving
+          ? "translateX(calc(var(--lane-default-width) + var(--canvas-grid)))"
+          : "",
+      }}
+      className="open-space lane-shift @container relative isolate flex h-full min-w-[320px] flex-1 flex-col items-center justify-center gap-4 rounded-[var(--radius-card)] border border-dashed border-hairline p-6 text-center"
     >
       {splash && <SplashDrawing />}
       <p className="font-serif text-xl text-balance text-ink">
@@ -40,17 +45,30 @@ function OpenSpace({
   );
 }
 
-// The full-height ink line in the gap a carry would land in; none at the end, where the open
-// space lights up instead.
-function DropMarker({ landing }: { landing: Landing | null }) {
-  if (landing === null || landing.marker === null) return null;
+// Inert, so the preview neither takes pointer hits nor duplicates controls in the tab order.
+function DropPreview({ landing }: { landing: Landing | null }) {
+  if (landing === null) return null;
   return (
     <div
-      data-drop-marker=""
+      data-drop-preview=""
+      inert
       aria-hidden="true"
-      className="pointer-events-none absolute inset-y-4 w-0.5 -translate-x-1/2 rounded-full bg-ink"
-      style={{ left: landing.marker }}
-    />
+      className="lane-shift"
+      style={{ transform: `translateX(${landing.left}px)` }}
+    >
+      {landing.carried.kind === "card" ? (
+        <CanvasCard card={landing.carried.card} />
+      ) : (
+        <section className="thread-panel" style={{ height: "100%" }}>
+          <header className="thread-header">
+            <h2>New thread</h2>
+          </header>
+          <div className="thread-scroll">
+            <blockquote>{landing.carried.text}</blockquote>
+          </div>
+        </section>
+      )}
+    </div>
   );
 }
 
@@ -60,15 +78,27 @@ type LaneActions = LaneReports & {
   onResize: (id: LaneId, px: number) => void;
 };
 
+function laneTransform(
+  landing: Landing | null,
+  drag: ReturnType<typeof useReorder>["drag"],
+  index: number,
+): string {
+  return landing !== null && index >= landing.at
+    ? "translateX(calc(var(--lane-default-width) + var(--canvas-grid)))"
+    : displacement(drag, index);
+}
+
 // The lanes with the gap after each: a lane lifts by its title bar, a gap drags its width.
 function LaneRow({
   lanes,
   actions,
   reorderable,
+  landing,
 }: {
   lanes: LaneView[];
   actions: LaneActions;
   reorderable: boolean;
+  landing: Landing | null;
 }) {
   const { onMove, onResize } = actions;
   const reorder = useReorder(onMove, reorderable);
@@ -80,14 +110,18 @@ function LaneRow({
         lane={lane}
         width={resizing?.id === lane.id ? resizing.px : lane.width}
         lifted={reorder.drag?.move?.id === lane.id}
-        style={{ transform: displacement(reorder.drag, index) }}
+        style={{
+          transform: laneTransform(landing, reorder.drag, index),
+        }}
         handlers={reorder.laneFor(lane.id, index)}
         reports={actions}
       />
       <LaneSeparator
         title={lane.title}
         resizable={!lane.collapsed}
-        style={{ transform: displacement(reorder.drag, index) }}
+        style={{
+          transform: laneTransform(landing, reorder.drag, index),
+        }}
         onResize={(px, kept) => {
           setResizing(kept ? null : { id: lane.id, px });
           if (kept) onResize(lane.id, px);
@@ -169,8 +203,8 @@ function useFocusedLane(
  * the end for the next thing. The gap after each lane drags the lane's width, a lane's title
  * bar drags it to another place in the row, and the ground drags to pan. A lane collapses to a
  * slim strip and back (ADR-133), and the whole strip drags it. The whole row takes a
- * carried card or highlight (ADR-091): while one is over it the pane shows it, and an ink
- * marker stands in the gap it would land in. On a phone the row is view-only (ADR-122): it
+ * carried card or highlight (ADR-091): a dimmed preview occupies its destination slot and
+ * neighboring lanes step aside, as they do during reorder. On a phone the row is view-only (ADR-122): it
  * still scrolls sideways, but a lane's title bar no longer lifts it. The canvas keeps no lanes
  * of its own: it reports each change, and the caller's lanes come back changed. A lane that
  * closes with the focus in it hands the focus on to its neighbour.
@@ -217,9 +251,14 @@ export function Canvas({
       onPointerUp={pan.onPointerUp}
       onPointerCancel={pan.onPointerUp}
     >
-      <LaneRow lanes={lanes} actions={{ ...actions, onClose }} reorderable={reorderable} />
-      <DropMarker landing={landing} />
-      <OpenSpace lit={landing?.marker === null} splash={lanes.length === 0} onBlank={onBlank} />
+      <LaneRow
+        lanes={lanes}
+        actions={{ ...actions, onClose }}
+        reorderable={reorderable}
+        landing={landing}
+      />
+      <DropPreview landing={landing} />
+      <OpenSpace receiving={landing !== null} splash={lanes.length === 0} onBlank={onBlank} />
       {/* The ground goes on for a pane past the open space: the canvas has no right edge. */}
       {lanes.length > 0 && <div data-ground="" aria-hidden="true" className="w-full shrink-0" />}
     </section>
