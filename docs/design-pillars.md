@@ -272,6 +272,7 @@ behind each rule below is told in `docs/FOR_ETHAN.md`.
 | Sidebar peek fade in, at the slide's start | 120ms | `cubic-bezier(0.23, 1, 0.32, 1)` | derived |
 | Sidebar peek fade back, to the slide's end | 120ms | `cubic-bezier(0.68, 0, 0.77, 0)` | derived |
 | Sidebar peek rows, leaving at the slide back's start | 120ms | `cubic-bezier(0.23, 1, 0.32, 1)` | derived (Ethan's report) |
+| The rail's divider through a pin and an unpin | on at the pin's first frame; off at the unpin's last (a 0s step after `--panel-pin`) | none, steps | Ethan |
 | Sidebar pin and unpin (the panel behind the rail, workspace and tabs in step) | 250ms (`--panel-pin`); none under reduced motion (rule 24) | `cubic-bezier(0.17, 1.02, 0.58, 1)` (`--panel-ease`) | Ethan |
 | Sidebar peek under reduced motion (rule 24) | none: no slide and no fade | none | Ethan |
 
@@ -362,6 +363,10 @@ the slide's first frame on the fade-in's 120ms and curve, so it is gone before t
 the way home, and no row's end (a count, an ellipsis, a "+") is left in the sliver beside the rail,
 where it read as text outside the panel (Ethan). The paper, the hairline and the shadow stay
 solid, so the slide still reads.
+Docked by the toggle, the line that parts the rail from the panel is the rail's own right edge,
+not the panel's left: it is there on the pin's first frame, the panel sliding out from behind
+it, and it stays through an unpin until the panel is home (Ethan). A line on the panel's edge
+would sit behind the clip until the last frame and creep in as the curve settles, like a fade.
 That tail fade takes away only the soft shadow and the hairline across the workspace's corner,
 which would otherwise vanish in one frame as the panel lands: 2.5% of the 40px strip past the
 rail's edge in either theme, the landing frame at full strength against rest (derived).

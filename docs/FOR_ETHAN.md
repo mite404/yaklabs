@@ -2518,3 +2518,44 @@ Proof that nothing else moved: every button's computed corner, surveyed in four 
 after, read the same, and the screenshots matched to the pixel. In print terms, a typo on the
 plate is fixed on the plate; correcting each copy by hand works until the one copy nobody
 checked goes out.
+
+### The line belongs to the set, not the actor
+
+Docked, a hairline parts the rail from the panel. It was first drawn on the panel's own left
+edge, which made sense at rest and failed in motion: during a pin the panel slides out from
+behind the rail's edge, so its left edge (and the line on it) stayed hidden behind the clip for
+the whole slide and only arrived on the last frames. With the curve's long settle, those last
+frames move by fractions of a pixel, so the 1px line smeared into view like a fade. Ethan: "it
+fades in and doesn't feel considered".
+
+The line is part of the set, the rail's edge, not of the actor sliding past it. So it moved onto
+the rail, and it switches with the docked state rather than riding the panel:
+
+```css
+/* apps/web/src/index.css - the rail's edge, on from a pin's first frame, off after an unpin */
+[data-slot="rail"] {
+  transition: box-shadow 0s var(--panel-pin); /* going off: hold, then step at 250ms */
+}
+[data-slot="sidebar-wrapper"]:has([data-slot="sidebar"][data-state="expanded"])
+  [data-slot="rail"] {
+  box-shadow: inset -1px 0 0 var(--hairline);
+  transition: none; /* coming on: at once */
+}
+```
+
+```mermaid
+sequenceDiagram
+  participant T as Toggle
+  participant R as Rail edge (line)
+  participant P as Panel
+  T->>R: pin: data-state expanded, line on at frame 1
+  T->>P: slides out from behind the line, 250ms
+  T->>P: unpin: slides back behind the line, 250ms
+  R-->>R: 0s transition, delayed 250ms: line off as the panel lands
+```
+
+The trick in the middle is a transition with no duration and a delay: the browser holds the old
+value for the delay, then steps. A transition runs on the rules of the state it arrives at, so
+the off state carries the delay and the on state carries none, and one line of CSS plays the
+pin backwards for the unpin with no JavaScript. In film terms: the door frame is dressed before
+the actor walks through it, and struck only after they have left the shot.

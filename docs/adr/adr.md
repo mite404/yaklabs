@@ -1783,8 +1783,13 @@ Ethan answered the defaults it was built with, the same day:
 - The landmarks and the toggle keep their names, the rail "Places", the panel "Sidebar", the
   toggle "Toggle sidebar" ("names yes that's fine").
 - Docked by the toggle, a hint of a line parts the rail from the panel, the workspace's hairline
-  at the panel's left edge, as in Kay's own app; a peek draws none ("ONLY SHOW the dividing line
-  on toggle, don't show it on peek"). P35 holds both.
+  at the rail's right edge, as in Kay's own app; a peek draws none ("ONLY SHOW the dividing line
+  on toggle, don't show it on peek"). It is the rail's, so a click on the toggle draws it on the
+  pin's first frame and the panel slides out from behind it ("the separator ... needs to be drawn
+  right away right at the first keyframe of the slide out anim"); on the panel's own left edge,
+  as first built, it stayed behind the rail's clip until the last frame and crept in like a
+  fade. An unpin holds it through the slide until the panel is home, the pin played backwards;
+  a key's change and reduced motion, with no slide, switch it at once. P35 holds all of it.
 - A phone is out of scope ("skip the mobile app. this is a desktop app"): no rail below 768px,
   and the drawer stays as built, not extended.
 - A pin and an unpin move over 250ms, the panel, the workspace and the tabs in lockstep, on
