@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// Measures the done predicate for the projects, sub-threads, shell, carry and collapsible lane
-// work on the real app
+// Measures the done predicate for the projects, sub-threads, shell, carry, collapsible lane and
+// sidebar (peek, resize, pills) work on the real app
 // and the real Storybook. Every check runs in its own browser context, so one failure never
 // hides another, and a check never sees another's data.
 //
@@ -11,6 +11,13 @@ import { canvasChecks } from "./canvas-checks.mjs";
 import { laneCollapseChecks } from "./lane-collapse-checks.mjs";
 import { run } from "./lever.mjs";
 import { shellChecks } from "./shell-checks.mjs";
+import { sidebarChecks } from "./sidebar-checks.mjs";
 import { welcomeChecks } from "./welcome-checks.mjs";
 
-await run({ ...canvasChecks, ...shellChecks, ...laneCollapseChecks, ...welcomeChecks });
+await run({
+  ...canvasChecks,
+  ...shellChecks,
+  ...laneCollapseChecks,
+  ...welcomeChecks,
+  ...sidebarChecks,
+});

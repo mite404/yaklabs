@@ -480,10 +480,18 @@ export const polishChecks = {
         await context.close();
       }
     }
+    // D3: the tabs keep 0.6's boxes, moved together so the first starts 4px past the sidebar's
+    // edge, which they follow as the sidebar is resized (the ChatGPT app's alignment).
     const grown = await openScenario(browser, { viewport: GROWN });
     const base = readBaseline().json.light.bar.boxes.tabs;
     const now = (await boxesOf(grown.page)).tabs.map(shift);
-    const d3 = same(now, base);
+    const sidebarEdge = (await grown.page.getByRole("main").boundingBox()).x - 8; // → as shifted
+    const by = now.length > 0 && base.length > 0 ? now[0].x - base[0].x : 0;
+    const d3 =
+      same(
+        now.map((box) => ({ ...box, x: box.x - by })),
+        base,
+      ) && Math.abs(now[0].x - (sidebarEdge + 4)) < 0.5;
     await grown.context.close();
 
     const long = await openScenario(browser, { scenario: "long", query: query("solid") });
