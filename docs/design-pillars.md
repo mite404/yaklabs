@@ -218,6 +218,9 @@ behind each rule below is told in `docs/FOR_ETHAN.md`.
 | Modal fade, then rise | 160ms, 200ms | `ease-out` | derived |
 | Agent working glyph (wave, orbit) | 2000ms loop | `linear` fades | Ethan |
 | Agent tree glyph | 2000ms loop | `linear` fades, `cubic-bezier(0.4, 0, 0.6, 1)` scroll | Ethan |
+| Sidebar peek slide, out and back (rule 26) | 220ms | `cubic-bezier(0.32, 0.72, 0, 1)` | Ethan |
+| Sidebar peek fade in, at the slide's start | 120ms | `cubic-bezier(0.23, 1, 0.32, 1)` | derived |
+| Sidebar peek fade back, to the slide's end | 120ms | `cubic-bezier(0.68, 0, 0.77, 0)` | derived |
 
 ### 18. A working indicator reads as steady work, never an alert
 
@@ -286,6 +289,22 @@ checked on a contact sheet: the loop paused at even steps.
 Timing claims ("half clipped as the branch is half faded", "no two squares share a shade") get a
 browser test that seeks the animation and measures it; a screenshot of one good frame proves
 little, since each frame of a broken loop can look fine on its own.
+
+### 26. A panel that slides past the window's edge is clipped, not faded
+
+The sidebar's peek slides out from the window's edge and back to it on one curve and one
+duration, 220ms of `cubic-bezier(0.32, 0.72, 0, 1)` both ways (Ethan).
+The window's frame clips the panel where it slides off (`overflow: hidden`), the way rule 22's
+shapes pass their gate, so the fade hides no motion (derived).
+Out, it fades in over the slide's first 120ms; back, it keeps full strength and fades over the
+slide's last 120ms, starting 100ms in, on the fade-in's curve played backwards (derived): still
+0.97 when its edge is 3px from home.
+That tail fade takes away only the hairline and shadow left at the window's edge, which would
+otherwise vanish in one frame as the rail takes the panel's place: 19% of the rail's pixels in
+the light theme, 13% in the dark.
+The first way back faded on the slide's own front-loaded curve over 160ms: at 0.32 after 33ms,
+with its edge still 83px out, it read as no motion at all.
+The sidebar checks' P24 seeks both directions to the same instants and holds them to this.
 
 ## Open questions
 
