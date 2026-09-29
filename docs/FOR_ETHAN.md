@@ -1948,11 +1948,11 @@ choreograph a second routine, you cue the same one later. A canon in music works
 
 The first cut ran at 150ms: nearly seven loops a second, which the eye reads as flicker, not a
 travelling wave, and the fade through the greens lasted about 75ms, too short to register. It now
-ships at 1500ms, with a rest in each loop: the motion fits in the first 65% of a square's cycle
-and it sits clear for the rest, so the wave lands before the next one starts. A rest is what
-separates steady work from an alarm; an alarm never pauses. The Speeds story plays 650, 850, 1200,
-1350 and 1500ms side by side, because
-timing is a taste call that is easier to defend with the alternatives on screen than in words.
+ships at 2000ms (after stops at 1200 and 1500), with a rest in each loop: the motion fits in the
+first 65% of a square's cycle and it sits clear for the rest, so the wave lands before the next
+one starts. A rest is what separates steady work from an alarm; an alarm never pauses. The Speeds
+story plays five lengths side by side, because timing is a taste call that is easier to defend
+with the alternatives on screen than in words.
 
 Colour got its own track later. A second animation on each square walks through seven brand
 greens, one per loop, and jumps only while the square is clear, so every flash is one shade from
