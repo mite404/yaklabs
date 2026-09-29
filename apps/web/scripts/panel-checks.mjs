@@ -1,7 +1,8 @@
 // Checks for the projects panel beside the rail, on a desktop window with motion on: where
-// keyboard focus goes as the panel closes.
+// keyboard focus goes as the panel closes, and what focus holds a peek.
 // oxlint-disable no-await-in-loop -- one keyboard drives one page, so each step waits for the last
-import { openDesk } from "./sidebar-checks.mjs";
+import { placeOf, RAIL_PLACES } from "./rail-places.mjs";
+import { CLOSE_MS, openDesk, peek, phaseOf, SLIDE_MS } from "./sidebar-checks.mjs";
 
 const THEMES = ["light", "dark"];
 // What the closing panel hides that keyboard focus can sit on: a project row and the edge.
@@ -9,6 +10,12 @@ const HIDDEN_ON_CLOSE = [
   { role: "button", name: "Demo store" },
   { role: "separator", name: "Resize the sidebar" },
 ];
+// A slide back that never reports its end still settles by then (sidebar-peek.tsx).
+const LEAVE_FALLBACK_MS = 400;
+// The most a peek takes to go once the pointer leaves: the grace, the slide back, its fallback.
+const GONE_MS = CLOSE_MS + SLIDE_MS + LEAVE_FALLBACK_MS;
+const [KAY] = RAIL_PLACES;
+const LAB = RAIL_PLACES.at(-1);
 
 // Runs in the page: the focused element as its role and name, or "body".
 function focusedNow() {
@@ -44,6 +51,77 @@ async function closeFrom(browser, theme, place) {
   };
 }
 
+// P28's first case: keyboard focus on Kay, the pointer rests on the rail until the panel peeks,
+// then leaves: the peek goes as it would with no focus anywhere.
+async function railFocusReleases(browser, theme) {
+  const { context, page } = await openDesk(browser, { theme });
+  await page.mouse.move(900, 500);
+  await tabOnto(page, placeOf(page, KAY));
+  const visible = await page.evaluate(() => document.activeElement.matches(":focus-visible"));
+  await peek(page);
+  const left = Date.now();
+  await page.mouse.move(900, 400, { steps: 2 });
+  const gone = await page
+    .waitForFunction(
+      () => document.querySelector('[data-slot="sidebar"]').dataset.peek === undefined,
+      null,
+      {
+        timeout: GONE_MS + 200,
+      },
+    )
+    .then(() => Date.now() - left)
+    .catch(() => null);
+  const still = await page.evaluate(focusedNow);
+  await context.close();
+  return {
+    ok: visible === true && gone !== null && still === "a Kay",
+    note: `${theme} focus on Kay (visible ${visible}): the peek ${gone === null ? `held past ${GONE_MS}ms` : `went ${gone}ms after the pointer left`}, focus still on ${still}`,
+  };
+}
+
+// The name pills up now.
+const pillsUp = (page) =>
+  page.locator('[data-slot="tooltip-content"][data-variant="pill"]:visible').count();
+
+// P28's Escape cases: with focus on Lab, the first Escape closes Lab's pill (a tooltip owns
+// Escape while it shows) and the next closes the peek, leaving focus on Lab; with focus Tabbed
+// into the panel's first row, Escape hands it to the toggle.
+async function escapeFrom(browser, theme) {
+  const { context, page } = await openDesk(browser, { theme });
+  await peek(page);
+  await tabOnto(page, placeOf(page, LAB));
+  await page.waitForTimeout(200);
+  const pill = await pillsUp(page);
+  await page.keyboard.press("Escape");
+  await page.waitForTimeout(200);
+  const first = { pill: await pillsUp(page), phase: await phaseOf(page) };
+  await page.keyboard.press("Escape");
+  const fromRail = { phase: await phaseOf(page), focus: await page.evaluate(focusedNow) };
+  await page.mouse.move(900, 500);
+  await page.waitForTimeout(CLOSE_MS);
+  await peek(page);
+  await tabOnto(page, page.locator('[data-slot="rail"]').getByRole("button", { name: "Account" }));
+  await page.keyboard.press("Tab");
+  const inPanel = await page.evaluate(
+    () => document.activeElement.closest('[data-slot="sidebar-container"]') !== null,
+  );
+  await page.keyboard.press("Escape");
+  const fromPanel = { phase: await phaseOf(page), focus: await page.evaluate(focusedNow) };
+  await context.close();
+  return {
+    ok:
+      pill === 1 &&
+      first.pill === 0 &&
+      first.phase === "open" &&
+      fromRail.phase === "rail" &&
+      fromRail.focus === "a Lab" &&
+      inPanel === true &&
+      fromPanel.phase === "rail" &&
+      fromPanel.focus === "button Toggle sidebar",
+    note: `${theme} focus on Lab, ${pill} pill up; Escape: ${first.pill} pills, peek ${first.phase}; Escape: ${fromRail.phase}, focus on ${fromRail.focus}; Tab past the account into the panel ${inPanel}, Escape: ${fromPanel.phase}, focus on ${fromPanel.focus}`,
+  };
+}
+
 /** The workspace lever's checks of the projects panel beside the rail, by id. */
 export const panelChecks = {
   // Closing the docked panel by Ctrl/Cmd+B with keyboard focus on a project row or on the
@@ -52,6 +130,17 @@ export const panelChecks = {
     const results = [];
     for (const theme of THEMES) {
       for (const place of HIDDEN_ON_CLOSE) results.push(await closeFrom(browser, theme, place));
+    }
+    return { ok: results.every((r) => r.ok), detail: results.map((r) => r.note).join("; ") };
+  },
+
+  // Keyboard focus on a rail place never holds a peek out (ADR-139): the rail stays either way.
+  // Escape from a rail place leaves focus there; from the panel it hands focus to the toggle,
+  // since the panel's rows leave with it.
+  async P28(browser) {
+    const results = [];
+    for (const theme of THEMES) {
+      results.push(await railFocusReleases(browser, theme), await escapeFrom(browser, theme));
     }
     return { ok: results.every((r) => r.ok), detail: results.map((r) => r.note).join("; ") };
   },
