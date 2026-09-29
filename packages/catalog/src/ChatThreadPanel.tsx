@@ -10,6 +10,7 @@ import {
   type SetStateAction,
 } from "react";
 import type { Agent, AgentEvent } from "./agent";
+import { AgentTree } from "./AgentTree";
 import { AwaitingInputCard } from "./AwaitingInputCard";
 import { resolveAwaiting, type AwaitingInput } from "./awaiting";
 import { ComposeBox } from "./ComposeBox";
@@ -18,6 +19,7 @@ import { markGrabbableHighlight } from "./grabbable";
 import { DictationModal, type DictationSource } from "./DictationModal";
 import { labAgent } from "./labAgent";
 import { resolveInteractive, type CardAttachment } from "./interactive";
+import { ReadingTools } from "./ReadingTools";
 import { Recap } from "./Recap";
 import { shouldShowRecap, type RecapItem } from "./recapRules";
 import type { Thread, ThreadMessage } from "./thread";
@@ -64,9 +66,11 @@ function landOn(turn: HTMLElement | null) {
 }
 
 // The dock card overlays the conversation, so its height is reserved below the last turn for
-// as long as it is docked, keeping a reader who was at the bottom still at the bottom.
+// as long as it is docked, keeping a reader who was at the bottom still at the bottom. The dock
+// learns the same height, so what floats over it (the reading tools) stands above the card.
 // Returns the release, which hands the space back.
 function reserveDockSpace(thread: HTMLElement, slot: HTMLElement): () => void {
+  const holders = [thread, slot.parentElement].filter((el) => el !== null); // → thread, dock
   const reserve = () => {
     const atBottom = thread.scrollHeight - thread.scrollTop - thread.clientHeight < 4;
     // Layout offsets, not screen rects, so the card's slide-in animation can't skew them.
@@ -75,7 +79,8 @@ function reserveDockSpace(thread: HTMLElement, slot: HTMLElement): () => void {
     const composeInset = slot.nextElementSibling
       ? parseFloat(getComputedStyle(slot.nextElementSibling).paddingTop) || 0
       : 0;
-    thread.style.setProperty("--dock-space", `${slot.offsetHeight - card + composeInset}px`);
+    const space = `${slot.offsetHeight - card + composeInset}px`;
+    for (const holder of holders) holder.style.setProperty("--dock-space", space);
     if (atBottom) thread.scrollTop = thread.scrollHeight;
   };
   reserve();
@@ -83,7 +88,7 @@ function reserveDockSpace(thread: HTMLElement, slot: HTMLElement): () => void {
   observer.observe(slot);
   return () => {
     observer.disconnect();
-    thread.style.removeProperty("--dock-space");
+    for (const holder of holders) holder.style.removeProperty("--dock-space");
   };
 }
 
@@ -184,16 +189,22 @@ function initialReported(messages: ThreadMessage[]): Record<string, string> {
 // What the thread says when a reply never arrives, so the user is not left waiting on a bubble.
 const REPLY_FAILED = "I couldn't finish that reply. Try again in a moment.";
 
+/** One reply still waiting on its first chunk, keyed by its own id. */
+type Pending = { id: string };
+
 /**
  * Sends events to the agent and streams each reply into the thread as its own turn (ADR-041).
- * Replies stop when the panel unmounts. Returns the function that sends an event.
+ * Replies stop when the panel unmounts. Returns the function that sends an event, and every
+ * reply still waiting on its first chunk - tracked per id in a set, not one shared flag, since
+ * more than one reply can be in flight at once.
  */
 function useAgent(
   agent: Agent,
   setMessages: Dispatch<SetStateAction<ThreadMessage[]>>,
-): (event: AgentEvent) => () => void {
+): { tell: (event: AgentEvent) => () => void; pending: Pending[] } {
   const replies = useRef(0);
   const live = useRef(new Set<AbortController>());
+  const [pendingIds, setPendingIds] = useState<ReadonlySet<string>>(new Set());
 
   useEffect(() => {
     const controllers = live.current;
@@ -204,10 +215,20 @@ function useAgent(
     };
   }, []);
 
-  return (event) => {
+  const stopPending = (id: string) => {
+    setPendingIds((current) => {
+      if (!current.has(id)) return current;
+      const next = new Set(current);
+      next.delete(id);
+      return next;
+    });
+  };
+
+  const tell = (event: AgentEvent) => {
     const controller = new AbortController();
     const id = `reply-${++replies.current}`;
     live.current.add(controller);
+    setPendingIds((current) => new Set(current).add(id));
     // Pure updaters (React may run them twice): append on the first chunk, then extend.
     const write = (text: string, streaming: boolean) => {
       setMessages((current) =>
@@ -225,6 +246,9 @@ function useAgent(
       try {
         for await (const chunk of agent.respond(event, controller.signal)) {
           if (controller.signal.aborted) break;
+          // Real text to show is what ends the wait, right there - not the reply's end, and
+          // not an empty chunk, which carries nothing a reader would call content.
+          if (chunk !== "") stopPending(id);
           write(chunk, true);
           started = true;
         }
@@ -238,12 +262,30 @@ function useAgent(
         if (!controller.signal.aborted) write(started ? "" : REPLY_FAILED, false);
       } finally {
         live.current.delete(controller);
+        // Completion, failure or abort all end the wait; a chunk already cleared it, so this is
+        // a no-op then, and the only path for a reply that never sent one.
+        stopPending(id);
       }
     })();
     return () => {
       controller.abort();
     };
   };
+
+  return { tell, pending: [...pendingIds].map((pendingId) => ({ id: pendingId })) };
+}
+
+// The quiet placeholder for a reply whose iterator is running but has said nothing yet: the
+// same working glyph the sidebar shows, and a plain, factual line - never a guessed tool name,
+// since the real runtime has no tool events to report (ADR-041). The glyph's own label carries
+// the announcement, so the visible line stays out of a screen reader's way.
+function PendingTurn({ ref }: { ref?: (element: HTMLElement | null) => void }) {
+  return (
+    <div ref={ref} className="turn turn-agent turn-pending">
+      <AgentTree label="Thinking" />
+      <span aria-hidden="true">Thinking…</span>
+    </div>
+  );
 }
 
 // A live clock, or a fixed one when the host passes `now` (stories and tests).
@@ -481,15 +523,31 @@ function useRecap(input: {
   };
 }
 
-// Jump so the evidence lands vertically centered, every time (ADR-022 eye trace).
+// Each glowing turn's timer, so a later jump can clear the glow early.
+const flashTimers = new WeakMap<HTMLElement, number>();
+
+function clearFlash(turn: HTMLElement): void {
+  window.clearTimeout(flashTimers.get(turn));
+  flashTimers.delete(turn);
+  delete turn.dataset.flash;
+}
+
+// Jump so the evidence lands vertically centered, every time (ADR-022 eye trace). Only the turn
+// jumped to last glows: stepping through matches moves the glow rather than leaving a trail, and
+// a second jump to the same turn starts its glow over.
 function flashTurn(scroller: HTMLElement | null, turnId: string): void {
   const turn = scroller?.querySelector<HTMLElement>(`[data-turn-id="${CSS.escape(turnId)}"]`);
   if (!scroller || !turn) return;
   centerInScroller(scroller, turn);
+  scroller.querySelectorAll<HTMLElement>("[data-flash]").forEach(clearFlash);
+  void turn.offsetWidth; // a style flush, so the glow's animation starts over
   turn.dataset.flash = "true";
-  window.setTimeout(() => {
-    delete turn.dataset.flash;
-  }, FLASH_MS);
+  flashTimers.set(
+    turn,
+    window.setTimeout(() => {
+      clearFlash(turn);
+    }, FLASH_MS),
+  );
 }
 
 // After a card or a modal hands back control, the caret returns to the compose box.
@@ -506,6 +564,8 @@ function focusComposeIn(scroller: HTMLElement | null): void {
  * A vertical chat thread column: header, scrolling turns, and a compose box that never moves.
  * Text is capped at `--thread-measure` (80ch) inside a `--thread-gutter` (20px) on each side,
  * and embedded catalog cards adapt to the panel's width through container queries.
+ * Reading tools float at the right just above the compose box, or above the docked card: search,
+ * and a jump to any request (ReadingTools).
  * Above the compose box floats at most one card: a question the agent is blocked on
  * (ADR-039), or else, when the thread is active and the user has been away for 10+ minutes,
  * a recap of recorded outcomes (ADR-018). Anything that grows inside the thread is kept
@@ -570,7 +630,7 @@ export function ChatThreadPanel({
 }) {
   const { source, open } = dictationSetup(dictation);
   const [messages, setMessages] = useState(thread.messages);
-  const tell = useAgent(agent, setMessages);
+  const { tell, pending } = useAgent(agent, setMessages);
   const [draft, setDraft] = useState(initialDraft);
   const [dictating, setDictating] = useState(open);
   const outbox = useOutbox(thread.messages);
@@ -641,7 +701,14 @@ export function ChatThreadPanel({
           actions={headerActions}
         />
       )}
-      <div className="thread-scroll" ref={scroller} data-empty={showEmpty ? "" : undefined}>
+      {/* The turns take a tab stop, so a keyboard can scroll a thread that holds nothing else
+          to focus, such as one of plain words. */}
+      <div
+        className="thread-scroll"
+        ref={scroller}
+        data-empty={showEmpty ? "" : undefined}
+        {...(messages.length > 0 && { role: "region", "aria-label": "Messages", tabIndex: 0 })}
+      >
         {messages.length === 0 && empty}
         {messages.map((message) => (
           <Turn
@@ -651,8 +718,21 @@ export function ChatThreadPanel({
             cardsCarry={cardsCarry}
           />
         ))}
+        {pending.map((reply) => (
+          <PendingTurn key={reply.id} ref={landOn} />
+        ))}
       </div>
       <div className="thread-dock">
+        {messages.length > 0 && (
+          <div className="reading-dock">
+            <ReadingTools
+              messages={messages}
+              onJump={(turnId) => {
+                flashTurn(scroller.current, turnId);
+              }}
+            />
+          </div>
+        )}
         {hostAsk !== undefined && (
           <div className="dock-overlay" ref={setDockSlot}>
             <AwaitingInputCard

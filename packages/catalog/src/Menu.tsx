@@ -11,10 +11,14 @@ import {
 
 /** One choice in a menu. */
 export type MenuItem = {
+  /** Tells items apart when two share a label; the label is used when absent. */
+  id?: string;
   label: string;
   icon?: ReactNode;
   /** A keyboard shortcut shown on the right, e.g. "⌘U". Display only. */
   shortcut?: string;
+  /** Quiet text at the right that belongs to the item, e.g. when it was sent. */
+  detail?: string;
   disabled?: boolean;
   /** Why the item is unavailable, shown on hover. */
   hint?: string;
@@ -22,18 +26,33 @@ export type MenuItem = {
 };
 
 /** Where the menu opens relative to its trigger. */
-export type MenuPlacement = "above-start" | "below-end";
+export type MenuPlacement = "above-start" | "above-end" | "below-end";
 
 // The gap between the trigger and the menu.
 const OFFSET_PX = 6;
 
+// The least room kept between a menu and the viewport's far edge.
+const EDGE_PX = 8;
+
 // Fixed to the viewport beside its trigger, so no clipping container (the compose row, a
-// card) can cut the menu off.
+// card) can cut the menu off. A long list stops short of the viewport's edge and scrolls.
 function positionFor(trigger: HTMLElement, placement: MenuPlacement): CSSProperties {
   const rect = trigger.getBoundingClientRect();
+  if (placement === "below-end")
+    return {
+      position: "fixed",
+      right: window.innerWidth - rect.right,
+      top: rect.bottom + OFFSET_PX,
+      maxHeight: window.innerHeight - rect.bottom - OFFSET_PX - EDGE_PX,
+    };
+  const above = {
+    position: "fixed",
+    bottom: window.innerHeight - rect.top + OFFSET_PX,
+    maxHeight: rect.top - OFFSET_PX - EDGE_PX,
+  } as const;
   return placement === "above-start"
-    ? { position: "fixed", left: rect.left, bottom: window.innerHeight - rect.top + OFFSET_PX }
-    : { position: "fixed", right: window.innerWidth - rect.right, top: rect.bottom + OFFSET_PX };
+    ? { ...above, left: rect.left }
+    : { ...above, right: window.innerWidth - rect.right };
 }
 
 // Whether an event happened inside `container`. A window-level event, such as a resize, has no
@@ -151,7 +170,7 @@ export function Menu({
           onKeyDown={keys}
         >
           {items.map((item) => (
-            <li key={item.label} role="none">
+            <li key={item.id ?? item.label} role="none">
               <button
                 role="menuitem"
                 disabled={item.disabled}
@@ -163,6 +182,7 @@ export function Menu({
               >
                 {item.icon && <span className="menu-icon">{item.icon}</span>}
                 <span className="menu-label">{item.label}</span>
+                {item.detail && <span className="menu-detail">{item.detail}</span>}
                 {item.shortcut && <kbd className="menu-shortcut">{item.shortcut}</kbd>}
               </button>
             </li>

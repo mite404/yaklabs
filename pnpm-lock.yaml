@@ -247,6 +247,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@fontsource-variable/inter':
+        specifier: ^5.3.0
+        version: 5.3.0
       '@react-router/fs-routes':
         specifier: ^8.3.1
         version: 8.4.0(@react-router/dev@8.4.0(react-router@8.4.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(typescript@6.0.3)(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.2)(jiti@2.7.0))(wrangler@4.141.0(@cloudflare/workers-types@5.20260926.1)(@types/node@26.6.3)))(typescript@6.0.3)

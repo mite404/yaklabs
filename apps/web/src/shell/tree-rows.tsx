@@ -1,4 +1,5 @@
-import type { ThreadSummary } from "@yaklabs/runtime";
+import type { ThreadId, ThreadSummary } from "@yaklabs/runtime";
+import { AgentTree } from "@yaklabs/catalog";
 import { SidebarMenuButton } from "@yaklabs/ui/components/sidebar";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@yaklabs/ui/components/tooltip";
 import {
@@ -12,9 +13,10 @@ import {
 } from "lucide-react";
 import { useState, type ReactElement } from "react";
 import { Link } from "react-router";
-import { usePaths } from "../runtime";
+import { usePaths, useRuntimeState } from "../runtime";
 import { useShell } from "./model";
 import { rowLook, type Mark, type RowLook } from "./row-marks";
+import { isWorking } from "./working";
 
 // A row: the hover fill stays inside the sidebar's padding, with the site's 4px corners.
 const ROW = "h-8 rounded-[var(--radius)] text-sm";
@@ -120,12 +122,20 @@ function FoldChevron({ open }: { open: boolean }): ReactElement {
   );
 }
 
-// A row's words after any "↳": its marks (which hang in the gutter, out of the flow), its title,
-// and the marks as a screen reader hears them.
+// Whether a thread's row shows the working glyph, read from the runtime's own live state.
+function useWorking(threadId: ThreadId): boolean {
+  return isWorking(useRuntimeState(), threadId);
+}
+
+// A row's words after any "↳": its marks (which hang in the gutter, out of the flow), the
+// working glyph while its reply is in flight, its title, and the marks as a screen reader
+// hears them.
 function RowWords({ thread, look }: { thread: ThreadSummary; look: RowLook }): ReactElement {
+  const working = useWorking(thread.id);
   return (
     <>
       <Marks marks={look.marks} />
+      {working && <AgentTree label={`${thread.title} is working`} />}
       <span data-label="" className={LABEL}>
         {thread.title}
       </span>
