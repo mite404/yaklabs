@@ -1,0 +1,181 @@
+import { useId, useRef, useState, type KeyboardEvent, type MouseEvent } from "react";
+import { IconButton } from "./IconButton";
+import { BookmarkIcon, CloseIcon, SearchIcon, StepIcon } from "./icons";
+import { Menu, type MenuItem, type TriggerProps } from "./Menu";
+import { matchStatus, matchesOf, requestsOf, stepMatch, type Request } from "./threadReading";
+import type { ThreadMessage } from "./thread";
+
+// What the bookmark button says, read aloud and on hover.
+const BOOKMARKS = "Your requests";
+
+// One item per request, oldest first, each jumping to its turn; the full request shows on hover.
+function bookmarkItems(requests: Request[], onJump: (turnId: string) => void): MenuItem[] {
+  if (requests.length === 0)
+    return [{ label: "No requests yet", disabled: true, onSelect: () => {} }];
+  return requests.map((request) => ({
+    id: request.id,
+    label: request.label,
+    detail: request.time,
+    hint: request.text,
+    onSelect: () => {
+      onJump(request.id);
+    },
+  }));
+}
+
+// The bookmark button: a click opens the list, an Alt-click (Option on a Mac) skips the list
+// and goes straight to the latest request.
+function bookmarkTrigger(latest: string | undefined, onJump: (turnId: string) => void) {
+  return function renderBookmarkTrigger(props: TriggerProps) {
+    return (
+      <IconButton
+        {...props}
+        label={BOOKMARKS}
+        title={`${BOOKMARKS} (Alt-click for the latest)`}
+        onClick={(event: MouseEvent) => {
+          if (event.altKey && latest !== undefined) onJump(latest);
+          else props.onClick();
+        }}
+      >
+        <BookmarkIcon />
+      </IconButton>
+    );
+  };
+}
+
+// Puts the caret in the field as it opens.
+function focusOnMount(field: HTMLInputElement | null): void {
+  field?.focus();
+}
+
+// The open search: a field, the count, previous and next, and close. Enter in the field steps to
+// the next match and Shift+Enter to the previous one; Escape on any of its controls closes it.
+function SearchBar({
+  id,
+  messages,
+  onJump,
+  onClose,
+}: {
+  id: string;
+  messages: ThreadMessage[];
+  onJump: (turnId: string) => void;
+  onClose: () => void;
+}) {
+  const [query, setQuery] = useState("");
+  const [current, setCurrent] = useState<string>();
+  const matches = matchesOf(messages, query); // → turn ids, thread order
+
+  function step(direction: 1 | -1) {
+    const next = stepMatch(matches, current, direction); // → a turn id, or undefined
+    setCurrent(next);
+    if (next !== undefined) onJump(next);
+  }
+
+  function keys(event: KeyboardEvent<HTMLElement>) {
+    if (event.key === "Escape") {
+      event.preventDefault();
+      event.stopPropagation();
+      onClose();
+    } else if (event.key === "Enter" && event.target instanceof HTMLInputElement) {
+      event.preventDefault();
+      step(event.shiftKey ? -1 : 1);
+    }
+  }
+
+  return (
+    <search id={id} className="reading-search">
+      <input
+        ref={focusOnMount}
+        className="field"
+        type="search"
+        aria-label="Search this thread"
+        placeholder="Search this thread"
+        value={query}
+        onKeyDown={keys}
+        onChange={(event) => {
+          setQuery(event.target.value);
+          setCurrent(undefined);
+        }}
+      />
+      <output className="reading-count">{query.trim() && matchStatus(matches, current)}</output>
+      <IconButton
+        label="Previous match"
+        onKeyDown={keys}
+        disabled={matches.length === 0}
+        onClick={() => {
+          step(-1);
+        }}
+      >
+        <StepIcon />
+      </IconButton>
+      <IconButton
+        label="Next match"
+        onKeyDown={keys}
+        disabled={matches.length === 0}
+        onClick={() => {
+          step(1);
+        }}
+      >
+        <StepIcon down />
+      </IconButton>
+      <IconButton label="Close search" onKeyDown={keys} onClick={onClose}>
+        <CloseIcon />
+      </IconButton>
+    </search>
+  );
+}
+
+/**
+ * A thread's reading tools, floating at the top of its turns: search the thread's words and step
+ * through the turns that hold them, or jump back to any request the user sent, listed by its
+ * first 15 characters and its time. An Alt-click on the bookmark goes straight to the latest
+ * request. Where a jump lands, and how it shows, is the host's.
+ * @param messages The thread's turns as they stand now, including ones sent since it opened.
+ * @param onJump Brings the turn with this id into view.
+ */
+export function ReadingTools({
+  messages,
+  onJump,
+}: {
+  messages: ThreadMessage[];
+  onJump: (turnId: string) => void;
+}) {
+  const [searching, setSearching] = useState(false);
+  const searchButton = useRef<HTMLButtonElement>(null);
+  const searchId = useId();
+  const requests = requestsOf(messages); // → Request[], oldest first
+
+  function closeSearch() {
+    setSearching(false);
+    searchButton.current?.focus();
+  }
+
+  return (
+    <fieldset
+      className="reading-tools"
+      aria-label="Reading tools"
+      data-open={searching ? "" : undefined}
+    >
+      {searching && (
+        <SearchBar id={searchId} messages={messages} onJump={onJump} onClose={closeSearch} />
+      )}
+      <IconButton
+        ref={searchButton}
+        label="Search this thread"
+        aria-expanded={searching}
+        aria-controls={searching ? searchId : undefined}
+        onClick={() => {
+          if (searching) closeSearch();
+          else setSearching(true);
+        }}
+      >
+        <SearchIcon />
+      </IconButton>
+      <Menu
+        label={BOOKMARKS}
+        items={bookmarkItems(requests, onJump)}
+        trigger={bookmarkTrigger(requests.at(-1)?.id, onJump)}
+      />
+    </fieldset>
+  );
+}

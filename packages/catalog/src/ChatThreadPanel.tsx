@@ -18,6 +18,7 @@ import { markGrabbableHighlight } from "./grabbable";
 import { DictationModal, type DictationSource } from "./DictationModal";
 import { labAgent } from "./labAgent";
 import { resolveInteractive, type CardAttachment } from "./interactive";
+import { ReadingTools } from "./ReadingTools";
 import { Recap } from "./Recap";
 import { shouldShowRecap, type RecapItem } from "./recapRules";
 import type { Thread, ThreadMessage } from "./thread";
@@ -522,6 +523,7 @@ function focusComposeIn(scroller: HTMLElement | null): void {
  * A vertical chat thread column: header, scrolling turns, and a compose box that never moves.
  * Text is capped at `--thread-measure` (80ch) inside a `--thread-gutter` (20px) on each side,
  * and embedded catalog cards adapt to the panel's width through container queries.
+ * Reading tools float over the turns' top edge: search, and a jump to any request (ReadingTools).
  * Above the compose box floats at most one card: a question the agent is blocked on
  * (ADR-039), or else, when the thread is active and the user has been away for 10+ minutes,
  * a recap of recorded outcomes (ADR-018). Anything that grows inside the thread is kept
@@ -675,6 +677,14 @@ export function ChatThreadPanel({
           />
         ))}
       </div>
+      {messages.length > 0 && (
+        <ReadingTools
+          messages={messages}
+          onJump={(turnId) => {
+            flashTurn(scroller.current, turnId);
+          }}
+        />
+      )}
       <div className="thread-dock">
         {hostAsk !== undefined && (
           <div className="dock-overlay" ref={setDockSlot}>
