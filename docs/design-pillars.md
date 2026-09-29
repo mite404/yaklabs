@@ -271,6 +271,7 @@ behind each rule below is told in `docs/FOR_ETHAN.md`.
 | Sidebar peek slide, out and back (rule 26) | 220ms | `cubic-bezier(0.17, 1.02, 0.58, 1)` (`--panel-ease`) | Ethan |
 | Sidebar peek fade in, at the slide's start | 120ms | `cubic-bezier(0.23, 1, 0.32, 1)` | derived |
 | Sidebar peek fade back, to the slide's end | 120ms | `cubic-bezier(0.68, 0, 0.77, 0)` | derived |
+| Sidebar peek rows, leaving at the slide back's start | 120ms | `cubic-bezier(0.23, 1, 0.32, 1)` | derived (Ethan's report) |
 | Sidebar pin and unpin (the panel behind the rail, workspace and tabs in step) | 250ms (`--panel-pin`); none under reduced motion (rule 24) | `cubic-bezier(0.17, 1.02, 0.58, 1)` (`--panel-ease`) | Ethan |
 | Sidebar peek under reduced motion (rule 24) | none: no slide and no fade | none | Ethan |
 
@@ -356,6 +357,11 @@ panel never covers the rail's places, and the fade hides no motion (derived, ADR
 Out, it fades in over the slide's first 120ms; back, it keeps full strength and fades over the
 slide's last 120ms, starting 100ms in, on the fade-in's curve played backwards (derived): still
 0.97 when its edge is 2px from home.
+Its rows go first, as a title's type goes before its bar: back, the panel's content fades from
+the slide's first frame on the fade-in's 120ms and curve, so it is gone before the last tenth of
+the way home, and no row's end (a count, an ellipsis, a "+") is left in the sliver beside the rail,
+where it read as text outside the panel (Ethan). The paper, the hairline and the shadow stay
+solid, so the slide still reads.
 That tail fade takes away only the soft shadow and the hairline across the workspace's corner,
 which would otherwise vanish in one frame as the panel lands: 2.5% of the 40px strip past the
 rail's edge in either theme, the landing frame at full strength against rest (derived).

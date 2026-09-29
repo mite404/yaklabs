@@ -1204,6 +1204,44 @@ The fix was to say what the rule means, not what one curve happened to produce: 
 0.97 or more until its last 5% of travel. Lesson: a check that pins a symptom of today's tuning
 breaks the day the tuning changes; pin the intent, and the check survives a retime.
 
+### The type that stayed after the bar left
+
+The peek slid home correctly: the panel passed behind the rail's edge and never covered it. But
+the panel and the rail are the same paper, so in the last 20px of the trip the ends of the rows
+(a "18" count, an ellipsis, a "+", a sliver of the open row's fill) sat beside the rail's icons
+for four frames with no visible panel around them. Ethan saw it at once in a recording: "text is
+still rendered outside of the component".
+
+A lower third does not retract its bar with the name still on it: the type goes first, then the
+bar. The panel now does the same:
+
+```css
+/* apps/web/src/index.css - the rows leave on the fade-in's own clock; the paper slides on */
+[data-slot="sidebar"][data-peek] [data-slot="sidebar-inner"] > * {
+  transition: opacity 120ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+[data-slot="sidebar"][data-peek="leaving"] [data-slot="sidebar-inner"] > * {
+  opacity: 0;
+}
+```
+
+```mermaid
+gantt
+  title The peek's way home, in ms
+  dateFormat x
+  axisFormat %L
+  section Before
+  Slide, rows at full strength :crit, 0, 220
+  section After
+  Rows fade, strong ease-out   :0, 120
+  Paper, hairline, shadow slide:0, 220
+  Edge fade as it lands        :100, 220
+```
+
+The check had a blind spot on the way: opacity is not inherited, so the rows' own computed
+opacity read 1 while their parent faded. P24 now multiplies the opacity of every box from the rows
+up to the panel, the value actually drawn, and it fails on the old stylesheet.
+
 ## 5. Director's Commentary
 
 ### The agent only states intent; the design system does the rest

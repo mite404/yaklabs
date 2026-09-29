@@ -1821,6 +1821,16 @@ first, then the peek, as a menu takes Escape before the peek does. shadcn's `no-
 utility, which its `SidebarContent` names, is defined nowhere in the app, so the rail sets
 `scrollbar-width: none` itself.
 
+Amended the same day (Ethan, from a recording of the peek: "right as it gets to the last frame of
+slide back into the navbar text is still rendered outside of the component"). The panel and the
+rail are the same paper, so in the last 20px of the way home the rows' ends ("18", an ellipsis, a
+"+", a sliver of the open row's fill) stood beside the rail's glyphs for four frames with nothing
+around them. Back, the panel's rows now fade from the slide's first frame, on the fade-in's own
+120ms and curve (0.4 after 20ms, gone by the time the edge is 22px out), while the paper, its
+hairline and its shadow slide home solid. P24 seeks the rows with the slide and holds them under
+2% over the last 10% of the way back; it fails on the old stylesheet with the rows at full
+strength to the end.
+
 ## ADR-140 - Every hover label is the rail's ink pill
 
 2026-09-29 - Accepted (Ethan: "also "unpin thread" hover needs to match our design language. do
