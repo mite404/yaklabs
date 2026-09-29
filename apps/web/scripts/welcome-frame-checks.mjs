@@ -158,11 +158,11 @@ async function startsIn(browser, look) {
 }
 
 export const welcomeFrameChecks = {
-  // W6: every way to start a thread shows the new thread's welcome, its picture whole and at
+  // W7: every way to start a thread shows the new thread's welcome, its picture whole and at
   // full strength, in the first frame its tab paints, in every look and with motion on: never a
   // frame of the waiting frame, of bare paper, or of a picture fading in, each of which read as
   // a white flash between two pictures. The page never reloads.
-  async W6(browser) {
+  async W7(browser) {
     const runs = [];
     for (const look of LOOKS) runs.push(await startsIn(browser, look));
     const clean = (row) =>
@@ -182,10 +182,10 @@ export const welcomeFrameChecks = {
     };
   },
 
-  // W7: a thread with turns, opened from a welcome while its worker is slow (every message held
+  // W8: a thread with turns, opened from a welcome while its worker is slow (every message held
   // back 400ms), never shows the painting while it waits, and its "Opening ..." line stays
   // hidden for the first 100ms of the wait (a quicker open shows no line at all), then shows.
-  async W7(browser) {
+  async W8(browser) {
     const { page, context, errors } = await openDemo(browser, {
       prepare: (fresh) => slowWorkers(fresh, SLOW_MS),
     });
