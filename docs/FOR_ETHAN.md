@@ -1016,6 +1016,18 @@ Like re-slating every camera after a reset, not just the ones that were moved.
 `AgentWorking.browser.test.tsx` checks both: whole-pixel, even spacing, and one start time for
 every square after a switch. Both tests fail on the old code.
 
+### A variable the keyframe could not read
+
+The tree's slide and the top branch's fade were meant to share one ease-in-out curve, so the
+curve went in a custom property, `--tree-slide-ease`, read by both keyframes. The browser threw
+it away without a word: a keyframe's `animation-timing-function` does not resolve `var()`, so
+both fell back to the default `ease`, which front-loads the move. At the slide's midpoint the
+base was 80% of the way down, not 50%, and out of step with the fade. The test that asserts
+"half down, half faded" at the midpoint caught it; a screenshot would not have, since each
+frame looked plausible on its own. The fix writes the curve out in both keyframes, with a
+comment saying why. Lesson: when CSS silently ignores something, only a measured assertion
+tells you.
+
 ## 5. Director's Commentary
 
 ### The agent only states intent; the design system does the rest
@@ -1952,7 +1964,8 @@ with six stops.
 The tree (Storybook: Motion/Agent tree) is a second glyph on the same clock and palette: Kay's
 three pills, a crest of green running down them, left then right, and the base holding solid for
 a beat. Then the base slides down under the icon's bottom edge, and as it is half clipped the top
-branch starts to glow. It borrows a trick from side-scrolling games and car shots on a
+branch fades in over the same beat, on the same curve, one pill leaving as the other arrives. It
+borrows a trick from side-scrolling games and car shots on a
 soundstage: the car stays put and the background scrolls, so the eye reads motion the other way.
 It is also a cheat, the good kind: only the base moves. It is the one pill lit when the slide
 starts, so moving it alone reads as the whole tree dropping away. Once it is out of frame it
