@@ -10,6 +10,7 @@
 import { canvasChecks } from "./canvas-checks.mjs";
 import { laneCollapseChecks } from "./lane-collapse-checks.mjs";
 import { collect, run } from "./lever.mjs";
+import { railChecks } from "./rail-checks.mjs";
 import { shellChecks } from "./shell-checks.mjs";
 import { sidebarChecks } from "./sidebar-checks.mjs";
 import { welcomeChecks } from "./welcome-checks.mjs";
@@ -23,5 +24,6 @@ await run(
     welcomeChecks,
     welcomeFrameChecks,
     sidebarChecks,
+    railChecks,
   ),
 );

@@ -1,22 +1,27 @@
-// Checks for the sidebar's peek, its resizable edge, the title bar's tabs that follow that edge,
-// and the collapsed rail's name pills, on a desktop window with motion on.
+// Checks for the sidebar's peek, its resizable edge and the title bar's tabs that follow that
+// edge, on a desktop window with motion on.
 import { BASE, shotPath } from "./lever.mjs";
 
 const DEMO = `${BASE}/?scenario=demo`;
 const DESK = { width: 1440, height: 900 };
 // The peek's slide, out and back alike, and its curve (index.css), and its timing (peek.ts).
-const SLIDE_MS = 220;
+/** The peek's slide, out and back alike, in ms (index.css). */
+export const SLIDE_MS = 220;
 const DRAWER = "cubic-bezier(0.32, 0.72, 0, 1)";
-const OPEN_MS = 80;
-const CLOSE_MS = 250;
+/** How long the pointer rests before the peek opens, in ms (peek.ts). */
+export const OPEN_MS = 80;
+/** How long the peek waits after the pointer leaves before it closes, in ms (peek.ts). */
+export const CLOSE_MS = 250;
 // The instants a slide is seeked to: every 20ms, and the last millisecond before it ends.
 const SEEK_STEPS = [0, 20, 40, 60, 80, 100, 120, 140, 160, 180, 200, SLIDE_MS - 1];
 // The tabs start this far past the sidebar's edge (title-bar.tsx).
 const TAB_INSET = 4;
 const TOGGLE = 'header [data-sidebar="trigger"]';
 
-const round = (n) => Math.round(n * 100) / 100;
-const phaseOf = (page) =>
+/** A number rounded to two decimals, for a check's notes. */
+export const round = (n) => Math.round(n * 100) / 100;
+/** The sidebar's peek phase: "rail" at rest, else the phase it is in. */
+export const phaseOf = (page) =>
   page.evaluate(() => document.querySelector('[data-slot="sidebar"]').dataset.peek ?? "rail");
 // The first tab's left and the workspace's (the sidebar's edge), in CSS px.
 const edges = (page) =>
@@ -25,9 +30,11 @@ const edges = (page) =>
     edge: document.querySelector('[role="main"]').getBoundingClientRect().x,
   }));
 
-// A fresh desktop window on the demo, the sidebar open or collapsed, at a kept width, in a
-// theme, with motion on unless asked.
-async function openDesk(
+/**
+ * A fresh desktop window on the demo, the sidebar open or collapsed, at a kept width, in a
+ * theme, with motion on unless asked.
+ */
+export async function openDesk(
   browser,
   { side = "closed", width, theme = "light", motion = "no-preference" } = {},
 ) {
@@ -55,8 +62,8 @@ async function openDesk(
   return { context, page };
 }
 
-// Rests the pointer on the collapsed rail's empty stretch until the peek is out.
-async function peek(page) {
+/** Rests the pointer on the collapsed rail's empty stretch until the peek is out. */
+export async function peek(page) {
   await page.mouse.move(900, 500);
   await page.mouse.move(28, 650, { steps: 3 });
   await page.waitForFunction(
@@ -159,8 +166,8 @@ function luminance(css) {
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 
-// WCAG's contrast of two computed rgb() colours.
-function contrast(a, b) {
+/** WCAG's contrast of two computed rgb() colours. */
+export function contrast(a, b) {
   const [hi, lo] = [luminance(a), luminance(b)].toSorted((x, y) => y - x);
   return (hi + 0.05) / (lo + 0.05);
 }
@@ -260,33 +267,6 @@ async function pinInStep(page, cluster) {
   await page.locator(TOGGLE).click();
   const seen = await frames;
   return Math.max(...seen.map((f) => Math.abs(f.tab - Math.max(cluster, f.edge + TAB_INSET))));
-}
-
-// The pill a rail place shows once the pointer has rested on it, measured against the shell.
-async function pillOn(page, name) {
-  const place = page.locator('[data-slot="sidebar"]').getByRole("link", { name, exact: true });
-  const box = await place.boundingBox();
-  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2, { steps: 2 });
-  const pill = page.locator('[data-slot="tooltip-content"][data-variant="pill"]');
-  await pill.filter({ hasText: name }).waitFor({ timeout: 2000 });
-  await page.waitForTimeout(200);
-  const look = await pill.filter({ hasText: name }).evaluate((el) => {
-    const style = getComputedStyle(el);
-    const shell = getComputedStyle(document.querySelector('[data-slot="sidebar-inner"]'));
-    return {
-      text: style.color,
-      fill: style.backgroundColor,
-      shell: shell.backgroundColor,
-      round: Number.parseFloat(style.borderRadius) >= el.getBoundingClientRect().height / 2,
-      arrow: el.querySelector("[data-side], svg") !== null,
-      instant: el.dataset.instant ?? null,
-    };
-  });
-  return {
-    ...look,
-    onText: contrast(look.text, look.fill),
-    onShell: contrast(look.fill, look.shell),
-  };
 }
 
 export const sidebarChecks = {
@@ -412,43 +392,6 @@ export const sidebarChecks = {
     notes.push(
       `collapsed ${round(rail.tab)} after the toggle ${rail.tab > afterToggle}, peeking ${round(peeking.tab)}; pin drift ${round(drift)}px`,
     );
-    return { ok, detail: notes.join("; ") };
-  },
-
-  // The collapsed rail names each place in an ink pill, 7:1 for its text and 3:1 against the
-  // shell in either theme; the next place's pill opens at once; none while the sidebar peeks.
-  async P23(browser) {
-    const notes = [];
-    let ok = true;
-    for (const theme of ["light", "dark"]) {
-      const { context, page } = await openDesk(browser, { theme });
-      await page.mouse.move(900, 300);
-      for (const name of ["Kay", "Documentation", "Lab"]) {
-        const pill = await pillOn(page, name);
-        await page.screenshot({
-          path: shotPath(`P23-pill-${name}-${theme}`),
-          clip: { x: 0, y: 40, width: 320, height: 240 },
-        });
-        const good = pill.onText >= 7 && pill.onShell >= 3 && pill.round && !pill.arrow;
-        ok &&= good && (name === "Kay" || pill.instant === "delay");
-        notes.push(
-          `${theme} ${name}: text ${round(pill.onText)}:1, shell ${round(pill.onShell)}:1, round ${pill.round}, arrow ${pill.arrow}, instant ${pill.instant}`,
-        );
-      }
-      await peek(page);
-      const lab = await page
-        .locator('[data-slot="sidebar"]')
-        .getByRole("link", { name: "Lab" })
-        .boundingBox();
-      await page.mouse.move(lab.x + 20, lab.y + 20, { steps: 2 });
-      await page.waitForTimeout(700);
-      const whilePeeking = await page
-        .locator('[data-slot="tooltip-content"][data-variant="pill"]:visible')
-        .count();
-      ok &&= whilePeeking === 0;
-      notes.push(`${theme} pills while peeking ${whilePeeking}`);
-      await context.close();
-    }
     return { ok, detail: notes.join("; ") };
   },
 
