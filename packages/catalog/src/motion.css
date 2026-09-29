@@ -131,14 +131,15 @@
 
 /* Agent tree: Kay's three-pill glyph (left, right, full-width base), climbed. Green runs down
    the branches, top then middle; the base fills in and holds solid, darkest, for a beat; then
-   the base slides down out of the box, so the tree seems to drop away as we climb past it.
+   the base slides down out of the box as the top branch fades in, so the tree seems to drop
+   away as we climb past it.
    Only the base moves: it is the one pill lit when the slide starts, so moving it alone reads
    as the whole tree scrolling. Once it is out of sight it jumps back, clear, and later fades
    in where it started. Geometry on whole pixels: 3px pills, 1px gaps, a 12px box pinned 1px
    down, whose bottom edge clips the sliding base.
    Every pill's keyframes are written in loop time (no delays), so the cues line up by eye. */
 .agent-tree {
-  --working-duration: 1500ms;
+  --working-duration: 2000ms;
   display: inline-grid;
   grid-template-columns: repeat(12, 1px);
   grid-auto-rows: 3px;
@@ -168,14 +169,19 @@
   grid-column: 1 / span 12; /* x 0-12: the base */
   animation-name: agent-tree-base;
 }
-/* Top branch: starts to fade in at 8%, the moment the sliding base is half under the edge. */
+/* The slide: the base leaves by the bottom edge while the top branch arrives, over the same
+   0-24% on the same ease-in-out curve (written out in each, since a keyframe's timing function
+   cannot read a custom property: var() there silently falls back to "ease"), so the top's
+   opacity tracks the base's position frame for frame:
+   clear as the base starts to move, half as it is half clipped, solid as it leaves. One
+   camera move, seen at both ends of the frame. */
 @keyframes agent-tree-top {
-  0%,
-  8% {
+  0% {
     opacity: 0;
     background: var(--working-soft);
+    animation-timing-function: cubic-bezier(0.4, 0, 0.6, 1); /* same curve in both */
   }
-  25%,
+  24%,
   30% {
     opacity: 1;
     background: var(--working-strong);
@@ -190,7 +196,7 @@
     background: var(--working-soft);
   }
 }
-/* Middle branch: the same shape, one step behind the top. */
+/* Middle branch: the same shape, a step behind the top. */
 @keyframes agent-tree-middle {
   0%,
   28% {
@@ -212,32 +218,32 @@
     background: var(--working-soft);
   }
 }
-/* Base: slides 3px down, solid, until it is fully under the edge (0-16%, eased, so it is half
-   clipped at 8%); turns clear and jumps home out of sight (16-18%); fades in where it started as
-   the middle branch leaves (50-68%); holds solid for the beat (68-100%). */
+/* Base: slides 3px down, solid, until it is fully under the edge (0-24%); turns clear and jumps
+   home out of sight (24-26%); fades in where it started as the middle branch leaves (52-70%);
+   holds solid for the beat (70-100%, 600ms at the default speed). */
 @keyframes agent-tree-base {
   0% {
     opacity: 1;
     background: var(--working-strong);
     transform: none;
-    animation-timing-function: cubic-bezier(0.4, 0, 0.6, 1);
+    animation-timing-function: cubic-bezier(0.4, 0, 0.6, 1); /* same curve in both */
   }
-  16% {
+  24% {
     opacity: 1;
     background: var(--working-strong);
     transform: translateY(3px);
   }
-  17% {
+  25% {
     opacity: 0;
     transform: translateY(3px);
   }
-  18%,
-  50% {
+  26%,
+  52% {
     opacity: 0;
     background: var(--working-soft);
     transform: none;
   }
-  68%,
+  70%,
   100% {
     opacity: 1;
     background: var(--working-strong);
