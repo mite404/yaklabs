@@ -2,9 +2,12 @@
 // on a desktop window: the closed panel out of reach, and the Tab order through the rail and the
 // panel.
 // oxlint-disable no-await-in-loop -- one keyboard drives one page, so each step waits for the last
+import { placeOf, RAIL_PLACES } from "./rail-places.mjs";
 import { openDesk } from "./sidebar-checks.mjs";
 
 const THEMES = ["light", "dark"];
+// The rail's stops top to bottom: its places, then the account at its foot.
+const RAIL_STOPS = [...RAIL_PLACES.map((place) => place.name), "Account"];
 // How many Tabs a walk from the toggle takes before it gives up.
 const TABS = 60;
 // What the closed panel must hide: a thread's row and the resize edge, by their accessibility
@@ -70,6 +73,77 @@ async function outOfReach(browser, theme) {
   };
 }
 
+// Runs in the page: the focused element's name and where it sits: the title bar, the rail, the
+// panel, the workspace's main, or elsewhere.
+function stopNow() {
+  const at = document.activeElement;
+  const inside = (selector) => at.closest(selector) !== null;
+  const where = [
+    ["bar", 'header[data-slot="title-bar"]'],
+    ["rail", '[data-slot="rail"]'],
+    ["panel", '[data-slot="sidebar-container"]'],
+    ["main", '[role="main"]'],
+  ].find(([, selector]) => inside(selector));
+  return {
+    name: at.getAttribute("aria-label") ?? at.textContent.trim().slice(0, 40),
+    where: where === undefined ? "elsewhere" : where[0],
+  };
+}
+
+// The Tab stops from Kay until one lands in the workspace, and the stop just before Kay.
+async function stopsFromKay(page) {
+  await placeOf(page, RAIL_PLACES[0]).focus();
+  await page.keyboard.press("Shift+Tab");
+  const before = await page.evaluate(stopNow);
+  await page.keyboard.press("Tab");
+  const stops = [await page.evaluate(stopNow)];
+  while (stops.at(-1).where !== "main" && stops.length < TABS) {
+    await page.keyboard.press("Tab");
+    stops.push(await page.evaluate(stopNow));
+  }
+  return { before, stops };
+}
+
+// Some stops' names, joined; whether they all sit in one place; a walk written out.
+const namesOf = (stops) => stops.map((stop) => stop.name).join("|");
+const allIn = (stops, where) => stops.every((stop) => stop.where === where) === true;
+const describeWalk = ({ before, stops }) =>
+  `${before.where} > ${stops.map((stop) => `${stop.where}:${stop.name}`).join(" > ")}`;
+
+// Whether a walk crossed the rail in its order and then, docked, the panel from its first
+// project to its resize edge, before the workspace.
+function walkedInOrder({ before, stops }, docked) {
+  const rail = stops.slice(0, RAIL_STOPS.length);
+  const rest = stops.slice(RAIL_STOPS.length, -1);
+  const railInOrder = allIn(rail, "rail") && namesOf(rail) === RAIL_STOPS.join("|");
+  const panel =
+    docked === true
+      ? rest.length > 2 &&
+        allIn(rest, "panel") &&
+        rest[0].name === "Demo store" &&
+        rest.at(-1).name === "Resize the sidebar"
+      : rest.length === 0;
+  return before.where === "bar" && railInOrder && panel && stops.at(-1).where === "main";
+}
+
+// P33 in one theme: the walk with the panel docked and closed.
+async function tabOrder(browser, theme) {
+  const walks = {};
+  for (const side of ["open", "closed"]) {
+    const { context, page } = await openDesk(browser, { side, theme });
+    walks[side] = await stopsFromKay(page);
+    await context.close();
+  }
+  const [open, closed] = [walks.open.stops, walks.closed.stops].map((stops) =>
+    namesOf(stops.slice(0, RAIL_STOPS.length)),
+  );
+  const same = open === closed;
+  return {
+    ok: walkedInOrder(walks.open, true) && walkedInOrder(walks.closed, false) && same,
+    note: `${theme} docked ${describeWalk(walks.open)}; closed ${describeWalk(walks.closed)}; the rail's stops the same ${same}`,
+  };
+}
+
 /** The workspace lever's checks of what reaches the panel, by id; panel-checks.mjs registers them. */
 export const panelReachChecks = {
   // The closed panel is out of reach (ADR-139): inert, never a stop in 60 Tabs from the toggle,
@@ -78,6 +152,15 @@ export const panelReachChecks = {
   async P32(browser) {
     const results = [];
     for (const theme of THEMES) results.push(await outOfReach(browser, theme));
+    return { ok: results.every((r) => r.ok), detail: results.map((r) => r.note).join("; ") };
+  },
+
+  // Tab reads the columns in order (ADR-139): after the title bar, the rail's eight places and
+  // then its account; docked, the panel from Demo store to its resize edge; then the workspace.
+  // Closed, the workspace follows the account. The rail's stops are the same either way.
+  async P33(browser) {
+    const results = [];
+    for (const theme of THEMES) results.push(await tabOrder(browser, theme));
     return { ok: results.every((r) => r.ok), detail: results.map((r) => r.note).join("; ") };
   },
 };
