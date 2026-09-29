@@ -155,6 +155,29 @@ function PendingFrame({
   );
 }
 
+// What the frame says while the turns are not here: that the thread is opening, or why it
+// could not open, with Try again.
+function PendingWords({
+  title,
+  turns,
+  retry,
+}: {
+  title: string;
+  turns: Exclude<Turns, { kind: "open" }>;
+  retry: () => void;
+}) {
+  if (turns.kind === "loading") return <p className="text-soft-ink">Opening {title}…</p>;
+  return (
+    <>
+      <p className="text-ink">{title} could not be opened.</p>
+      <p className="text-soft-ink">{turns.reason}</p>
+      <QuietButton onClick={retry} data-retry="">
+        Try again
+      </QuietButton>
+    </>
+  );
+}
+
 // What renames a thread from its own title bar: nothing for a bare pane, which has no bar and
 // is renamed from its tab.
 function renamer(
@@ -237,17 +260,7 @@ export function ThreadPane({
         />
       ) : (
         <PendingFrame thread={thread} leading={leading} actions={actions} bare={bare}>
-          {turns.kind === "loading" ? (
-            <p className="text-soft-ink">Opening {thread.title}…</p>
-          ) : (
-            <>
-              <p className="text-ink">{thread.title} could not be opened.</p>
-              <p className="text-soft-ink">{turns.reason}</p>
-              <QuietButton onClick={retry} data-retry="">
-                Try again
-              </QuietButton>
-            </>
-          )}
+          <PendingWords title={thread.title} turns={turns} retry={retry} />
         </PendingFrame>
       )}
     </div>
