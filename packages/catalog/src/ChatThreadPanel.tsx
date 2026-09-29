@@ -641,7 +641,14 @@ export function ChatThreadPanel({
           actions={headerActions}
         />
       )}
-      <div className="thread-scroll" ref={scroller} data-empty={showEmpty ? "" : undefined}>
+      {/* The turns take a tab stop, so a keyboard can scroll a thread that holds nothing else
+          to focus, such as one of plain words. */}
+      <div
+        className="thread-scroll"
+        ref={scroller}
+        data-empty={showEmpty ? "" : undefined}
+        {...(messages.length > 0 && { role: "region", "aria-label": "Messages", tabIndex: 0 })}
+      >
         {messages.length === 0 && empty}
         {messages.map((message) => (
           <Turn
