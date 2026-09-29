@@ -6,7 +6,7 @@ import "./tokens.css";
 
 type Box = { x: number; y: number; width: number; height: number };
 type BaseFrame = { top: number; opacity: number };
-type SlideFrame = { baseTop: number; topBranchOpacity: number };
+type ScrollFrame = { baseTop: number; branchTop: number; branchOpacity: number };
 
 let host: HTMLElement;
 let root: Root;
@@ -47,12 +47,17 @@ function baseAt(ms: number): BaseFrame {
   return { top, opacity: Number(getComputedStyle(base).opacity) };
 }
 
-// The base's drop and the top branch's opacity at one moment of the slide.
-function slideAt(ms: number): SlideFrame {
+// Where the base and the top branch sit, and how visible the branch is, at one moment of the
+// scroll.
+function scrollAt(ms: number): ScrollFrame {
   const { top } = baseAt(ms);
-  const topBranch = pills().at(0);
-  if (!topBranch) throw new Error("no top branch");
-  return { baseTop: top, topBranchOpacity: Number(getComputedStyle(topBranch).opacity) };
+  const branch = pills().at(0);
+  if (!branch) throw new Error("no top branch");
+  return {
+    baseTop: top,
+    branchTop: branch.getBoundingClientRect().y - glyph().getBoundingClientRect().y,
+    branchOpacity: Number(getComputedStyle(branch).opacity),
+  };
 }
 
 beforeEach(() => {
@@ -70,7 +75,7 @@ it("draws Kay's three pills on whole pixels: left branch, right branch, full bas
   flushSync(() => {
     root.render(<AgentTree />);
   });
-  seek(0); // the base slides later in the loop; at 0 every pill is home
+  seek(600); // 30% in: the scroll is over and every pill is home
 
   expect(pillBoxes()).toEqual([
     { x: 2, y: 1, width: 7, height: 3 },
@@ -79,25 +84,28 @@ it("draws Kay's three pills on whole pixels: left branch, right branch, full bas
   ]);
 });
 
-it("slides the base fully under the bottom edge, and brings it home before it shows again", () => {
+it("scrolls the base fully under the bottom edge, and brings it home before it shows again", () => {
   flushSync(() => {
     root.render(<AgentTree duration={1000} />);
   });
 
   expect(baseAt(0)).toEqual({ top: 9, opacity: 1 }); // home, solid: the beat's last frame
-  expect(baseAt(240)).toEqual({ top: 12, opacity: 1 }); // fully under the edge, still solid
+  expect(baseAt(240)).toEqual({ top: 13, opacity: 1 }); // past the 12px edge, still solid
   expect(baseAt(300)).toEqual({ top: 9, opacity: 0 }); // home again, clear
   expect(baseAt(900)).toEqual({ top: 9, opacity: 1 }); // faded back in for the beat
 });
 
-it("fades the top branch in as the base scrolls out, on the same curve", () => {
+it("scrolls the top branch in from above as the base scrolls out, as one strip", () => {
   flushSync(() => {
     root.render(<AgentTree duration={1000} />);
   });
 
-  expect(slideAt(0)).toEqual({ baseTop: 9, topBranchOpacity: 0 }); // before the move
-  const half = slideAt(120); // → the halfway frame of the slide
-  expect(half.baseTop).toBeCloseTo(10.5); // half under the edge
-  expect(half.topBranchOpacity).toBeCloseTo(0.5); // half arrived
-  expect(slideAt(240)).toEqual({ baseTop: 12, topBranchOpacity: 1 }); // gone, and arrived
+  // before the move: the branch waits clear, fully above the top edge
+  expect(scrollAt(0)).toEqual({ baseTop: 9, branchTop: -3, branchOpacity: 0 });
+  const half = scrollAt(120); // → the halfway frame of the scroll
+  expect(half.baseTop).toBeCloseTo(11); // both 2px down: one strip moving
+  expect(half.branchTop).toBeCloseTo(-1);
+  expect(half.branchOpacity).toBeCloseTo(0.5); // half faded up
+  // the base is past the bottom edge as the branch lands home, solid
+  expect(scrollAt(240)).toEqual({ baseTop: 13, branchTop: 1, branchOpacity: 1 });
 });
