@@ -1681,7 +1681,9 @@ The shadcn menu takes Kay's menu shape (8px popup, 4px items, 13px text) in the 
 `dropdown-menu.tsx`: `--radius` and the palette variables reach colours and one radius, but the
 `base-lyra` preset hard-codes `rounded-none` and `text-xs` in each file, so variables alone left
 the menu looking like a different app. Welcome actions use the app's 8px corners (`rounded-xl`).
-A strip's expand is 24px, so its hover fill sits 3px inside the strip on every side.
+A collapsed strip's expand is 24px, set 7px down, so its hover fill clears the strip's outline by
+5.5px at the corners and 6px at the sides (a 28px fill met the strip's 14px corner arc, 1.5px
+apart).
 Amended the same day (Ethan, after seeing it): a main thread has no title row at all, with turns
 or without, since the tab row already names it; renaming moved to the tab (a double click on its
 title, or Rename first in its menu). The thread's "⋯" shows only while the pointer is on its tab
@@ -1711,3 +1713,13 @@ The layout switch offers Thread, Canvas, then Browser (it was Thread, Browser, C
 The edge shadow was refitted to Kay's by measuring their compose box: about 5% dark just below
 the box easing out over some 20px, 1% dark at its right, nothing above. It is now `2px 13px 22px
 -12px` on `--shadow`: mostly downward, a whisper to the right, and the long soft fall-off.
+Amended once more the same day (Ethan): a pinned, snoozed or archived thread's mark hangs in the
+row's left gutter, so every title starts at the same x. The splash switch works again (it threw
+when opened: its label sat outside a menu group), offers Landscape, Abstract and Vitruvian, lists
+Bonsai as disabled until its assets exist, and shows only in the new thread's welcome on the
+Thread layout. The sidebar, collapsed to its rail, peeks: hovering the title bar's toggle or the
+rail slides it out over the workspace (220ms in, 160ms out, no reflow), while keys and pins are
+instant. Its edge takes the canvas divider's handle (drag, arrows, Home and End, a double click to
+reset, the width kept as `kay.sidebar-width`), and the first tab starts 4px past that edge from the
+same width variable, as in the ChatGPT desktop app, so it follows a drag on every frame. Rail
+icons name themselves in an ink pill (13:1 against the shell).

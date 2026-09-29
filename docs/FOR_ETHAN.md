@@ -998,6 +998,21 @@ The first entries are ideas from before any code existed; the rest are parts of 
   menu's items without the new Rename. They now read the panel's `aria-label` and the tab's
   menu. Lesson: when a layout change removes an element, search the checks for its selector
   before the run does it for you.
+- **The button that crashed the app.** The splash switch "did not work" because opening it threw
+  and took the whole screen to "Something went wrong": its menu label was drawn outside a menu
+  group, and the menu library requires one. The picture never got a chance to change. It was
+  found by pressing the button the way a person does, not by reading the code. Lesson: when a
+  control "does nothing", reproduce it first; the silence can be a crash.
+- **A fill that met the curve.** The strip's expand hover kept touching the strip's edge although
+  the gap at the sides was 3px. The strip's top is a 14px arc, and the arc curves in under the
+  fill's corners, leaving 1.5px there. A smaller fill set lower now clears it by 5.5px. Lesson:
+  measure the distance to the outline everywhere, corners included, not along one axis.
+- **The hook that took my colleague's edits.** Committing part of a file, with another worker's
+  edits still unstaged in the same tree, made the formatter hook stash the unstaged changes and
+  fail to put them back, so four files reverted to their last commit for a moment. The hook
+  had left a snapshot commit, so nothing was lost. Now commits of partial work are made in a
+  clean second checkout, then the branch is moved onto them, and the shared tree is never
+  touched. Lesson: a tool that rewrites your working tree needs a tree nobody else is using.
 
 ## 5. Director's Commentary
 
