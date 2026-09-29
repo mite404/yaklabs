@@ -11,6 +11,8 @@ const meta = {
   parameters: { layout: "centered" },
   argTypes: {
     duration: { control: { type: "range", min: 100, max: 3000, step: 50 } },
+    // Only a screen reader hears it; a control that changes nothing on screen reads as broken.
+    label: { control: false },
   },
   args: { duration: 2000 },
   decorators: [(Story) => <Stage>{Story()}</Stage>],
@@ -23,6 +25,8 @@ export const Default: Story = {};
 
 /** The same climb at five lengths, side by side, to pick the pacing by eye. */
 export const Speeds: Story = {
+  // Each glyph here has its own fixed length, so the duration control would do nothing.
+  parameters: { controls: { exclude: ["duration"] } },
   render: () => (
     <>
       {SPEEDS.map((ms) => (
@@ -48,11 +52,11 @@ export const WithWave: Story = {
   ),
 };
 
-/** In place, at the shipped default speed: beside a line of text, as in a thread or the sidebar. */
+/** In place, beside a line of text as in a thread or the sidebar; opens at the shipped default. */
 export const InContext: Story = {
-  render: () => (
+  render: (args) => (
     <InLine>
-      <AgentTree />
+      <AgentTree {...args} />
     </InLine>
   ),
 };

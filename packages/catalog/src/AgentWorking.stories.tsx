@@ -18,6 +18,8 @@ const meta = {
     duration: { control: { type: "range", min: 100, max: 2000, step: 50 } },
     pattern: { control: "inline-radio", options: ["wave", "orbit"] },
     cells: { control: "inline-radio", options: [4, 6] },
+    // Only a screen reader hears it; a control that changes nothing on screen reads as broken.
+    label: { control: false },
   },
   args: { duration: 1500, pattern: "wave", cells: 4 },
   decorators: [(Story) => <Stage>{Story()}</Stage>],
@@ -39,6 +41,8 @@ export const SixOrbit: Story = { args: { cells: 6, pattern: "orbit" } };
 
 /** All four variants side by side at the same speed, to compare. */
 export const Compare: Story = {
+  // Every variant is shown at once, so only the shared duration is a live control here.
+  parameters: { controls: { exclude: ["pattern", "cells"] } },
   render: (args) => (
     <>
       {VARIANTS.map(({ pattern, cells }) => (
@@ -50,24 +54,27 @@ export const Compare: Story = {
   ),
 };
 
-/** The same wave at five speeds, side by side, to pick the timing by eye. */
+/** The same glyph at five speeds, side by side, to pick the timing by eye. */
 export const Speeds: Story = {
-  render: () => (
+  // Each glyph here has its own fixed length, so the duration control would do nothing; pattern
+  // and cells stay live, to compare the speeds of any variant.
+  parameters: { controls: { exclude: ["duration"] } },
+  render: (args) => (
     <>
       {SPEEDS.map((ms) => (
         <Labeled key={ms} caption={`${ms}ms`}>
-          <AgentWorking duration={ms} />
+          <AgentWorking duration={ms} pattern={args.pattern} cells={args.cells} />
         </Labeled>
       ))}
     </>
   ),
 };
 
-/** In place, at the shipped default speed: beside a line of text, as in a thread or the sidebar. */
+/** In place, beside a line of text as in a thread or the sidebar; opens at the shipped default. */
 export const InContext: Story = {
-  render: () => (
+  render: (args) => (
     <InLine>
-      <AgentWorking />
+      <AgentWorking {...args} />
     </InLine>
   ),
 };
