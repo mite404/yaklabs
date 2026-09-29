@@ -1949,5 +1949,11 @@ symmetric fade has no front: the eye cannot tell which way a blob of light is go
 edge is sharp. Six squares (two columns of three in the same 12px height) use the same table
 with six stops.
 
+The tree (Storybook: Motion/Agent tree) is a second glyph on the same clock and palette: Kay's
+three pills, a crest of green running down them, left then right, and the base holding solid for
+the last 30% of the loop. It borrows a trick from side-scrolling games and car shots on a
+soundstage: the runner stays put and the background scrolls, and the eye reads motion the other
+way. Light falling down the branches, again and again, reads as climbing up.
+
 Senior-engineer takeaway: when motion must stay in sync, derive every actor from one clock. A
 second keyframe track would drift the moment someone changed one duration and not the other.
