@@ -6,6 +6,7 @@ import "./tokens.css";
 
 type Box = { x: number; y: number; width: number; height: number };
 type BaseFrame = { top: number; opacity: number };
+type SlideFrame = { baseTop: number; topBranchOpacity: number };
 
 let host: HTMLElement;
 let root: Root;
@@ -46,6 +47,14 @@ function baseAt(ms: number): BaseFrame {
   return { top, opacity: Number(getComputedStyle(base).opacity) };
 }
 
+// The base's drop and the top branch's opacity at one moment of the slide.
+function slideAt(ms: number): SlideFrame {
+  const { top } = baseAt(ms);
+  const topBranch = pills().at(0);
+  if (!topBranch) throw new Error("no top branch");
+  return { baseTop: top, topBranchOpacity: Number(getComputedStyle(topBranch).opacity) };
+}
+
 beforeEach(() => {
   host = document.createElement("div");
   document.body.append(host);
@@ -76,8 +85,19 @@ it("slides the base fully under the bottom edge, and brings it home before it sh
   });
 
   expect(baseAt(0)).toEqual({ top: 9, opacity: 1 }); // home, solid: the beat's last frame
-  expect(baseAt(80).top).toBeCloseTo(10.5); // half under the 12px edge as the top branch starts
-  expect(baseAt(160)).toEqual({ top: 12, opacity: 1 }); // fully under the edge, still solid
+  expect(baseAt(240)).toEqual({ top: 12, opacity: 1 }); // fully under the edge, still solid
   expect(baseAt(300)).toEqual({ top: 9, opacity: 0 }); // home again, clear
   expect(baseAt(900)).toEqual({ top: 9, opacity: 1 }); // faded back in for the beat
+});
+
+it("fades the top branch in as the base scrolls out, on the same curve", () => {
+  flushSync(() => {
+    root.render(<AgentTree duration={1000} />);
+  });
+
+  expect(slideAt(0)).toEqual({ baseTop: 9, topBranchOpacity: 0 }); // before the move
+  const half = slideAt(120); // → the halfway frame of the slide
+  expect(half.baseTop).toBeCloseTo(10.5); // half under the edge
+  expect(half.topBranchOpacity).toBeCloseTo(0.5); // half arrived
+  expect(slideAt(240)).toEqual({ baseTop: 12, topBranchOpacity: 1 }); // gone, and arrived
 });
