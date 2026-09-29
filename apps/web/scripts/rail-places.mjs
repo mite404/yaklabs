@@ -4,24 +4,30 @@
 
 /**
  * The rail's places top to bottom (ADR-094, amended): each one's name, its role, the lucide
- * glyph it draws (Kay draws its own mark), whether the web build lacks it yet, and whether it
- * opens a site elsewhere, in a new tab (ADR-139).
+ * glyph it draws (Kay draws its own mark), whether it is outside the demo's scope, and whether
+ * it opens a site elsewhere, in a new tab (ADR-139).
  */
 export const RAIL_PLACES = [
-  { name: "Kay", role: "link", icon: null, soon: false, external: false },
-  { name: "Memory", role: "button", icon: "lucide-brain", soon: true, external: false },
-  { name: "Skills", role: "button", icon: "lucide-unplug", soon: true, external: false },
-  { name: "App store", role: "button", icon: "lucide-store", soon: true, external: false },
+  { name: "Kay", role: "link", icon: null, outOfScope: false, external: false },
+  { name: "Memory", role: "button", icon: "lucide-brain", outOfScope: true, external: false },
+  { name: "Skills", role: "button", icon: "lucide-unplug", outOfScope: true, external: false },
+  { name: "App store", role: "button", icon: "lucide-store", outOfScope: true, external: false },
   {
     name: "Analytics",
     role: "button",
     icon: "lucide-chart-column-increasing",
-    soon: true,
+    outOfScope: true,
     external: false,
   },
-  { name: "Automations", role: "button", icon: "lucide-clock", soon: true, external: false },
-  { name: "Documentation", role: "link", icon: "lucide-book-open", soon: false, external: true },
-  { name: "Lab", role: "link", icon: "lucide-flask-conical", soon: false, external: false },
+  { name: "Automations", role: "button", icon: "lucide-clock", outOfScope: true, external: false },
+  {
+    name: "Documentation",
+    role: "link",
+    icon: "lucide-book-open",
+    outOfScope: false,
+    external: true,
+  },
+  { name: "Lab", role: "link", icon: "lucide-flask-conical", outOfScope: false, external: false },
 ];
 
 /**
@@ -55,11 +61,11 @@ export const placeOf = (page, { role, name }) =>
   railOf(page).getByRole(role, { name, exact: true });
 
 /**
- * Runs in the page: each place not built yet in the phone drawer's header, as its name's edges
- * and whether it shows whole, its short hint's words, edges and visibility, the button's edges,
+ * Runs in the page: each place outside the demo in the phone drawer's header, as its name's
+ * edges and whether it shows whole, its hint's words, edges and visibility, the button's edges,
  * and the inks of the name and the hint with the drawer's shell behind them.
  */
-export function readSoonRows(header) {
+export function readOutOfScopeRows(header) {
   const shell = getComputedStyle(header.closest('dialog[data-slot="sidebar"]'));
   return [...header.querySelectorAll('[aria-disabled="true"]')].map((el) => {
     const spans = [...el.querySelectorAll("span")];

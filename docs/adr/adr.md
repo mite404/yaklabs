@@ -1088,6 +1088,11 @@ all 22px down its 44px, with the toggle and the tabs after them where they were.
 on a whole pixel with whole-pixel edges has an even width, so 14 and 16 were the sizes on offer;
 14 leaves 6px between lights, where 16 would leave 4px and crowd them. P26 holds the lights'
 boxes and the toggle's place.
+Amended 2026-09-29 (Ethan): the five are outside this demo's scope rather than on their way, so
+each says "Out of demo scope", in its pill, beside its name in the phone drawer's row and to a
+screen reader, one phrase in all three. The phone drawer is 85% of the width up to 20rem
+(ADR-121), 320px on the checks' 390px phone, which leaves "Automations" 64px clear of the whole
+phrase, so the short "Soon" goes. P23 and P25 read the new words.
 
 ## ADR-095 - The Kay mark is the vector Kay's site declares
 

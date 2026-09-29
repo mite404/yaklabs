@@ -122,11 +122,11 @@ delay makes a control feel unresponsive.
 Around 100ms reads as instant, around 150 to 200ms reads as a soft arrival, and past about 300ms a
 hover starts to feel sluggish.
 
-### 27. A place not built yet keeps its name, and says so
+### 27. A place outside the demo keeps its name, and says so
 
-A place in the rail that the web build does not have yet stays in the rail, named in its pill and
-in the phone drawer's row and reached by keyboard, but it opens nothing and says "Coming soon", as
-the splash switch's Bonsai does (ADR-094, amended; ADR-139).
+A place in the rail that this demo leaves out of scope stays in the rail, named in its pill and in
+the phone drawer's row and reached by keyboard, but it opens nothing and says "Out of demo scope"
+(Ethan; ADR-094, amended; ADR-139).
 It is drawn in faint ink, never at reduced opacity: the 45% of a disabled button (rule 8) takes a
 rail glyph to 2.0:1 on paper, under rule 16's 3:1.
 It has no hover fill and no step to ink, since there is nothing to press, so the fill still means
@@ -137,9 +137,10 @@ The rail checks' P23 and P25 measure all of this in both themes.
 | --- | --- | --- |
 | Glyph and name | `--faint-ink`, an archived row's: 5.17:1 on paper, 5.46:1 dark | derived |
 | Hover | none: no fill, no step to ink, the arrow cursor | derived |
-| Pill | name, then "· Coming soon", `--on-ink` 72% over `--ink` (rule 4): 7.6:1, 6.9:1 | derived |
-| Drawer row | "Soon" after the name, 12px, as the thread count sits | derived |
-| Screen reader | a button, `aria-disabled`, described as "Coming soon" | derived |
+| Words | "Out of demo scope", the same in the pill, the drawer row and to a screen reader | Ethan |
+| Pill | name, then "· Out of demo scope", `--on-ink` 72% over `--ink` (rule 4): 7.6:1, 6.9:1 | derived |
+| Drawer row | the words after the name, 12px, as the thread count sits | derived |
+| Screen reader | a button, `aria-disabled`, described by the words | derived |
 
 ## Data visualisation
 

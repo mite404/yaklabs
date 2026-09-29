@@ -35,20 +35,19 @@ const LOOKS = {
 } as const;
 type Look = keyof typeof LOOKS;
 
-// What a place not built yet says, as the splash switch's Bonsai does; the drawer's row has
-// room for the short form only, as a 208px sidebar beside "Automations" had.
-const SOON = "Coming soon";
-const SOON_SHORT = "Soon";
+// What a place outside the demo's scope says (Ethan), in its pill, its drawer row and to a
+// screen reader alike.
+const OUT_OF_SCOPE = "Out of demo scope";
 
-// A place not built yet (design pillars, rule 27): faint ink, the dimmest text the sidebar
+// A place outside the demo (design pillars, rule 27): faint ink, the dimmest text the sidebar
 // allows (an archived row's, 5.17:1 on paper, 5.46:1 dark), in place of shadcn's half opacity,
 // which would take the glyph to 2.2:1. No hover fill and no step to ink, since there is nothing
 // to press. The pointer still lands on it (shadcn turns that off for aria-disabled), so resting
 // on it shows its pill and, as on a link, does not slide the panel out.
-const SOON_BUTTON =
+const OUT_OF_SCOPE_BUTTON =
   "cursor-default text-faint-ink hover:bg-transparent hover:text-faint-ink active:bg-transparent active:text-faint-ink aria-disabled:pointer-events-auto aria-disabled:opacity-100";
 
-// The pill's "Coming soon", a step softer than the name: the pill's text at 72% over its ink,
+// The pill's "Out of demo scope", a step softer than the name: the pill's text at 72% over its ink,
 // rule 4's step for secondary text (7.6:1 light, 6.9:1 dark).
 const PILL_HINT = "text-[color-mix(in_srgb,var(--on-ink)_72%,var(--ink))]";
 
@@ -63,15 +62,15 @@ type Glyph = ComponentType<{ className?: string }>;
 
 // One place in the rail, by what pressing it does: Kay's link home, drawn in the brand's mark
 // and serif; a route of the app, marked while it is open; a site elsewhere, in a new tab; or a
-// place the web build does not have yet, which opens nothing.
+// place outside the demo's scope, which opens nothing.
 type RailPlace =
   | { kind: "home"; label: string; Glyph: Glyph; to: "/" }
   | { kind: "route"; label: string; Glyph: Glyph; to: "/lab" }
   | { kind: "external"; label: string; Glyph: Glyph; href: string }
-  | { kind: "soon"; label: string; Glyph: Glyph };
+  | { kind: "outOfScope"; label: string; Glyph: Glyph };
 
 // A place that opens something.
-type LivePlace = Exclude<RailPlace, { kind: "soon" }>;
+type LivePlace = Exclude<RailPlace, { kind: "outOfScope" }>;
 
 /** Kay's mark, one polygon in the text colour; decorative, so its host carries the name. */
 export function KayMark({ className }: { className?: string }) {
@@ -83,15 +82,15 @@ export function KayMark({ className }: { className?: string }) {
 }
 
 // The rail's places top to bottom (ADR-094, amended): Kay, then the places Kay's desktop app
-// has and the web build does not yet, each keeping its name and glyph (Ethan, after Kay's own
-// rail), then the documentation link, and the Lab last.
+// has and this demo leaves out of scope, each keeping its name and glyph (Ethan, after Kay's
+// own rail), then the documentation link, and the Lab last.
 const PLACES = [
   { kind: "home", label: "Kay", Glyph: KayMark, to: "/" },
-  { kind: "soon", label: "Memory", Glyph: Brain },
-  { kind: "soon", label: "Skills", Glyph: Unplug },
-  { kind: "soon", label: "App store", Glyph: Store },
-  { kind: "soon", label: "Analytics", Glyph: ChartColumnIncreasing },
-  { kind: "soon", label: "Automations", Glyph: Clock },
+  { kind: "outOfScope", label: "Memory", Glyph: Brain },
+  { kind: "outOfScope", label: "Skills", Glyph: Unplug },
+  { kind: "outOfScope", label: "App store", Glyph: Store },
+  { kind: "outOfScope", label: "Analytics", Glyph: ChartColumnIncreasing },
+  { kind: "outOfScope", label: "Automations", Glyph: Clock },
   { kind: "external", label: "Documentation", Glyph: BookOpen, href: DOCS_URL },
   { kind: "route", label: "Lab", Glyph: FlaskConical, to: "/lab" },
 ] as const satisfies readonly RailPlace[];
@@ -174,15 +173,15 @@ function Place({
   );
 }
 
-// A place the web build does not have yet: a button that is there to be found, by pointer,
-// keyboard and screen reader ("Memory, dimmed, button, Coming soon"), and opens nothing. It
-// keeps its look's size and padding, so its glyph sits where a live place's would.
-function SoonPlace({ label, Glyph, look }: { label: string; Glyph: Glyph; look: Look }) {
+// A place outside the demo's scope: a button that is there to be found, by pointer, keyboard
+// and screen reader ("Memory, dimmed, button, Out of demo scope"), and opens nothing. It keeps
+// its look's size and padding, so its glyph sits where a live place's would.
+function OutOfScopePlace({ label, Glyph, look }: { label: string; Glyph: Glyph; look: Look }) {
   const hint = useId(); // → string, unique per drawing
   const pill = (
     <>
       {label}
-      <span className={PILL_HINT}> · {SOON}</span>
+      <span className={PILL_HINT}> · {OUT_OF_SCOPE}</span>
     </>
   );
   return (
@@ -193,16 +192,16 @@ function SoonPlace({ label, Glyph, look }: { label: string; Glyph: Glyph; look: 
         aria-disabled="true"
         aria-describedby={hint}
         tooltip={look === "square" ? pillOf(pill) : undefined}
-        className={`${LOOKS[look]} ${SOON_BUTTON}`}
+        className={`${LOOKS[look]} ${OUT_OF_SCOPE_BUTTON}`}
       >
         <Glyph />
         {look === "row" && <span>{label}</span>}
         <span id={hint} className="sr-only">
-          {SOON}
+          {OUT_OF_SCOPE}
         </span>
         {look === "row" && (
           <span aria-hidden="true" className="ml-auto shrink-0 text-xs">
-            {SOON_SHORT}
+            {OUT_OF_SCOPE}
           </span>
         )}
       </SidebarMenuButton>
@@ -211,7 +210,7 @@ function SoonPlace({ label, Glyph, look }: { label: string; Glyph: Glyph; look: 
 }
 
 /**
- * The app's fixed places: Kay, the places not built yet, the documentation link, and the Lab
+ * The app's fixed places: Kay, the places outside the demo, the documentation link, and the Lab
  * last (ADR-094, amended). A route's place is marked while it is open.
  * @param look Squares that name their places in pills, for the desktop's rail (ADR-139); or
  *   labelled rows, for the phone's drawer (ADR-121).
@@ -224,8 +223,13 @@ export function RailPlaces({ look }: { look: Look }) {
       <TooltipProvider delay={PILL_DELAY_MS} closeDelay={0}>
         <SidebarMenu className="gap-0.5">
           {PLACES.map((place) =>
-            place.kind === "soon" ? (
-              <SoonPlace key={place.label} label={place.label} Glyph={place.Glyph} look={look} />
+            place.kind === "outOfScope" ? (
+              <OutOfScopePlace
+                key={place.label}
+                label={place.label}
+                Glyph={place.Glyph}
+                look={look}
+              />
             ) : (
               <Place
                 key={place.label}

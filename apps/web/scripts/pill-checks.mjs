@@ -5,9 +5,9 @@ import { shotPath } from "./lever.mjs";
 import { placeOf, RAIL_PLACES } from "./rail-places.mjs";
 import { CLOSE_MS, contrast, openDesk, peek, phaseOf, round } from "./sidebar-checks.mjs";
 
-// What a place not built yet adds in its pill.
-const SOON = "Coming soon";
-// A live place and one not built yet, whose pills are read with the panel docked and peeking.
+// What a place outside the demo's scope adds in its pill.
+const OUT_OF_SCOPE = "Out of demo scope";
+// A live place and one outside the demo, whose pills are read with the panel docked and peeking.
 const SAMPLED = RAIL_PLACES.filter((place) => ["Lab", "Memory"].includes(place.name));
 
 // Runs in the page: the pill up now, as its words, inks, shape and box, with the rail behind it,
@@ -36,8 +36,8 @@ function readPill(el) {
 }
 
 // The pill a rail place shows, once the pointer has rested on it or `focus` has taken it there:
-// its words and look, and for a place not built yet, how its softer "Coming soon" reads on the
-// ink. Null when the rail has no such place.
+// its words and look, and for a place outside the demo, how its softer "Out of demo scope"
+// reads on the ink. Null when the rail has no such place.
 async function pillOn(page, place, { focus = false } = {}) {
   const target = placeOf(page, place);
   if ((await target.count()) === 0) return null;
@@ -70,8 +70,8 @@ const opensElsewhere = (external, pill) =>
     : pill.elsewhere === null;
 
 // Whether a pill says what its place is, in the ink pill's look, legibly, clear of the rail.
-function pillReads({ name, soon, external }, pill) {
-  const words = soon === true ? `${name} · ${SOON}` : name;
+function pillReads({ name, outOfScope, external }, pill) {
+  const words = outOfScope === true ? `${name} · ${OUT_OF_SCOPE}` : name;
   return (
     pill.words === words &&
     pill.onText >= 7 &&
@@ -176,12 +176,11 @@ async function pillOnFocus(browser, theme) {
 
 /** The workspace lever's checks of the rail's name pills, by id; rail-checks.mjs registers them. */
 export const pillChecks = {
-  // The rail names every place in an ink pill, 7:1 for its text and 3:1 against the rail in
-  // either theme, and a place not built yet adds a softer "· Coming soon" that still clears
+  // The rail names every place in an ink pill, 7:1 for its text and 3:1 against the rail in either
+  // theme, and a place outside the demo adds a softer "· Out of demo scope" that still clears
   // 4.5:1, and Documentation a softer arrow that says it opens elsewhere, 3:1 or more; the next
-  // place's pill opens at once. The pills show in every state (ADR-139): with
-  // the panel closed, docked, and peeking, where they sit over the panel and keep it out; and
-  // on keyboard focus.
+  // place's pill opens at once. The pills show in every state (ADR-139): with the panel closed,
+  // docked, and peeking, where they sit over the panel and keep it out; and on keyboard focus.
   async P23(browser) {
     const notes = [];
     let ok = true;

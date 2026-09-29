@@ -3,7 +3,7 @@
 // oxlint-disable no-await-in-loop -- one pointer drives one page, so each step waits for the last
 import { BASE, collect, shotPath } from "./lever.mjs";
 import { pillChecks } from "./pill-checks.mjs";
-import { placeOf, railOf, RAIL_PLACES, readPlaces, readSoonRows } from "./rail-places.mjs";
+import { placeOf, railOf, RAIL_PLACES, readOutOfScopeRows, readPlaces } from "./rail-places.mjs";
 import {
   CLOSE_MS,
   contrast,
@@ -15,10 +15,10 @@ import {
   SLIDE_MS,
 } from "./sidebar-checks.mjs";
 
-// What a place not built yet says to a screen reader, and beside its name in the drawer's row.
-const SOON = "Coming soon";
-const SOON_SHORT = "Soon";
-const SOON_PLACES = RAIL_PLACES.filter((place) => place.soon);
+// What a place outside the demo's scope says to a screen reader, and beside its name in the
+// drawer's row.
+const OUT_OF_SCOPE = "Out of demo scope";
+const OUT_OF_SCOPE_PLACES = RAIL_PLACES.filter((place) => place.outOfScope);
 // The tab order from Kay: every place before the Lab.
 const WALK = RAIL_PLACES.slice(1, -1).map((place) => place.name);
 // A phone (ADR-121), whose drawer lists the places as rows, and a row's gap and side padding
@@ -44,14 +44,14 @@ async function placesEverywhere(browser, theme) {
   return { collapsed, peeking, docked };
 }
 
-// P25's verdict on where the places are: in order by name, role and glyph, the places not built
-// yet announced as unavailable and linking nowhere, every glyph on one pixel in all three views.
+// P25's verdict on where the places are: in order by name, role and glyph, the places outside the
+// demo announced as unavailable and linking nowhere, every glyph on one pixel in all three views.
 function placesVerdict({ collapsed, peeking, docked }) {
   const want = JSON.stringify(RAIL_PLACES.map(({ name, role, icon }) => [name, role, icon]));
   const got = JSON.stringify(collapsed.map(({ name, role, icon }) => [name, role, icon]));
   const announced = collapsed.every((place, i) =>
-    RAIL_PLACES.at(i)?.soon === true
-      ? place.disabled === "true" && place.href === null && place.description === SOON
+    RAIL_PLACES.at(i)?.outOfScope === true
+      ? place.disabled === "true" && place.href === null && place.description === OUT_OF_SCOPE
       : place.disabled === null,
   );
   const views = [peeking, docked].map((view) => glyphsOf(view));
@@ -76,12 +76,12 @@ const lookOf = (locator) =>
     };
   });
 
-// P25's pointer half: resting on a place not built yet, long past the peek's open delay, keeps
+// P25's pointer half: resting on a place outside the demo, long past the peek's open delay, keeps
 // it as it was (no fill, no step to ink, the arrow cursor) and keeps the panel away. A place the
 // rail lacks is noted as missing.
-async function restOnSoon(page) {
+async function restOnOutOfScope(page) {
   const seen = [];
-  for (const place of SOON_PLACES) {
+  for (const place of OUT_OF_SCOPE_PLACES) {
     const target = placeOf(page, place);
     if ((await target.count()) === 0) {
       seen.push({ name: place.name, missing: true });
@@ -108,10 +108,10 @@ const restsQuietly = ({ missing, rest, hover, phase }) =>
   phase === "away" &&
   contrast(rest.ink, rest.shell) >= 4.5;
 
-// P25's keyboard and press half: Tab walks from Kay through the places not built yet to the
+// P25's keyboard and press half: Tab walks from Kay through the places outside the demo to the
 // documentation link, and a click, Enter or Space on each opens nothing: the address, the open
 // pages and the absence of any menu or dialog all hold.
-async function pressSoon(context, page) {
+async function pressOutOfScope(context, page) {
   const before = page.url();
   await placeOf(page, RAIL_PLACES[0]).focus();
   const walked = [];
@@ -120,7 +120,7 @@ async function pressSoon(context, page) {
     walked.push(await page.evaluate(() => document.activeElement?.getAttribute("aria-label")));
   }
   let pressed = 0;
-  for (const place of SOON_PLACES) {
+  for (const place of OUT_OF_SCOPE_PLACES) {
     const target = placeOf(page, place);
     if ((await target.count()) === 0) continue;
     await target.click({ force: true });
@@ -142,15 +142,15 @@ async function pressSoon(context, page) {
 // Whether Tab walked the places in order and no press went anywhere.
 const pressesInert = (presses) =>
   presses.walked.join("|") === WALK.join("|") &&
-  presses.pressed === SOON_PLACES.length &&
+  presses.pressed === OUT_OF_SCOPE_PLACES.length &&
   presses.stayed === true &&
   presses.pages === 1 &&
   presses.popups === 0;
 
-// P25's row half, on a phone: in the drawer's rows, each place not built yet shows its whole
-// name and "Soon" after it, clear of the name by the row's gap and inside its padding, both in
+// P25's row half, on a phone: in the drawer's rows, each place outside the demo shows its whole
+// name and "Out of demo scope" after it, clear of the name by the row's gap and inside its padding, both in
 // faint ink at 4.5:1 or more.
-async function soonRows(browser, theme) {
+async function outOfScopeRows(browser, theme) {
   const context = await browser.newContext({ viewport: PHONE, deviceScaleFactor: 2 });
   await context.addInitScript((t) => {
     localStorage.setItem("theme", t);
@@ -167,7 +167,7 @@ async function soonRows(browser, theme) {
   // The drawer's slide (300ms, window.tsx) ends before its rows are measured.
   await page.waitForTimeout(400);
   const header = page.locator('dialog[data-slot="sidebar"] [data-sidebar="header"]');
-  const rows = await header.evaluate(readSoonRows);
+  const rows = await header.evaluate(readOutOfScopeRows);
   const box = await header.boundingBox();
   await page.screenshot({ path: shotPath(`P25-drawer-rows-${theme}`), clip: box });
   await context.close();
@@ -177,7 +177,7 @@ async function soonRows(browser, theme) {
 // Whether a row shows its name whole and its hint beside it, legibly.
 const rowReads = (row) =>
   row.whole === true &&
-  row.tag === SOON_SHORT &&
+  row.tag === OUT_OF_SCOPE &&
   row.shown === true &&
   row.tagBox.left >= row.label.right + PLACE_GAP - 0.5 &&
   row.tagBox.right <= row.button.right - PLACE_PAD + 0.5 &&
@@ -186,11 +186,11 @@ const rowReads = (row) =>
 
 // The workspace lever's checks of the rail's places, by id.
 const placeChecks = {
-  // The rail's places in order under Kay (ADR-094, amended), and the five the web build does not
-  // have yet: named ("Memory", dimmed, "Coming soon" to a screen reader), in the tab order, and
-  // inert. Resting on one names it and neither fills it nor peeks; a click, Enter or Space opens
-  // nothing; in the phone drawer's rows each says "Soon" beside its whole name; faint ink clears
-  // 4.5:1 in either theme; and every place's glyph sits on one pixel with the panel closed,
+  // The rail's places in order under Kay (ADR-094, amended), and the five outside the demo's scope:
+  // named ("Memory", dimmed, "Out of demo scope" to a screen reader), in the tab order, and inert.
+  // Resting on one names it and neither fills it nor peeks; a click, Enter or Space opens nothing;
+  // in the phone drawer's rows each says "Out of demo scope" beside its whole name; faint ink
+  // clears 4.5:1 in either theme; and every place's glyph sits on one pixel with the panel closed,
   // peeking and docked.
   async P25(browser) {
     const notes = [];
@@ -198,13 +198,14 @@ const placeChecks = {
     for (const theme of ["light", "dark"]) {
       const places = placesVerdict(await placesEverywhere(browser, theme));
       const { context, page } = await openDesk(browser, { theme });
-      const rests = await restOnSoon(page);
-      const presses = await pressSoon(context, page);
+      const rests = await restOnOutOfScope(page);
+      const presses = await pressOutOfScope(context, page);
       await context.close();
-      const rows = await soonRows(browser, theme);
+      const rows = await outOfScopeRows(browser, theme);
       const quiet = rests.every((rest) => restsQuietly(rest));
       const inert = pressesInert(presses);
-      const readable = rows.length === SOON_PLACES.length && rows.every((row) => rowReads(row));
+      const readable =
+        rows.length === OUT_OF_SCOPE_PLACES.length && rows.every((row) => rowReads(row));
       ok &&= places.ok && quiet && inert && readable;
       const inks = rests
         .filter((r) => r.missing !== true)

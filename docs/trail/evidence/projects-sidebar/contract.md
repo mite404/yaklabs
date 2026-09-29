@@ -254,8 +254,8 @@ const LIFT_PX = 6;
 - **Sidebar below 768px (ADR-121).** A drawer that pushes the whole window right, not a sheet
   over it: `dialog[data-slot="sidebar"]` named "Sidebar", 85% of the width up to 20rem. The
   pushed page is inert, and a tap on it, Escape, or an arrival anywhere closes the drawer. It is
-  one labelled column (ADR-139): the places as rows, "Soon" beside those not built yet, then the
-  project tree, then the account at its foot. There is no rail below 768px.
+  one labelled column (ADR-139): the places as rows, "Out of demo scope" beside those outside the
+  demo, then the project tree, then the account at its foot. There is no rail below 768px.
 - **Title bar below 768px (ADR-116, amended by ADR-123).** Two rows. The top row does not scroll:
   the sidebar toggle, the project's name (`[data-slot="project-name"]`), Collapse all, the bell,
   and button "Thread actions". The second row is the Layout group with its views named in words.
@@ -265,7 +265,7 @@ const LIFT_PX = 6;
   - The rail (`rail.tsx`, `[data-slot="rail"]`, 56px, `--rail-width`) is drawn in every desktop
     state and never moves. A navigation landmark named "Places" holds its eight places as 40px
     squares, each naming itself in an ink pill: `KayMark` (the site's polygon), Memory, Skills,
-    App store, Analytics and Automations (not built yet), Documentation, and Lab. The account
+    App store, Analytics and Automations (out of demo scope), Documentation, and Lab. The account
     sits at its foot, outside the landmark; its menu carries the theme.
   - The stage (`[data-slot="stage"]`) clips at the rail's edge (`overflow: clip` from 768px)
     and holds the panel and the workspace.
