@@ -126,7 +126,7 @@ function SearchBar({
 }
 
 /**
- * A thread's reading tools, floating at the top of its turns: search the thread's words and step
+ * A thread's reading tools, floating above its compose box: search the thread's words and step
  * through the turns that hold them, or jump back to any request the user sent, listed by its
  * first 15 characters and its time. An Alt-click on the bookmark goes straight to the latest
  * request. Where a jump lands, and how it shows, is the host's.
@@ -173,6 +173,7 @@ export function ReadingTools({
       </IconButton>
       <Menu
         label={BOOKMARKS}
+        placement="above-end"
         items={bookmarkItems(requests, onJump)}
         trigger={bookmarkTrigger(requests.at(-1)?.id, onJump)}
       />

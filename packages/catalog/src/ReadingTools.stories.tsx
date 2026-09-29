@@ -65,7 +65,7 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 /**
- * Search and request bookmarks float over the thread's top-right corner. With a mouse they
+ * Search and request bookmarks float at the right just above the compose box. With a mouse they
  * wait, faded, until the pointer is on the thread; a keyboard finds them at once.
  */
 export const Overview: Story = {};
