@@ -1043,6 +1043,15 @@ pointer and lets Escape cancel.
 Ethan accepted losing drags out to other apps, which only ever received the card's title as plain
 text, because the arrow reappearing mid-drag reads as unpolished; the Share link stays the way to
 take a card elsewhere.
+Amended 2026-09-29 (Ethan): incoming cards and highlights use the canvas reorder's preview language.
+The canvas outline appears at lift, before the pointer enters it. Over a slot, a 35%-opacity preview
+shows the destination while neighboring lanes step aside over 150ms. The insertion line is gone.
+The preview and the landed lane share their default width, and the preview is inert and hidden from
+assistive technology. Leaving the canvas clears the slot preview but keeps the outline until the
+carry ends. Escape cancels without adding a lane. Reduced motion removes the slot transitions.
+Reordering reads the gap from the canvas's 18px grid instead of assuming the older 16px spacing.
+Proof: `apps/web/scripts/drag-preview-check.mjs` checks early feedback, matching drop geometry,
+stable slots, cancellation, re-entry, and card and text carries in light and dark themes.
 
 ## ADR-092 - Threads started on the canvas are sub-threads of the main thread
 
@@ -1723,3 +1732,67 @@ instant. Its edge takes the canvas divider's handle (drag, arrows, Home and End,
 reset, the width kept as `kay.sidebar-width`), and the first tab starts 4px past that edge from the
 same width variable, as in the ChatGPT desktop app, so it follows a drag on every frame. Rail
 icons name themselves in an ink pill (13:1 against the shell).
+
+## ADR-139 - Separate progress narration, finished responses, and work details
+
+2026-09-29 - Accepted (Ethan). Implemented in the scripted weekly-brief demo only.
+To let non-technical readers follow agent work without reading its logs, progress narration stays
+quiet, brief, and factual ("Checking your public profile."), while finished responses use Quiet
+prose with selective emphasis on findings, decisions, and asks.
+Expanded work details lead with readable outcomes and evidence, with technical logs behind another
+disclosure so advanced users can inspect them without making everyone read them.
+Warnings, uncertainty that affects a decision, and requests for permission stay visible at the
+level where the user needs to act, rather than disappearing into technical details.
+The demo retains superseded narration under Technical details. An interrupted answer stays visible
+with an incomplete label and a retry action; retry keeps the earlier partial answer for reference.
+This is session-local UI behavior, not persisted history or a change to the real-model runtime.
+
+## ADR-140 - Own the Quiet prose response styling, independent of the Markdown renderer
+
+2026-09-29 - Accepted (Ethan chose Quiet prose). Implemented in `/demo/weekly-brief` only.
+A small, app-owned response component applies Quiet prose's 15px Inter body, 24px line height,
+16px paragraph spacing, restrained body-sized section headings, real Inter italic fonts, and
+semibold emphasis at weight 600, with accessible links and code presentation and the same styling
+during streaming and after completion.
+Inspect rendered elements rather than assuming Markdown bold produces `<strong>`: Ethan's Bonsai
+source findings report emphasis spans with `data-streamdown="strong"`, which a `.response strong`
+selector would miss; prefer a semantic `<strong>` component override where supported, otherwise
+target the renderer's documented hooks.
+The app owns this presentation contract so a renderer change does not dictate the reading
+experience; this decision selects neither a Markdown library nor a live LLM integration and keeps
+the interview's scripted-agent scope (ADR-137).
+The demo reveals authored semantic blocks by word count. Its typography does not change when the
+reveal finishes. The browser check measures rendered fonts and exercises decisions, nested evidence,
+and interruptions. `/t/profit` remains the default route and does not adopt this demo's prose
+renderer.
+
+## ADR-141 - A child's parent stays the same when its panel moves
+
+2026-09-29 - Accepted (Ethan). Design decision, not yet implemented.
+A child thread's relationship to its parent is separate from where the UI displays it. Opening a
+child through "Open thread in main panel", or dragging it into that panel, changes presentation
+state only. The operation does not change `place.parentId`, create another thread, or transfer
+control from the parent. The child's messages, running work, and draft remain attached to its
+existing thread ID.
+The main panel can therefore show a child without turning it into a main thread. Navigation and
+panel placement must not infer parentage from the panel currently holding the thread.
+The child keeps "Controlled by parent thread" below its composer, including in the main panel,
+so the larger reading surface does not imply that control changed.
+Verification must cover both the menu and drag paths, with the same parent ID before and after.
+
+## ADR-142 - Keep running status by the composer and tasks in a movable card
+
+2026-09-29 - Accepted (Ethan). Design decision, not yet implemented.
+A child's running status stays below its composer, to the right of "Controlled by parent
+thread". "Running" is a pill with the same green fill as the user conversation bubble. Its text
+communicates the state without relying on colour or animation alone, and its state follows actual
+work rather than whether the latest message has finished rendering.
+The status sits outside the transcript's scroll area. The transcript and a task card remain
+independently scrollable, so reviewing earlier work never hides whether the agent is still working.
+Running work does not lock the composer or force the reader back to the latest message.
+Task lists use a card rather than unstructured progress narration. A user can drag the card onto
+the canvas to keep it in view while continuing the conversation. The canvas copy refers to the
+same task state rather than starting another run or becoming an unlabelled stale snapshot.
+Verification must cover scrolling, continued input while work runs, the running-to-settled state
+change, and a task card on the canvas. Warnings and requests for input remain explicit; a green
+pill must not conceal blocked or failed work.
