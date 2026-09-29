@@ -2,9 +2,6 @@ import type { LaneId } from "@yaklabs/runtime";
 import { useEffect, useRef, useState, type PointerEvent } from "react";
 import { landingIndex, shiftFor, slotLeft, type Slot } from "../canvas";
 
-// The gap between lanes, which is the separator's width.
-const GAP_PX = 16;
-
 // How far a grip travels before its lane lifts, so a click stays a click.
 const LIFT_PX = 6;
 
@@ -21,6 +18,7 @@ type Lift = {
   x: number;
   y: number;
   slots: Slot[];
+  gap: number;
   box: DOMRect;
   lane: HTMLElement;
 };
@@ -146,6 +144,7 @@ function liftAt(event: PointerEvent<HTMLElement>, id: LaneId, index: number): Li
     x: event.clientX,
     y: event.clientY,
     slots: measureSlots(row),
+    gap: parseFloat(getComputedStyle(row).getPropertyValue("--canvas-grid")),
     box: lane.getBoundingClientRect(),
     lane,
   };
@@ -214,11 +213,11 @@ export function useReorder(
  */
 export function displacement(drag: Drag | null, index: number): string {
   if (!drag?.move) return "";
-  const { slots } = drag.lift;
+  const { slots, gap } = drag.lift;
   const { from, to } = drag.move;
   const px =
     index === from
       ? slotLeft(slots, from, to) - slots[from].left
-      : shiftFor(slots, from, to, index, GAP_PX);
+      : shiftFor(slots, from, to, index, gap);
   return `translateX(${px}px)`;
 }

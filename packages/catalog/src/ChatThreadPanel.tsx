@@ -10,6 +10,7 @@ import {
   type SetStateAction,
 } from "react";
 import type { Agent, AgentEvent } from "./agent";
+import { AgentTree } from "./AgentTree";
 import { AwaitingInputCard } from "./AwaitingInputCard";
 import { resolveAwaiting, type AwaitingInput } from "./awaiting";
 import { ComposeBox } from "./ComposeBox";
@@ -188,16 +189,22 @@ function initialReported(messages: ThreadMessage[]): Record<string, string> {
 // What the thread says when a reply never arrives, so the user is not left waiting on a bubble.
 const REPLY_FAILED = "I couldn't finish that reply. Try again in a moment.";
 
+/** One reply still waiting on its first chunk, keyed by its own id. */
+type Pending = { id: string };
+
 /**
  * Sends events to the agent and streams each reply into the thread as its own turn (ADR-041).
- * Replies stop when the panel unmounts. Returns the function that sends an event.
+ * Replies stop when the panel unmounts. Returns the function that sends an event, and every
+ * reply still waiting on its first chunk - tracked per id in a set, not one shared flag, since
+ * more than one reply can be in flight at once.
  */
 function useAgent(
   agent: Agent,
   setMessages: Dispatch<SetStateAction<ThreadMessage[]>>,
-): (event: AgentEvent) => () => void {
+): { tell: (event: AgentEvent) => () => void; pending: Pending[] } {
   const replies = useRef(0);
   const live = useRef(new Set<AbortController>());
+  const [pendingIds, setPendingIds] = useState<ReadonlySet<string>>(new Set());
 
   useEffect(() => {
     const controllers = live.current;
@@ -208,10 +215,20 @@ function useAgent(
     };
   }, []);
 
-  return (event) => {
+  const stopPending = (id: string) => {
+    setPendingIds((current) => {
+      if (!current.has(id)) return current;
+      const next = new Set(current);
+      next.delete(id);
+      return next;
+    });
+  };
+
+  const tell = (event: AgentEvent) => {
     const controller = new AbortController();
     const id = `reply-${++replies.current}`;
     live.current.add(controller);
+    setPendingIds((current) => new Set(current).add(id));
     // Pure updaters (React may run them twice): append on the first chunk, then extend.
     const write = (text: string, streaming: boolean) => {
       setMessages((current) =>
@@ -229,6 +246,9 @@ function useAgent(
       try {
         for await (const chunk of agent.respond(event, controller.signal)) {
           if (controller.signal.aborted) break;
+          // Real text to show is what ends the wait, right there - not the reply's end, and
+          // not an empty chunk, which carries nothing a reader would call content.
+          if (chunk !== "") stopPending(id);
           write(chunk, true);
           started = true;
         }
@@ -242,12 +262,30 @@ function useAgent(
         if (!controller.signal.aborted) write(started ? "" : REPLY_FAILED, false);
       } finally {
         live.current.delete(controller);
+        // Completion, failure or abort all end the wait; a chunk already cleared it, so this is
+        // a no-op then, and the only path for a reply that never sent one.
+        stopPending(id);
       }
     })();
     return () => {
       controller.abort();
     };
   };
+
+  return { tell, pending: [...pendingIds].map((pendingId) => ({ id: pendingId })) };
+}
+
+// The quiet placeholder for a reply whose iterator is running but has said nothing yet: the
+// same working glyph the sidebar shows, and a plain, factual line - never a guessed tool name,
+// since the real runtime has no tool events to report (ADR-041). The glyph's own label carries
+// the announcement, so the visible line stays out of a screen reader's way.
+function PendingTurn({ ref }: { ref?: (element: HTMLElement | null) => void }) {
+  return (
+    <div ref={ref} className="turn turn-agent turn-pending">
+      <AgentTree label="Thinking" />
+      <span aria-hidden="true">Thinking…</span>
+    </div>
+  );
 }
 
 // A live clock, or a fixed one when the host passes `now` (stories and tests).
@@ -592,7 +630,7 @@ export function ChatThreadPanel({
 }) {
   const { source, open } = dictationSetup(dictation);
   const [messages, setMessages] = useState(thread.messages);
-  const tell = useAgent(agent, setMessages);
+  const { tell, pending } = useAgent(agent, setMessages);
   const [draft, setDraft] = useState(initialDraft);
   const [dictating, setDictating] = useState(open);
   const outbox = useOutbox(thread.messages);
@@ -679,6 +717,9 @@ export function ChatThreadPanel({
             onChoose={outbox.choose}
             cardsCarry={cardsCarry}
           />
+        ))}
+        {pending.map((reply) => (
+          <PendingTurn key={reply.id} ref={landOn} />
         ))}
       </div>
       <div className="thread-dock">

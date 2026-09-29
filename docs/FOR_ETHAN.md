@@ -234,7 +234,7 @@ The first entries are ideas from before any code existed; the rest are parts of 
 - **The reading tools** (`packages/catalog/src/ReadingTools.tsx`) are the script supervisor's
   binder, clipped to the corner of every thread: a search that flips to each page a word appears
   on, and a tab per request the user made, labelled with its first 15 characters and its time
-  (ADR-139). The binder never moves the camera itself; it hands a turn's id to the panel, which
+  (ADR-143). The binder never moves the camera itself; it hands a turn's id to the panel, which
   runs the same centre-and-glow jump the recap uses.
 - **The share vault** (`apps/gateway/src/shares.ts`) is a film vault that takes sealed canisters
   it cannot open. The page seals the thread and keeps the key in the link's `#`, which browsers
@@ -2114,6 +2114,45 @@ memory. Two actors reading one sheet cannot drift apart.
 Senior-engineer takeaway: when two components compute the same thing, the thing is a calculation
 asking for a name. Pull it out, keep it free of hooks and clocks, and let the components stay thin
 actions around it.
+
+### Quiet prose is an editing decision, not another model
+
+The interview demo at `/demo/weekly-brief` uses an authored conversation. Think of its content as
+a script with emphasis already marked, rather than raw footage that another editor must interpret.
+`quiet-prose.ts` holds paragraphs, headings, lists, and inline text segments. `timeline.ts` reveals
+those segments by word count. `QuietProse.tsx` renders the same semantic elements before and after
+the reveal finishes, so bold does not wait for a closing pair of Markdown asterisks.
+
+This is deliberately not a live Markdown solution. A real provider would need a parser and tests
+for unfinished syntax. The demo proves the reading treatment without claiming that integration:
+15px Inter, 24px lines, 16px paragraph gaps, genuine italics, and 600-weight emphasis.
+
+The finding stays on the transcript. Evidence sits behind **Work details**, and technical records
+sit one disclosure deeper. Progress narration can change without deleting the record of earlier
+work. Failed checks never display a successful chart. An interrupted reply keeps its partial text,
+labels it incomplete, and offers a retry without duplicating the user's question. This preservation
+lasts only for the mounted demo session, not a page reload.
+
+Three isolated CSS candidates challenged the spacing. A separate judge preferred extra space
+before the decision and final draft, but rejected a negative margin and a selector that could
+never match. We kept one 24px rhythm between turns, 16px from prose to evidence, and a 20px resting
+gap above the footer. The browser check in `apps/web/scripts/brief-check.mjs` exercises the actual
+buttons, disclosures, pause, retry, narrow layout, and rendered fonts.
+
+One blooper illustrates why screenshots matter: adding a semantic `main` inherited the catalog's
+page margins and let the transcript overlap the controls. TypeScript could not catch that. A real
+Replay click failed, and a geometry assertion now checks that the transcript stays above the footer.
+
+The senior-engineer lesson is to separate three claims: the words are readable, the interface
+explains what happened, and the runtime is durable. This demo demonstrates the first two in named
+scenarios. It does not pretend to prove the third. The remaining promises are tracked in
+`docs/demo-ui-checklist.md`.
+
+CI caught another problem before merge: the page combined too many conditional rendering paths
+in one function. The transcript, evidence, and playback controls now render through separate
+components. A typed stage table keeps durations and transitions together, and the word reveal
+passes its remaining budget through blocks, list items, and inline text. The audit thresholds stay
+unchanged. Existing tests and the browser scripts check that this restructuring preserves the demo.
 
 ### The binder never moves the camera
 

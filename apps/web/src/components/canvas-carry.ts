@@ -2,34 +2,28 @@ import { useCarryTarget, type Carried, type CarryPoint } from "@yaklabs/catalog/
 import { useState, type RefObject } from "react";
 import { insertionIndex } from "../canvas";
 
-/**
- * Where a carry over the canvas would land: the insertion index among the lanes, and the
- * marker's left edge in the row's own coordinates, or null at the end, where the open space
- * lights up instead.
- */
-export type Landing = { at: number; marker: number | null };
+/** An incoming lane's insertion index, untransformed left edge, and preview content. */
+export type Landing = { at: number; left: number; carried: Carried };
 
-// Half the gap between lanes, where the marker stands.
-const HALF_GAP_PX = 8;
-
-// Where a carry at `point` lands in `row`, measured from the lanes as they stand now.
-function landingAt(row: HTMLElement, point: CarryPoint): Landing {
-  const rowBox = row.getBoundingClientRect();
-  const boxes = [...row.querySelectorAll(":scope > article")].map((lane) =>
-    lane.getBoundingClientRect(),
-  );
-  const at = insertionIndex(
-    boxes.map((box) => ({ left: box.left, width: box.width })),
-    point.x,
-  );
-  const lane = boxes.at(at);
-  const marker = lane === undefined ? null : lane.left - rowBox.left + row.scrollLeft - HALF_GAP_PX;
-  return { at, marker };
+function sameLanding(current: Landing, next: Landing): boolean {
+  return current.at === next.at && current.left === next.left && current.carried === next.carried;
 }
 
-// A landing as one comparable value, so a move to the same place sets no state.
-function keyOf(landing: Landing | null): string {
-  return landing === null ? "" : `${landing.at}:${String(landing.marker)}`;
+// Where a carry at `point` lands in `row`, measured from the lanes as they stand now.
+function landingAt(row: HTMLElement, point: CarryPoint, carried: Carried): Landing {
+  const rowBox = row.getBoundingClientRect();
+  // Transformed neighbor boxes would feed the preview's own movement back into hit testing.
+  const slots = [...row.querySelectorAll<HTMLElement>(":scope > article")].map((lane) => ({
+    left: lane.offsetLeft,
+    width: lane.offsetWidth,
+  }));
+  const at = insertionIndex(slots, point.x - rowBox.left + row.scrollLeft);
+  const last = slots.at(-1);
+  const style = getComputedStyle(row);
+  const end = last
+    ? last.left + last.width + parseFloat(style.getPropertyValue("--canvas-grid"))
+    : parseFloat(style.paddingLeft);
+  return { at, left: slots.at(at)?.left ?? end, carried };
 }
 
 /**
@@ -43,11 +37,14 @@ export function useLanding(
 ): Landing | null {
   const [landing, setLanding] = useState<Landing | null>(null);
   const follow = (next: Landing | null) => {
-    setLanding((current) => (keyOf(current) === keyOf(next) ? current : next));
+    setLanding((current) => {
+      if (current === null || next === null) return next;
+      return sameLanding(current, next) ? current : next;
+    });
   };
   useCarryTarget(row, {
-    over: (_carried, point) => {
-      if (row.current !== null) follow(landingAt(row.current, point));
+    over: (carried, point) => {
+      if (row.current !== null) follow(landingAt(row.current, point, carried));
       return row.current !== null;
     },
     leave: () => {
@@ -55,7 +52,7 @@ export function useLanding(
     },
     drop: (carried, point) => {
       follow(null);
-      if (row.current !== null) onCarry(carried, landingAt(row.current, point).at);
+      if (row.current !== null) onCarry(carried, landingAt(row.current, point, carried).at);
     },
   });
   return landing;
