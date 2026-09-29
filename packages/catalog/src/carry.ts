@@ -83,6 +83,10 @@ type Press = {
   ghost: HTMLElement | null;
 };
 
+// A size container around a lifted element at home: its names and type as computed, and the
+// content box its container queries and cq units measure, in CSS pixels.
+type HomeContainer = { name: string; type: string; width: number; height: number };
+
 /** How far a press travels before it lifts; anything shorter is a click. */
 export const LIFT_PX = 6;
 
@@ -209,16 +213,48 @@ function targetAt(at: CarryPoint): CarryTarget | null {
   return null;
 }
 
-// The name and content width of the size container nearest `element`, so a clone laid out
-// away from home still matches the container queries it matched at home.
-function containerOf(element: Element): { name: string; width: number } | null {
-  for (let node = element.parentElement; node; node = node.parentElement) {
-    const style = getComputedStyle(node);
-    if (style.containerType === "normal") continue;
-    const padding = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
-    return { name: style.containerName, width: node.clientWidth - padding };
+// Computed lengths such as "12.5px", added up in pixels.
+function pixels(...lengths: string[]): number {
+  return lengths.reduce((total, length) => total + parseFloat(length), 0);
+}
+
+// The content box of `element` on screen, to the fraction of a pixel that `clientWidth` rounds
+// away: its border box less borders, padding and any scrollbar, which is a whole pixel wide.
+function contentBoxOf(element: Element): { width: number; height: number } {
+  const style = getComputedStyle(element);
+  const box = element.getBoundingClientRect();
+  const borderX = pixels(style.borderLeftWidth, style.borderRightWidth);
+  const borderY = pixels(style.borderTopWidth, style.borderBottomWidth);
+  const insetX = borderX + pixels(style.paddingLeft, style.paddingRight);
+  const insetY = borderY + pixels(style.paddingTop, style.paddingBottom);
+  const barWidth = Math.round(box.width - borderX - element.clientWidth); // a vertical scrollbar's
+  const barHeight = Math.round(box.height - borderY - element.clientHeight); // a horizontal one's
+  return { width: box.width - insetX - barWidth, height: box.height - insetY - barHeight };
+}
+
+// Every size container around `lift` at home, outermost first, as the ghost rebuilds them.
+function homeContainersOf(lift: HTMLElement): HomeContainer[] {
+  const found: HomeContainer[] = [];
+  for (let node = lift.parentElement; node; node = node.parentElement) {
+    const { containerName, containerType } = getComputedStyle(node);
+    if (containerType !== "normal")
+      found.unshift({ name: containerName, type: containerType, ...contentBoxOf(node) });
   }
-  return null;
+  return found;
+}
+
+// A plain box in the ghost for one container at home, with its names and type, at its content
+// size, so a query or a cq unit that reached that container at home reaches this box and
+// measures the same. Only a container on both axes takes a height: an inline-size one keeps
+// the height of what it holds, as it does at home.
+function standInFor({ name, type, width, height }: HomeContainer): HTMLElement {
+  const box = document.createElement("div");
+  box.dataset.carryContainer = "";
+  box.style.containerName = name;
+  box.style.containerType = type;
+  box.style.width = `${width}px`;
+  if (type.split(" ").includes("size")) box.style.height = `${height}px`;
+  return box;
 }
 
 // How far the picture's corner sits from the pointer, measured at the press: a picture of its
@@ -233,7 +269,10 @@ function offsetOf({ lift, picture }: CarrySource, from: CarryPoint): CarryPoint 
 // An empty copy of each of `lift`'s ancestors below the body, around its clone. Laid out as if
 // absent (`display: contents`), they still match the selectors and hand down the inherited
 // styles that shaped `lift` at home, such as the thread's type size and line height, so the
-// clone looks like the element it pictures.
+// clone looks like the element it pictures. None of them stays a size container: with no box of
+// its own, one would still be the container a query picks, and answer its every size feature
+// "unknown" (CSS Conditional 5, 6.1), so a narrow thread's card would lose its compact layout.
+// Their names stay, for a style query, which reads no box.
 function atHome(lift: HTMLElement, clone: HTMLElement): HTMLElement {
   let wrapped = clone;
   for (let home = lift.parentElement; home && home !== document.body; home = home.parentElement) {
@@ -241,10 +280,24 @@ function atHome(lift: HTMLElement, clone: HTMLElement): HTMLElement {
     for (const { name, value } of home.attributes)
       if (name !== "id") shell.setAttribute(name, value);
     shell.style.display = "contents";
+    shell.style.containerType = "normal";
     shell.append(wrapped);
     wrapped = shell;
   }
   return wrapped;
+}
+
+// The copies of `lift`'s ancestors inside a stand-in for each size container at home, the
+// outermost outside, so every container query and cq unit in the clone finds its container at
+// the size it had at home. The stand-ins go around the copies rather than between them, where
+// they would break a child selector such as `.thread-panel > .thread-scroll`.
+function inContainers(lift: HTMLElement, clone: HTMLElement): HTMLElement {
+  const shells = atHome(lift, clone); // → the outermost shell, the clone inside
+  return homeContainersOf(lift).reduceRight((inner, container) => {
+    const box = standInFor(container); // → an empty, sized container
+    box.append(inner);
+    return box;
+  }, shells);
 }
 
 // What rides the pointer: the picture, marked for the stylesheet, and whatever surrounds it.
@@ -265,15 +318,8 @@ function ghostOf({ lift, picture }: CarrySource): HTMLElement | null {
   if (!lift) return null;
   const clone = lift.cloneNode(true);
   if (!(clone instanceof HTMLElement)) return null;
-  const ghost = frame(clone, atHome(lift, clone));
-  const { style } = ghost;
-  style.setProperty("--carry-width", `${lift.getBoundingClientRect().width}px`);
-  const container = containerOf(lift);
-  if (container) {
-    style.containerType = "inline-size";
-    style.containerName = container.name;
-    style.width = `${container.width}px`;
-  }
+  const ghost = frame(clone, inContainers(lift, clone));
+  ghost.style.setProperty("--carry-width", `${lift.getBoundingClientRect().width}px`);
   return ghost;
 }
 
