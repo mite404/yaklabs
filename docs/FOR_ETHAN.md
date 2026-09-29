@@ -138,6 +138,14 @@ empty canvas became his composed surface, a raised sheet with the dots, Atlas an
 lines, and the coloured trim around the window turned out to be a Figma selection outline caught
 in a screenshot, so it went (ADR-136).
 
+Then Ethan went through the new welcome with a screen recorder, and four things gave it away:
+the "+" beside Projects had square corners, pressing it flashed the pane white for a frame, the
+sidebar's peek slid out beautifully and vanished on the way back, and a card dragged out of a
+narrow thread changed shape in mid-air. Each was pulled apart frame by frame from his recordings
+before any code changed, fixed at its root, and then handed to a second agent whose only job was
+to prove the fix wrong. One of those skeptics caught a flash the first fix had missed, on the
+Vitruvian look, and the merge caught a check that had quietly replaced another.
+
 ## 2. Cast & Crew
 
 The first entries are ideas from before any code existed; the rest are parts of the running app.
@@ -1049,6 +1057,52 @@ base was 80% of the way down, not 50%, and out of step with the fade. The test t
 frame looked plausible on its own. The fix writes the curve out in both keyframes, with a
 comment saying why. Lesson: when CSS silently ignores something, only a measured assertion
 tells you.
+
+### Four frames that gave the polish away
+
+**The square "+".** The welcome's New project "+" drew square corners on hover and focus while
+every other button in the app rounds to 4px (design pillars rule 8). The vendored shadcn button
+comes from the base-lyra preset, which hard-codes `rounded-none`, so the `--radius: 4px` bridge in
+`globals.css` never reaches it: every call site opts back in with `rounded-[var(--radius)]`, and
+this one had not. It opts in now, and W6 reads its corners at rest, on hover and under focus.
+Lesson: a default that is wrong everywhere is fixed by an override everywhere, and the one place
+that forgets is the one people notice. The lasting fix is the default itself (a follow-up).
+
+**The white frame.** Pressing "+" flashed the main pane to bare paper for one frame, 6.77s and
+10.89s into the recording, with "Opening New thread..." in its corner. It was not a page reload:
+the sidebar and tabs never moved, a marker left on `window` survived, and the page had one
+navigation entry. The thread pane asked the worker for its turns in a `useEffect`, and an effect
+runs after the first paint, so frame one was always the waiting frame, even for a thread created
+a moment ago that can only be empty. The snapshot now counts each thread's turns, and a thread
+with none opens empty in its first render; a thread that truly waits keeps its "Opening..." line
+hidden for 100ms, below what reads as a wait (rule 9). The skeptic then found a second flash
+behind the first: the Vitruvian sheet faded in from nothing on every new welcome, using a fade
+written for the empty canvas, so that fade is back where it belongs. Lesson: a loading state is
+for not knowing. If you already know, render.
+
+**The slide that went home in the dark.** The peek slid out over 220ms and back over 160ms, and the
+way back also faded its opacity on the drawer curve, which front-loads its change: the panel was
+at 0.32 opacity 33ms in, with its edge still 83px out. It was invisible before it had travelled,
+so the way back read as no motion at all (2 to 3 frames in the recording, against 8 on the way
+out). Both directions now share one `--peek-slide`, and the way back's fade is the fade-in played
+backwards, starting 100ms in, so the panel holds full strength until it is nearly home. Lesson:
+a mirror plays the tape backwards; pasting the same fade into both directions is not a mirror.
+
+**The ghost that grew.** A card lifted from a narrow thread, drawn compact at home (a 160px chart,
+a stacked footer), rode the pointer in the wide layout: the chart 40px taller, the footer on one
+row, "Show my work" 266px to the right, at the same width. The ghost wraps its clone in
+`display: contents` copies of every ancestor so selectors and inherited type still match, but the
+copy of `.thread-scroll` kept `container: thread`. A query still picks a container with no box,
+and reads its width as "unknown", so `@container thread (max-width: 480px)` failed. The copies
+stop being containers now, and each real container is rebuilt around them as a plain box at its
+home size. Lesson: a stand-in inherits every job on the call sheet, including the ones it has no
+body to do.
+
+**The check that ate a check.** The corners check and the new frame check were both named W6, and
+the runner spread its check collections into one object, so the second W6 replaced the first
+without a word: a green run that never ran the corners check. They are W6, W7 and W8 now, and
+`collect()` in `lever.mjs` throws on a duplicate id. Lesson: an object spread is a last-writer-wins
+merge; anything keyed by name needs a guard, not a hope.
 
 ## 5. Director's Commentary
 
@@ -2082,3 +2136,128 @@ memory. Two actors reading one sheet cannot drift apart.
 Senior-engineer takeaway: when two components compute the same thing, the thing is a calculation
 asking for a name. Pull it out, keep it free of hooks and clocks, and let the components stay thin
 actions around it.
+
+### Don't send a runner to the vault for a shot you already have
+
+The white flash is the classic cost of fetching in an effect. React paints first and runs
+effects after, so a component that starts in "loading" and asks for its data in `useEffect` will
+paint "loading" at least once, however fast the answer comes. When the answer is already on hand,
+decide in the first render instead:
+
+```tsx
+// apps/web/src/components/turns.ts - a calculation: data in, data out
+export function turnsBefore(thread: ThreadSummary): Turns {
+  return thread.turnCount === 0 ? NONE : LOADING; // → open and empty, or ask the worker
+}
+
+// apps/web/src/components/thread-pane.tsx - read once, as the pane mounts
+const [turns, setTurns] = useState(() => turnsBefore(thread)); // → Turns
+useEffect(() => {
+  if (asking) void load(); // only a thread with turns still asks
+}, [runtime, id, asking]);
+```
+
+```mermaid
+sequenceDiagram
+  participant E as Ethan
+  participant P as Thread pane
+  participant W as Worker
+  Note over E,W: Before
+  E->>P: press "+"
+  P->>E: frame 1: "Opening..." on bare paper
+  P->>W: open(id), from useEffect after the paint
+  W-->>P: no turns
+  P->>E: frame 2: the welcome and its painting
+  Note over E,W: After
+  E->>P: press "+"
+  P->>P: the snapshot says turnCount 0
+  P->>E: frame 1: the welcome and its painting
+```
+
+The film version: the script supervisor already has the take on the sheet, so nobody sends a
+runner to the vault for it while the audience watches a blank screen.
+
+Senior-engineer takeaway: an effect is for what you truly do not know yet. Anything you can
+decide from what you already hold (props, a snapshot, a cache) belongs in the first render, and
+a wait people cannot perceive deserves no message at all.
+
+### A mirror plays the tape backwards
+
+Ethan asked for the peek to go back "with the same curve and duration". The slide took that
+literally: one custom property, so the two directions cannot drift apart. The fade could not,
+because a fade that races ahead on the way out has to trail behind on the way back:
+
+```css
+/* apps/web/src/index.css - one slide both ways; the fade reversed, not copied */
+[data-slot="sidebar"][data-peek] > [data-slot="sidebar-container"] {
+  --peek-slide: transform 220ms cubic-bezier(0.32, 0.72, 0, 1);
+  transition:
+    var(--peek-slide),
+    opacity 120ms cubic-bezier(0.23, 1, 0.32, 1); /* out: solid early */
+}
+[data-slot="sidebar"][data-peek="leaving"] > [data-slot="sidebar-container"] {
+  transition:
+    var(--peek-slide),
+    opacity 120ms cubic-bezier(0.68, 0, 0.77, 0) 100ms; /* back: the same curve reversed, late */
+}
+```
+
+```mermaid
+gantt
+  title The peek's tracks, in ms
+  dateFormat x
+  axisFormat %L
+  section Out
+  Slide, drawer curve       :0, 220
+  Fade in, strong ease-out  :0, 120
+  section Back, before
+  Slide                     :0, 160
+  Fade out, front-loaded    :crit, 0, 160
+  section Back, after
+  Slide, drawer curve       :0, 220
+  Full strength             :0, 100
+  Fade out, reversed curve  :100, 220
+```
+
+A curve reversed in time swaps and flips its control points: `(x1, y1, x2, y2)` becomes
+`(1 - x2, 1 - y2, 1 - x1, 1 - y1)`, which is how `(0.23, 1, 0.32, 1)` became `(0.68, 0, 0.77, 0)`.
+In the edit suite it is the difference between reversing a clip and pasting the same dissolve at
+both ends: only the reversed clip reads as the same move going home.
+
+### A stand-in inherits the whole call sheet
+
+The drag ghost is a clone laid out far from home, under `<body>`. To look the same it wears empty
+copies of its ancestors (`display: contents`, so they draw nothing and still match the CSS), and
+that is where the bug hid: the copies also inherited the job of being size containers, a job
+that needs a body.
+
+```ts
+// packages/catalog/src/carryGhost.ts
+shell.style.display = "contents"; // → matches .thread-panel, draws no box
+shell.style.containerType = "normal"; // → but is no longer a container nobody can measure
+
+// Every real container at home comes back as a plain box at its home size, outermost first
+return homeContainersOf(lift).reduceRight((inner, container) => {
+  const box = standInFor(container); // → <div style="container: thread; width: 426.6px">
+  box.append(inner);
+  return box;
+}, shells);
+```
+
+```mermaid
+flowchart TB
+  subgraph Before
+    G1[".carry-ghost, sized, named thread"] --> S1
+    S1[".thread-scroll copy<br/>display: contents<br/>container: thread"]
+    S1 --> C1["card: @container thread asks<br/>'width?' → unknown → wide layout"]
+  end
+  subgraph After
+    G2[".carry-ghost"] --> B2["stand-in box, container: thread<br/>426.6px, the home width"]
+    B2 --> S2[".thread-scroll copy<br/>display: contents, not a container"]
+    S2 --> C2["card: 'width?' → 426.6px → compact layout"]
+  end
+```
+
+On set, a stand-in takes the lead's marks for lighting, not the lead's lines. The copies here
+now do the same: they stand where the ancestors stood for the selectors, and leave the measuring
+to boxes that have a body.
