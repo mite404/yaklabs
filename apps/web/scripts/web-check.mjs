@@ -1450,6 +1450,55 @@ try {
     },
   );
 
+  // A phone has no rail (ADR-139): its drawer is one labelled column, the places as rows with
+  // the Lab's name in view, then the projects, then the one account at its foot.
+  const drawerIsOneColumn = (width) =>
+    onOwnPage(
+      `a ${width}px phone has no rail: its drawer lists the places, then the projects, then the account`,
+      "/t/t-005?scenario=demo",
+      { viewport: { width, height: 844 } },
+      async (own) => {
+        await own.locator('[data-slot="project-name"]').filter({ hasText: /\S/ }).waitFor({
+          timeout: 15_000,
+        });
+        await own.getByRole("button", { name: "Toggle sidebar" }).click();
+        await own.locator('dialog[data-slot="sidebar"][data-state="open"]').waitFor();
+        await own.waitForTimeout(400);
+        const look = await own.evaluate(() => {
+          const drawer = document.querySelector('dialog[data-slot="sidebar"]');
+          const lab = drawer.querySelector('a[aria-label="Lab"] span');
+          const project = [...drawer.querySelectorAll("button")].find(
+            (button) => button.textContent.trim() === "Demo store",
+          );
+          const account = drawer.querySelector('[aria-label="Account"]');
+          const [d, l, p, a] = [drawer, lab, project, account].map(
+            (el) => el?.getBoundingClientRect() ?? null,
+          );
+          const all = l !== null && p !== null && a !== null;
+          return {
+            rail: document.querySelector('[data-slot="rail"]') !== null,
+            accounts: document.querySelectorAll('[aria-label="Account"]').length,
+            labShown: l !== null && l.width > 0 && l.left >= d.left && l.right <= d.right,
+            inOrder: all && l.bottom <= p.top && p.bottom <= a.top,
+            foot: a === null ? null : Math.round(d.bottom - a.bottom),
+          };
+        });
+        await own.screenshot({ path: path.join(OUT, `drawer-${width}.png`) });
+        return {
+          ok:
+            look.rail === false &&
+            look.accounts === 1 &&
+            look.labShown === true &&
+            look.inOrder === true &&
+            look.foot !== null &&
+            look.foot <= 16,
+          detail: JSON.stringify(look),
+        };
+      },
+    );
+  await drawerIsOneColumn(390);
+  await drawerIsOneColumn(767);
+
   await onOwnPage(
     "on desktop the one Account button is at the rail's foot, and the bell is the bar's last control",
     "/t/t-005?scenario=demo",
