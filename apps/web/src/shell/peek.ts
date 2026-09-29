@@ -3,8 +3,8 @@
 // the title bar's toggle, on the rail or just past it, and slides back once the pointer has been
 // gone a moment. What the pointer is over is the host's to say; this decides when to move.
 
-/** Where the peek is: at rest behind the rail, about to slide out, out, or sliding back. */
-export type PeekPhase = "rail" | "entering" | "open" | "leaving";
+/** Where the peek is: away (at rest behind the rail), about to slide out, out, or sliding back. */
+export type PeekPhase = "away" | "entering" | "open" | "leaving";
 
 // The phase, and whether the step into it is drawn with no motion: a key closed it, or it has
 // finished sliding back and rests behind the rail's edge.
@@ -22,7 +22,7 @@ export type PeekAction =
   | { type: "settled" };
 
 /** The peek as it starts: at rest behind the rail. */
-export const RESTING: PeekState = { phase: "rail", instant: false };
+export const RESTING: PeekState = { phase: "away", instant: false };
 
 /** How long the pointer rests on a place that peeks before the panel slides out. */
 export const PEEK_OPEN_MS = 80;
@@ -30,7 +30,7 @@ export const PEEK_OPEN_MS = 80;
 export const PEEK_CLOSE_MS = 250;
 
 // Where show takes each phase: out from behind the rail, or back out from partway home.
-const SHOWN: Partial<Record<PeekPhase, PeekPhase>> = { rail: "entering", leaving: "open" };
+const SHOWN: Partial<Record<PeekPhase, PeekPhase>> = { away: "entering", leaving: "open" };
 
 /** Whether the peek is out, or on its way out. */
 export function isOut(phase: PeekPhase): boolean {
@@ -38,7 +38,7 @@ export function isOut(phase: PeekPhase): boolean {
 }
 
 function hidden(state: PeekState, instant: boolean): PeekState {
-  if (instant && state.phase !== "rail") return { phase: "rail", instant: true };
+  if (instant && state.phase !== "away") return { phase: "away", instant: true };
   return isOut(state.phase) ? { phase: "leaving", instant: false } : state;
 }
 
@@ -49,8 +49,8 @@ const STEPS: Record<Exclude<PeekAction["type"], "hide">, (state: PeekState) => P
     return phase === undefined ? state : { phase, instant: false };
   },
   entered: (state) => (state.phase === "entering" ? { phase: "open", instant: false } : state),
-  left: (state) => (state.phase === "leaving" ? { phase: "rail", instant: true } : state),
-  rest: (state) => (state.phase === "rail" && !state.instant ? state : RESTING),
+  left: (state) => (state.phase === "leaving" ? { phase: "away", instant: true } : state),
+  rest: (state) => (state.phase === "away" && !state.instant ? state : RESTING),
   settled: (state) => (state.instant ? { ...state, instant: false } : state),
 };
 
@@ -121,7 +121,7 @@ export function peekIntent({
   const close = (instant: boolean) => {
     timer.stop();
     suppressed = true;
-    if (phase() !== "rail") dispatch({ type: "hide", instant });
+    if (phase() !== "away") dispatch({ type: "hide", instant });
   };
   return {
     point(inZone) {

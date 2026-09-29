@@ -26,19 +26,19 @@ describe("nextPeek", () => {
   it("slides back when hidden, and becomes the rail at once when it ends", () => {
     const leaving = nextPeek(at("open"), { type: "hide", instant: false });
     expect(leaving).toEqual(at("leaving"));
-    expect(nextPeek(leaving, { type: "left" })).toEqual(at("rail", true));
+    expect(nextPeek(leaving, { type: "left" })).toEqual(at("away", true));
   });
 
   it("goes straight to the rail, with no motion, when a key hides it", () => {
-    expect(nextPeek(at("open"), { type: "hide", instant: true })).toEqual(at("rail", true));
-    expect(nextPeek(at("leaving"), { type: "hide", instant: true })).toEqual(at("rail", true));
+    expect(nextPeek(at("open"), { type: "hide", instant: true })).toEqual(at("away", true));
+    expect(nextPeek(at("leaving"), { type: "hide", instant: true })).toEqual(at("away", true));
   });
 
   it("settles a step with no motion once it is drawn", () => {
-    expect(nextPeek(at("rail", true), { type: "settled" })).toEqual(RESTING);
+    expect(nextPeek(at("away", true), { type: "settled" })).toEqual(RESTING);
   });
 
-  it("rests as the rail when the sidebar is pinned open, from any phase", () => {
+  it("rests away when the panel is docked, from any phase", () => {
     for (const phase of ["entering", "open", "leaving"] as const) {
       expect(nextPeek(at(phase), { type: "rest" })).toEqual(RESTING);
     }
@@ -74,7 +74,7 @@ const intent = () =>
 
 beforeEach(() => {
   vi.useFakeTimers();
-  phase = "rail";
+  phase = "away";
   held = false;
   actions = [];
 });
@@ -160,7 +160,7 @@ describe("peekIntent, closing on a key or a visit", () => {
     peek.point(true);
     peek.close(true);
     expect(actions).toEqual([{ type: "hide", instant: true }]);
-    phase = "rail";
+    phase = "away";
     peek.point(false);
     peek.point(true);
     vi.advanceTimersByTime(PEEK_OPEN_MS);
@@ -180,7 +180,7 @@ describe("peekIntent, closing on a key or a visit", () => {
     ]);
   });
 
-  it("does nothing on arrival while resting as the rail", () => {
+  it("does nothing on arrival while away", () => {
     const peek = intent();
     peek.arrive();
     expect(actions).toEqual([]);

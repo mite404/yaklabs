@@ -105,7 +105,7 @@ const restsQuietly = ({ missing, rest, hover, phase }) =>
   hover.fill === rest.fill &&
   hover.ink === rest.ink &&
   hover.cursor === "default" &&
-  phase === "rail" &&
+  phase === "away" &&
   contrast(rest.ink, rest.shell) >= 4.5;
 
 // P25's keyboard and press half: Tab walks from Kay through the places not built yet to the

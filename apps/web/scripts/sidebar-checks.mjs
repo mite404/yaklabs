@@ -21,9 +21,9 @@ const TOGGLE = 'header [data-sidebar="trigger"]';
 
 /** A number rounded to two decimals, for a check's notes. */
 export const round = (n) => Math.round(n * 100) / 100;
-/** The sidebar's peek phase: "rail" at rest, else the phase it is in. */
+/** The panel's peek phase: "away" at rest, else the phase it is in. */
 export const phaseOf = (page) =>
-  page.evaluate(() => document.querySelector('[data-slot="sidebar"]').dataset.peek ?? "rail");
+  page.evaluate(() => document.querySelector('[data-slot="sidebar"]').dataset.peek ?? "away");
 // The first tab's left and the workspace's (the sidebar's edge), in CSS px.
 const edges = (page) =>
   page.evaluate(() => ({
@@ -106,7 +106,7 @@ const seekSlide = (page, phase, steps) =>
         const inner = document.querySelector('[data-slot="rail"]').getBoundingClientRect().right;
         const tick = () => {
           const running = panel.getAnimations();
-          if ((sidebar.dataset.peek ?? "rail") !== want || running.length === 0) {
+          if ((sidebar.dataset.peek ?? "away") !== want || running.length === 0) {
             requestAnimationFrame(tick);
             return;
           }
@@ -288,13 +288,13 @@ async function peekByPointer(page) {
   await page.waitForTimeout(OPEN_MS + SLIDE_MS + 100);
   const hot = await phaseOf(page);
   const ok =
-    passed === "rail" &&
+    passed === "away" &&
     slide.includes(`transform ${SLIDE_MS} ${DRAWER}`) &&
     before.tab === during.tab &&
     before.edge === during.edge &&
     panel.width >= 208 &&
     graced === "open" &&
-    closed === "rail" &&
+    closed === "away" &&
     hot === "open";
   return {
     ok,
@@ -331,8 +331,8 @@ async function peekHolds(page) {
       places === 1 &&
       held === "open" &&
       focus === "Account" &&
-      released === "rail" &&
-      escaped === "rail" &&
+      released === "away" &&
+      escaped === "away" &&
       running.length === 0,
     note: `landmarks named Sidebar ${landmarks}, Places ${places}; menu up, pointer away: ${held}; menu closed, focus on ${focus}, then ${released}; Escape: ${escaped}, running [${running.join(", ")}]`,
   };
@@ -354,7 +354,7 @@ async function placesStayQuiet(page) {
     seen.push(`${name} ${await phaseOf(page)}`);
   }
   return {
-    ok: seen.every((each) => each.endsWith(" rail")),
+    ok: seen.every((each) => each.endsWith(" away")),
     note: `700ms on ${seen.join(", ")}`,
   };
 }
@@ -546,7 +546,7 @@ export const sidebarChecks = {
       away.length > 0 &&
       dimmest >= 0.9 &&
       landed < 0.1 &&
-      rested === "rail";
+      rested === "away";
     const trace = back.frames.map((f) => `${f.ms}:${round(f.edge)}@${round(f.opacity)}`).join(" ");
     const tails = [];
     for (const theme of ["light", "dark"]) {

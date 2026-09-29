@@ -269,7 +269,7 @@ export function useSidebarPeek(
  */
 export function peekProps(peek: SidebarPeek) {
   return {
-    peek: peek.phase === "rail" ? undefined : peek.phase,
+    peek: peek.phase === "away" ? undefined : peek.phase,
     "data-peek-instant": peek.instant || undefined,
     onTransitionEnd: peek.onTransitionEnd,
   };

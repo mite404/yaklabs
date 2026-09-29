@@ -113,10 +113,10 @@ async function escapeFrom(browser, theme) {
       pill === 1 &&
       first.pill === 0 &&
       first.phase === "open" &&
-      fromRail.phase === "rail" &&
+      fromRail.phase === "away" &&
       fromRail.focus === "a Lab" &&
       inPanel === true &&
-      fromPanel.phase === "rail" &&
+      fromPanel.phase === "away" &&
       fromPanel.focus === "button Toggle sidebar",
     note: `${theme} focus on Lab, ${pill} pill up; Escape: ${first.pill} pills, peek ${first.phase}; Escape: ${fromRail.phase}, focus on ${fromRail.focus}; Tab past the account into the panel ${inPanel}, Escape: ${fromPanel.phase}, focus on ${fromPanel.focus}`,
   };

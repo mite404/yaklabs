@@ -76,7 +76,7 @@ export function AppSidebar({
         )}
         <SidebarResizeHandle width={width} onWidth={onWidth} controls={SIDEBAR_ID} />
       </Sidebar>
-      {peek.enabled && peek.phase === "rail" && <PeekHotZone />}
+      {peek.enabled && peek.phase === "away" && <PeekHotZone />}
     </>
   );
 }
