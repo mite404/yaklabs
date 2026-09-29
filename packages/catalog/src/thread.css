@@ -55,6 +55,115 @@
   z-index: 1;
 }
 
+/* Reading tools (ReadingTools.tsx): a small bar at the right just above the compose box, over the
+   conversation's resting gap, so the turns keep resting 20px above the box (pillar 12). A row laid
+   out as the compose row is (the same gutter, the same reserved scrollbar) puts the bar's right
+   edge on the compose box's. It stands 8px clear of the box, its own 4px and the compose row's
+   4px inset, and with a card docked (--dock-space, set by the panel) 8px clear of the card
+   instead. Its paper hides the turn under it; its corners and gaps are the menu's (8px) and the
+   title bar's actions' (2px). */
+.reading-dock {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: calc(100% + var(--dock-space, 0px));
+  z-index: 1;
+  display: flex;
+  justify-content: flex-end;
+  overflow: hidden;
+  scrollbar-gutter: stable;
+  padding: 4px var(--thread-gutter);
+  pointer-events: none;
+}
+.reading-tools {
+  display: flex;
+  align-items: center;
+  min-inline-size: 0; /* a fieldset's default is its content's width */
+  margin: 0;
+  padding: 2px;
+  background: var(--paper);
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  pointer-events: auto;
+}
+.reading-search {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  margin-inline-end: 2px;
+}
+.reading-search .field {
+  width: 200px;
+  min-width: 0;
+  flex: 1 1 auto;
+  padding-block: 3px; /* the field's 5px less 2px, so it stands 28px, as its buttons */
+}
+/* The browser's own clear button repeats Close search in a colour off the palette. */
+.reading-search .field::-webkit-search-cancel-button {
+  appearance: none;
+}
+.reading-count {
+  min-width: 7ch;
+  padding: 0 6px;
+  color: var(--soft-ink);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  white-space: nowrap;
+}
+.reading-count:empty {
+  min-width: 0;
+  padding: 0;
+}
+/* The tools beside Search, open by default: a touch screen has no hover to unfold them by. The
+   2px before Search lives inside the track, so it folds away with them. */
+.reading-more {
+  display: grid;
+  grid-template-columns: 1fr;
+}
+.reading-more > .menu-anchor {
+  min-width: 0;
+  overflow: hidden;
+}
+.reading-more .icon-btn {
+  margin-inline-end: 2px; /* a margin, not padding: padding could not fold below 2px */
+}
+/* The fold clips anything past the tools' edges, the focus ring included, so the bar's rings sit
+   inside their buttons, as an awaiting tile's does; Search matches so the two read alike. */
+.reading-tools .icon-btn:focus-visible {
+  outline-offset: -2px;
+}
+/* With a fine pointer the bar rests as Search alone and unfolds leftward while the pointer is on
+   it (data-unfolded, set from its pointer events so a story's synthetic hover can prove it), a
+   keyboard is in it, or search or the list of requests is open. Focus counts only when the last
+   input was not a pointer (ADR-053): a menu hands focus back to its trigger after a click, which
+   the browser calls focus-visible, and the bar would stay unfolded after the pointer left. The track clips from 0fr to 1fr
+   rather than scaling (pillar 22), over 150ms on the strong ease-out, as a lane's menu fades.
+   Folded, the tools are hidden, so a keyboard skips them until it reaches the bar; visibility
+   waits out the fold so the clip finishes first. */
+@media (hover: hover) and (pointer: fine) {
+  .reading-more {
+    grid-template-columns: 0fr;
+    visibility: hidden;
+    transition:
+      grid-template-columns 150ms cubic-bezier(0.23, 1, 0.32, 1),
+      visibility 0s linear 150ms;
+  }
+  .reading-tools:is([data-unfolded], [data-open], :has([aria-expanded="true"])) .reading-more,
+  :root:not([data-input="pointer"]) .reading-tools:has(:focus-visible) .reading-more {
+    grid-template-columns: 1fr;
+    visibility: visible;
+    transition: grid-template-columns 150ms cubic-bezier(0.23, 1, 0.32, 1);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .reading-more,
+  .reading-tools .reading-more {
+    transition: none;
+  }
+}
+
 /* Header and compose reserve the same scrollbar gutter as the scroll area,
    so all three share one text column on every platform. */
 .thread-header,
@@ -155,6 +264,12 @@
   display: flex;
   flex-direction: column;
   gap: 20px;
+}
+/* The turns take the focus so a keyboard can scroll them; the ring sits inside the edge the
+   panel clips, as an awaiting tile's does. */
+.thread-scroll:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
 }
 /* An empty thread showing its host's `empty` slot, such as a welcome, gives the slot the whole
    area: no gutters and no reserved scrollbar, so its art can reach the panel's edges. */
@@ -717,6 +832,13 @@
   .awaiting,
   .turn[data-flash] {
     animation: none;
+  }
+}
+/* Without the glow's fade, a jumped-to turn holds the glow's first frame until it clears, so the
+   eye still finds it. */
+@media (prefers-reduced-motion: reduce) {
+  .turn[data-flash] {
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--focus) 25%, transparent);
   }
 }
 

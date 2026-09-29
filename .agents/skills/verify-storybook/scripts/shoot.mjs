@@ -41,7 +41,12 @@ function parseArgs(argv) {
 
 async function shoot(page, base, id, out, theme) {
   const errors = [];
-  const onConsole = (msg) => msg.type() === "error" && errors.push(`console: ${msg.text()}`);
+  // The browser asks for a favicon on its first page, which Storybook does not serve; that 404
+  // is the browser's, not the story's, and failed whichever story happened to load first.
+  const onConsole = (msg) =>
+    msg.type() === "error" &&
+    !msg.location().url.endsWith("/favicon.ico") &&
+    errors.push(`console: ${msg.text()}`);
   const onPageError = (err) => errors.push(`pageerror: ${err.message}`);
   page.on("console", onConsole);
   page.on("pageerror", onPageError);
@@ -82,7 +87,11 @@ if (args.ids.length === 0) {
 mkdirSync(args.out, { recursive: true });
 
 const base = `http://127.0.0.1:${readPort()}`;
-const browser = await chromium.launch();
+// VERIFY_CHROMIUM points at a local Chromium when Playwright's own build is missing, as in
+// audit-controls.mjs.
+const browser = await chromium.launch(
+  process.env.VERIFY_CHROMIUM ? { executablePath: process.env.VERIFY_CHROMIUM } : {},
+);
 const page = await browser.newPage({ viewport: { width: args.width, height: 900 } });
 // The chart's grow and the waveform's sweep both honour reduced motion, so every frame is the
 // settled one and two runs of the same code are byte-identical.

@@ -19,6 +19,7 @@ import { markGrabbableHighlight } from "./grabbable";
 import { DictationModal, type DictationSource } from "./DictationModal";
 import { labAgent } from "./labAgent";
 import { resolveInteractive, type CardAttachment } from "./interactive";
+import { ReadingTools } from "./ReadingTools";
 import { Recap } from "./Recap";
 import { shouldShowRecap, type RecapItem } from "./recapRules";
 import type { Thread, ThreadMessage } from "./thread";
@@ -65,9 +66,11 @@ function landOn(turn: HTMLElement | null) {
 }
 
 // The dock card overlays the conversation, so its height is reserved below the last turn for
-// as long as it is docked, keeping a reader who was at the bottom still at the bottom.
+// as long as it is docked, keeping a reader who was at the bottom still at the bottom. The dock
+// learns the same height, so what floats over it (the reading tools) stands above the card.
 // Returns the release, which hands the space back.
 function reserveDockSpace(thread: HTMLElement, slot: HTMLElement): () => void {
+  const holders = [thread, slot.parentElement].filter((el) => el !== null); // → thread, dock
   const reserve = () => {
     const atBottom = thread.scrollHeight - thread.scrollTop - thread.clientHeight < 4;
     // Layout offsets, not screen rects, so the card's slide-in animation can't skew them.
@@ -76,7 +79,8 @@ function reserveDockSpace(thread: HTMLElement, slot: HTMLElement): () => void {
     const composeInset = slot.nextElementSibling
       ? parseFloat(getComputedStyle(slot.nextElementSibling).paddingTop) || 0
       : 0;
-    thread.style.setProperty("--dock-space", `${slot.offsetHeight - card + composeInset}px`);
+    const space = `${slot.offsetHeight - card + composeInset}px`;
+    for (const holder of holders) holder.style.setProperty("--dock-space", space);
     if (atBottom) thread.scrollTop = thread.scrollHeight;
   };
   reserve();
@@ -84,7 +88,7 @@ function reserveDockSpace(thread: HTMLElement, slot: HTMLElement): () => void {
   observer.observe(slot);
   return () => {
     observer.disconnect();
-    thread.style.removeProperty("--dock-space");
+    for (const holder of holders) holder.style.removeProperty("--dock-space");
   };
 }
 
@@ -519,15 +523,31 @@ function useRecap(input: {
   };
 }
 
-// Jump so the evidence lands vertically centered, every time (ADR-022 eye trace).
+// Each glowing turn's timer, so a later jump can clear the glow early.
+const flashTimers = new WeakMap<HTMLElement, number>();
+
+function clearFlash(turn: HTMLElement): void {
+  window.clearTimeout(flashTimers.get(turn));
+  flashTimers.delete(turn);
+  delete turn.dataset.flash;
+}
+
+// Jump so the evidence lands vertically centered, every time (ADR-022 eye trace). Only the turn
+// jumped to last glows: stepping through matches moves the glow rather than leaving a trail, and
+// a second jump to the same turn starts its glow over.
 function flashTurn(scroller: HTMLElement | null, turnId: string): void {
   const turn = scroller?.querySelector<HTMLElement>(`[data-turn-id="${CSS.escape(turnId)}"]`);
   if (!scroller || !turn) return;
   centerInScroller(scroller, turn);
+  scroller.querySelectorAll<HTMLElement>("[data-flash]").forEach(clearFlash);
+  void turn.offsetWidth; // a style flush, so the glow's animation starts over
   turn.dataset.flash = "true";
-  window.setTimeout(() => {
-    delete turn.dataset.flash;
-  }, FLASH_MS);
+  flashTimers.set(
+    turn,
+    window.setTimeout(() => {
+      clearFlash(turn);
+    }, FLASH_MS),
+  );
 }
 
 // After a card or a modal hands back control, the caret returns to the compose box.
@@ -544,6 +564,8 @@ function focusComposeIn(scroller: HTMLElement | null): void {
  * A vertical chat thread column: header, scrolling turns, and a compose box that never moves.
  * Text is capped at `--thread-measure` (80ch) inside a `--thread-gutter` (20px) on each side,
  * and embedded catalog cards adapt to the panel's width through container queries.
+ * Reading tools float at the right just above the compose box, or above the docked card: search,
+ * and a jump to any request (ReadingTools).
  * Above the compose box floats at most one card: a question the agent is blocked on
  * (ADR-039), or else, when the thread is active and the user has been away for 10+ minutes,
  * a recap of recorded outcomes (ADR-018). Anything that grows inside the thread is kept
@@ -679,7 +701,14 @@ export function ChatThreadPanel({
           actions={headerActions}
         />
       )}
-      <div className="thread-scroll" ref={scroller} data-empty={showEmpty ? "" : undefined}>
+      {/* The turns take a tab stop, so a keyboard can scroll a thread that holds nothing else
+          to focus, such as one of plain words. */}
+      <div
+        className="thread-scroll"
+        ref={scroller}
+        data-empty={showEmpty ? "" : undefined}
+        {...(messages.length > 0 && { role: "region", "aria-label": "Messages", tabIndex: 0 })}
+      >
         {messages.length === 0 && empty}
         {messages.map((message) => (
           <Turn
@@ -694,6 +723,16 @@ export function ChatThreadPanel({
         ))}
       </div>
       <div className="thread-dock">
+        {messages.length > 0 && (
+          <div className="reading-dock">
+            <ReadingTools
+              messages={messages}
+              onJump={(turnId) => {
+                flashTurn(scroller.current, turnId);
+              }}
+            />
+          </div>
+        )}
         {hostAsk !== undefined && (
           <div className="dock-overlay" ref={setDockSlot}>
             <AwaitingInputCard
