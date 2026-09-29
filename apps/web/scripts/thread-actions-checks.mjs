@@ -2,6 +2,7 @@
 // The thread menu's checks (ADR-126 to ADR-130) on the real app's demo scenario: every check
 // opens its own browser context, so no check sees another's data.
 import { BASE, openApp } from "./lever.mjs";
+import { gutterHolds, rowGutters } from "./thread-row-gutter.mjs";
 
 // The menu's items, in Ethan's order (ADR-126).
 const ITEMS = ["Copy thread URL", "Share thread", "Pin thread", "Snooze", "Archive", "Delete"];
@@ -73,7 +74,29 @@ async function rowOf(page, title) {
   };
 }
 
-/** The checks, keyed A1 to A8, each resolving to { ok, detail }; Share's are in share-checks.mjs. */
+// Picks a snooze tile, on the Snooze card in `scope`.
+async function snoozeIn(scope, tile) {
+  const card = scope.getByRole("region", { name: "Snooze" });
+  await card.waitFor();
+  await card.getByRole("radio", { name: new RegExp(tile) }).click();
+  await card.getByRole("button", { name: "Submit" }).click();
+  await card.waitFor({ state: "detached" });
+}
+
+// Opens a sub-thread from its row, where it comes up as a lane, and picks an item on the lane's
+// own "⋯".
+async function pinOrSnoozeChild(page, title, item) {
+  await rowsOf(page)
+    .filter({ hasText: title.slice(0, 14) })
+    .first()
+    .click();
+  const lane = page.locator(`article[data-lane][aria-label="${title}"]`);
+  await lane.getByRole("button", { name: "Thread actions" }).click();
+  await page.getByRole("menuitem", { name: item, exact: true }).click();
+  if (item === "Snooze") await snoozeIn(lane, "In 1 hour");
+}
+
+/** The checks, keyed A1 to A9, each resolving to { ok, detail }; Share's are in share-checks.mjs. */
 export const threadActionChecks = {
   // The active tab carries the "⋯" with Rename and the six items, and the main thread has no
   // title bar of its own (ADR-138).
@@ -228,6 +251,34 @@ export const threadActionChecks = {
       ok: gone && moved,
       detail: `gone ${gone}; left the page ${moved}; back at ${page.url()}`,
     };
+  },
+
+  // The marks hang in the row's left gutter, so a title starts at the same x marked or not: a
+  // pinned and snoozed main (two marks, stacked), a pinned and a snoozed sub-thread (left of
+  // its "↳"), an archived main.
+  async A9(browser) {
+    const page = await openDemo(browser);
+    const plain = await rowGutters(page);
+    await openThread(page, "Last week's sales");
+    await pick(page, "Pin thread");
+    await pick(page, "Snooze");
+    await snoozeIn(shownPanel(page), "In 1 hour");
+    await pinOrSnoozeChild(page, "Why is Tuesday quiet?", "Pin thread");
+    await pinOrSnoozeChild(page, "Saturday leads at every level", "Snooze");
+    await openThread(page, "Refund audit");
+    await pick(page, "Archive");
+    await page.mouse.move(5, 5);
+    const marked = await rowGutters(page);
+    const shown = marked.map(
+      (row) =>
+        `${row.title.slice(0, 12)} ${row.titleX.toFixed(1)}px [${row.marks.map((box) => box.mark).join("+")}]`,
+    );
+    const ok =
+      marked.length === plain.length &&
+      marked.filter((row) => row.marks.length > 0).length === 4 &&
+      marked.some((row) => row.marks.length === 2) &&
+      gutterHolds(plain, marked);
+    return { ok, detail: `title x from the fill's edge: ${shown.join("; ")}` };
   },
 
   // On a phone the one "⋯" sits in the bar's top row and holds the same items; the thread's own

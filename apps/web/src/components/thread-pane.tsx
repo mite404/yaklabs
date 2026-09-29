@@ -124,13 +124,13 @@ export function focusThreadIn(within: ParentNode): void {
 function PendingFrame({
   thread,
   leading,
-  trailing,
+  actions,
   bare,
   children,
 }: {
   thread: ThreadSummary;
   leading: ReactNode;
-  trailing: ReactNode;
+  actions: ReactNode;
   bare: boolean;
   children: ReactNode;
 }) {
@@ -147,10 +147,7 @@ function PendingFrame({
         <header className="thread-header">
           {leading !== undefined && <div className="header-leading">{leading}</div>}
           <h2>{thread.title}</h2>
-          <div className="thread-header-actions">
-            <ThreadHeaderActions thread={thread} />
-            {trailing}
-          </div>
+          <div className="thread-header-actions">{actions}</div>
         </header>
       )}
       <div
@@ -225,6 +222,7 @@ export function ThreadPane({
   const follow = useFocusFollows(host, turns);
   const snooze = useSnoozeCard(thread);
   useFocusCard(host, snooze !== undefined);
+  const actions = barActions(thread, trailing, bare); // → the bar's end, or undefined when bare
   return (
     <div ref={host} className="contents" data-thread-pane="" {...follow}>
       {turns.kind === "open" ? (
@@ -234,14 +232,14 @@ export function ThreadPane({
           initialDraft={thread.draft}
           onRename={renamer(runtime, thread, bare)}
           cardsCarry={!isMobile}
-          headerActions={barActions(thread, trailing, bare)}
+          headerActions={actions}
           hostAsk={snooze}
           leading={leading}
           empty={welcome}
           bare={bare}
         />
       ) : (
-        <PendingFrame thread={thread} leading={leading} trailing={trailing} bare={bare}>
+        <PendingFrame thread={thread} leading={leading} actions={actions} bare={bare}>
           {turns.kind === "loading" ? (
             <p className="text-soft-ink">Opening {thread.title}…</p>
           ) : (

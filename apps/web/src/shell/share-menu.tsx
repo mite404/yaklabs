@@ -13,19 +13,22 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@yaklabs/ui/components/dropdown-menu";
-import { Timer, X } from "lucide-react";
+import { Timer, Users, X } from "lucide-react";
 import { MenuStatus, statusName } from "./menu-status";
 import type { Shell } from "./model";
-import { LIFETIMES } from "./share-thread";
+import { LIFETIMES, liveShare } from "./share-thread";
 import { wakeText } from "./wake-text";
 
 // What the submenu acts on: the shell's verbs and the thread.
 type ShareProps = { shell: Shell; thread: ThreadSummary };
 
-// The thread's live share, the newest one, if its time has not run out.
-function liveShare(shell: Shell, thread: ThreadSummary): ThreadShare | undefined {
-  const latest = shell.workspace.shares.find((share) => share.threadId === thread.id);
-  return latest !== undefined && Date.parse(latest.expiresAt) > Date.now() ? latest : undefined;
+// The thread's live share, if any (see `liveShare`).
+const shareOf = (shell: Shell, thread: ThreadSummary) =>
+  liveShare(shell.workspace.shares, thread.id);
+
+// What Share says the thread is: private, or public until when, at the menu's length.
+function shareStatus(share: ThreadShare | undefined): string {
+  return share === undefined ? "Private" : `Until ${wakeText(new Date(share.expiresAt), "menu")}`;
 }
 
 // What a public thread's page offers: its end, its link, and taking it down.
@@ -67,13 +70,22 @@ function PublicItems({ shell, thread, share }: ShareProps & { share: ThreadShare
 }
 
 // What Share offers, wherever it opens: a public thread's link, page and Stop sharing first,
-// then how long to make it public.
+// then how long to make it public, then the permissions dialog, which shows the same choices.
 function ShareOptions({ shell, thread }: ShareProps) {
-  const share = liveShare(shell, thread);
+  const share = shareOf(shell, thread);
   return (
     <>
       {share !== undefined && <PublicItems shell={shell} thread={thread} share={share} />}
       <LifetimeItems shell={shell} thread={thread} isPublic={share !== undefined} />
+      <DropdownMenuSeparator />
+      <DropdownMenuItem
+        onClick={() => {
+          shell.askSharePermissions(thread.id);
+        }}
+      >
+        <Users aria-hidden="true" />
+        Share permissions
+      </DropdownMenuItem>
     </>
   );
 }
@@ -105,9 +117,8 @@ function LifetimeItems({ shell, thread, isPublic }: ShareProps & { isPublic: boo
  * never a guess.
  */
 export function ShareItem({ shell, thread }: ShareProps) {
-  const share = liveShare(shell, thread);
-  const status =
-    share === undefined ? "Private" : `Until ${wakeText(new Date(share.expiresAt), "menu")}`;
+  const share = shareOf(shell, thread); // → ThreadShare | undefined
+  const status = shareStatus(share); // → "Private" | "Until Fri 9:00"
   return (
     <DropdownMenuSub>
       <DropdownMenuSubTrigger
@@ -131,9 +142,8 @@ export function ShareItem({ shell, thread }: ShareProps) {
  * shows its glyph filled in, and its name says until when, so the state is never a guess.
  */
 export function ThreadShareButton({ shell, thread }: ShareProps) {
-  const share = liveShare(shell, thread);
-  const status =
-    share === undefined ? "Private" : `Until ${wakeText(new Date(share.expiresAt), "menu")}`;
+  const share = shareOf(shell, thread); // → ThreadShare | undefined
+  const status = shareStatus(share); // → "Private" | "Until Fri 9:00"
   return (
     <DropdownMenu>
       <DropdownMenuTrigger

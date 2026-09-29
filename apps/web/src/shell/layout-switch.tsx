@@ -13,7 +13,7 @@ function shownPane(shell: Shell): { main: ThreadId; pane: PaneKind } | null {
 }
 
 /**
- * Thread, Browser or Canvas beside the active tab's thread; nothing to switch with no tab. On a
+ * Thread, Canvas or Browser beside the active tab's thread; nothing to switch with no tab. On a
  * phone it is the bar's second row, each view named in words, and it scrolls when they overflow
  * (ADR-116).
  */

@@ -11,6 +11,7 @@ import {
   pad,
   STRIP_PX,
   stripLook,
+  toggleClearance,
 } from "./lane-collapse-look.mjs";
 import { luminance, shotPath } from "./lever.mjs";
 
@@ -21,10 +22,12 @@ async function stripIn(browser, theme) {
   const lane = laneNamed(page, LONG_TITLE);
   // Open, the toggle sits in the thread's own title bar, before its title.
   const inHeader = await lane.locator(".thread-header [data-lane-toggle]").count();
+  const barToggle = await lane.locator(".thread-header [data-lane-toggle]").boundingBox();
   await lane.getByRole("button", { name: "Collapse lane" }).click();
   await page.mouse.move(5, 5);
   await page.waitForTimeout(300);
   const look = await stripLook(lane);
+  const clear = await toggleClearance(lane);
   const gripInk = look.gripBox === null ? NO_INK : await luminance(page, pad(look.gripBox));
   const titleInk =
     look.titleBox === null
@@ -51,10 +54,14 @@ async function stripIn(browser, theme) {
     !look.contentShown &&
     JSON.stringify(look.buttons) === JSON.stringify(["Expand lane"]) &&
     look.toggleInStrip &&
-    inHeader === 1;
+    inHeader === 1 &&
+    near(barToggle.width, 28) &&
+    near(clear.size, 24) &&
+    clear.fill >= 5 &&
+    clear.ring >= 3;
   return {
     ok,
-    note: `${theme}: lane ${Math.round(look.width)}px, strip ${Math.round(look.stripWidth)}px from ${Math.round(look.stripTop)}px to ${Math.round(look.stripBottom)}px off the foot; title ${look.writing} ${look.overflow} clipped ${look.clipped}; grip opacity ${look.gripOpacity} ink ${JSON.stringify(gripInk)}; title ink ${JSON.stringify(titleInk)}; content shown ${look.contentShown}; buttons ${look.buttons.join("|")}; toggle in the header ${inHeader === 1}, in the strip ${look.toggleInStrip}`,
+    note: `${theme}: lane ${Math.round(look.width)}px, strip ${Math.round(look.stripWidth)}px from ${Math.round(look.stripTop)}px to ${Math.round(look.stripBottom)}px off the foot; title ${look.writing} ${look.overflow} clipped ${look.clipped}; grip opacity ${look.gripOpacity} ink ${JSON.stringify(gripInk)}; title ink ${JSON.stringify(titleInk)}; content shown ${look.contentShown}; buttons ${look.buttons.join("|")}; toggle in the header ${inHeader === 1} at ${barToggle.width}px, in the strip ${look.toggleInStrip} at ${clear.size}px, its hover fill ${clear.fill.toFixed(1)}px and focus ring ${clear.ring.toFixed(1)}px from the strip's edge`,
   };
 }
 

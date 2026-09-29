@@ -12,6 +12,8 @@ export type ShareVerbs = {
   stopSharing(id: ThreadId): void;
   /** Copies a public thread's link. */
   copyPublicLink(id: ThreadId): void;
+  /** Opens the share permissions dialog for a thread (ADR-131); null closes it. */
+  askSharePermissions(id: ThreadId | null): void;
   /** Takes down every public page of a thread and its sub-threads, as a delete does. */
   takeDown(id: ThreadId): void;
 };
@@ -22,6 +24,7 @@ export type ShareDeps = {
   client: ShareClient;
   shares: ThreadShare[];
   threads: ThreadSummary[];
+  setSharePermissions: (id: ThreadId | null) => void;
 };
 
 /** Copies text and says so in `done`; a refused clipboard shows the text to copy by hand. */
@@ -68,7 +71,7 @@ async function shareFor(deps: ShareDeps, thread: ThreadSummary, seconds: number)
 
 /** The Share submenu's verbs over the gateway and the runtime (ADR-131). */
 export function shareVerbs(deps: ShareDeps): ShareVerbs {
-  const { runtime, client, shares, threads } = deps;
+  const { runtime, client, shares, threads, setSharePermissions } = deps;
   const byThread = (id: ThreadId) => threads.find((each) => each.id === id);
   const childrenOf = (id: ThreadId) =>
     threads.filter((each) => each.place.kind === "child" && each.place.parentId === id);
@@ -84,6 +87,7 @@ export function shareVerbs(deps: ShareDeps): ShareVerbs {
       const latest = shares.find((share) => share.threadId === id);
       if (latest !== undefined) void copyText(latest.link, "Public link copied");
     },
+    askSharePermissions: setSharePermissions,
     takeDown: (id) => {
       const ids = new Set([id, ...childrenOf(id).map((each) => each.id)]);
       const all = shares.filter((share) => ids.has(share.threadId));

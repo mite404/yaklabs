@@ -2,58 +2,57 @@ import { Button } from "@yaklabs/ui/components/button";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuLabel,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "@yaklabs/ui/components/dropdown-menu";
 import { Paintbrush } from "lucide-react";
-import { splashStyleOf, type SplashChoice, type SplashStyle } from "../splash";
+import { SPLASH_LOOKS, splashStyleOf, useSplash } from "../splash";
 
-const LOOKS: { value: SplashStyle; label: string }[] = [
-  { value: "landscape", label: "Landscape" },
-  { value: "abstract", label: "Abstract" },
-];
-const labelOf = (style: SplashStyle): string =>
-  LOOKS.find((each) => each.value === style)?.label ?? "";
+const labelOf = (style: string): string =>
+  SPLASH_LOOKS.find((look) => look.id === style)?.label ?? "";
 
 /**
- * The floating debug switch at the window's bottom right that picks the painting behind a new
- * thread's welcome (ADR-136): the landscape or the abstract strokes. It is here while Ethan
- * chooses between the two, and leaves with the choice. On a phone it sits above the compose box.
+ * The debug button that picks the painting behind a new thread's welcome (ADR-136): the
+ * landscape, the abstract strokes, Vitruvian's sheet, or Bonsai once its assets exist. The
+ * welcome places it, since it shows there and nowhere else; it leaves with Ethan's choice.
+ * Its menu opens from the button's corner in 150ms, and Esc closes it.
  */
-export function SplashSwitch({ splash }: { splash: SplashChoice }) {
+export function SplashSwitch({ className }: { className?: string }) {
+  const { style, choose } = useSplash();
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
-          <Button
-            variant="outline"
-            size="sm"
-            data-slot="splash-switch"
-            aria-label={`Splash look: ${labelOf(splash.style)}`}
-            className="fixed right-6 bottom-6 z-50 rounded-[var(--radius)] shadow-[0_4px_16px_var(--shadow)] max-md:bottom-28"
-          />
+          <Button variant="outline" size="sm" data-slot="splash-switch" className={className} />
         }
       >
         <Paintbrush />
-        Splash · {labelOf(splash.style)}
+        Splash · {labelOf(style)}
       </DropdownMenuTrigger>
-      <DropdownMenuContent side="top" align="end">
-        <DropdownMenuLabel>New thread painting</DropdownMenuLabel>
-        <DropdownMenuRadioGroup
-          value={splash.style}
-          onValueChange={(value) => {
-            const chosen = splashStyleOf(typeof value === "string" ? value : null);
-            if (chosen !== null) splash.choose(chosen);
-          }}
-        >
-          {LOOKS.map(({ value, label }) => (
-            <DropdownMenuRadioItem key={value} value={value}>
-              {label}
-            </DropdownMenuRadioItem>
-          ))}
-        </DropdownMenuRadioGroup>
+      <DropdownMenuContent
+        align="end"
+        className="w-52 duration-150 ease-[cubic-bezier(0.23,1,0.32,1)]"
+      >
+        <DropdownMenuGroup>
+          <DropdownMenuLabel>New thread painting</DropdownMenuLabel>
+          <DropdownMenuRadioGroup
+            value={style}
+            onValueChange={(value) => {
+              const chosen = splashStyleOf(typeof value === "string" ? value : null);
+              if (chosen !== null) choose(chosen);
+            }}
+          >
+            {SPLASH_LOOKS.map(({ id, label, available }) => (
+              <DropdownMenuRadioItem key={id} value={id} disabled={!available} closeOnClick>
+                {label}
+                {!available && <span className="ml-auto text-xs">Coming soon</span>}
+              </DropdownMenuRadioItem>
+            ))}
+          </DropdownMenuRadioGroup>
+        </DropdownMenuGroup>
       </DropdownMenuContent>
     </DropdownMenu>
   );

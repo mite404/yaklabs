@@ -8,7 +8,7 @@ import {
 } from "@yaklabs/runtime";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
-import { LIFETIMES, publish, unpublish, type ShareClient } from "./share-thread";
+import { LIFETIMES, liveShare, publish, unpublish, type ShareClient } from "./share-thread";
 
 const NOW = new Date("2026-09-28T10:00:00.000Z");
 // What a thread link's fragment carries, checked so a missing one fails the test by name.
@@ -122,5 +122,28 @@ describe("unpublish takes a share down (ADR-131)", () => {
   it("fails when the server keeps it", async () => {
     const { share } = client(() => answer(403));
     await expect(unpublish(share, record)).rejects.toThrow("The share server answered 403");
+  });
+});
+
+const shareEnding = (id: string, expiresAt: string): ThreadShare => ({
+  id,
+  threadId: thread.id,
+  link: `${BASE}/share.html#t=${id}.key`,
+  revokeToken: "revoke",
+  createdAt: NOW.toISOString(),
+  expiresAt,
+});
+
+describe("liveShare finds the share that still holds (ADR-131)", () => {
+  const newest = shareEnding("newest0000000000", "2026-09-28T11:00:00.000Z");
+  const older = shareEnding("older00000000000", "2026-09-28T09:00:00.000Z");
+
+  it("is the newest share while its time has not run out", () => {
+    expect(liveShare([newest, older], thread.id, NOW.getTime())).toBe(newest);
+  });
+
+  it("is undefined once the newest has ended, and for another thread", () => {
+    expect(liveShare([older], thread.id, NOW.getTime())).toBeUndefined();
+    expect(liveShare([newest], threadIdSchema.parse("t-2"), NOW.getTime())).toBeUndefined();
   });
 });

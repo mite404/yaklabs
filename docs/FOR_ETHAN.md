@@ -998,6 +998,28 @@ The first entries are ideas from before any code existed; the rest are parts of 
   menu's items without the new Rename. They now read the panel's `aria-label` and the tab's
   menu. Lesson: when a layout change removes an element, search the checks for its selector
   before the run does it for you.
+- **The button that crashed the app.** The splash switch "did not work" because opening it threw
+  and took the whole screen to "Something went wrong": its menu label was drawn outside a menu
+  group, and the menu library requires one. The picture never got a chance to change. It was
+  found by pressing the button the way a person does, not by reading the code. Lesson: when a
+  control "does nothing", reproduce it first; the silence can be a crash.
+- **A fill that met the curve.** The strip's expand hover kept touching the strip's edge although
+  the gap at the sides was 3px. The strip's top is a 14px arc, and the arc curves in under the
+  fill's corners, leaving 1.5px there. A smaller fill set lower now clears it by 5.5px. Lesson:
+  measure the distance to the outline everywhere, corners included, not along one axis.
+- **The hook that took my colleague's edits.** Committing part of a file, with another worker's
+  edits still unstaged in the same tree, made the formatter hook stash the unstaged changes and
+  fail to put them back, so four files reverted to their last commit for a moment. The hook
+  had left a snapshot commit, so nothing was lost. Now commits of partial work are made in a
+  clean second checkout, then the branch is moved onto them, and the shared tree is never
+  touched. Lesson: a tool that rewrites your working tree needs a tree nobody else is using.
+- **The phone's "⋯" that the check could not tap.** The tab's new "⋯" carries the same name,
+  Thread actions, as the phone's own "⋯" in the top row. On a phone the tab strip is hidden but
+  still mounted, so `querySelector` found the tab's copy first: zero pixels wide, so "takes a
+  tap" failed while the real button sat fine at the right edge. People never met it (a hidden
+  element takes no tap and no screen reader), so the check was fixed, not the app: it now asks
+  for the "⋯" that is not inside a tab (`:not(.chrome-pill *)`). Lesson: a shared accessible name
+  is right for people and ambiguous for a selector; scope the query to the place you mean.
 
 ### Half a pixel and an old clock: two bugs in the six-square glyph
 
@@ -2022,3 +2044,41 @@ fader decides the whole desk is broken.
 Senior-engineer takeaway: generated surfaces need an owner. When a tool creates UI for you, the
 question is not "does it render" but "does each part do what it says", and only a check that
 moves every part can answer it.
+
+### Pull the arithmetic out of the scene
+
+A component is an action: it reads the shell, renders, and wires clicks. Tucked inside it is often
+a small calculation, a rule that turns data into data. Left inline, the rule gets copied: the
+Share item in the thread menu and the new Share button in the title bar both spelled out
+"Private, or Until Fri 9:00" by hand. Lifted out, it has one name and one home.
+
+```tsx
+// apps/web/src/shell/share-menu.tsx: the rule, pure: a share (or none) in, words out
+function shareStatus(share: ThreadShare | undefined): string {
+  return share === undefined ? "Private" : `Until ${wakeText(new Date(share.expiresAt), "menu")}`;
+}
+
+// Both scenes now read the same line from the script
+const share = liveShare(shell, thread); // → ThreadShare | undefined
+const status = shareStatus(share); // → "Private" | "Until Fri 9:00"
+```
+
+```mermaid
+flowchart LR
+  S[shell.workspace.shares] --> L["liveShare: pick the live one"]
+  L --> C["shareStatus: pure words"]
+  C --> I[ShareItem: menu row]
+  C --> B[ThreadShareButton: title bar]
+```
+
+The same pass made two smaller moves of that kind. The tab's `nextTitle` now takes the Escape case
+too (`null` in, `null` out), so the rename hook is only "if there is a new name, send it". And the
+thread pane builds its title bar's end once and hands the same value to the open panel and the
+waiting frame, so the two can no longer disagree about what the bar carries.
+
+The film version: the continuity note lives on the script supervisor's sheet, not in each actor's
+memory. Two actors reading one sheet cannot drift apart.
+
+Senior-engineer takeaway: when two components compute the same thing, the thing is a calculation
+asking for a name. Pull it out, keep it free of hooks and clocks, and let the components stay thin
+actions around it.
