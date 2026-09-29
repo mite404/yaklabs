@@ -13,6 +13,7 @@ import {
   headerHeights,
   openScenario,
   pixelsOf,
+  rail,
   ratio,
   readBaseline,
   rgbOf,
@@ -248,8 +249,8 @@ async function tabTo(page, control, stops = 40) {
 }
 
 // E3 for the focus stops of the bar (the sidebar toggle, the active tab, the next tab, the bell)
-// and the account at the sidebar's foot, each as the share of its ring's worst side. The account
-// comes after every row of the project tree, so it gets a longer walk.
+// and the account at the rail's foot, each as the share of its ring's worst side. The account
+// comes after the rail's places, so it gets a longer walk.
 async function ringsOf(page) {
   const bar = titleBar(page);
   const out = {};
@@ -257,7 +258,7 @@ async function ringsOf(page) {
     ["toggle", bar.getByRole("button", { name: "Toggle sidebar" })],
     ["active tab", bar.getByRole("tab", { selected: true })],
     ["bell", bar.getByRole("button", { name: /^Notifications/ })],
-    ["account", page.locator('[data-slot="sidebar"]').getByRole("button", { name: "Account" })],
+    ["account", rail(page).getByRole("button", { name: "Account" })],
   ]) {
     await tabTo(page, control, label === "account" ? 150 : 40);
     await settle(page);
@@ -590,18 +591,15 @@ export const polishChecks = {
         .boundingBox();
       const header = await titleBar(page).boundingBox();
       const inBar = await titleBar(page).getByRole("button", { name: "Account" }).count();
-      const inSidebar = await page
-        .locator('[data-slot="sidebar"]')
-        .getByRole("button", { name: "Account" })
-        .count();
+      const inRail = await rail(page).getByRole("button", { name: "Account" }).count();
       const rightmost = await titleBar(page)
         .getByRole("button")
         .evaluateAll((els) => Math.max(...els.map((el) => el.getBoundingClientRect().right)));
       // The bell is the bar's last control, flush with its 12px padding; the one account is at the
-      // sidebar's foot.
+      // rail's foot.
       const e5 =
         inBar === 0 &&
-        inSidebar === 1 &&
+        inRail === 1 &&
         Math.abs(bell.x + bell.width - rightmost) < 1 &&
         header.x + header.width - (bell.x + bell.width) <= 12;
       const pressed = titleBar(page).locator('[aria-pressed="true"]');
@@ -659,14 +657,14 @@ export const polishChecks = {
       notes.push(`painting right group ${right.text}/${right.icons}`);
       await painted.context.close();
     }
-    // E1 for a signed-in account (at the sidebar's foot) with no picture: the same fallback, holding initials, as a WorkOS
-    // user's is. The local face is blocked so the fallback shows.
+    // E1 for a signed-in account (at the rail's foot) with no picture: the same fallback, holding
+    // initials, as a WorkOS user's is. The local face is blocked so the fallback shows.
     for (const variant of VARIANTS) {
       const bare = await openScenario(browser, { query: query(variant), ready: false });
       await bare.context.route("**/kay/kay-face.webp", (route) => route.abort());
       await bare.page.reload();
       await sidebarDrawn(bare.page);
-      const fallback = sidebar(bare.page).locator('[data-slot="avatar-fallback"]');
+      const fallback = rail(bare.page).locator('[data-slot="avatar-fallback"]');
       await fallback.waitFor();
       await fallback.evaluate((el) => {
         el.textContent = "EA";
@@ -882,10 +880,7 @@ export const polishChecks = {
   async H(browser) {
     const { page, context } = await openScenario(browser, {});
     await toEmpty(page);
-    const avatar = page
-      .locator('[data-slot="sidebar"]')
-      .getByRole("button", { name: "Account" })
-      .locator("img");
+    const avatar = rail(page).getByRole("button", { name: "Account" }).locator("img");
     const h5 =
       (await avatar.getAttribute("src"))?.includes("kay-face") === true &&
       (await avatar.getAttribute("alt")) === "";
@@ -921,7 +916,7 @@ export const polishChecks = {
       bar: await titleBar(probe.page).evaluate((el) => getComputedStyle(el).backgroundColor),
     });
     const before = await look();
-    await sidebar(probe.page).getByRole("button", { name: "Account" }).click();
+    await rail(probe.page).getByRole("button", { name: "Account" }).click();
     await probe.page.getByRole("menuitemradio", { name: "Dark" }).click();
     await probe.page.keyboard.press("Escape");
     await probe.page.waitForTimeout(200);

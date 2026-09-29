@@ -1,14 +1,15 @@
 import { SidebarProvider, useSidebar } from "@yaklabs/ui/components/sidebar";
-import type { ReactNode } from "react";
+import { useRef, type ReactNode } from "react";
 import { useChrome } from "../chrome";
 import { useMatch } from "react-router";
 import type { ThemeChoice } from "../theme";
+import { Rail } from "./rail";
 import { SharePermissions } from "./share-permissions";
 import { AppSidebar } from "./sidebar";
 import { sidebarVars, useSidebarOpen, useSidebarWidth } from "./sidebar-choice";
 import { TitleBar } from "./title-bar";
 
-// The workspace beside the sidebar, inset like Kay's content pane, with the deck and the route
+// The workspace beside the panel, inset like Kay's content pane, with the deck and the route
 // in one grid cell. It is the page's main landmark, except on /lab, whose workbench brings its
 // own main: two, one inside the other, leave no single main to skip to. It is a div on every
 // route, since swapping the element would remount the deck and lose every open tab.
@@ -31,13 +32,15 @@ function Workspace({ children }: { children: ReactNode }) {
 /**
  * The app drawn as a desktop window (ADR-094): a rounded frame on a desk of its own with a
  * margin around it, full-bleed on a narrow screen (ADR-111). The green title bar runs its whole
- * width (ADR-110); below it, the sidebar (shadcn's sidebar-16 pattern) and,
- * inset like Kay's content pane, the workspace.
+ * width (ADR-110); below it, the rail of places (ADR-139), then the stage: the projects panel
+ * (shadcn's sidebar-16 pattern) and, inset like Kay's content pane, the workspace. The stage
+ * clips at the rail's edge, the gate the panel slides out from behind when it peeks.
  */
 export function Window({ theme, children }: { theme: ThemeChoice; children: ReactNode }) {
   const choice = useSidebarOpen();
   const sized = useSidebarWidth();
   const chrome = useChrome();
+  const rail = useRef<HTMLDivElement>(null);
   return (
     <>
       <div data-slot="desk" aria-hidden="true" className="fixed inset-0 bg-[var(--desk)]" />
@@ -53,9 +56,16 @@ export function Window({ theme, children }: { theme: ThemeChoice; children: Reac
         >
           <TitleBar theme={theme} chrome={chrome} />
           <div data-slot="window-body" className="relative flex min-h-0 flex-1">
-            {/* The stage: the sidebar's containing block, beside the workspace it sits over. */}
-            <div data-slot="stage" className="relative flex min-h-0 min-w-0 flex-1">
-              <AppSidebar theme={theme} chrome={chrome} {...sized} />
+            <Rail ref={rail} theme={theme} chrome={chrome} />
+            {/* The stage: the panel's containing block, beside the workspace it sits over. It
+                clips, never hides (overflow: clip is no scroll container, so nothing a focus
+                or a scroll into view does can scroll it), and only on a desktop: the phone's
+                drawer is fixed to the sliding wrapper above it. */}
+            <div
+              data-slot="stage"
+              className="relative flex min-h-0 min-w-0 flex-1 md:overflow-clip"
+            >
+              <AppSidebar theme={theme} chrome={chrome} rail={rail} {...sized} />
               <Workspace>{children}</Workspace>
             </div>
           </div>

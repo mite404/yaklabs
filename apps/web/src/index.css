@@ -82,19 +82,20 @@
   }
 }
 
-/* The sidebar's peek (sidebar-peek.tsx): collapsed to its rail, the one sidebar slides out over
-   the workspace from the window's edge, the shell's own paper with a hairline at its right edge
-   and the softest shadow past it, and slides back the same way: both over 220ms on the iOS
+/* The projects panel's peek (sidebar-peek.tsx, ADR-139): closed, the panel slides out over the
+   workspace from behind the rail's edge, the shell's own paper with a hairline at its right
+   edge and the softest shadow past it, and slides back the same way: both over 220ms on the iOS
    drawer curve (Ethan), one `--peek-slide`, so the two cannot drift apart. Transitions, so a
    pointer that returns mid-way turns it back from where it is.
-   The window's frame clips the panel where it slides off (its overflow is hidden), so the fade
-   hides no motion. Out, it fades in over the slide's first 120ms on the strong ease-out. Back,
-   it holds full strength and fades over the slide's last 120ms on that curve played backwards,
-   ending with the slide: still 0.97 with the edge 3px from home. The fade takes away only the
-   hairline and shadow left at the window's edge, which would otherwise vanish in one frame as
-   the rail takes the panel's place. The shadow is clipped to its right, off the title bar.
-   Reduced motion only fades it. A key's close, and the step back into the rail, have no motion
-   (data-peek-instant), and neither do the rail's buttons, which change size between the two.
+   The stage's overflow clip is the gate at the rail's edge (design pillars, rule 22): the panel
+   passes behind it and never covers the rail, so the fade hides no motion. Out, it fades in over
+   the slide's first 120ms on the strong ease-out. Back, it holds full strength and fades over
+   the slide's last 120ms on that curve played backwards, ending with the slide: still 0.97 with
+   the edge 3px from home. The fade takes away only the soft shadow and the hairline across the
+   workspace's 10px corner, which would otherwise vanish in one frame as the panel lands; at home
+   the line is the workspace's own left border. The shadow is clipped to its right, off the
+   title bar. Reduced motion only fades it. A key's close, and the step behind the rail once the
+   slide ends, have no motion (data-peek-instant), and neither do the menu buttons inside it.
    Outside every layer on purpose: the container's own `transition-[left,right,width]` is a
    utility, which a layered rule cannot outrank. */
 [data-slot="sidebar"][data-peek] > [data-slot="sidebar-container"] {

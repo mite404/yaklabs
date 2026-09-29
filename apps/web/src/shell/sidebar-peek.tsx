@@ -25,25 +25,30 @@ const FINE_HOVER = "(hover: hover) and (pointer: fine)";
 // A slide back (220ms, index.css) that never reports its end, a transition cut short, still
 // settles by then.
 const LEAVE_FALLBACK_MS = 400;
-// The title bar's toggle; every place the pointer can rest for the sidebar to peek (the toggle,
-// the strip just past the rail's edge, the rail or panel itself); and the rail's own buttons,
-// which show their names in a pill instead.
+// The title bar's toggle, and the projects panel that slides.
 const TOGGLE = 'header [data-sidebar="trigger"]';
-const ZONES = `${TOGGLE}, [data-slot="sidebar-hot-zone"], [data-slot="sidebar-container"]`;
-const RAIL_BUTTONS = '[data-slot="sidebar-container"] :is(a, button)';
-// What the collapsed rail hides: the project rows and the resize edge.
-const HIDDEN_WHEN_CLOSED =
-  '[data-slot="sidebar-container"] :is([data-slot="sidebar-content"], [data-slot="sidebar-resize"])';
+const PANEL = '[data-slot="sidebar-container"]';
+// Every place the pointer can rest for the panel to peek: the toggle, the strip just past the
+// rail's edge, the rail, and the panel itself. At rest the rail's places (the gaps between them
+// included) and its account show their names and menu instead, so only its empty stretch peeks.
+const ZONES = `${TOGGLE}, [data-slot="sidebar-hot-zone"], [data-slot="rail"], ${PANEL}`;
+const RAIL_QUIET = '[data-slot="rail"] :is([role="navigation"], button)';
+// What holds the peek out: keyboard focus, or a menu open from a trigger (a menu's popup sits
+// outside the rail and the panel, so the pointer leaving for it must not close the panel).
+const HOLDS = ':focus-visible, [aria-haspopup="menu"][aria-expanded="true"]';
 
-/** The peek as the sidebar draws it. */
+/** The peek as the panel draws it. */
 export type SidebarPeek = {
   phase: PeekPhase;
   /** The step into this phase is drawn with no motion. */
   instant: boolean;
-  /** Whether the sidebar can peek at all: collapsed, on a desktop, under a hovering pointer. */
+  /** Whether the panel can peek at all: closed, on a desktop, under a hovering pointer. */
   enabled: boolean;
   onTransitionEnd: (event: TransitionEvent<HTMLDivElement>) => void;
 };
+
+// The elements the peek belongs to: the panel that slides, and the rail it slides from.
+type PeekHosts = { panel: HTMLElement; rail: HTMLElement | null };
 
 function subscribeHover(onChange: () => void): () => void {
   const query = window.matchMedia(FINE_HOVER);
@@ -58,19 +63,20 @@ function canHover(): boolean {
 }
 
 // Whether the pointer is on a place that peeks: the toggle, the strip past the rail, the rail
-// itself off its buttons, or anywhere on the panel while it is out.
+// off its places and account, or, while the panel is out, anywhere on the rail or the panel, so
+// crossing the rail to the account never closes it.
 function inPeekZone(target: EventTarget | null, out: boolean): boolean {
   if (!(target instanceof Element) || target.closest(ZONES) === null) return false;
-  return out || target.closest(RAIL_BUTTONS) === null;
+  return out || target.closest(RAIL_QUIET) === null;
 }
 
-// Whether something in the panel keeps it out: keyboard focus, or a menu it opened (a menu's
-// popup sits outside the panel, so the pointer leaving for it must not close the panel).
-function isHeld(panel: HTMLElement | null): boolean {
-  if (panel === null) return false;
-  return (
-    panel.querySelector(':focus-visible, [aria-haspopup="menu"][aria-expanded="true"]') !== null
-  );
+// The hosts that exist: a phone has no rail, though nothing peeks there.
+const hostsOf = ({ panel, rail }: PeekHosts): HTMLElement[] =>
+  rail === null ? [panel] : [panel, rail];
+
+// Whether something in the panel or the rail keeps the panel out.
+function isHeld(hosts: PeekHosts): boolean {
+  return hostsOf(hosts).some((host) => host.querySelector(HOLDS) !== null);
 }
 
 // Escape closes the peek, unless a menu has it: the menu closes itself first.
@@ -79,19 +85,32 @@ function escapes(event: KeyboardEvent): boolean {
   return event.key === "Escape" && !event.defaultPrevented && !inMenu;
 }
 
-// Closes the peek on Escape; focus that was inside it goes to the toggle, since the rows it was
-// on leave the page with the panel.
-function closeOnEscape(intent: PeekIntent, panel: HTMLElement): void {
-  const inside = panel.contains(document.activeElement);
-  intent.close(true);
-  if (inside) document.querySelector<HTMLElement>(TOGGLE)?.focus();
+/**
+ * Moves keyboard focus to the title bar's toggle when it sits in the projects panel, so closing
+ * the panel never drops focus to the page's body; focus on the rail stays where it is. Call it
+ * before the panel closes: a focused element that turns inert loses focus on the spot.
+ */
+export function handFocusToToggle(): void {
+  const at = document.activeElement; // → Element | null
+  if (at === null || at.closest(PANEL) === null) return;
+  document.querySelector<HTMLElement>(TOGGLE)?.focus();
 }
 
-// Wires the page's pointer, keys and focus to the peek's timing while the sidebar can peek, and
-// rests the peek as the rail whenever it cannot.
+// Closes the peek on Escape; focus in the panel goes to the toggle first, since the panel's rows
+// leave the page with it, while focus on the rail stays where it is.
+function closeOnEscape(intent: PeekIntent): void {
+  handFocusToToggle();
+  intent.close(true);
+}
+
+// Wires the page's pointer, keys and focus to the peek's timing while the panel can peek, and
+// rests the peek whenever it cannot.
 function usePeekIntent(
   enabled: boolean,
-  panel: RefObject<HTMLDivElement | null>,
+  {
+    container,
+    rail,
+  }: { container: RefObject<HTMLDivElement | null>; rail: RefObject<HTMLDivElement | null> },
   phase: PeekPhase,
   dispatch: Dispatch<PeekAction>,
 ): RefObject<PeekIntent | null> {
@@ -101,28 +120,29 @@ function usePeekIntent(
     current.current = phase;
   }, [phase]);
   useEffect(() => {
-    const element = panel.current;
-    if (!enabled || element === null) {
+    const panel = container.current;
+    if (!enabled || panel === null) {
       dispatch({ type: "rest" });
       return () => {};
     }
+    const hosts = { panel, rail: rail.current };
     const peek = peekIntent({
       phase: () => current.current,
-      held: () => isHeld(element),
+      held: () => isHeld(hosts),
       dispatch,
     });
     intent.current = peek;
-    const unlisten = listen(peek, element, () => isOut(current.current));
+    const unlisten = listen(peek, hosts, () => isOut(current.current));
     return () => {
       unlisten();
       intent.current = null;
     };
-  }, [enabled, panel, dispatch]);
+  }, [enabled, container, rail, dispatch]);
   return intent;
 }
 
 // The listeners behind usePeekIntent; returns what removes them and stops the timing.
-function listen(peek: PeekIntent, panel: HTMLElement, out: () => boolean): () => void {
+function listen(peek: PeekIntent, hosts: PeekHosts, out: () => boolean): () => void {
   const onMove = (event: PointerEvent) => {
     if (event.pointerType !== "touch") peek.point(inPeekZone(event.target, out()));
   };
@@ -134,26 +154,28 @@ function listen(peek: PeekIntent, panel: HTMLElement, out: () => boolean): () =>
   };
   const onKey = (event: KeyboardEvent) => {
     peek.input(true);
-    if (out() && escapes(event)) closeOnEscape(peek, panel);
+    if (out() && escapes(event)) closeOnEscape(peek);
   };
   const onFocusOut = () => {
     setTimeout(peek.release);
   };
   const menus = new MutationObserver(peek.release);
-  menus.observe(panel, { subtree: true, attributeFilter: ["aria-expanded"] });
+  for (const host of hostsOf(hosts)) {
+    menus.observe(host, { subtree: true, attributeFilter: ["aria-expanded"] });
+    host.addEventListener("focusout", onFocusOut);
+  }
   document.addEventListener("pointermove", onMove, { passive: true });
   document.documentElement.addEventListener("pointerleave", onLeave);
   document.addEventListener("pointerdown", onDown, true);
   document.addEventListener("keydown", onKey);
-  panel.addEventListener("focusout", onFocusOut);
   return () => {
     peek.dispose();
     menus.disconnect();
+    for (const host of hostsOf(hosts)) host.removeEventListener("focusout", onFocusOut);
     document.removeEventListener("pointermove", onMove);
     document.documentElement.removeEventListener("pointerleave", onLeave);
     document.removeEventListener("pointerdown", onDown, true);
     document.removeEventListener("keydown", onKey);
-    panel.removeEventListener("focusout", onFocusOut);
   };
 }
 
@@ -178,13 +200,13 @@ function useSettle(
 }
 
 // Whether a transition that just ended on the panel was its last: the slide and the fade end
-// together today (index.css), and neither may hand the panel to the rail while the other runs.
+// together today (index.css), and neither may put the panel away while the other runs.
 function lastToEnd(event: TransitionEvent<HTMLDivElement>): boolean {
   return event.target === event.currentTarget && event.currentTarget.getAnimations().length === 0;
 }
 
-// The slide back ends in the rail: once the panel's last transition ends, or by a fallback if
-// that never comes.
+// The slide back ends behind the rail's edge: once the panel's last transition ends, or by a
+// fallback if that never comes.
 function useLeave(phase: PeekPhase, dispatch: Dispatch<PeekAction>) {
   useEffect(() => {
     if (phase !== "leaving") return () => {};
@@ -212,38 +234,31 @@ function useClosesOnArrival(intent: RefObject<PeekIntent | null>): void {
 }
 
 /**
- * The sidebar's peek, for the sidebar whose container is `panel`: while it is
- * collapsed to its rail on a desktop, the whole sidebar slides out over the workspace once the
- * pointer rests on the title bar's toggle, on the rail off its buttons, or on the strip just
- * past it, and slides back 250ms after the pointer leaves them all. Keyboard focus inside it
- * or a menu it opened holds it out; Escape, a visit to a thread and pinning the sidebar close
- * it. A key's close is drawn with no motion.
+ * The projects panel's peek (ADR-139), for the panel whose container is `container`: while it is
+ * closed on a desktop, it slides out from behind the rail's edge over the workspace once the
+ * pointer rests on the title bar's toggle, on the rail off its places and account, or on the
+ * strip just past the rail, and slides back 250ms after the pointer leaves them all, the rail
+ * and the panel alike. Keyboard focus in either, or a menu either opened, holds it out; Escape,
+ * a visit to a thread and docking the panel close it. A key's close is drawn with no motion.
+ * @param rail The rail it slides from.
  */
-export function useSidebarPeek(panel: RefObject<HTMLDivElement | null>): SidebarPeek {
+export function useSidebarPeek(
+  container: RefObject<HTMLDivElement | null>,
+  rail: RefObject<HTMLDivElement | null>,
+): SidebarPeek {
   const { state, isMobile } = useSidebar();
   const hovers = useSyncExternalStore(subscribeHover, canHover, () => false);
   const enabled = state === "collapsed" && !isMobile && hovers;
   const [peek, dispatch] = useReducer(nextPeek, RESTING);
-  const intent = usePeekIntent(enabled, panel, peek.phase, dispatch);
-  useSettle(panel, peek, dispatch);
+  const intent = usePeekIntent(enabled, { container, rail }, peek.phase, dispatch);
+  useSettle(container, peek, dispatch);
   useClosesOnArrival(intent);
   const onTransitionEnd = useLeave(peek.phase, dispatch);
   return { ...peek, enabled, onTransitionEnd };
 }
 
 /**
- * Moves keyboard focus to the title bar's toggle when it sits on something the closing sidebar
- * hides, so closing it never drops focus to the page's body. Call it before the sidebar closes:
- * a focused element that stops being drawn loses focus on the spot.
- */
-export function handFocusToToggle(): void {
-  const at = document.activeElement; // → Element | null
-  if (at === null || at.closest(HIDDEN_WHEN_CLOSED) === null) return;
-  document.querySelector<HTMLElement>(TOGGLE)?.focus();
-}
-
-/**
- * What the sidebar takes from its peek: the phase to draw (none at rest), whether the step is
+ * What the panel takes from its peek: the phase to draw (none at rest), whether the step is
  * drawn with no motion, and the end of the slide back.
  */
 export function peekProps(peek: SidebarPeek) {
@@ -255,15 +270,16 @@ export function peekProps(peek: SidebarPeek) {
 }
 
 /**
- * The strip just past the collapsed rail's edge (6px over the workspace) where the pointer can
- * rest for the sidebar to peek, as it can on the rail itself. It takes no clicks of its own.
+ * The strip just past the rail's edge (6px over the workspace, at the stage's left) where the
+ * pointer can rest for the panel to peek, as it can on the rail itself. It takes no clicks of
+ * its own.
  */
 export function PeekHotZone() {
   return (
     <div
       data-slot="sidebar-hot-zone"
       aria-hidden="true"
-      className="absolute inset-y-0 left-(--sidebar-width-icon) z-10 w-1.5"
+      className="absolute inset-y-0 left-0 z-10 w-1.5"
     />
   );
 }

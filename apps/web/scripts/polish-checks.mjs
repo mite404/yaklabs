@@ -16,6 +16,7 @@ export const WIDTHS = [
 
 export const titleBar = (page) => page.locator('header[data-slot="title-bar"]');
 export const sidebar = (page) => page.locator('[data-slot="sidebar"]');
+export const rail = (page) => page.locator('[data-slot="rail"]');
 export const shown = (page) => page.locator('[role="tabpanel"]:not([inert])');
 export const canvasIn = (page) => shown(page).locator('[aria-label="Compose canvas"]');
 export const tabs = (page) => page.getByRole("tablist", { name: "Open threads" }).getByRole("tab");

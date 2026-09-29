@@ -73,15 +73,15 @@ function useWidthDrag(keep: (px: number) => void) {
 }
 
 /**
- * The sidebar's right edge as a handle, the canvas divider's twin (ADR-089): a hint of an ink
- * line follows the pointer along it, a drag resizes the sidebar live (the workspace reflows
- * when it is pinned open; the panel widens over it while it peeks) and keeps the width on
+ * The projects panel's right edge as a handle, the canvas divider's twin (ADR-089): a hint of
+ * an ink line follows the pointer along it, a drag resizes the panel live (the workspace
+ * reflows when it is docked; the panel widens over it while it peeks) and keeps the width on
  * release, arrows step it 16px (64px with Shift), Home and End go to its ends, and a double
  * click puts back the default. Focused, it says the width, as a window splitter does. Hidden
- * in the collapsed rail, which has no width to drag, and on a phone, whose drawer has its own.
+ * while the panel is away, and on a phone, whose drawer has its own width.
  * @param width The kept width, in CSS px.
  * @param onWidth Keeps a new width.
- * @param controls The id of the sidebar's landmark.
+ * @param controls The id of the panel's landmark.
  */
 export function SidebarResizeHandle({
   width,
@@ -119,7 +119,7 @@ export function SidebarResizeHandle({
       tabIndex={0}
       data-slot="sidebar-resize"
       data-dragging={dragging || undefined}
-      className="drag-hint absolute inset-y-0 left-full z-10 flex w-px cursor-col-resize touch-none ring-offset-background group-data-[collapsible=icon]:hidden after:absolute after:inset-y-0 after:left-1/2 after:w-2.5 after:-translate-x-1/2 focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-hidden"
+      className="drag-hint absolute inset-y-0 left-full z-10 flex w-px cursor-col-resize touch-none ring-offset-background group-data-[collapsible=offcanvas]:hidden after:absolute after:inset-y-0 after:left-1/2 after:w-2.5 after:-translate-x-1/2 focus-visible:ring-1 focus-visible:ring-ring focus-visible:outline-hidden"
       {...drag}
       onKeyDown={onKeyDown}
       onDoubleClick={() => {

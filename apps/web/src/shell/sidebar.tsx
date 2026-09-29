@@ -1,10 +1,10 @@
 import { Sidebar, SidebarContent, SidebarFooter, useSidebar } from "@yaklabs/ui/components/sidebar";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type RefObject } from "react";
 import { useLocation } from "react-router";
 import { Account, type Looks } from "./account";
 import { ProjectTree } from "./project-tree";
 import { RailPlaces } from "./rail-places";
-import { PeekHotZone, peekProps, useSidebarPeek, type SidebarPeek } from "./sidebar-peek";
+import { PeekHotZone, peekProps, useSidebarPeek } from "./sidebar-peek";
 import { SidebarResizeHandle } from "./sidebar-resize";
 
 // On a phone the sidebar is a drawer that pushes the page aside (ADR-121), so every arrival
@@ -20,69 +20,38 @@ function useSheetClosesOnArrival(): void {
   }, [key, setOpenMobile]);
 }
 
-/** The id of the sidebar's navigation landmark, which the title bar's toggle controls. */
+/** The id of the projects panel's navigation landmark, which the title bar's toggle controls. */
 export const SIDEBAR_ID = "sidebar";
 
-// The collapsed rail drawn once more beneath the sidebar: when it peeks, the one sidebar slides
-// out over the workspace from the window's edge and back, and this keeps the rail's places and
-// face where they were, so the rail never blinks as the panel leaves it. At rest the rail covers
-// it exactly. Decorative: hidden from assistive technology and inert.
-function RailEcho({ looks }: { looks: Looks }) {
-  return (
-    <div
-      aria-hidden="true"
-      inert
-      data-slot="rail-echo"
-      data-state="collapsed"
-      data-collapsible="icon"
-      className="group absolute inset-y-0 left-0 flex w-(--sidebar-width-icon) flex-col bg-sidebar"
-    >
-      <RailPlaces pills={false} echo />
-      <SidebarFooter className="mt-auto">
-        <Account theme={looks.theme} chrome={looks.chrome} side="top" align="start" />
-      </SidebarFooter>
-    </div>
-  );
-}
-
-// Whether the rail's places name themselves in pills: collapsed on a desktop, not peeking.
-function usePills(peek: SidebarPeek): boolean {
-  const { state, isMobile } = useSidebar();
-  return state === "collapsed" && !isMobile && peek.phase === "rail";
-}
-
-// What the peek puts around the sidebar while it can peek: the rail's echo beneath it and, at
-// rest, the strip past the rail's edge.
-function PeekScenery({ peek, looks }: { peek: SidebarPeek; looks: Looks }) {
-  if (!peek.enabled) return null;
-  return (
-    <>
-      <RailEcho looks={looks} />
-      {peek.phase === "rail" && <PeekHotZone />}
-    </>
-  );
-}
-
-/** The sidebar's width as the window keeps it, and the way to change it. */
+/** The panel's width as the window keeps it, and the way to change it. */
 export type SidebarWidth = { width: number; onWidth: (px: number) => void };
 
 /**
- * The sidebar below the title bar (shadcn's sidebar-16 pattern), one navigation landmark.
- * Collapsed it is today's 56px rail of places, each naming itself in a pill; open it names them
- * and lists the projects. The account and the theme sit at its foot, outside the navigation
- * landmark, in the rail too (ADR-121). Collapsed on a desktop it peeks: the same sidebar slides
- * out over the workspace (sidebar-peek.tsx). Its right edge resizes it, pinned or peeking.
+ * The projects panel below the title bar (ADR-139): shadcn's offcanvas Sidebar beside the
+ * desktop's rail, one navigation landmark holding the project tree. Docked, it pushes the
+ * workspace aside, and its right edge resizes it. Closed on a desktop it peeks: it slides out
+ * from behind the rail's edge over the workspace (sidebar-peek.tsx), and the stage around it
+ * clips it at that edge, so it never covers the rail. On a phone it is the drawer that pushes
+ * the page aside (ADR-121), listing the places as rows above the tree, with the account and the
+ * theme at its foot, outside the landmark.
+ * @param rail The desktop's rail, where the pointer may rest for the panel to peek.
  */
-export function AppSidebar({ theme, chrome, width, onWidth }: Looks & SidebarWidth) {
-  const panel = useRef<HTMLDivElement>(null);
-  const peek = useSidebarPeek(panel);
-  const pills = usePills(peek);
+export function AppSidebar({
+  theme,
+  chrome,
+  width,
+  onWidth,
+  rail,
+}: Looks & SidebarWidth & { rail: RefObject<HTMLDivElement | null> }) {
+  const { isMobile } = useSidebar();
+  const container = useRef<HTMLDivElement>(null);
+  const peek = useSidebarPeek(container, rail);
   useSheetClosesOnArrival();
   return (
     <>
       <Sidebar
-        ref={panel}
-        collapsible="icon"
+        ref={container}
+        collapsible="offcanvas"
         mobile="push"
         {...peekProps(peek)}
         className="absolute h-full border-r-0 group-data-[side=left]:border-r-0"
@@ -94,17 +63,20 @@ export function AppSidebar({ theme, chrome, width, onWidth }: Looks & SidebarWid
           aria-label="Sidebar"
           className="flex min-h-0 flex-1 flex-col"
         >
-          <RailPlaces pills={pills} />
+          {isMobile && <RailPlaces look="row" />}
           <SidebarContent>
             <ProjectTree />
           </SidebarContent>
         </div>
-        <SidebarFooter>
-          <Account theme={theme} chrome={chrome} side="top" align="start" />
-        </SidebarFooter>
+        {/* Mounted once per device: the desktop's account sits at the rail's foot. */}
+        {isMobile && (
+          <SidebarFooter>
+            <Account theme={theme} chrome={chrome} side="top" align="start" />
+          </SidebarFooter>
+        )}
         <SidebarResizeHandle width={width} onWidth={onWidth} controls={SIDEBAR_ID} />
       </Sidebar>
-      <PeekScenery peek={peek} looks={{ theme, chrome }} />
+      {peek.enabled && peek.phase === "rail" && <PeekHotZone />}
     </>
   );
 }

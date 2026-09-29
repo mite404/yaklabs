@@ -1,5 +1,6 @@
-// Checks for the sidebar's peek, its resizable edge and the title bar's tabs that follow that
-// edge, on a desktop window with motion on.
+// Checks for the projects panel's peek from behind the rail, its resizable edge and the title
+// bar's tabs that follow that edge, on a desktop window with motion on.
+// oxlint-disable no-await-in-loop -- one pointer drives one page, so each step waits for the last
 import { BASE, shotPath } from "./lever.mjs";
 
 const DEMO = `${BASE}/?scenario=demo`;
@@ -85,18 +86,24 @@ const transitions = (page) =>
       ),
   );
 
+// Runs in the page: the transitions a pin or an unpin runs, on the gap's width, the panel's
+// left (off canvas, it slides) and the title bar's lead's min-width.
+function pinTransitions() {
+  const moving = new Set(["width", "left", "min-width"]);
+  return document.getAnimations().filter((a) => moving.has(a.transitionProperty)).length;
+}
+
 // Catches the container's transitions as they start in `phase`, seeks them to each of `steps`
-// and reads the panel's edge (its right past the window's inner left, in CSS px) and opacity.
-// One synchronous pass, so no frame is drawn and no timer runs between the seeks; the last
-// seek leaves the slide a millisecond from its end, to finish on its own.
+// and reads the panel's edge (its right past the rail's, in CSS px) and opacity. One
+// synchronous pass, so no frame is drawn and no timer runs between the seeks; the last seek
+// leaves the slide a millisecond from its end, to finish on its own.
 const seekSlide = (page, phase, steps) =>
   page.evaluate(
     ([want, at]) =>
       new Promise((done) => {
         const sidebar = document.querySelector('[data-slot="sidebar"]');
         const panel = document.querySelector('[data-slot="sidebar-container"]');
-        const frame = document.querySelector('[data-slot="window"]');
-        const inner = frame.getBoundingClientRect().left + frame.clientLeft;
+        const inner = document.querySelector('[data-slot="rail"]').getBoundingClientRect().right;
         const tick = () => {
           const running = panel.getAnimations();
           if ((sidebar.dataset.peek ?? "rail") !== want || running.length === 0) {
@@ -119,6 +126,81 @@ const seekSlide = (page, phase, steps) =>
       }),
     [phase, steps],
   );
+
+// Holds the slide back at its last frame, the panel at full strength (its fade seeked to its
+// start) or with the fade as it is then, once the slide back begins.
+const holdLanding = (page, faded) =>
+  page.evaluate(
+    ([ms, withFade]) =>
+      new Promise((done) => {
+        const sidebar = document.querySelector('[data-slot="sidebar"]');
+        const panel = document.querySelector('[data-slot="sidebar-container"]');
+        const tick = () => {
+          const running = panel.getAnimations();
+          if (sidebar.dataset.peek !== "leaving" || running.length < 2) {
+            requestAnimationFrame(tick);
+            return;
+          }
+          for (const a of running) {
+            a.pause();
+            a.currentTime = a.transitionProperty === "opacity" && withFade !== true ? 0 : ms;
+          }
+          done();
+        };
+        tick();
+      }),
+    [SLIDE_MS - 1, faded],
+  );
+
+// Runs in the page: the share of two same-sized PNGs' pixels that differ by more than 8 levels
+// in any channel.
+async function differShare(pngs) {
+  const pixels = [];
+  for (const b64 of pngs) {
+    const png = await (await fetch(`data:image/png;base64,${b64}`)).blob();
+    const bitmap = await createImageBitmap(png);
+    const context = new OffscreenCanvas(bitmap.width, bitmap.height).getContext("2d");
+    context.drawImage(bitmap, 0, 0);
+    pixels.push(context.getImageData(0, 0, bitmap.width, bitmap.height).data);
+  }
+  const [x, y] = pixels;
+  let differ = 0;
+  for (let i = 0; i < x.length; i += 4) {
+    const far = [0, 1, 2].some((c) => Math.abs(x[i + c] - y[i + c]) > 8);
+    if (far) differ += 1;
+  }
+  return differ / (x.length / 4);
+}
+
+// The share of the 40px strip past the rail's edge that the slide back's last frame changes
+// against rest, at full strength and with the tail fade (rule 26): what would vanish in one
+// frame without the fade, the hairline and the soft shadow, and what does with it.
+async function tailShare(browser, theme) {
+  const shares = {};
+  for (const faded of [false, true]) {
+    const { context, page } = await openDesk(browser, { theme });
+    const stage = await page.locator('[data-slot="stage"]').boundingBox();
+    const clip = { x: stage.x, y: stage.y, width: 40, height: stage.height };
+    await peek(page);
+    const held = holdLanding(page, faded);
+    await page.mouse.move(900, 500);
+    await held;
+    const landing = await page.screenshot({ clip });
+    await page.evaluate(() => {
+      for (const a of document.querySelector('[data-slot="sidebar-container"]').getAnimations()) {
+        a.finish();
+      }
+    });
+    await page.waitForTimeout(SLIDE_MS + 200);
+    const rest = await page.screenshot({ clip });
+    shares[faded ? "faded" : "full"] = await page.evaluate(differShare, [
+      landing.toString("base64"),
+      rest.toString("base64"),
+    ]);
+    await context.close();
+  }
+  return shares;
+}
 
 // The share of a slide's travel drawn at full strength: each step's move weighted by opacity.
 function seenShare(frames) {
@@ -175,9 +257,9 @@ export function contrast(a, b) {
   return (hi + 0.05) / (lo + 0.05);
 }
 
-// P19's pointer half: resting on the toggle slides the whole sidebar out over the workspace
-// in 220ms on the drawer curve, moving nothing beneath; passing over it does not; leaving
-// closes it after the grace; the strip past the rail opens it too.
+// P19's pointer half: resting on the toggle slides the panel out from behind the rail over the
+// workspace in 220ms on the drawer curve, moving nothing beneath; passing over it does not;
+// leaving closes it after the grace; the strip past the rail opens it too.
 async function peekByPointer(page) {
   const before = await edges(page);
   const toggle = await page.locator(TOGGLE).boundingBox();
@@ -220,12 +302,14 @@ async function peekByPointer(page) {
   };
 }
 
-// P19's keyboard and menu half: the account menu holds the peek out with the pointer away;
-// Escape closes it at once; one navigation landmark named Sidebar throughout.
+// P19's keyboard and menu half: the account menu at the rail's foot holds the peek out with the
+// pointer away; Escape closes it at once; one landmark named Sidebar and one named Places while
+// it peeks.
 async function peekHolds(page) {
   await peek(page);
   const landmarks = await page.getByRole("navigation", { name: "Sidebar" }).count();
-  await page.locator('[data-slot="sidebar"]').getByRole("button", { name: "Account" }).click();
+  const places = await page.getByRole("navigation", { name: "Places" }).count();
+  await page.locator('[data-slot="rail"]').getByRole("button", { name: "Account" }).click();
   await page.mouse.move(900, 300);
   await page.waitForTimeout(CLOSE_MS + 300);
   const held = await phaseOf(page);
@@ -238,8 +322,34 @@ async function peekHolds(page) {
   const escaped = await phaseOf(page);
   const running = await transitions(page);
   return {
-    ok: landmarks === 1 && held === "open" && escaped === "rail" && running.length === 0,
-    note: `landmarks named Sidebar ${landmarks}; menu up, pointer away: ${held}; menu closed, focus on ${focus}; Escape: ${escaped}, running [${running.join(", ")}]`,
+    ok:
+      landmarks === 1 &&
+      places === 1 &&
+      held === "open" &&
+      escaped === "rail" &&
+      running.length === 0,
+    note: `landmarks named Sidebar ${landmarks}, Places ${places}; menu up, pointer away: ${held}; menu closed, focus on ${focus}; Escape: ${escaped}, running [${running.join(", ")}]`,
+  };
+}
+
+// P19's quiet half: resting on a rail place names it in a pill instead of peeking (ADR-139),
+// however long the pointer stays.
+async function placesStayQuiet(page) {
+  const seen = [];
+  for (const name of ["Kay", "Lab"]) {
+    await page.mouse.move(900, 500);
+    await page.waitForTimeout(CLOSE_MS + SLIDE_MS);
+    const box = await page
+      .locator('[data-slot="rail"]')
+      .getByRole("link", { name, exact: true })
+      .boundingBox();
+    await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2, { steps: 3 });
+    await page.waitForTimeout(700);
+    seen.push(`${name} ${await phaseOf(page)}`);
+  }
+  return {
+    ok: seen.every((each) => each.endsWith(" rail")),
+    note: `700ms on ${seen.join(", ")}`,
   };
 }
 
@@ -273,11 +383,12 @@ async function pinInStep(page, cluster) {
 }
 
 export const sidebarChecks = {
-  // The peek (ADR-094's sidebar, collapsed): out on hover of the toggle, the rail or the strip
-  // past it, back after the grace, held by a menu, closed at once by Escape.
+  // The peek (the projects panel, closed): out on hover of the toggle, the rail's empty stretch
+  // or the strip past it, never on a place, back after the grace, held by a menu, closed at once
+  // by Escape.
   async P19(browser) {
     const results = [];
-    for (const step of [peekByPointer, peekHolds]) {
+    for (const step of [peekByPointer, peekHolds, placesStayQuiet]) {
       const { context, page } = await openDesk(browser);
       results.push(await step(page));
       await context.close();
@@ -299,18 +410,14 @@ export const sidebarChecks = {
     const keys = await openDesk(browser, { side: "open" });
     await keys.page.locator(TOGGLE).focus();
     await keys.page.keyboard.press("Enter");
-    const enter = await keys.page.evaluate(
-      () => document.getAnimations().filter((a) => a.transitionProperty === "width").length,
-    );
+    const enter = await keys.page.evaluate(pinTransitions);
     await keys.page.keyboard.press("Control+b");
-    const shortcut = await keys.page.evaluate(
-      () => document.getAnimations().filter((a) => a.transitionProperty === "width").length,
-    );
+    const shortcut = await keys.page.evaluate(pinTransitions);
     await keys.context.close();
     const fadeOnly = fade.length > 0 && fade.every((each) => each.startsWith("opacity"));
     return {
       ok: fadeOnly && enter === 0 && shortcut === 0,
-      detail: `reduced motion [${fade.join(", ")}]; width transitions after Enter ${enter}, after Ctrl+B ${shortcut}`,
+      detail: `reduced motion [${fade.join(", ")}]; width, left and min-width transitions after Enter ${enter}, after Ctrl+B ${shortcut}`,
     };
   },
 
@@ -399,9 +506,11 @@ export const sidebarChecks = {
   },
 
   // The peek slides back as it slides out: the same 220ms on the drawer curve both ways, seeked
-  // to the same instants (the back's edge mirrors the out's within 1% of the panel's width). The
-  // window's frame clips the panel, so the way back stays at 0.9 or more while its edge is more
-  // than 2px from home, and fades out only as it lands, the rail taking its place.
+  // to the same instants (the back's edge, past the rail's, mirrors the out's within 1% of the
+  // panel's width). The stage clips the panel at the rail's edge, so the way back stays at 0.9 or
+  // more while its edge is more than 2px from home, and fades out only as it lands. Notes the
+  // share of the 40px past the rail that the landing frame would change at full strength, the
+  // tail fade's job (design pillars, rule 26).
   async P24(browser) {
     const { context, page } = await openDesk(browser);
     await page.mouse.move(900, 500);
@@ -433,9 +542,16 @@ export const sidebarChecks = {
       landed < 0.1 &&
       rested === "rail";
     const trace = back.frames.map((f) => `${f.ms}:${round(f.edge)}@${round(f.opacity)}`).join(" ");
+    const tails = [];
+    for (const theme of ["light", "dark"]) {
+      const share = await tailShare(browser, theme);
+      tails.push(
+        `${theme} ${round(share.full * 100)}% at full strength, ${round(share.faded * 100)}% faded`,
+      );
+    }
     return {
       ok,
-      detail: `out [${out.timings.join(", ")}]; back [${back.timings.join(", ")}]; curve miss ${round(miss * 100)}%; back dimmest ${round(dimmest)} while more than 2px out, ${round(landed)} as it lands, then ${rested}; travel seen out ${round(seenShare(out.frames))}, back ${round(seenShare(back.frames))}; back ${trace}`,
+      detail: `out [${out.timings.join(", ")}]; back [${back.timings.join(", ")}]; curve miss ${round(miss * 100)}%; back dimmest ${round(dimmest)} while more than 2px out, ${round(landed)} as it lands, then ${rested}; travel seen out ${round(seenShare(out.frames))}, back ${round(seenShare(back.frames))}; back ${trace}; the landing frame against rest, in the 40px past the rail: ${tails.join(", ")}`,
     };
   },
 };

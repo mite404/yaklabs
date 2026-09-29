@@ -26,15 +26,17 @@ const KAY_MARK_POINTS =
 // Kay's documentation, a Kay plugin's natural home (ADR-078).
 const DOCS_URL = "https://docs.meetkay.ai";
 
-// A rail button as today's rail drew them: 40px in the collapsed rail, the label beside it
-// open, the glyph soft until the pointer is on it or its place is open. 10px of padding puts
-// the 20px glyph in the same spot open and collapsed (centred in the collapsed square), so the
-// peek's glyphs land exactly on the rail's.
-const RAIL_BUTTON =
-  "h-10 gap-3 px-2.5 text-sm text-soft-ink hover:text-ink data-active:text-ink group-data-[collapsible=icon]:size-10! group-data-[collapsible=icon]:p-2.5! [&_svg]:size-5";
+// A place's two looks, its glyph soft in both until the pointer is on it or its place is open:
+// a 40px square in the desktop's rail, 10px of padding centring the 20px glyph, that names its
+// place in a pill; and a labelled row in the phone's drawer, the glyph the same 10px in.
+const LOOKS = {
+  square: "size-10 p-2.5 text-soft-ink hover:text-ink data-active:text-ink [&_svg]:size-5",
+  row: "h-10 gap-3 px-2.5 text-sm text-soft-ink hover:text-ink data-active:text-ink [&_svg]:size-5",
+} as const;
+type Look = keyof typeof LOOKS;
 
-// What a place not built yet says, as the splash switch's Bonsai does; the open sidebar's row
-// has room for the short form only (a 208px sidebar beside "Automations").
+// What a place not built yet says, as the splash switch's Bonsai does; the drawer's row has
+// room for the short form only, as a 208px sidebar beside "Automations" had.
 const SOON = "Coming soon";
 const SOON_SHORT = "Soon";
 
@@ -42,7 +44,7 @@ const SOON_SHORT = "Soon";
 // allows (an archived row's, 5.17:1 on paper, 5.46:1 dark), in place of shadcn's half opacity,
 // which would take the glyph to 2.2:1. No hover fill and no step to ink, since there is nothing
 // to press. The pointer still lands on it (shadcn turns that off for aria-disabled), so resting
-// on it shows its pill and, as on a link, does not slide the sidebar out.
+// on it shows its pill and, as on a link, does not slide the panel out.
 const SOON_BUTTON =
   "cursor-default text-faint-ink hover:bg-transparent hover:text-faint-ink active:bg-transparent active:text-faint-ink aria-disabled:pointer-events-auto aria-disabled:opacity-100";
 
@@ -56,9 +58,6 @@ const PILL_DELAY_MS = 350;
 // The pill sits 8px off the place's square.
 const PILL_OFFSET_PX = 8;
 
-// The rail's echo keeps its own slot, so a check that reads the sidebar's header finds one.
-const ECHO_HEADER = { "data-slot": "rail-echo-header" };
-
 // A place's glyph: a lucide icon, or Kay's own mark.
 type Glyph = ComponentType<{ className?: string }>;
 
@@ -70,6 +69,9 @@ type RailPlace =
   | { kind: "route"; label: string; Glyph: Glyph; to: "/lab" }
   | { kind: "external"; label: string; Glyph: Glyph; href: string }
   | { kind: "soon"; label: string; Glyph: Glyph };
+
+// A place that opens something.
+type LivePlace = Exclude<RailPlace, { kind: "soon" }>;
 
 /** Kay's mark, one polygon in the text colour; decorative, so its host carries the name. */
 export function KayMark({ className }: { className?: string }) {
@@ -94,67 +96,58 @@ const PLACES = [
   { kind: "route", label: "Lab", Glyph: FlaskConical, to: "/lab" },
 ] as const satisfies readonly RailPlace[];
 
-// The pill a place names itself in, shown only while the rail is collapsed and at rest.
-const pillOf = (children: ReactNode, shown: boolean) =>
-  ({ children, variant: "pill", sideOffset: PILL_OFFSET_PX, hidden: !shown }) as const;
+// The pill a square names its place in, whatever the panel beside the rail is doing. It says
+// shown, since the menu button hides a pill unless the sidebar is collapsed, and the rail is
+// not the sidebar.
+const pillOf = (children: ReactNode) =>
+  ({ children, variant: "pill", sideOffset: PILL_OFFSET_PX, hidden: false }) as const;
 
 // What a live place opens: a route of the app, or a site of its own in a new tab.
-function linkOf(
-  place: Exclude<RailPlace, { kind: "soon" }>,
-  hrefTo: (path: "/" | "/lab") => string,
-) {
+function linkOf(place: LivePlace, hrefTo: (path: "/" | "/lab") => string) {
   if (place.kind === "external") {
     return <a href={place.href} target="_blank" rel="noreferrer" aria-label={place.label} />;
   }
   return <Link to={hrefTo(place.to)} aria-label={place.label} />;
 }
 
-// A live place's glyph and name as the open row shows them: Kay's mark and serif name in ink,
-// and an arrow after a site elsewhere.
-function Face({ place }: { place: Exclude<RailPlace, { kind: "soon" }> }) {
-  const { Glyph, label } = place;
-  if (place.kind === "home") {
-    return (
-      <>
-        <Glyph className="text-ink" />
-        <span className="font-serif text-lg text-ink">{label}</span>
-      </>
-    );
-  }
+// A live place's glyph, and in a row its name after it: Kay's mark and serif name in ink, and
+// an arrow after a site elsewhere.
+function Face({ place, look }: { place: LivePlace; look: Look }) {
+  const { Glyph, label, kind } = place;
+  const glyph = <Glyph className={kind === "home" ? "text-ink" : undefined} />;
+  if (look === "square") return glyph;
   return (
     <>
-      <Glyph />
-      <span className="text-ink">{label}</span>
-      {place.kind === "external" && (
+      {glyph}
+      <span className={kind === "home" ? "font-serif text-lg text-ink" : "text-ink"}>{label}</span>
+      {kind === "external" && (
         <ArrowUpRight aria-hidden="true" className="ml-auto size-3.5! text-soft-ink" />
       )}
     </>
   );
 }
 
-// One place in the rail's header, whose name shows in a pill while the rail is collapsed.
+// A place that opens something: a square that names it in a pill, or a row that shows its name.
 function Place({
-  label,
+  place,
+  look,
   link,
   active,
-  pill,
-  children,
 }: {
-  label: string;
+  place: LivePlace;
+  look: Look;
   link: ReactElement;
   active: boolean;
-  pill: boolean;
-  children: ReactNode;
 }) {
   return (
     <SidebarMenuItem>
       <SidebarMenuButton
         render={link}
         isActive={active}
-        tooltip={pillOf(label, pill)}
-        className={RAIL_BUTTON}
+        tooltip={look === "square" ? pillOf(place.label) : undefined}
+        className={LOOKS[look]}
       >
-        {children}
+        <Face place={place} look={look} />
       </SidebarMenuButton>
     </SidebarMenuItem>
   );
@@ -162,9 +155,15 @@ function Place({
 
 // A place the web build does not have yet: a button that is there to be found, by pointer,
 // keyboard and screen reader ("Memory, dimmed, button, Coming soon"), and opens nothing. It
-// keeps the rail's square and padding, so its glyph sits where a live place's would.
-function SoonPlace({ label, Glyph, pill }: { label: string; Glyph: Glyph; pill: boolean }) {
-  const hint = useId(); // → string, unique per drawing, so the rail's echo never repeats it
+// keeps its look's size and padding, so its glyph sits where a live place's would.
+function SoonPlace({ label, Glyph, look }: { label: string; Glyph: Glyph; look: Look }) {
+  const hint = useId(); // → string, unique per drawing
+  const pill = (
+    <>
+      {label}
+      <span className={PILL_HINT}> · {SOON}</span>
+    </>
+  );
   return (
     <SidebarMenuItem>
       <SidebarMenuButton
@@ -172,54 +171,48 @@ function SoonPlace({ label, Glyph, pill }: { label: string; Glyph: Glyph; pill: 
         aria-label={label}
         aria-disabled="true"
         aria-describedby={hint}
-        tooltip={pillOf(
-          <>
-            {label}
-            <span className={PILL_HINT}> · {SOON}</span>
-          </>,
-          pill,
-        )}
-        className={`${RAIL_BUTTON} ${SOON_BUTTON}`}
+        tooltip={look === "square" ? pillOf(pill) : undefined}
+        className={`${LOOKS[look]} ${SOON_BUTTON}`}
       >
         <Glyph />
-        <span>{label}</span>
+        {look === "row" && <span>{label}</span>}
         <span id={hint} className="sr-only">
           {SOON}
         </span>
-        <span aria-hidden="true" className="ml-auto shrink-0 text-xs">
-          {SOON_SHORT}
-        </span>
+        {look === "row" && (
+          <span aria-hidden="true" className="ml-auto shrink-0 text-xs">
+            {SOON_SHORT}
+          </span>
+        )}
       </SidebarMenuButton>
     </SidebarMenuItem>
   );
 }
 
 /**
- * The rail's fixed places, above the projects: Kay, the places not built yet, the documentation
- * link, and the Lab last (ADR-094, amended). A route's place is marked while it is open.
- * @param pills Whether their names show in pills: the collapsed rail, not while it peeks.
- * @param echo Draws them for the rail's echo beneath the sidebar.
+ * The app's fixed places: Kay, the places not built yet, the documentation link, and the Lab
+ * last (ADR-094, amended). A route's place is marked while it is open.
+ * @param look Squares that name their places in pills, for the desktop's rail (ADR-139); or
+ *   labelled rows, for the phone's drawer (ADR-121).
  */
-export function RailPlaces({ pills, echo = false }: { pills: boolean; echo?: boolean }) {
+export function RailPlaces({ look }: { look: Look }) {
   const { hrefTo } = usePaths();
   const at = useLocation().pathname; // → the open route, such as "/lab"
   return (
-    <SidebarHeader className="gap-0.5 px-2 pt-2" {...(echo ? ECHO_HEADER : {})}>
+    <SidebarHeader className="gap-0.5 px-2 pt-2">
       <TooltipProvider delay={PILL_DELAY_MS} closeDelay={0}>
         <SidebarMenu className="gap-0.5">
           {PLACES.map((place) =>
             place.kind === "soon" ? (
-              <SoonPlace key={place.label} label={place.label} Glyph={place.Glyph} pill={pills} />
+              <SoonPlace key={place.label} label={place.label} Glyph={place.Glyph} look={look} />
             ) : (
               <Place
                 key={place.label}
-                label={place.label}
+                place={place}
+                look={look}
                 link={linkOf(place, hrefTo)}
                 active={place.kind === "route" && at === place.to}
-                pill={pills}
-              >
-                <Face place={place} />
-              </Place>
+              />
             ),
           )}
         </SidebarMenu>

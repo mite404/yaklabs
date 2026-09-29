@@ -7,7 +7,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { arg, chromium, ROOT } from "./harness.mjs";
-import { RAIL_PLACES } from "./rail-places.mjs";
+import { railOf, RAIL_PLACES } from "./rail-places.mjs";
 
 const BASE = arg("--base", "http://127.0.0.1:5173");
 // The gap between lanes: one step of the canvas's dot grid (index.css --canvas-grid).
@@ -305,13 +305,13 @@ try {
   await chooseTheme("Light");
   await page.waitForFunction(() => document.documentElement.dataset.theme === "light");
 
-  const rail = page.locator('[data-slot="sidebar"]');
+  const rail = railOf(page);
   const placesShown = [];
   for (const { role, name } of RAIL_PLACES) {
     if (await rail.getByRole(role, { name, exact: true }).isVisible()) placesShown.push(name);
   }
   record(
-    "the sidebar shows its places, Kay to Lab",
+    "the rail shows its places, Kay to Lab",
     placesShown.length === RAIL_PLACES.length,
     placesShown.join(", "),
   );
@@ -818,14 +818,12 @@ try {
   // address no thread has. Each way out starts on a fresh page, so its route is not loaded yet.
   const leaving = {
     "the Lab link": (on) =>
-      on
-        .locator('[data-slot="sidebar"]')
+      railOf(on)
         .getByRole("link", { name: "Lab", exact: true })
         .click()
         .then(() => on.getByText("Useful answers.").waitFor({ timeout: 10_000 })),
     "the Kay link": (on) =>
-      on
-        .locator('[data-slot="sidebar"]')
+      railOf(on)
         .getByRole("link", { name: "Kay", exact: true })
         .click()
         .then(() => shownPanel(on).locator(".thread-panel").first().waitFor({ timeout: 10_000 })),
@@ -1303,18 +1301,33 @@ try {
   );
 
   await onOwnPage(
-    "the sidebar is a navigation landmark holding the rail and the projects",
+    "the rail's places and the projects are two navigation landmarks, Places and Sidebar",
     "/t/t-005?scenario=demo",
     {},
     async (own) => {
       await tabsOf(own).first().waitFor({ timeout: 15_000 });
-      const nav = own.getByRole("navigation", { name: "Sidebar" });
-      const held = {
-        kay: await nav.getByRole("link", { name: "Kay", exact: true }).count(),
-        lab: await nav.getByRole("link", { name: "Lab", exact: true }).count(),
-        project: await nav.getByRole("button", { name: "Demo store", exact: true }).count(),
-      };
-      return { ok: Object.values(held).every((n) => n === 1), detail: JSON.stringify(held) };
+      const places = own.getByRole("navigation", { name: "Places" });
+      const sidebar = own.getByRole("navigation", { name: "Sidebar" });
+      const counts = await Promise.all(
+        RAIL_PLACES.map(({ role, name }) => places.getByRole(role, { name, exact: true }).count()),
+      );
+      const held = Object.fromEntries(RAIL_PLACES.map(({ name }, i) => [name, counts[i]]));
+      held["Demo store in Sidebar"] = await sidebar
+        .getByRole("button", { name: "Demo store", exact: true })
+        .count();
+      held["Demo store in Places"] = await places
+        .getByRole("button", { name: "Demo store", exact: true })
+        .count();
+      const apart = await own.evaluate(() => {
+        const [a, b] = ["Places", "Sidebar"].map((name) =>
+          document.querySelector(`[role="navigation"][aria-label="${name}"]`),
+        );
+        return a !== null && b !== null && !a.contains(b) && !b.contains(a);
+      });
+      const once = Object.entries(held).every(([key, n]) =>
+        key === "Demo store in Places" ? n === 0 : n === 1,
+      );
+      return { ok: once && apart, detail: `${JSON.stringify(held)}; apart ${apart}` };
     },
   );
 
@@ -1438,25 +1451,25 @@ try {
   );
 
   await onOwnPage(
-    "on desktop the one Account button is at the sidebar's foot, and the bell is the bar's last control",
+    "on desktop the one Account button is at the rail's foot, and the bell is the bar's last control",
     "/t/t-005?scenario=demo",
     {},
     async (own) => {
-      await own.locator('[data-slot="sidebar"]').first().waitFor({ timeout: 15_000 });
+      await railOf(own).waitFor({ timeout: 15_000 });
       const all = await own.getByRole("button", { name: "Account" }).count();
-      const account = own.locator('[data-slot="sidebar"]').getByRole("button", { name: "Account" });
-      const inSidebar = await account.count();
+      const account = railOf(own).getByRole("button", { name: "Account" });
+      const inRail = await account.count();
       const inTitleBar = await own
         .locator('header[data-slot="title-bar"]')
         .getByRole("button", { name: "Account" })
         .count();
       const inNav = await own
-        .locator('[role="navigation"][aria-label="Sidebar"]')
+        .locator('[role="navigation"]')
         .getByRole("button", { name: "Account" })
         .count();
       const face = await account.boundingBox();
-      const sidebarBox = await own.locator('[data-slot="sidebar-container"]').boundingBox();
-      const foot = face.y + face.height >= sidebarBox.y + sidebarBox.height - 16;
+      const railBox = await railOf(own).boundingBox();
+      const foot = face.y + face.height >= railBox.y + railBox.height - 16;
       const bell = await own
         .locator('header[data-slot="title-bar"]')
         .getByRole("button", { name: /^Notifications/ })
@@ -1472,44 +1485,59 @@ try {
         opened.y >= 0 &&
         opened.x + opened.width <= view.width &&
         opened.y + opened.height <= view.height;
+      const upward = opened !== null && opened.y + opened.height <= face.y;
       await own.keyboard.press("Escape");
       return {
         ok:
           all === 1 &&
-          inSidebar === 1 &&
+          inRail === 1 &&
           inTitleBar === 0 &&
           inNav === 0 &&
           foot &&
           bellLast &&
-          onScreen,
-        detail: `${all} Account button(s) on the page; ${inSidebar} in the sidebar, ${inTitleBar} in the bar, ${inNav} inside the navigation landmark; at the foot ${foot}; bell is the bar's last control ${bellLast} (furthest right: ${rightmost.name}); menu on screen ${onScreen}`,
+          onScreen &&
+          upward,
+        detail: `${all} Account button(s) on the page; ${inRail} in the rail, ${inTitleBar} in the bar, ${inNav} inside a navigation landmark; at the rail's foot ${foot}; bell is the bar's last control ${bellLast} (furthest right: ${rightmost.name}); menu on screen ${onScreen}, opening upward ${upward}`,
       };
     },
   );
 
   await onOwnPage(
-    "the collapsed rail's icons sit centred in their squares",
+    "the rail's icons sit centred in their squares, which hold still with the panel docked",
     "/t/t-005?scenario=demo",
     { viewport: { width: 1024, height: 768 } },
     async (own) => {
       await tabsOf(own).first().waitFor({ timeout: 15_000 });
-      const offsets = await own
-        .locator('[data-slot="sidebar"] [data-sidebar="header"]')
-        .evaluate((header) =>
-          [...header.querySelectorAll('[data-sidebar="menu-button"]')].map((place) => {
-            const square = place.getBoundingClientRect();
-            const glyph = place.querySelector("svg").getBoundingClientRect();
-            return [
-              glyph.left + glyph.width / 2 - (square.left + square.width / 2),
-              glyph.top + glyph.height / 2 - (square.top + square.height / 2),
-            ];
-          }),
-        );
+      // Each place's square, and its glyph's centre minus the square's, x then y.
+      const squares = () =>
+        railOf(own)
+          .locator('[data-sidebar="header"]')
+          .evaluate((header) =>
+            [...header.querySelectorAll('[data-sidebar="menu-button"]')].map((place) => {
+              const square = place.getBoundingClientRect();
+              const glyph = place.querySelector("svg").getBoundingClientRect();
+              return {
+                square: [square.x, square.y, square.width, square.height],
+                offset: [
+                  glyph.left + glyph.width / 2 - (square.left + square.width / 2),
+                  glyph.top + glyph.height / 2 - (square.top + square.height / 2),
+                ],
+              };
+            }),
+          );
+      const collapsed = await squares();
+      await own.getByRole("button", { name: "Toggle sidebar" }).press("Enter");
+      await own.locator('[data-slot="sidebar"][data-state="expanded"]').waitFor();
+      const docked = await squares();
+      const centred = [...collapsed, ...docked]
+        .flatMap(({ offset }) => offset)
+        .every((each) => Math.abs(each) < 0.5);
+      const still =
+        JSON.stringify(collapsed.map((place) => place.square)) ===
+        JSON.stringify(docked.map((place) => place.square));
       return {
-        ok:
-          offsets.length === RAIL_PLACES.length &&
-          offsets.flat().every((offset) => Math.abs(offset) < 0.5),
-        detail: `icon centre minus square centre (x, y): ${offsets.map((pair) => pair.join(", ")).join("; ")}`,
+        ok: collapsed.length === RAIL_PLACES.length && centred && still,
+        detail: `icon centre minus square centre (x, y): ${collapsed.map((place) => place.offset.join(", ")).join("; ")}; squares the same docked ${still}`,
       };
     },
   );

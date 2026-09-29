@@ -1,17 +1,17 @@
-// The sidebar's peek (sidebar-peek.tsx), as data and timing: while the sidebar is collapsed to
-// its rail, the whole sidebar slides out over the workspace once the pointer has rested on the
-// title bar's toggle, on the rail or just past it, and slides back once the pointer has been
+// The projects panel's peek (sidebar-peek.tsx), as data and timing: while the panel is closed,
+// it slides out from behind the rail's edge over the workspace once the pointer has rested on
+// the title bar's toggle, on the rail or just past it, and slides back once the pointer has been
 // gone a moment. What the pointer is over is the host's to say; this decides when to move.
 
-/** Where the peek is: at rest as the rail, about to slide out, out, or sliding back. */
+/** Where the peek is: at rest behind the rail, about to slide out, out, or sliding back. */
 export type PeekPhase = "rail" | "entering" | "open" | "leaving";
 
 // The phase, and whether the step into it is drawn with no motion: a key closed it, or it has
-// finished sliding back and the rail takes its place.
+// finished sliding back and rests behind the rail's edge.
 export type PeekState = { phase: PeekPhase; instant: boolean };
 
 // What moves the peek: show and hide from the pointer and keys; entered once the slide's start
-// is drawn, left once the slide back ends; rest when the sidebar stops being a rail; settled
+// is drawn, left once the slide back ends; rest when the panel can no longer peek; settled
 // once a step with no motion is drawn.
 export type PeekAction =
   | { type: "show" }
@@ -21,15 +21,15 @@ export type PeekAction =
   | { type: "rest" }
   | { type: "settled" };
 
-/** The peek as it starts: the rail, at rest. */
+/** The peek as it starts: at rest behind the rail. */
 export const RESTING: PeekState = { phase: "rail", instant: false };
 
-/** How long the pointer rests on a place that peeks before the sidebar slides out. */
+/** How long the pointer rests on a place that peeks before the panel slides out. */
 export const PEEK_OPEN_MS = 80;
 /** How long the pointer may be away from the peek before it slides back. */
 export const PEEK_CLOSE_MS = 250;
 
-// Where show takes each phase: out from the rail, or back out from partway home.
+// Where show takes each phase: out from behind the rail, or back out from partway home.
 const SHOWN: Partial<Record<PeekPhase, PeekPhase>> = { rail: "entering", leaving: "open" };
 
 /** Whether the peek is out, or on its way out. */

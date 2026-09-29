@@ -3,7 +3,7 @@
 import { writeFileSync } from "node:fs";
 import { canvasOf, carry, laneTitles, mainPanel, makeLane } from "./canvas-checks.mjs";
 import { BASE, openApp, shotPath, sidebarDrawn } from "./lever.mjs";
-import { RAIL_PLACES, readPlaces } from "./rail-places.mjs";
+import { railOf, RAIL_PLACES, readPlaces } from "./rail-places.mjs";
 
 // The polygon meetkay.ai declares for its mark (ADR-095), as the rail must draw it.
 const KAY_POINTS =
@@ -491,7 +491,7 @@ export const shellChecks = {
     const { page } = await onThreadPage(browser);
     const kay = page.getByRole("link", { name: "Kay", exact: true });
     const points = await kay.locator("svg polygon").getAttribute("points");
-    const places = await sidebarOf(page).locator('[data-sidebar="header"]').evaluate(readPlaces);
+    const places = await railOf(page).locator('[data-sidebar="header"]').evaluate(readPlaces);
     const exact = points?.replaceAll(/\s+/g, " ").trim() === KAY_POINTS;
     const want = RAIL_PLACES.map(({ name, role, icon }) => [name, role, icon]);
     const got = places.map(({ name, role, icon }) => [name, role, icon]);

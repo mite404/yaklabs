@@ -18,8 +18,9 @@ export const RAIL_PLACES = [
 ];
 
 /**
- * Runs in the page: each place in a sidebar header, top to bottom, as its accessible name, its
- * role, its first glyph's lucide class, the glyph's box, and its unavailable state.
+ * Runs in the page: each place in a places header (the rail's, or the phone drawer's), top to
+ * bottom, as its accessible name, its role, its first glyph's lucide class, the glyph's box, and
+ * its unavailable state.
  */
 export function readPlaces(header) {
   return [...header.querySelectorAll('[data-sidebar="menu-button"]')].map((el) => {
@@ -39,17 +40,20 @@ export function readPlaces(header) {
   });
 }
 
-/** A rail place in the sidebar of a Playwright page, by its role and name. */
+/** The desktop's rail of a Playwright page (ADR-139): the places and, at its foot, the account. */
+export const railOf = (page) => page.locator('[data-slot="rail"]');
+
+/** A place in the desktop's rail of a Playwright page, by its role and name. */
 export const placeOf = (page, { role, name }) =>
-  page.locator('[data-slot="sidebar"]').getByRole(role, { name, exact: true });
+  railOf(page).getByRole(role, { name, exact: true });
 
 /**
- * Runs in the page: each place not built yet in a sidebar header, as its name's edges and
- * whether it shows whole, its short hint's words, edges and visibility, the button's edges, and
- * the inks of the name and the hint with the shell behind them.
+ * Runs in the page: each place not built yet in the phone drawer's header, as its name's edges
+ * and whether it shows whole, its short hint's words, edges and visibility, the button's edges,
+ * and the inks of the name and the hint with the drawer's shell behind them.
  */
 export function readSoonRows(header) {
-  const shell = getComputedStyle(document.querySelector('[data-slot="sidebar-inner"]'));
+  const shell = getComputedStyle(header.closest('dialog[data-slot="sidebar"]'));
   return [...header.querySelectorAll('[aria-disabled="true"]')].map((el) => {
     const spans = [...el.querySelectorAll("span")];
     const [label] = spans;

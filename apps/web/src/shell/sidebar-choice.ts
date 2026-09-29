@@ -1,6 +1,7 @@
-// The visitor's choices for the sidebar, kept like the theme: open or collapsed, and the width
-// its edge was dragged to. Both are read before the first paint, so the sidebar and the tabs
-// never jump, and both reach the page as the CSS the sidebar and the title bar read.
+// The visitor's choices for the projects panel (the sidebar), kept like the theme: docked or
+// closed, and the width its edge was dragged to. Both are read before the first paint, so the
+// panel and the tabs never jump, and both reach the page as the CSS the panel and the title bar
+// read.
 import { cssVars } from "@yaklabs/ui/lib/utils";
 import { useState, type CSSProperties } from "react";
 import type { SidebarWidth } from "./sidebar";
@@ -76,14 +77,14 @@ export function useSidebarWidth(): SidebarWidth {
 }
 
 /**
- * The sidebar's sizes as the CSS its wrapper carries, read by the sidebar and by the title bar,
- * whose tabs start at the sidebar's edge.
- * @param width The kept width, in CSS px.
+ * The rail's and the panel's sizes as the CSS the wrapper carries, read by both and by the title
+ * bar, whose tabs start at the panel's edge.
+ * @param width The panel's kept width, in CSS px.
  */
 export function sidebarVars(width: number): CSSProperties {
   return cssVars({
     "--sidebar-width": widthValue(width),
-    "--sidebar-width-icon": "3.5rem",
+    "--rail-width": "3.5rem",
     // On a phone the drawer takes most of the width and leaves the page's edge in view.
     "--sidebar-width-mobile": "min(85vw, 20rem)",
   });
