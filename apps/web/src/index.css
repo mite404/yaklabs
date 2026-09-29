@@ -84,27 +84,34 @@
 
 /* The sidebar's peek (sidebar-peek.tsx): collapsed to its rail, the one sidebar slides out over
    the workspace from the window's edge, the shell's own paper with a hairline at its right edge
-   and the softest shadow past it, and slides back. Out on the iOS drawer curve over 220ms with a
-   quicker fade, back over 160ms; transitions, so a pointer that returns mid-way turns it back
-   from where it is. The shadow is clipped to its right, off the title bar. Reduced motion only
-   fades it. A key's close, and the step back into the rail, have no motion (data-peek-instant),
-   and neither do the rail's buttons, which change size between the two.
+   and the softest shadow past it, and slides back the same way: both over 220ms on the iOS
+   drawer curve (Ethan), one `--peek-slide`, so the two cannot drift apart. Transitions, so a
+   pointer that returns mid-way turns it back from where it is.
+   The window's frame clips the panel where it slides off (its overflow is hidden), so the fade
+   hides no motion. Out, it fades in over the slide's first 120ms on the strong ease-out. Back,
+   it holds full strength and fades over the slide's last 120ms on that curve played backwards,
+   ending with the slide: still 0.97 with the edge 3px from home. The fade takes away only the
+   hairline and shadow left at the window's edge, which would otherwise vanish in one frame as
+   the rail takes the panel's place. The shadow is clipped to its right, off the title bar.
+   Reduced motion only fades it. A key's close, and the step back into the rail, have no motion
+   (data-peek-instant), and neither do the rail's buttons, which change size between the two.
    Outside every layer on purpose: the container's own `transition-[left,right,width]` is a
    utility, which a layered rule cannot outrank. */
 [data-slot="sidebar"][data-peek] > [data-slot="sidebar-container"] {
+  --peek-slide: transform 220ms cubic-bezier(0.32, 0.72, 0, 1);
   z-index: 20;
   box-shadow:
     1px 0 0 var(--hairline),
     8px 0 24px -12px var(--shadow);
   clip-path: inset(0 -40px 0 0);
   transition:
-    transform 220ms cubic-bezier(0.32, 0.72, 0, 1),
+    var(--peek-slide),
     opacity 120ms cubic-bezier(0.23, 1, 0.32, 1);
 }
 [data-slot="sidebar"][data-peek="leaving"] > [data-slot="sidebar-container"] {
   transition:
-    transform 160ms cubic-bezier(0.32, 0.72, 0, 1),
-    opacity 160ms cubic-bezier(0.32, 0.72, 0, 1);
+    var(--peek-slide),
+    opacity 120ms cubic-bezier(0.68, 0, 0.77, 0) 100ms;
 }
 [data-slot="sidebar"]:is([data-peek="entering"], [data-peek="leaving"])
   > [data-slot="sidebar-container"] {

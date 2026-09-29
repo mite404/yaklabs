@@ -22,7 +22,8 @@ import {
 
 // A pointer that hovers: a peek on hover means nothing to a touch screen.
 const FINE_HOVER = "(hover: hover) and (pointer: fine)";
-// A slide back that never reports its end (a transition cut short) still settles by then.
+// A slide back (220ms, index.css) that never reports its end, a transition cut short, still
+// settles by then.
 const LEAVE_FALLBACK_MS = 400;
 // The title bar's toggle; every place the pointer can rest for the sidebar to peek (the toggle,
 // the strip just past the rail's edge, the rail or panel itself); and the rail's own buttons,
