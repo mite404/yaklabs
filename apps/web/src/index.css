@@ -100,6 +100,13 @@
   transition-duration: var(--panel-pin);
   transition-timing-function: var(--panel-ease);
 }
+/* Docked by the toggle, a hint of a line parts the rail from the panel, as in Kay's own app: the
+   panel's left edge in the workspace's own hairline. A peek draws none, so it reads as a glance,
+   not a column. On the panel's own edge, the line slides with it behind the rail's clip. */
+[data-slot="sidebar"][data-state="expanded"] [data-slot="sidebar-inner"] {
+  box-shadow: inset 1px 0 0 var(--hairline);
+}
+
 /* The projects panel's peek (sidebar-peek.tsx, ADR-139): closed, the panel slides out over the
    workspace from behind the rail's edge, the shell's own paper with a hairline at its right
    edge and the softest shadow past it, and slides back the same way: both over 220ms on the
