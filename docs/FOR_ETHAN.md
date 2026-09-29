@@ -1193,6 +1193,17 @@ drawer (ADR-121), so a click that beat the redirect was undone by it. The check 
 thread's own address and waits for the drawer's open state, not a timer. Lesson: a flaky check is
 usually a race the product really has; find which two things are racing before adding a wait.
 
+### A check that knew the old curve by heart
+
+P24 guards the peek's slide back: the panel has to stay solid until it is almost home, or the
+slide reads as a blink. It said so as "still 0.97 when the edge is 3px out", a number measured on
+the old drawer curve. Ethan's curve eases into place instead of slamming there, so the last few
+pixels take longer, and the same late fade now overlaps them: 0.88 at 9px, 0.6 at 3px. Nothing on
+screen got worse (the panel is solid for its first 95% of the trip), but the check failed.
+The fix was to say what the rule means, not what one curve happened to produce: the panel keeps
+0.97 or more until its last 5% of travel. Lesson: a check that pins a symptom of today's tuning
+breaks the day the tuning changes; pin the intent, and the check survives a retime.
+
 ## 5. Director's Commentary
 
 ### The agent only states intent; the design system does the rest
@@ -2393,3 +2404,73 @@ The film version is a cut hidden in the gate: two shots join on the frame where 
 whip-pans through black, and the audience sees one move. The engineering rule underneath: when
 two mechanisms own the same property at different times, hand over on a frame where their
 outputs agree, and turn the motion off for exactly that frame.
+
+### Reading a curve off a napkin
+
+Ethan drew the motion he wanted: "fast in the beginning and then a bit of an ease into the final
+position". A CSS easing curve is that drawing with two handles, the same tangent handles as a
+keyframe in After Effects' graph editor. Time runs left to right, travel bottom to top; the first
+handle sets how hard it leaves, the second how softly it lands. Read off the sketch, the handles
+sit at (0.34, 1.11) and (1, 1). A handle above 1 means the curve pokes past the top: the panel
+would slide 0.8px past its mark and back. Holding it at 1 keeps the shape and drops the bounce:
+
+```css
+/* apps/web/src/index.css - one curve, two clocks, so the peek and the pin feel like one move */
+:root {
+  --panel-ease: cubic-bezier(0.34, 1, 1, 1); /* Ethan's sketch, first handle held at 1 */
+  --panel-peek: 220ms; /* the hover peek, unchanged */
+  --panel-pin: 250ms; /* a click on the toggle: was shadcn's 200ms linear */
+}
+```
+
+```mermaid
+xychart-beta
+  title "How far the panel has travelled (%), 0 to 220ms"
+  x-axis "ms" [0, 20, 40, 60, 80, 100, 120, 140, 160, 180, 200, 220]
+  y-axis "travel %" 0 --> 100
+  line "old drawer curve" [0, 24, 59, 81, 90, 94, 97, 98, 99, 100, 100, 100]
+  line "Ethan's curve" [0, 23, 40, 54, 65, 75, 82, 88, 93, 96, 99, 100]
+```
+
+Both lines leave the gate together (23% by 20ms), then part: the old drawer curve had covered 90%
+by 80ms and spent the rest crawling the last few pixels, while Ethan's keeps moving through the
+middle and settles over the last third. The editor's version: same shot length, same first
+frame, a different speed ramp. The feel of a move lives in its ramp, and a duration you are not
+allowed to touch still leaves the whole ramp to play with.
+
+### Fix the stamp, not the prints
+
+Two bugs this week had one cause. The splash's "+" came out square, and the "Unpin thread" label
+came out as a black box with an arrow, because the vendored shadcn parts (the base-lyra preset)
+default to square corners and a box tooltip. Every call site had been undoing the default by
+hand: a dozen `rounded-[var(--radius)]` overrides on buttons, and a `variant="pill"` on the
+rail's labels only. The fix moved the rule to where the parts are made:
+
+```tsx
+// packages/ui/src/components/button.tsx - the default is the brand, at every size
+const buttonVariants = cva("group/button inline-flex ... rounded-lg border ...", {
+  // rounded-lg is --radius, the site's 4px (design pillars, rule 8)
+});
+
+// packages/ui/src/components/tooltip.tsx - one look, no variant to forget
+<TooltipPrimitive.Popup data-slot="tooltip-content" className={cn(PILL, className)} />
+```
+
+```mermaid
+flowchart LR
+  subgraph Before
+    D1["shadcn default<br/>square, box tooltip"] --> A1["call site A<br/>override: 4px"]
+    D1 --> B1["call site B<br/>override: pill"]
+    D1 --> C1["call site C<br/>forgot → square"]
+  end
+  subgraph After
+    D2["Kay default<br/>4px, pill"] --> A2["call site A"]
+    D2 --> B2["call site B"]
+    D2 --> C2["call site C<br/>right by default"]
+  end
+```
+
+Proof that nothing else moved: every button's computed corner, surveyed in four views before and
+after, read the same, and the screenshots matched to the pixel. In print terms, a typo on the
+plate is fixed on the plate; correcting each copy by hand works until the one copy nobody
+checked goes out.
