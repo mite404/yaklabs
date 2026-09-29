@@ -71,8 +71,13 @@ export async function startThread(page) {
   await panelOf(page).locator(".welcome").waitFor({ timeout: 10_000 });
 }
 
+// Pressed only when it is not already: pressing the open side pane again closes it back to the
+// thread (ADR-138).
 async function chooseLayout(page, name) {
-  await layoutButton(page, name).click();
+  await page.locator('[role="group"][aria-label="Layout"] button[aria-pressed="true"]').waitFor();
+  if ((await layoutButton(page, name).getAttribute("aria-pressed")) !== "true") {
+    await layoutButton(page, name).click();
+  }
   await page
     .locator('[role="group"][aria-label="Layout"] button[aria-pressed="true"]', { hasText: name })
     .waitFor();

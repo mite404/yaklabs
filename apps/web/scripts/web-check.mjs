@@ -120,6 +120,18 @@ async function openScenario(address, ready, within = '[role="tabpanel"]:not([ine
   return view;
 }
 
+// Puts `view` in the layout named `name`: pressed only when it is not already, since pressing
+// the open side pane again closes it back to the thread (ADR-138), then held until it shows.
+// It waits for the tab's own layout first; read before the tab loads, nothing is pressed yet, and
+// a press that lands once the tab is already on `name` would close it.
+async function chooseLayout(view, name) {
+  const group = view.getByRole("group", { name: "Layout" });
+  await group.locator('button[aria-pressed="true"]').waitFor({ timeout: 15_000 });
+  const button = group.getByRole("button", { name });
+  if ((await button.getAttribute("aria-pressed")) !== "true") await button.click();
+  await group.locator(`button[aria-label="${name}"][aria-pressed="true"]`).waitFor();
+}
+
 // A step on a page of its own at `address`, a mock scenario, so no device data is touched. A
 // throw fails that step alone, and the steps after it still run.
 async function onOwnPage(step, address, options, measure) {
@@ -2137,8 +2149,7 @@ try {
     "/t/t-001?scenario=demo",
     { viewport: { width: 390, height: 844 } },
     async (own) => {
-      const layout = own.getByRole("group", { name: "Layout" });
-      await layout.getByRole("button", { name: "Canvas" }).click();
+      await chooseLayout(own, "Canvas");
       const region = own
         .locator('[role="tabpanel"]:not([inert])')
         .getByRole("region", { name: "Compose canvas" });
@@ -2230,10 +2241,9 @@ try {
             canvas: share(onTab.querySelector('[aria-label="Compose canvas"]')),
           };
         });
-      const layout = own.getByRole("group", { name: "Layout" });
       const seen = {};
       for (const pane of ["Canvas", "Thread", "Browser"]) {
-        await layout.getByRole("button", { name: pane }).click();
+        await chooseLayout(own, pane);
         await own.waitForTimeout(400);
         seen[pane] = await shares();
       }
