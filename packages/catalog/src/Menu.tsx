@@ -26,7 +26,7 @@ export type MenuItem = {
 };
 
 /** Where the menu opens relative to its trigger. */
-export type MenuPlacement = "above-start" | "below-end";
+export type MenuPlacement = "above-start" | "above-end" | "below-end";
 
 // The gap between the trigger and the menu.
 const OFFSET_PX = 6;
@@ -38,19 +38,21 @@ const EDGE_PX = 8;
 // card) can cut the menu off. A long list stops short of the viewport's edge and scrolls.
 function positionFor(trigger: HTMLElement, placement: MenuPlacement): CSSProperties {
   const rect = trigger.getBoundingClientRect();
+  if (placement === "below-end")
+    return {
+      position: "fixed",
+      right: window.innerWidth - rect.right,
+      top: rect.bottom + OFFSET_PX,
+      maxHeight: window.innerHeight - rect.bottom - OFFSET_PX - EDGE_PX,
+    };
+  const above = {
+    position: "fixed",
+    bottom: window.innerHeight - rect.top + OFFSET_PX,
+    maxHeight: rect.top - OFFSET_PX - EDGE_PX,
+  } as const;
   return placement === "above-start"
-    ? {
-        position: "fixed",
-        left: rect.left,
-        bottom: window.innerHeight - rect.top + OFFSET_PX,
-        maxHeight: rect.top - OFFSET_PX - EDGE_PX,
-      }
-    : {
-        position: "fixed",
-        right: window.innerWidth - rect.right,
-        top: rect.bottom + OFFSET_PX,
-        maxHeight: window.innerHeight - rect.bottom - OFFSET_PX - EDGE_PX,
-      };
+    ? { ...above, left: rect.left }
+    : { ...above, right: window.innerWidth - rect.right };
 }
 
 // Whether an event happened inside `container`. A window-level event, such as a resize, has no
