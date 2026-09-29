@@ -2115,3 +2115,9 @@ The senior-engineer lesson is to separate three claims: the words are readable, 
 explains what happened, and the runtime is durable. This demo demonstrates the first two in named
 scenarios. It does not pretend to prove the third. The remaining promises are tracked in
 `docs/demo-ui-checklist.md`.
+
+CI caught another problem before merge: the page combined too many conditional rendering paths
+in one function. The transcript, evidence, and playback controls now render through separate
+components. A typed stage table keeps durations and transitions together, and the word reveal
+passes its remaining budget through blocks, list items, and inline text. The audit thresholds stay
+unchanged. Existing tests and the browser scripts check that this restructuring preserves the demo.

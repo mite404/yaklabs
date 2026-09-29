@@ -79,6 +79,32 @@ function takeInline(segments: Inline[], budget: number): { taken: Inline[]; left
   return { taken, left };
 }
 
+// Takes list items in order from a remaining word budget, mirroring takeInline's contract one
+// level up: an item past the budget is dropped entirely rather than shown empty.
+function takeListItems(items: Inline[][], budget: number): { taken: Inline[][]; left: number } {
+  const taken: Inline[][] = [];
+  let left = budget;
+  for (const item of items) {
+    if (left <= 0) break;
+    const { taken: takenItem, left: remaining } = takeInline(item, left);
+    if (takenItem.length > 0) taken.push(takenItem);
+    left = remaining;
+  }
+  return { taken, left };
+}
+
+// Takes one block's content within a remaining word budget: list items for a list block, inline
+// segments otherwise. Returns undefined in place of a block none of which fit, alongside the
+// budget left after it - block and list share this same taken/left contract.
+function takeBlock(block: Block, budget: number): { taken: Block | undefined; left: number } {
+  if (block.kind === "list") {
+    const { taken: items, left } = takeListItems(block.items, budget);
+    return { taken: items.length > 0 ? { kind: "list", items } : undefined, left };
+  }
+  const { taken, left } = takeInline(block.content, budget);
+  return { taken: taken.length > 0 ? { ...block, content: taken } : undefined, left };
+}
+
 /**
  * Reveals the first `words` words of `blocks`, in reading order: block content, list items,
  * inline segments each losing only their own trailing words. A block or item past the budget is
@@ -90,20 +116,9 @@ export function revealBlocks(blocks: Block[], words: number): Block[] {
   const revealed: Block[] = [];
   for (const block of blocks) {
     if (left <= 0) break;
-    if (block.kind === "list") {
-      const items: Inline[][] = [];
-      for (const item of block.items) {
-        if (left <= 0) break;
-        const { taken, left: remaining } = takeInline(item, left);
-        if (taken.length > 0) items.push(taken);
-        left = remaining;
-      }
-      if (items.length > 0) revealed.push({ kind: "list", items });
-    } else {
-      const { taken, left: remaining } = takeInline(block.content, left);
-      if (taken.length > 0) revealed.push({ ...block, content: taken });
-      left = remaining;
-    }
+    const { taken, left: remaining } = takeBlock(block, left);
+    if (taken) revealed.push(taken);
+    left = remaining;
   }
   return revealed;
 }

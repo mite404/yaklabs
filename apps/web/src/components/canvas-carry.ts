@@ -5,6 +5,10 @@ import { insertionIndex } from "../canvas";
 /** An incoming lane's insertion index, untransformed left edge, and preview content. */
 export type Landing = { at: number; left: number; carried: Carried };
 
+function sameLanding(current: Landing, next: Landing): boolean {
+  return current.at === next.at && current.left === next.left && current.carried === next.carried;
+}
+
 // Where a carry at `point` lands in `row`, measured from the lanes as they stand now.
 function landingAt(row: HTMLElement, point: CarryPoint, carried: Carried): Landing {
   const rowBox = row.getBoundingClientRect();
@@ -33,11 +37,10 @@ export function useLanding(
 ): Landing | null {
   const [landing, setLanding] = useState<Landing | null>(null);
   const follow = (next: Landing | null) => {
-    setLanding((current) =>
-      current?.at === next?.at && current?.left === next?.left && current?.carried === next?.carried
-        ? current
-        : next,
-    );
+    setLanding((current) => {
+      if (current === null || next === null) return next;
+      return sameLanding(current, next) ? current : next;
+    });
   };
   useCarryTarget(row, {
     over: (carried, point) => {

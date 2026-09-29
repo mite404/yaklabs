@@ -74,29 +74,36 @@ export function initialState(): DemoState {
   };
 }
 
-// A stage's own duration, or undefined for a stage `tick` cannot advance on its own: idle waits
-// for `start`, awaiting waits for `choose`/`skip`, and complete/skipped/failed are terminal.
+type StageConfig = {
+  /** How long this stage runs before `tick` rolls it forward on its own; undefined for a
+   * stage that waits for a user action (idle, awaiting) or is terminal. */
+  durationMs?: number;
+  /** The stage a duration-driven stage rolls into once durationMs is used up. */
+  next?: Stage;
+  /** Overrides `next` when a child has failed - only `checking` forks this way, ending the
+   * run there rather than moving on to a finding it can't honestly write. */
+  nextOnChildFailure?: Stage;
+};
+
+// Every stage's own duration and where it rolls into once that duration is spent. Stage is an
+// exhaustive union, so a `Record<Stage, _>` forces every member listed here - a new stage without
+// an entry is a compile error, the same guarantee a switch + `satisfies never` gave.
+const STAGE_CONFIG: Record<Stage, StageConfig> = {
+  idle: {},
+  thinking: { durationMs: THINKING_MS, next: "selecting" },
+  selecting: { durationMs: SELECTING_MS, next: "checking" },
+  checking: { durationMs: CHECKING_MS, next: "finding", nextOnChildFailure: "failed" },
+  finding: { durationMs: FINDING_MS, next: "awaiting" },
+  awaiting: {},
+  drafting: { durationMs: DRAFTING_MS, next: "complete" },
+  complete: {},
+  skipped: {},
+  interrupted: {},
+  failed: {},
+};
+
 function durationOf(stage: Stage): number | undefined {
-  switch (stage) {
-    case "thinking":
-      return THINKING_MS;
-    case "selecting":
-      return SELECTING_MS;
-    case "checking":
-      return CHECKING_MS;
-    case "finding":
-      return FINDING_MS;
-    case "drafting":
-      return DRAFTING_MS;
-    case "idle":
-    case "awaiting":
-    case "complete":
-    case "skipped":
-    case "interrupted":
-    case "failed":
-      return undefined;
-  }
-  return stage satisfies never;
+  return STAGE_CONFIG[stage].durationMs;
 }
 
 /** Whether the current stage advances on its own via `tick`, without waiting for a user
@@ -105,30 +112,10 @@ export function isAutoStage(stage: Stage): boolean {
   return durationOf(stage) !== undefined;
 }
 
-// The stage a duration-driven stage rolls into once its time is up. `checking` forks: a scenario
-// that left a child `failed` ends the run there rather than moving on to a finding it can't
-// honestly write - never a finding, question or draft built from data that never arrived.
 function nextStage(stage: Stage, anyChildFailed: boolean): Stage {
-  switch (stage) {
-    case "thinking":
-      return "selecting";
-    case "selecting":
-      return "checking";
-    case "checking":
-      return anyChildFailed ? "failed" : "finding";
-    case "finding":
-      return "awaiting";
-    case "drafting":
-      return "complete";
-    case "idle":
-    case "awaiting":
-    case "complete":
-    case "skipped":
-    case "interrupted":
-    case "failed":
-      return stage;
-  }
-  return stage satisfies never;
+  const config = STAGE_CONFIG[stage];
+  if (anyChildFailed && config.nextOnChildFailure !== undefined) return config.nextOnChildFailure;
+  return config.next ?? stage;
 }
 
 function childrenAtElapsed(elapsed: number, scenario: Scenario): Record<ChildKey, ChildStatus> {
@@ -137,6 +124,20 @@ function childrenAtElapsed(elapsed: number, scenario: Scenario): Record<ChildKey
     issues:
       elapsed >= ISSUES_DONE_AT ? (scenario === "missing-issues" ? "failed" : "done") : "running",
   };
+}
+
+// A scenario that interrupts an otherwise-successful stage at a fixed elapsed time within it,
+// before the stage's own duration would let it roll forward normally.
+type ScriptedInterrupt = { stage: Stage; elapsedAt: number };
+
+function scriptedInterruptAt(stage: Stage, scenario: Scenario): ScriptedInterrupt | undefined {
+  if (stage === "thinking" && scenario === "reply-fails") {
+    return { stage: "failed", elapsedAt: THINKING_MS };
+  }
+  if (stage === "finding" && scenario === "reply-interrupted") {
+    return { stage: "interrupted", elapsedAt: FINDING_MS / 2 };
+  }
+  return undefined;
 }
 
 // Advances elapsed time within the current stage, rolling into later stages as their own
@@ -149,15 +150,9 @@ function tick(state: DemoState, dt: number): DemoState {
   let elapsed = state.elapsed + dt;
   let children = state.children;
   for (;;) {
-    if (stage === "thinking" && state.scenario === "reply-fails" && elapsed >= THINKING_MS) {
-      return { ...state, stage: "failed", elapsed: THINKING_MS };
-    }
-    if (
-      stage === "finding" &&
-      state.scenario === "reply-interrupted" &&
-      elapsed >= FINDING_MS / 2
-    ) {
-      return { ...state, stage: "interrupted", elapsed: FINDING_MS / 2, children };
+    const interrupt = scriptedInterruptAt(stage, state.scenario);
+    if (interrupt && elapsed >= interrupt.elapsedAt) {
+      return { ...state, stage: interrupt.stage, elapsed: interrupt.elapsedAt, children };
     }
     if (stage === "checking") children = childrenAtElapsed(elapsed, state.scenario);
     const duration = durationOf(stage);

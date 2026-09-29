@@ -1,21 +1,20 @@
 import type { Inline, Block } from "./quiet-prose";
 
-// One inline segment: the same four tags whether the text is still streaming in or finished
-// (ADR-140), never `dangerouslySetInnerHTML` - every value here is plain text content.
+// Every non-link kind wraps its text in one semantic tag; link is the only kind that also
+// carries an href, so it is handled on its own rather than folded into this map.
+const INLINE_TAGS: Record<Exclude<Inline["kind"], "link" | "text">, "strong" | "em" | "code"> = {
+  strong: "strong",
+  em: "em",
+  code: "code",
+};
+
+// The same tags whether the text is still streaming in or finished (ADR-140), never
+// `dangerouslySetInnerHTML` - every value here is plain text content.
 function InlineView({ segment }: { segment: Inline }) {
-  switch (segment.kind) {
-    case "text":
-      return segment.text;
-    case "strong":
-      return <strong>{segment.text}</strong>;
-    case "em":
-      return <em>{segment.text}</em>;
-    case "link":
-      return <a href={segment.href}>{segment.text}</a>;
-    case "code":
-      return <code>{segment.text}</code>;
-  }
-  return segment satisfies never;
+  if (segment.kind === "link") return <a href={segment.href}>{segment.text}</a>;
+  if (segment.kind === "text") return segment.text;
+  const Tag = INLINE_TAGS[segment.kind];
+  return <Tag>{segment.text}</Tag>;
 }
 
 function BlockView({ block }: { block: Block }) {

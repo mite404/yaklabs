@@ -10,6 +10,71 @@ function checkExplanation(status: ChildStatus | undefined): string {
   return "This check has not started. No result is available yet.";
 }
 
+function evidenceLabel(childKey: ChildKey): string {
+  return childKey === "workload" ? "Weekly workload" : "Open issues";
+}
+
+function outcomeText(child: WorkingChild | undefined): string {
+  return child?.outcome ?? checkExplanation(child?.status);
+}
+
+function EvidenceStatus({
+  child,
+  childKey,
+}: {
+  child: WorkingChild | undefined;
+  childKey: ChildKey;
+}) {
+  const status = child?.status;
+  return (
+    <div className="quiet-prose">
+      <p>
+        <strong>{evidenceLabel(childKey)}:</strong> {status ?? "pending"}.
+      </p>
+      <p>{outcomeText(child)}</p>
+    </div>
+  );
+}
+
+function WorkloadEvidence() {
+  return (
+    <CatalogCard
+      payload={{
+        ...workloadChart,
+        component: "DataTable",
+        props: { ...workloadChart.props, variant: "audit" },
+      }}
+      context="thread"
+      shareable={false}
+    />
+  );
+}
+
+function IssuesEvidence() {
+  return (
+    <>
+      <CatalogCard payload={issuesChart} context="thread" shareable={false} />
+      <div className="quiet-prose">
+        <p>
+          Median days open: Billing 2, Product 6, Access 9. A median is the middle case age in each
+          category, not the age of every case.
+        </p>
+      </div>
+    </>
+  );
+}
+
+function EvidenceChart({
+  child,
+  childKey,
+}: {
+  child: WorkingChild | undefined;
+  childKey: ChildKey;
+}) {
+  if (child?.status !== "done") return null;
+  return childKey === "workload" ? <WorkloadEvidence /> : <IssuesEvidence />;
+}
+
 function EvidenceItem({
   child,
   childKey,
@@ -21,53 +86,54 @@ function EvidenceItem({
 }) {
   return (
     <div ref={evidenceRef} className="wb-evidence-item">
-      <div className="quiet-prose">
-        <p>
-          <strong>{childKey === "workload" ? "Weekly workload" : "Open issues"}:</strong>{" "}
-          {child?.status ?? "pending"}.
-        </p>
-        <p>{child?.outcome ?? checkExplanation(child?.status)}</p>
-      </div>
-      {child?.status === "done" &&
-        (childKey === "workload" ? (
-          <CatalogCard
-            payload={{
-              ...workloadChart,
-              component: "DataTable",
-              props: { ...workloadChart.props, variant: "audit" },
-            }}
-            context="thread"
-            shareable={false}
-          />
-        ) : (
-          <>
-            <CatalogCard payload={issuesChart} context="thread" shareable={false} />
-            <div className="quiet-prose">
-              <p>
-                Median days open: Billing 2, Product 6, Access 9. A median is the middle case age in
-                each category, not the age of every case.
-              </p>
-            </div>
-          </>
-        ))}
+      <EvidenceStatus child={child} childKey={childKey} />
+      <EvidenceChart child={child} childKey={childKey} />
     </div>
   );
+}
+
+function isWorkloadLog(line: string): boolean {
+  return line.startsWith("fixture:workload") || line.startsWith("check:weekly-workload");
+}
+
+function isIssuesLog(line: string): boolean {
+  return line.startsWith("fixture:issues") || line.startsWith("check:open-issues");
+}
+
+function failedLine(child: WorkingChild | undefined, line: string): string | undefined {
+  return child?.status === "failed" ? line : undefined;
+}
+
+// A failed check has no fixture result to show, but its own status line is still worth keeping
+// so the record shows the check ran and what it found, not that it simply never happened.
+function failedLogLines(
+  workload: WorkingChild | undefined,
+  issues: WorkingChild | undefined,
+): string[] {
+  return [
+    failedLine(workload, "check:weekly-workload status=failed source=fixture"),
+    failedLine(issues, "check:open-issues status=failed source=fixture"),
+  ].filter((line): line is string => line !== undefined);
+}
+
+// Fixture and check lines for a category only appear once that category actually finished;
+// a failed or still-running category shows its status through `failedLogLines` instead.
+function logsFor(workload: WorkingChild | undefined, issues: WorkingChild | undefined): string[] {
+  const workloadDone = workload?.status === "done";
+  const issuesDone = issues?.status === "done";
+  const logs = technicalLogs.filter((line) => {
+    if (isWorkloadLog(line)) return workloadDone;
+    if (isIssuesLog(line)) return issuesDone;
+    return true;
+  });
+  return [...logs, ...failedLogLines(workload, issues)];
 }
 
 function TechnicalDetails({ checks, history }: { checks: WorkingChild[]; history: string[] }) {
   const [open, setOpen] = useState(false);
   const workload = checks.find((child) => child.key === "workload");
   const issues = checks.find((child) => child.key === "issues");
-  const logs = technicalLogs.filter((line) => {
-    if (line.startsWith("fixture:workload") || line.startsWith("check:weekly-workload"))
-      return workload?.status === "done";
-    if (line.startsWith("fixture:issues") || line.startsWith("check:open-issues"))
-      return issues?.status === "done";
-    return true;
-  });
-  if (workload?.status === "failed")
-    logs.push("check:weekly-workload status=failed source=fixture");
-  if (issues?.status === "failed") logs.push("check:open-issues status=failed source=fixture");
+  const logs = logsFor(workload, issues);
 
   return (
     <Disclosure

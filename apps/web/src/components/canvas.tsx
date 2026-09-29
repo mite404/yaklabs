@@ -78,6 +78,16 @@ type LaneActions = LaneReports & {
   onResize: (id: LaneId, px: number) => void;
 };
 
+function laneTransform(
+  landing: Landing | null,
+  drag: ReturnType<typeof useReorder>["drag"],
+  index: number,
+): string {
+  return landing !== null && index >= landing.at
+    ? "translateX(calc(var(--lane-default-width) + var(--canvas-grid)))"
+    : displacement(drag, index);
+}
+
 // The lanes with the gap after each: a lane lifts by its title bar, a gap drags its width.
 function LaneRow({
   lanes,
@@ -101,10 +111,7 @@ function LaneRow({
         width={resizing?.id === lane.id ? resizing.px : lane.width}
         lifted={reorder.drag?.move?.id === lane.id}
         style={{
-          transform:
-            landing !== null && index >= landing.at
-              ? "translateX(calc(var(--lane-default-width) + var(--canvas-grid)))"
-              : displacement(reorder.drag, index),
+          transform: laneTransform(landing, reorder.drag, index),
         }}
         handlers={reorder.laneFor(lane.id, index)}
         reports={actions}
@@ -113,10 +120,7 @@ function LaneRow({
         title={lane.title}
         resizable={!lane.collapsed}
         style={{
-          transform:
-            landing !== null && index >= landing.at
-              ? "translateX(calc(var(--lane-default-width) + var(--canvas-grid)))"
-              : displacement(reorder.drag, index),
+          transform: laneTransform(landing, reorder.drag, index),
         }}
         onResize={(px, kept) => {
           setResizing(kept ? null : { id: lane.id, px });
