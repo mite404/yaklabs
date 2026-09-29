@@ -173,8 +173,14 @@ function useSettle(
   }, [panel, instant, dispatch]);
 }
 
-// The slide back ends in the rail: on its transition's end, or by a fallback if that never
-// comes.
+// Whether a transition that just ended on the panel was its last: the slide and the fade end
+// together today (index.css), and neither may hand the panel to the rail while the other runs.
+function lastToEnd(event: TransitionEvent<HTMLDivElement>): boolean {
+  return event.target === event.currentTarget && event.currentTarget.getAnimations().length === 0;
+}
+
+// The slide back ends in the rail: once the panel's last transition ends, or by a fallback if
+// that never comes.
 function useLeave(phase: PeekPhase, dispatch: Dispatch<PeekAction>) {
   useEffect(() => {
     if (phase !== "leaving") return () => {};
@@ -186,7 +192,7 @@ function useLeave(phase: PeekPhase, dispatch: Dispatch<PeekAction>) {
     };
   }, [phase, dispatch]);
   return (event: TransitionEvent<HTMLDivElement>) => {
-    if (event.target === event.currentTarget && phase === "leaving") dispatch({ type: "left" });
+    if (phase === "leaving" && lastToEnd(event)) dispatch({ type: "left" });
   };
 }
 
