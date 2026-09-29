@@ -6,7 +6,20 @@ import { Menu } from "./Menu";
 const meta = {
   title: "Foundations/Menu",
   component: Menu,
-  parameters: { layout: "centered" },
+  parameters: {
+    layout: "centered",
+    // The audit script moves each control and expects the story to change; placement only shows
+    // once the menu opens, so it is checked by opening it instead.
+    controlsAudit: { onInteraction: ["placement"] },
+  },
+  argTypes: {
+    // Placement applies when the menu opens: change it, then open the menu to see it move.
+    placement: { control: "inline-radio", options: ["above-start", "below-end"] },
+    // The items carry icons and handlers, and the label only names the list for a screen reader.
+    items: { table: { disable: true } },
+    label: { table: { disable: true } },
+    trigger: { table: { disable: true } },
+  },
 } satisfies Meta<typeof Menu>;
 export default meta;
 type Story = StoryObj<typeof meta>;
@@ -60,4 +73,4 @@ export const WithDisabledItem: Story = {
       },
     ],
   },
-} as Story;
+};

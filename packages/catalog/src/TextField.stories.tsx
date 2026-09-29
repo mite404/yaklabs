@@ -60,6 +60,7 @@ const meta = {
   title: "Foundations/Text field",
   component: FieldStates,
   parameters: { layout: "fullscreen" },
+  argTypes: { surface: { control: "inline-radio", options: ["paper", "attention"] } },
 } satisfies Meta<typeof FieldStates>;
 export default meta;
 type Story = StoryObj<typeof meta>;

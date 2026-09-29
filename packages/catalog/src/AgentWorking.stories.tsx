@@ -19,7 +19,7 @@ const meta = {
     pattern: { control: "inline-radio", options: ["wave", "orbit"] },
     cells: { control: "inline-radio", options: [4, 6] },
     // Only a screen reader hears it; a control that changes nothing on screen reads as broken.
-    label: { control: false },
+    label: { table: { disable: true } },
   },
   args: { duration: 1500, pattern: "wave", cells: 4 },
   decorators: [(Story) => <Stage>{Story()}</Stage>],

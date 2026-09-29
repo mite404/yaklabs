@@ -52,7 +52,8 @@ export type TriggerProps = {
   ref: Ref<HTMLButtonElement>;
   "aria-haspopup": "menu";
   "aria-expanded": boolean;
-  "aria-controls": string;
+  /** The open list's id; absent while closed, when the list does not exist to point at. */
+  "aria-controls": string | undefined;
   disabled: boolean;
   onClick: () => void;
 };
@@ -131,7 +132,7 @@ export function Menu({
         ref: button,
         "aria-haspopup": "menu",
         "aria-expanded": open,
-        "aria-controls": id,
+        "aria-controls": open ? id : undefined,
         disabled,
         onClick: () => {
           if (!open && button.current) setStyle(positionFor(button.current, placement));

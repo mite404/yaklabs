@@ -17,11 +17,13 @@ function Section({ startOpen }: { startOpen: boolean }) {
     >
       <Disclosure
         open={open}
-        onToggle={() => setOpen(!open)}
+        onToggle={() => {
+          setOpen(!open);
+        }}
         summary={<strong style={{ fontSize: 13 }}>How I got this</strong>}
       >
         <p style={{ margin: "12px 16px 0", fontSize: 13 }}>
-          Read last week's orders, grouped them by day, and subtracted refunds.
+          Read last week&apos;s orders, grouped them by day, and subtracted refunds.
         </p>
       </Disclosure>
     </div>
@@ -32,6 +34,9 @@ const meta = {
   title: "Foundations/Disclosure",
   component: Section,
   parameters: { layout: "centered" },
+  // startOpen seeds the state once, so a new value starts a fresh section rather than being
+  // ignored by the one already open or folded.
+  render: (args) => <Section key={String(args.startOpen)} {...args} />,
 } satisfies Meta<typeof Section>;
 export default meta;
 type Story = StoryObj<typeof meta>;

@@ -1974,3 +1974,38 @@ during a blackout.
 
 Senior-engineer takeaway: when motion must stay in sync, derive every actor from one clock. A
 second keyframe track would drift the moment someone changed one duration and not the other.
+
+### A knob on the desk proves nothing: audit every control
+
+Storybook writes a control for every prop a component takes, so the Controls panel fills itself.
+That is the trap: a control's presence says nothing about whether it does anything. An audit of
+all 62 stories found 92 dead ones. Some only seeded state once (a draft, a start-open flag), some
+were raw data or slots only the host app can fill, one needed a stylesheet the story never
+loaded (a catalog card's thread look), and one started unticked while the component treated
+"unset" as on, so the first click set what was already true.
+
+```js
+// .agents/skills/verify-storybook/scripts/audit-controls.mjs: for each visible control, move it
+// and compare the story before and after, in the DOM and in pixels.
+const before = await snapshot(page); // → { dom, pixels }
+await setArgs(page, storyId, { [name]: value }); // the Controls panel's own message
+const after = await snapshot(page);
+if (before.dom === after.dom) findings.push({ kind: "dead", name }); // nothing moved
+```
+
+```mermaid
+flowchart LR
+  P[Every prop] --> I[Storybook infers a control]
+  I --> Q{Does moving it change the screen?}
+  Q -- yes --> K[Keep, with a real starting value]
+  Q -- only on click or drag --> H[Keep, mark it for a hand check]
+  Q -- no --> X[Hide the row: table disable]
+```
+
+It is a sound mixer with a fader for every channel in the building. Before a show you push each
+one and listen, and tape over the ones wired to nothing, because a guest who reaches for a dead
+fader decides the whole desk is broken.
+
+Senior-engineer takeaway: generated surfaces need an owner. When a tool creates UI for you, the
+question is not "does it render" but "does each part do what it says", and only a check that
+moves every part can answer it.
