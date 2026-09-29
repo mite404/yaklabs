@@ -33,14 +33,15 @@ const LANE_WIDTH = "min(calc(var(--canvas-grid) * 31), calc(100% - 48px))";
 
 // The lane's collapse, in the container it folds (ADR-134): the thread's or the card's title
 // bar while it is open, the head of its strip while it is collapsed. It says what it will do.
-// In the strip its hover fill sits 3px from the strip's inner edge on every side (the strip is
-// 34px inside its border, the button 28), instead of nearly touching the sides.
+// In the strip it is 24px, not the bar's 28: the strip's 14px corner arc curves in under a 28px
+// fill's top corners (1.5px apart, against 4px at the sides), so the smaller fill sits 6px from
+// the strip's inner edge on the sides and 5.5px from the arc, its focus ring 3.5px.
 function CollapseToggle({ collapsed, onClick }: { collapsed: boolean; onClick: () => void }) {
   return (
     <Button
       variant="ghost"
       size="icon-sm"
-      className="rounded-[var(--radius)] text-soft-ink hover:text-ink"
+      className={`rounded-[var(--radius)] text-soft-ink hover:text-ink ${collapsed ? "size-6" : ""}`}
       aria-label={collapsed ? "Expand lane" : "Collapse lane"}
       data-lane-toggle=""
       onClick={onClick}
@@ -70,12 +71,13 @@ function CloseButton({ title, onClick }: { title: string; onClick: () => void })
 // A collapsed lane (ADR-133): a slim strip filling the lane's article (its whole height, or a
 // card's half, see `heightOf`) with its expand at the head, the grip always shown beneath, and
 // the title turned to read top to bottom, clipped with an ellipsis. The whole strip but its
-// expand takes hold of the lane (lane-reorder.ts).
+// expand takes hold of the lane (lane-reorder.ts). The head starts 7px down (`pt-[7px]`) so the
+// expand's fill clears the 14px corner arc; the grip and title stay where they were.
 function LaneStrip({ title, toggle }: { title: string; toggle: ReactNode }) {
   return (
     <div
       data-lane-strip=""
-      className="lane-strip flex min-h-0 flex-1 flex-col items-center gap-2 rounded-[var(--radius-card)] border border-hairline bg-paper pt-[3px] pb-3"
+      className="lane-strip flex min-h-0 flex-1 flex-col items-center gap-2 rounded-[var(--radius-card)] border border-hairline bg-paper pt-[7px] pb-3"
     >
       {toggle}
       <span data-lane-strip-grip="" aria-hidden="true" className="lane-strip-grip" />
