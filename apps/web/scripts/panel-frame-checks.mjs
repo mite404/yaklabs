@@ -13,12 +13,15 @@ const FOOT_PX = 16;
 export const WIDTHS = [208, 256, 400];
 // The instants a slide is held at: its start, every 40ms, and a millisecond before it ends.
 const FRAMES = [0, 40, 80, 120, 160, 219];
-// The instant an unpin (200ms, sidebar.tsx) is held at.
+// The instant an unpin (250ms, index.css) is held at.
 const MID_UNPIN_MS = 100;
 // How far a glyph may drift, in CSS px, and how many of the rail's pixels may differ from rest by
 // more than 8 levels (antialiasing), as a share.
 const DRIFT_PX = 0.5;
 const PIXELS_OFF = 0.001;
+// The rail's right edge, the column that carries the docked divider (index.css), which P35
+// reads; the rail's pixels are compared without it.
+const DIVIDER_PX = 1;
 
 // Runs in the page: the rail's box against the window's body, its places' glyphs, the avatar's
 // centre and distance from the foot, how many accounts there are and whether the old echo is
@@ -51,11 +54,11 @@ function drift(rest, now) {
   return Math.max(...a.map((value, i) => Math.abs(value - b[i])));
 }
 
-// The rail's look now: its reading and its pixels.
+// The rail's look now: its reading and its pixels, short of the divider's column.
 async function railNow(page) {
   const look = await page.evaluate(readRail);
   const [x, y, width, height] = look.box;
-  const png = await page.screenshot({ clip: { x, y, width, height } });
+  const png = await page.screenshot({ clip: { x, y, width: width - DIVIDER_PX, height } });
   return { look, png: png.toString("base64") };
 }
 
@@ -196,7 +199,8 @@ async function railHolds(browser, theme) {
 /** The workspace lever's checks of the rail as the panel moves, by id; panel-checks.mjs registers them. */
 export const panelFrameChecks = {
   // The rail holds (ADR-139): 56px at the window's inner left, the body's full height, its
-  // glyphs and avatar on the same pixels, and its pixels as at rest (antialiasing aside), with
+  // glyphs and avatar on the same pixels, and its pixels as at rest (antialiasing aside, and its
+  // right edge's column, the docked divider's, which P35 reads), with
   // the panel closed, docked at 208, 256 and 400px, at every held frame of a peek out and back,
   // and halfway through an unpin; one account, and no echo of the rail beneath the panel.
   async P29(browser) {
