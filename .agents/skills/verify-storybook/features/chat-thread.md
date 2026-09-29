@@ -57,8 +57,9 @@ Preconditions:
   slider and press ArrowRight: its value text becomes `Operating profit` and the text reads
   `Operating profit was $34.1k`. ArrowLeft returns to gross.
 - **Reading tools.** Load `thread-reading-tools--overview` (`Thread/Reading tools`).
-  `group "Reading tools"` holds `button "Search this thread"` and `button "Your requests"`.
-  Click Your requests: `menu "Your requests"` lists one `menuitem` per request, e.g.
+  `group "Reading tools"` holds `button "Search this thread"`, and `button "Your requests"`
+  once the pointer is on the bar. Click Your requests: `menu "Your requests"` lists one `menuitem`
+  per request, e.g.
   `Which day had t…9:04` (it opens upward, from the bar above the compose box); pick one and that
   turn gets `data-flash` and lands centred. Alt-click
   the button: no menu, the latest request glows. Click Search: `searchbox "Search this thread"`
@@ -81,9 +82,10 @@ Preconditions:
   `aria-posinset` and `aria-setsize` so they count all three rows. Its `data-selected` still marks
   the chosen row. If you touch `AwaitingInputCard`, re-run `pnpm test:stories` and re-read this
   recipe's handles against the new markup.
-- The reading tools sit at `opacity: 0` until the pointer is on the thread (fine pointers only),
-  so a Playwright `visible` wait on them times out and shots without a hover do not show them.
-  Hover `.thread-scroll`, or wait for `state: "attached"`.
+- The reading tools rest as `button "Search this thread"` alone (fine pointers only):
+  `button "Your requests"` is folded away and hidden, so `getByRole` cannot find it until the
+  pointer is on the bar. Hover Search first (the stories' `unfold` helper), or Tab to it.
+  `FoldsToSearch` proves the fold; a touch screen keeps the bar unfolded.
 - A jump to a turn near either end cannot centre it: the scroll stops at the end. Assert "in
   full view at that end" there, as `expectLandedOn` in `ReadingTools.stories.tsx` does.
 - `--dock-space` is set from JavaScript, so the compose box position depends on a rendered dock.

@@ -1075,6 +1075,18 @@ area lets the arrow keys scroll it, so nobody had seen that a thread of plain wo
 keyboard nothing to hold. Chats on the main route are exactly that. The turns now take a tab
 stop as `region "Messages"` once there are any.
 
+### A bar that never heard the pointer leave
+
+The reading tools fold to one Search button and unfold while the pointer is on them. Pick a
+request from the list with the mouse, move away, and the bar stayed open. The list lives inside
+the bar, so the pointer was "in" the bar while picking; the pick then removed the list, and the
+node under the pointer went with it. A browser sends "pointer left" only as the pointer crosses an
+edge, and a node that vanishes under it crosses nothing, so the bar never heard it go. It is a
+boom mic still hot after the actor exits through a set wall that was struck mid-take: nobody
+walked past the mic, so nobody cut it. While unfolded, the bar now also listens for any pointer
+move on the page and folds on the first one outside it. The story that proves it failed on the
+old code before it passed on the new.
+
 ### Three turns glowing at once
 
 Stepping quickly through search matches left a trail: each jump started its own 1.2s glow and

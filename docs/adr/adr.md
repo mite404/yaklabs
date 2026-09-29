@@ -1823,8 +1823,16 @@ above the compose box, its right edge on the box's and 8px clear of it, and 8px 
 question or recap when one is up (the dock learns `--dock-space` from the panel). Its list of
 requests opens upward. It floats over the conversation's resting gap, so the newest turn still
 rests 20px above the box (pillar 12), and while the bar shows it covers that turn's bottom-right
-corner. Reserving room for it instead, so the turns rest 20px above the bar, was shown to Ethan
-side by side and awaits his call.
+corner.
+Amended again the same day (Ethan): the float stays. The bar no longer fades with the pointer on
+the thread; it rests as one Search button and unfolds leftward to show every tool while the
+pointer is on it, a keyboard is in it (when the last input was not a pointer, ADR-053), or search
+or the list of requests is open, so the button under the pointer never moves. The fold clips its
+track from 0fr to 1fr over 150ms on the strong ease-out, and the bar's focus rings sit inside
+their buttons so the clip cannot cut them. A touch screen has no hover, so it keeps the bar
+unfolded. The pointer state comes from the bar's pointer events, not CSS `:hover`, so a story can
+prove it; the first move outside the bar also folds it, since a list that closes under the
+pointer leaves the bar no leave event.
 The turns now take a tab stop (`region "Messages"`) once there are any, with the focus ring
 inside the panel's clip, so a keyboard can scroll a thread of plain words; axe had flagged it on
 the first text-only fixture. The Menu primitive gained an item `id` (two requests can share a
