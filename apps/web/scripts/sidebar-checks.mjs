@@ -10,8 +10,8 @@ const DESK = { width: 1440, height: 900 };
 export const SLIDE_MS = 220;
 /** The pin and the unpin by the toggle, in ms (index.css). */
 export const PIN_MS = 250;
-/** The one curve the peek's slide and the pin share (index.css, Ethan's sketch). */
-export const PANEL_EASE = "cubic-bezier(0.34, 1, 1, 1)";
+/** The one curve the peek's slide and the pin share (index.css, Ethan's After Effects graph). */
+export const PANEL_EASE = "cubic-bezier(0.17, 1.02, 0.58, 1)";
 // The last share of the panel's travel back, where the tail fade may dim it as it lands.
 const LANDING_SHARE = 0.05;
 /** How long the pointer rests before the peek opens, in ms (peek.ts). */

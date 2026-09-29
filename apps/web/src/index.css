@@ -83,11 +83,11 @@
 }
 
 /* The projects panel's motion (ADR-139, design pillars rule 26): one curve for the peek and the
-   pin, fast out of the gate and easing into place (Ethan's sketch, cubic-bezier(0.34, 1.11, 1,
-   1), its first handle held at 1 so the panel never passes its mark). The peek slides in 220ms,
-   the pin by the toggle in 250ms (Ethan). */
+   pin, a fast acceleration into a long, smooth settle, fitted to the value graph of Ethan's After
+   Effects example (its handles at 17% and 58% of the time). Half the travel is done by 13% of the
+   time and 90% by 43%. The peek slides in 220ms, the pin by the toggle in 250ms (Ethan). */
 :root {
-  --panel-ease: cubic-bezier(0.34, 1, 1, 1);
+  --panel-ease: cubic-bezier(0.17, 1.02, 0.58, 1);
   --panel-peek: 220ms;
   --panel-pin: 250ms;
 }
