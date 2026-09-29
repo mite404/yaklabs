@@ -14,7 +14,7 @@ away, and a card that asks the user a question when the agent is waiting on them
 - `thread-interactive` renders an interactive card (the profit slider) inside the thread.
 - `thread-fallbacks` shows the refusal notice in context.
 - `thread-narrow` lays all of this out in a narrow panel.
-- `thread-reading` searches the thread and jumps to any request the user sent (ADR-139).
+- `thread-reading` searches the thread and jumps to any request the user sent (ADR-143).
 
 ## How to get to it (user POV)
 
