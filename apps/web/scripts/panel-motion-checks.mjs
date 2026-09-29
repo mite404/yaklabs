@@ -1,4 +1,4 @@
-// Checks how the projects panel's rows and edge move through the toggle (ADR-139), on a desktop
+// Checks how the projects panel's rows and edge move through the toggle (ADR-143), on a desktop
 // window with motion on: the rows through a pin and an unpin, and the edge through a pin from a
 // peek, in both themes.
 // oxlint-disable no-await-in-loop -- one pointer drives one page, so each step waits for the last

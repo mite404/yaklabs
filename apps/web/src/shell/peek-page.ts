@@ -1,6 +1,6 @@
 import type { PeekIntent } from "./peek";
 
-// The page's side of the peek (ADR-139): where the pointer, keys, menus and focus meet its
+// The page's side of the peek (ADR-143): where the pointer, keys, menus and focus meet its
 // timing (peek.ts). The React side that owns it is sidebar-peek.tsx.
 
 // The title bar's toggle, and the projects panel that slides.

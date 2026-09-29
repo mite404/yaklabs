@@ -32,7 +32,7 @@ function Workspace({ children }: { children: ReactNode }) {
 /**
  * The app drawn as a desktop window (ADR-094): a rounded frame on a desk of its own with a
  * margin around it, full-bleed on a narrow screen (ADR-111). The green title bar runs its whole
- * width (ADR-110); below it, the rail of places (ADR-139), then the stage: the projects panel
+ * width (ADR-110); below it, the rail of places (ADR-143), then the stage: the projects panel
  * (shadcn's sidebar-16 pattern) and, inset like Kay's content pane, the workspace. The stage
  * clips at the rail's edge, the gate the panel slides out from behind when it peeks.
  */

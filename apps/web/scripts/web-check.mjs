@@ -1450,7 +1450,7 @@ try {
     },
   );
 
-  // A phone has no rail (ADR-139): its drawer is one labelled column, the places as rows with
+  // A phone has no rail (ADR-143): its drawer is one labelled column, the places as rows with
   // the Lab's name in view, then the projects, then the one account at its foot.
   const drawerIsOneColumn = (width) =>
     onOwnPage(

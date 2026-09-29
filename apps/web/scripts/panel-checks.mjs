@@ -215,7 +215,7 @@ const focusChecks = {
     return { ok: results.every((r) => r.ok), detail: results.map((r) => r.note).join("; ") };
   },
 
-  // Keyboard focus on a rail place never holds a peek out (ADR-139): the rail stays either way.
+  // Keyboard focus on a rail place never holds a peek out (ADR-143): the rail stays either way.
   // Escape from a rail place leaves focus there; from the panel it hands focus to the toggle,
   // since the panel's rows leave with it.
   async P28(browser) {

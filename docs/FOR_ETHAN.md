@@ -153,7 +153,7 @@ extend from the collapsed rail instead, so the icons stay navigation while the t
 The rail became its own column that never moves, and the projects became a second column that
 docks beside it or slides out from behind its edge. Think of a camera gate: the rail is the gate's
 frame, bolted to the camera, and the panel is film passing behind it. The frame is never in the
-way of the picture, and the picture never slides over the frame (ADR-139, Proposed until Ethan
+way of the picture, and the picture never slides over the frame (ADR-143, Proposed until Ethan
 answers its questions).
 
 ## 2. Cast & Crew
@@ -187,7 +187,7 @@ The first entries are ideas from before any code existed; the rest are parts of 
   tokens, so anything an agent builds comes out in the house colours (ADR-082).
 - **The rail** (`apps/web/src/shell/rail.tsx`) is the camera gate's frame. It was the corridor
   outside the theatre, then the sidebar folded to 56px; now it is its own 56px column, drawn in
-  every state and never moving (ADR-139). It keeps the rooms, a navigation landmark named Places:
+  every state and never moving (ADR-143). It keeps the rooms, a navigation landmark named Places:
   the Kay mark, drawn from the polygon meetkay.ai declares (ADR-095), the five rooms still being
   built, Documentation and Lab, each naming itself in an ink pill whatever the panel is doing.
   The cloakroom, the account with the light switch (the theme) in its menu, sits at its foot.
@@ -407,12 +407,12 @@ The first entries are ideas from before any code existed; the rest are parts of 
   is a `SidebarMenuAction`. Each would otherwise have been a primitive to build, style and make
   accessible by hand, and AGENTS.md already says new components come from shadcn. The project rows
   follow Conductor's: "name >" when folded, and no chevron on an open one until the pointer is on
-  it (ADR-093). ADR-139 later took the rail out of it, and the Sidebar is now `offcanvas`.
+  it (ADR-093). ADR-143 later took the rail out of it, and the Sidebar is now `offcanvas`.
 - **Our own rail beside shadcn's offcanvas Sidebar, not sidebar-09.** shadcn has a block with a
   rail and a panel nested inside one icon Sidebar. It would have needed slot overrides and an
   icon-group trick for the rail, turned `--sidebar-width` into a sum of two widths, and kept the
   pin that pops and reflows the rows. A plain column for the rail and the stock offcanvas panel
-  beside it gave each part one owner and kept the vendored primitive nearly as shipped (ADR-139).
+  beside it gave each part one owner and kept the vendored primitive nearly as shipped (ADR-143).
 - **One SidebarProvider, not two.** A second provider for the rail looks tidy until you read the
   vendored one: it hard-codes the `sidebar_state` cookie and a window-wide Cmd/Ctrl+B handler, so
   two providers would both toggle on one key press, and every `useSidebar()` would answer from
@@ -2603,3 +2603,42 @@ utilities that turn transitions off for a key press, a drag and reduced motion. 
 gets its own `transition: none` again, and P20 and P21 check that a key, a drag and reduced
 motion still move nothing. The film habit underneath: a door frame stays dressed while the dolly
 moves past it, and is struck only once the shot is over.
+
+### Quiet prose is an editing decision, not another model
+
+The interview demo at `/demo/weekly-brief` uses an authored conversation. Think of its content as
+a script with emphasis already marked, rather than raw footage that another editor must interpret.
+`quiet-prose.ts` holds paragraphs, headings, lists, and inline text segments. `timeline.ts` reveals
+those segments by word count. `QuietProse.tsx` renders the same semantic elements before and after
+the reveal finishes, so bold does not wait for a closing pair of Markdown asterisks.
+
+This is deliberately not a live Markdown solution. A real provider would need a parser and tests
+for unfinished syntax. The demo proves the reading treatment without claiming that integration:
+15px Inter, 24px lines, 16px paragraph gaps, genuine italics, and 600-weight emphasis.
+
+The finding stays on the transcript. Evidence sits behind **Work details**, and technical records
+sit one disclosure deeper. Progress narration can change without deleting the record of earlier
+work. Failed checks never display a successful chart. An interrupted reply keeps its partial text,
+labels it incomplete, and offers a retry without duplicating the user's question. This preservation
+lasts only for the mounted demo session, not a page reload.
+
+Three isolated CSS candidates challenged the spacing. A separate judge preferred extra space
+before the decision and final draft, but rejected a negative margin and a selector that could
+never match. We kept one 24px rhythm between turns, 16px from prose to evidence, and a 20px resting
+gap above the footer. The browser check in `apps/web/scripts/brief-check.mjs` exercises the actual
+buttons, disclosures, pause, retry, narrow layout, and rendered fonts.
+
+One blooper illustrates why screenshots matter: adding a semantic `main` inherited the catalog's
+page margins and let the transcript overlap the controls. TypeScript could not catch that. A real
+Replay click failed, and a geometry assertion now checks that the transcript stays above the footer.
+
+The senior-engineer lesson is to separate three claims: the words are readable, the interface
+explains what happened, and the runtime is durable. This demo demonstrates the first two in named
+scenarios. It does not pretend to prove the third. The remaining promises are tracked in
+`docs/demo-ui-checklist.md`.
+
+CI caught another problem before merge: the page combined too many conditional rendering paths
+in one function. The transcript, evidence, and playback controls now render through separate
+components. A typed stage table keeps durations and transitions together, and the word reveal
+passes its remaining budget through blocks, list items, and inline text. The audit thresholds stay
+unchanged. Existing tests and the browser scripts check that this restructuring preserves the demo.

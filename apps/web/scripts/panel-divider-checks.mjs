@@ -1,4 +1,4 @@
-// Checks the line that parts the rail from the projects panel (ADR-139), on a desktop window:
+// Checks the line that parts the rail from the projects panel (ADR-143), on a desktop window:
 // docked by the toggle, closed and peeking, and through a pin and an unpin, in both themes.
 import { openDesk, peek, PIN_MS } from "./sidebar-checks.mjs";
 

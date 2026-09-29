@@ -1,4 +1,4 @@
-// Checks that the rail holds while the projects panel moves beside it (ADR-139), on a desktop
+// Checks that the rail holds while the projects panel moves beside it (ADR-143), on a desktop
 // window with motion on: at rest, docked at several widths, and at held frames of the peek and
 // of an unpin. It also lends its frame holding to the panel's edge checks.
 // oxlint-disable no-await-in-loop -- one pointer drives one page, so each step waits for the last
@@ -198,7 +198,7 @@ async function railHolds(browser, theme) {
 
 /** The workspace lever's checks of the rail as the panel moves, by id; panel-checks.mjs registers them. */
 export const panelFrameChecks = {
-  // The rail holds (ADR-139): 56px at the window's inner left, the body's full height, its
+  // The rail holds (ADR-143): 56px at the window's inner left, the body's full height, its
   // glyphs and avatar on the same pixels, and its pixels as at rest (antialiasing aside, and its
   // right edge's column, the docked divider's, which P35 reads), with
   // the panel closed, docked at 208, 256 and 400px, at every held frame of a peek out and back,
