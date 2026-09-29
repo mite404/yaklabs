@@ -90,6 +90,8 @@
   --panel-ease: cubic-bezier(0.17, 1.02, 0.58, 1);
   --panel-peek: 220ms;
   --panel-pin: 250ms;
+  /* The rows' fade as the panel closes: at 0 by the curve's 75% mark, 27% of the peek's 220ms. */
+  --rows-leave: 60ms;
 }
 /* The pin and the unpin by the toggle: the gap that pushes the workspace and the panel sliding
    behind the rail move on one clock with the title bar's lead that carries the tabs
@@ -184,20 +186,31 @@
 [data-slot="sidebar"][data-peek="leaving"] > [data-slot="sidebar-container"] {
   opacity: 0;
 }
-/* Back, the rows leave before the panel does, as a title's type goes before its bar: the panel's
-   content fades from the slide's first frame on the fade-in's own 120ms and curve, so no row's
-   end ("18", an ellipsis, a "+") is left in the sliver beside the rail as the panel lands, where
-   it read as text outside the panel (Ethan). The paper, its hairline and its shadow stay solid,
-   so the slide still reads. A pointer that returns brings the rows back on the same clock. */
-[data-slot="sidebar"][data-peek] [data-slot="sidebar-inner"] > * {
+/* Closing, the rows leave before the panel does, as a title's type goes before its bar, on the
+   peek's way back and on an unpin alike: they fade from the first frame and are at 0 once the
+   panel has covered three quarters of its way home (--rows-leave), so no row, or row's end ("18",
+   an ellipsis, a "+"), is still there as the panel lands (Ethan). The paper, its edge and the
+   workspace's border stay solid, so the slide still reads. Opening, the rows are there from the
+   first frame, as the panel is; a pointer that returns mid-way brings them back on the peek's
+   fade-in. Closed, they rest at 0 behind the rail. */
+[data-slot="sidebar"][data-state="collapsed"] [data-slot="sidebar-inner"] > * {
+  opacity: 0;
+  transition: opacity var(--rows-leave) cubic-bezier(0.23, 1, 0.32, 1);
+}
+[data-slot="sidebar"][data-peek="entering"] [data-slot="sidebar-inner"] > * {
+  opacity: 1;
+  transition: none;
+}
+[data-slot="sidebar"][data-peek="open"] [data-slot="sidebar-inner"] > * {
+  opacity: 1;
   transition: opacity 120ms cubic-bezier(0.23, 1, 0.32, 1);
 }
-[data-slot="sidebar"][data-peek="leaving"] [data-slot="sidebar-inner"] > * {
-  opacity: 0;
+[data-slot="sidebar-wrapper"][data-instant] [data-slot="sidebar-inner"] > * {
+  transition: none;
 }
 @media (prefers-reduced-motion: reduce) {
   [data-slot="sidebar"][data-peek] > [data-slot="sidebar-container"],
-  [data-slot="sidebar"][data-peek] [data-slot="sidebar-inner"] > * {
+  [data-slot="sidebar"] [data-slot="sidebar-inner"] > * {
     transform: none;
     transition: none;
   }

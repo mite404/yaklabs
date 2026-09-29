@@ -15,7 +15,7 @@ export const PANEL_EASE = "cubic-bezier(0.17, 1.02, 0.58, 1)";
 // The last share of the panel's travel back, where the tail fade may dim it as it lands.
 const LANDING_SHARE = 0.05;
 // The last share of the way back in which no row may show, and how faint "no row" is.
-const ROWLESS_SHARE = 0.1;
+const ROWLESS_SHARE = 0.25;
 const ROWLESS_OPACITY = 0.02;
 /** How long the pointer rests before the peek opens, in ms (peek.ts). */
 export const OPEN_MS = 80;
@@ -553,8 +553,8 @@ export const sidebarChecks = {
   // panel's width). The stage clips the panel at the rail's edge, so the way back stays at 0.9 or
   // more until its last 5% of travel, and fades out only as it lands. On the way out the panel
   // and its rows are at full strength from the first frame, as a pin's are (Ethan); on the way
-  // back the rows have faded before the last 10% of the trip, so no row's end is left in the
-  // sliver beside the rail (Ethan). Notes the
+  // back the rows are gone for the last quarter of the trip, so no row is left as it lands
+  // (Ethan). Notes the
   // share of the 40px past the rail that the landing frame would change at full strength, the
   // tail fade's job (design pillars, rule 26).
   async P24(browser) {

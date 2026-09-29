@@ -244,8 +244,8 @@ const focusChecks = {
 /**
  * The workspace lever's checks of the projects panel beside the rail, by id: where focus goes,
  * how the rail holds (panel-frame-checks.mjs), where the panel sits (panel-edge-checks.mjs),
- * the line that parts it from the rail (panel-divider-checks.mjs), how its edge moves through
- * the toggle (panel-motion-checks.mjs) and what reaches it
+ * the line that parts it from the rail (panel-divider-checks.mjs), how its rows and edge move
+ * through the toggle (panel-motion-checks.mjs) and what reaches it
  * (panel-reach-checks.mjs).
  * @throws {Error} When two of them name a check with the same id.
  */
