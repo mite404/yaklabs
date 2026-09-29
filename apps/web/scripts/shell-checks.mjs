@@ -132,7 +132,12 @@ function selectedTab(page) {
 
 async function scenarioLook(browser, name) {
   const { page } = await openApp(browser, `${BASE}/?scenario=${name}`, { ready: null });
-  await sidebarDrawn(page);
+  await sidebarDrawn(page).catch(async (error) => {
+    // Which scenario never drew its sidebar, and what the page held instead, so a timeout under
+    // load says where it stalled.
+    const held = await page.evaluate(() => document.body.innerText.slice(0, 160));
+    throw new Error(`${name}: sidebar not drawn (${String(error).split("\n")[0]}); page: ${held}`);
+  });
   await page.waitForTimeout(1500);
   const png = await page.screenshot();
   const look = {
