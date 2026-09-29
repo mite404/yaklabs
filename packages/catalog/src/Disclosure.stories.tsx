@@ -12,7 +12,9 @@ function Section({ startOpen }: { startOpen: boolean }) {
         background: "var(--paper)",
         border: "1px solid var(--hairline)",
         borderRadius: 12,
-        padding: "4px 0 12px",
+        // The 12px under the body belongs to the open state; folded, the header gets the same
+        // 4px above and below, as .awaiting:not([data-open]) does in the card.
+        padding: open ? "4px 0 12px" : "4px 0",
       }}
     >
       <Disclosure
