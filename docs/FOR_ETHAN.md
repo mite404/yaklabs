@@ -1013,6 +1013,13 @@ The first entries are ideas from before any code existed; the rest are parts of 
   had left a snapshot commit, so nothing was lost. Now commits of partial work are made in a
   clean second checkout, then the branch is moved onto them, and the shared tree is never
   touched. Lesson: a tool that rewrites your working tree needs a tree nobody else is using.
+- **The phone's "⋯" that the check could not tap.** The tab's new "⋯" carries the same name,
+  Thread actions, as the phone's own "⋯" in the top row. On a phone the tab strip is hidden but
+  still mounted, so `querySelector` found the tab's copy first: zero pixels wide, so "takes a
+  tap" failed while the real button sat fine at the right edge. People never met it (a hidden
+  element takes no tap and no screen reader), so the check was fixed, not the app: it now asks
+  for the "⋯" that is not inside a tab (`:not(.chrome-pill *)`). Lesson: a shared accessible name
+  is right for people and ambiguous for a selector; scope the query to the place you mean.
 
 ## 5. Director's Commentary
 
@@ -1894,3 +1901,40 @@ plate in first.
 Senior-engineer takeaway: when a look depends on order, make the order the design. The three looks
 share one DOM and one stack; the attribute on `<html>` picks the plate, and nothing else moves.
 
+### Pull the arithmetic out of the scene
+
+A component is an action: it reads the shell, renders, and wires clicks. Tucked inside it is often
+a small calculation, a rule that turns data into data. Left inline, the rule gets copied: the
+Share item in the thread menu and the new Share button in the title bar both spelled out
+"Private, or Until Fri 9:00" by hand. Lifted out, it has one name and one home.
+
+```tsx
+// apps/web/src/shell/share-menu.tsx: the rule, pure: a share (or none) in, words out
+function shareStatus(share: ThreadShare | undefined): string {
+  return share === undefined ? "Private" : `Until ${wakeText(new Date(share.expiresAt), "menu")}`;
+}
+
+// Both scenes now read the same line from the script
+const share = liveShare(shell, thread); // → ThreadShare | undefined
+const status = shareStatus(share); // → "Private" | "Until Fri 9:00"
+```
+
+```mermaid
+flowchart LR
+  S[shell.workspace.shares] --> L["liveShare: pick the live one"]
+  L --> C["shareStatus: pure words"]
+  C --> I[ShareItem: menu row]
+  C --> B[ThreadShareButton: title bar]
+```
+
+The same pass made two smaller moves of that kind. The tab's `nextTitle` now takes the Escape case
+too (`null` in, `null` out), so the rename hook is only "if there is a new name, send it". And the
+thread pane builds its title bar's end once and hands the same value to the open panel and the
+waiting frame, so the two can no longer disagree about what the bar carries.
+
+The film version: the continuity note lives on the script supervisor's sheet, not in each actor's
+memory. Two actors reading one sheet cannot drift apart.
+
+Senior-engineer takeaway: when two components compute the same thing, the thing is a calculation
+asking for a name. Pull it out, keep it free of hooks and clocks, and let the components stay thin
+actions around it.
