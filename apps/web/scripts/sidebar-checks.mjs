@@ -152,9 +152,11 @@ const holdLanding = (page, faded) =>
     [SLIDE_MS - 1, faded],
   );
 
-// Runs in the page: the share of two same-sized PNGs' pixels that differ by more than 8 levels
-// in any channel.
-async function differShare(pngs) {
+/**
+ * Runs in the page: the share of two same-sized PNGs' pixels (base64) that differ by more than 8
+ * levels in any channel.
+ */
+export async function differShare(pngs) {
   const pixels = [];
   for (const b64 of pngs) {
     const png = await (await fetch(`data:image/png;base64,${b64}`)).blob();

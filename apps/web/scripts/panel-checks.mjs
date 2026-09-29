@@ -1,6 +1,8 @@
 // Checks for the projects panel beside the rail, on a desktop window with motion on: where
 // keyboard focus goes as the panel closes, and what focus holds a peek.
 // oxlint-disable no-await-in-loop -- one keyboard drives one page, so each step waits for the last
+import { collect } from "./lever.mjs";
+import { panelFrameChecks } from "./panel-frame-checks.mjs";
 import { placeOf, RAIL_PLACES } from "./rail-places.mjs";
 import { CLOSE_MS, openDesk, peek, phaseOf, SLIDE_MS } from "./sidebar-checks.mjs";
 
@@ -122,8 +124,8 @@ async function escapeFrom(browser, theme) {
   };
 }
 
-/** The workspace lever's checks of the projects panel beside the rail, by id. */
-export const panelChecks = {
+// The workspace lever's checks of where focus goes around the panel, by id.
+const focusChecks = {
   // Closing the docked panel by Ctrl/Cmd+B with keyboard focus on a project row or on the
   // resize edge hands focus to Toggle sidebar, never to the page's body.
   async P27(browser) {
@@ -145,3 +147,10 @@ export const panelChecks = {
     return { ok: results.every((r) => r.ok), detail: results.map((r) => r.note).join("; ") };
   },
 };
+
+/**
+ * The workspace lever's checks of the projects panel beside the rail, by id: where focus goes,
+ * and how the rail and the panel sit and move (panel-frame-checks.mjs).
+ * @throws {Error} When the two name a check with the same id.
+ */
+export const panelChecks = collect(focusChecks, panelFrameChecks);
