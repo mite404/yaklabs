@@ -348,7 +348,10 @@ html[data-dragging="sidebar"] * {
       display: none;
     }
   }
-  .splash {
+  /* The fade is the empty canvas's alone, for a sheet that arrives as the last lane leaves or
+     the canvas first shows. The welcome's sheet (below) has none: each new thread mounts a new
+     one, so the fade blinked the sheet out to paper and back on every "+". */
+  .open-space > .splash {
     animation: splash-in 150ms ease-out;
   }
   @keyframes splash-in {
@@ -357,7 +360,7 @@ html[data-dragging="sidebar"] * {
     }
   }
   @media (prefers-reduced-motion: reduce) {
-    .splash {
+    .open-space > .splash {
       animation: none;
     }
   }
@@ -408,7 +411,8 @@ html[data-dragging="sidebar"] * {
      two-line copy, and this column is taller and wider, so the globe and Atlas's hands would run
      behind the words (3.8:1 at worst). The column carries its own halo of paper, drawn over the
      sheet and under the words, which follows the column's box however many projects it lists
-     and fades out at its edge, so the ring still shows above, below and to either side of it. */
+     and fades out at its edge, so the ring still shows above, below and to either side of it.
+     The sheet arrives with the words, unfaded, as the paintings do. */
   .welcome .splash {
     border-radius: 0;
     background: var(--clearing);
