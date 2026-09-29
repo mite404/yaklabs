@@ -1151,6 +1151,15 @@ page. A focused element that stops being drawn simply loses focus. Closing now h
 Toggle sidebar first (`handFocusToToggle`), before the rows go. P27 was red before the fix.
 Lesson: anything that hides what the user is on owes them a new place to stand.
 
+**The third door out of the peek.** The review found the same drop on a path the fix missed:
+open a thread from a peeking panel, by Enter or a click, and the panel slides away with focus
+still on the row, which turns inert and lets go of it some hundreds of milliseconds later, onto
+`body`. Ctrl+B and Escape had each learned to hand focus over; a visit and the end of a slide
+back had not. Instead of a third patch, every step of the peek now goes through one door: a pure
+`putsAway(state, action)` says whether the step leaves the panel behind the rail, and if so focus
+moves to Toggle sidebar first. P34 fails without it (focus on `body` in all six peek cases) and
+checks a docked row keeps its focus. Lesson: when the same bug has three doors, fix the hallway.
+
 **The rail's focus held the panel out.** Tab to Kay, rest the pointer on the rail until the panel
 peeks, move away: the panel stayed out for good, because keyboard focus anywhere in the peek held
 it, and the rail counted as the peek. The rail stays whether the panel is out or not, so its

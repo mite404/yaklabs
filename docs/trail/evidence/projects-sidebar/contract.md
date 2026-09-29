@@ -308,6 +308,6 @@ const LIFT_PX = 6;
 - **Defaults.** The projects panel opens docked on a window at least 1280px wide and remembers
   the visitor's choice in localStorage `kay.sidebar` ("open" is docked, "closed" leaves the rail
   alone); its width is `kay.sidebar-width`, 208 to 480px, 256 by default, never past 40% of the
-  window, and the rail comes on top of it. Every link the app builds keeps `?scenario=`,
+  window, and the rail's 56px is added to it. Every link the app builds keeps `?scenario=`,
   so a mock visit never drifts onto device data. A new main thread opens on `thread`; the starter
   and migrated `profit` open on `canvas`, as today.

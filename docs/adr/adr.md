@@ -1767,7 +1767,8 @@ echo that the old peek slid over is gone.
 One `SidebarProvider` still owns docked or closed, and `kay.sidebar-width` with its 208, 256 and
 480px now names the panel alone. The rail's places are a navigation landmark named "Places" and
 the panel's tree one named "Sidebar"; neither holds the other, and the Account sits outside both.
-Closing the panel with focus inside it hands focus to Toggle sidebar first; focus on a rail place
+Closing the panel with focus inside it hands focus to Toggle sidebar first, however it closes (Ctrl
+or Cmd+B, Escape, a thread opened from a peeking row, or the slide back); focus on a rail place
 never holds a peek, while a menu open in the rail or the panel does; the closed panel is inert,
 out of the tab order and the accessibility tree. The phone keeps ADR-121's drawer as one labelled
 column: the place rows with "Soon", then the tree, then the Account.

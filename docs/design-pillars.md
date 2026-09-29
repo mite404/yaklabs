@@ -138,7 +138,7 @@ The rail checks' P23 and P25 measure all of this in both themes.
 | Glyph and name | `--faint-ink`, an archived row's: 5.17:1 on paper, 5.46:1 dark | derived |
 | Hover | none: no fill, no step to ink, the arrow cursor | derived |
 | Pill | name, then "· Coming soon", `--on-ink` 72% over `--ink` (rule 4): 7.6:1, 6.9:1 | derived |
-| Drawer row | "Soon" after the name, 12px: all a 208px sidebar fit beside "Automations" | derived |
+| Drawer row | "Soon" after the name, 12px, as the thread count sits | derived |
 | Screen reader | a button, `aria-disabled`, described as "Coming soon" | derived |
 
 ## Data visualisation
