@@ -382,6 +382,10 @@ function Sidebar({
             : "group-data-[collapsible=icon]:w-(--sidebar-width-icon) group-data-[side=left]:border-r group-data-[side=right]:border-l",
           className,
         )}
+        // Off canvas and not peeking, its rows are out of sight but upstream leaves them in the
+        // Tab order: inert takes them out of it, out of the accessibility tree and out of
+        // find-in-page, until the sidebar opens or peeks.
+        inert={state === "collapsed" && collapsible === "offcanvas" && peeking === undefined}
         {...props}
       >
         <div
