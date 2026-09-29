@@ -132,6 +132,21 @@ async function chooseLayout(view, name) {
   await group.locator(`button[aria-label="${name}"][aria-pressed="true"]`).waitFor();
 }
 
+// The title bar's control furthest right, named, so a failure says what stood past the bell.
+function furthestRight(view) {
+  return view
+    .locator('header[data-slot="title-bar"]')
+    .getByRole("button")
+    .evaluateAll((els) =>
+      els
+        .map((el) => ({
+          name: el.getAttribute("aria-label") ?? el.textContent.trim(),
+          right: el.getBoundingClientRect().right,
+        }))
+        .reduce((far, each) => (each.right > far.right ? each : far)),
+    ); // → { name, right }
+}
+
 // A step on a page of its own at `address`, a mock scenario, so no device data is touched. A
 // throw fails that step alone, and the steps after it still run.
 async function onOwnPage(step, address, options, measure) {
@@ -1446,11 +1461,8 @@ try {
         .locator('header[data-slot="title-bar"]')
         .getByRole("button", { name: /^Notifications/ })
         .boundingBox();
-      const rightmost = await own
-        .locator('header[data-slot="title-bar"]')
-        .getByRole("button")
-        .evaluateAll((els) => Math.max(...els.map((el) => el.getBoundingClientRect().right)));
-      const bellLast = Math.abs(bell.x + bell.width - rightmost) < 1;
+      const rightmost = await furthestRight(own);
+      const bellLast = Math.abs(bell.x + bell.width - rightmost.right) < 1;
       await account.click();
       const opened = await own.getByRole("menu").boundingBox();
       const view = own.viewportSize();
@@ -1470,7 +1482,7 @@ try {
           foot &&
           bellLast &&
           onScreen,
-        detail: `${all} Account button(s) on the page; ${inSidebar} in the sidebar, ${inTitleBar} in the bar, ${inNav} inside the navigation landmark; at the foot ${foot}; bell is the bar's last control ${bellLast}; menu on screen ${onScreen}`,
+        detail: `${all} Account button(s) on the page; ${inSidebar} in the sidebar, ${inTitleBar} in the bar, ${inNav} inside the navigation landmark; at the foot ${foot}; bell is the bar's last control ${bellLast} (furthest right: ${rightmost.name}); menu on screen ${onScreen}`,
       };
     },
   );
