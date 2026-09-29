@@ -129,8 +129,10 @@
    panel's curve (Ethan), one `--peek-slide`, so the two cannot drift apart. Transitions, so a
    pointer that returns mid-way turns it back from where it is.
    The stage's overflow clip is the gate at the rail's edge (design pillars, rule 22): the panel
-   passes behind it and never covers the rail, so the fade hides no motion. Out, it fades in over
-   the slide's first 120ms on the strong ease-out. Back, it holds full strength and fades over
+   passes behind it and never covers the rail, so the fade hides no motion. Out, it slides at full
+   strength from under the rail, as a pin does (Ethan): its edge's hairline and shadow are drawn
+   from the first frame, and the workspace's border beneath is covered at once, never seen
+   through a fading panel. Back, it holds full strength and fades over
    the slide's last 120ms on that curve played backwards, ending with the slide: still 0.97 with
    the edge 2px from home. The fade takes away only the soft shadow and the hairline across the
    workspace's 10px corner, which would otherwise vanish in one frame as the panel lands; at home
@@ -159,6 +161,8 @@
 [data-slot="sidebar"]:is([data-peek="entering"], [data-peek="leaving"])
   > [data-slot="sidebar-container"] {
   transform: translateX(-100%);
+}
+[data-slot="sidebar"][data-peek="leaving"] > [data-slot="sidebar-container"] {
   opacity: 0;
 }
 /* Back, the rows leave before the panel does, as a title's type goes before its bar: the panel's

@@ -551,9 +551,10 @@ export const sidebarChecks = {
   // The peek slides back as it slides out: the same 220ms on the panel's curve both ways, seeked
   // to the same instants (the back's edge, past the rail's, mirrors the out's within 1% of the
   // panel's width). The stage clips the panel at the rail's edge, so the way back stays at 0.9 or
-  // more until its last 5% of travel, and fades out only as it lands. Its rows show in full on
-  // the way out and have faded before the last 10% of the way back, so no row's end is left in
-  // the sliver beside the rail (Ethan). Notes the
+  // more until its last 5% of travel, and fades out only as it lands. On the way out the panel
+  // and its rows are at full strength from the first frame, as a pin's are (Ethan); on the way
+  // back the rows have faded before the last 10% of the trip, so no row's end is left in the
+  // sliver beside the rail (Ethan). Notes the
   // share of the 40px past the rail that the landing frame would change at full strength, the
   // tail fade's job (design pillars, rule 26).
   async P24(browser) {
@@ -581,6 +582,7 @@ export const sidebarChecks = {
     const sliver = back.frames.filter((f) => f.edge <= back.width * ROWLESS_SHARE);
     const rowsInSliver = Math.max(...sliver.map((f) => f.rows * f.opacity));
     const rowsOut = Math.min(...out.frames.map((f) => f.rows));
+    const solidOut = Math.min(...out.frames.map((f) => f.opacity));
     const ok =
       out.timings.includes(slide) === true &&
       back.timings.includes(slide) === true &&
@@ -591,6 +593,7 @@ export const sidebarChecks = {
       sliver.length > 0 &&
       rowsInSliver <= ROWLESS_OPACITY &&
       rowsOut === 1 &&
+      solidOut === 1 &&
       rested === "away";
     const trace = back.frames
       .map((f) => `${f.ms}:${round(f.edge)}@${round(f.opacity)}/${round(f.rows)}`)
@@ -604,7 +607,7 @@ export const sidebarChecks = {
     }
     return {
       ok,
-      detail: `out [${out.timings.join(", ")}]; back [${back.timings.join(", ")}]; curve miss ${round(miss * 100)}%; back dimmest ${round(dimmest)} before its last ${LANDING_SHARE * 100}% of travel, ${round(landed)} as it lands, then ${rested}; rows out at least ${round(rowsOut)}, in the last ${ROWLESS_SHARE * 100}% back at most ${round(rowsInSliver)}; travel seen out ${round(seenShare(out.frames))}, back ${round(seenShare(back.frames))}; back ${trace}; the landing frame against rest, in the 40px past the rail: ${tails.join(", ")}`,
+      detail: `out [${out.timings.join(", ")}]; back [${back.timings.join(", ")}]; curve miss ${round(miss * 100)}%; back dimmest ${round(dimmest)} before its last ${LANDING_SHARE * 100}% of travel, ${round(landed)} as it lands, then ${rested}; panel out at least ${round(solidOut)}, rows out at least ${round(rowsOut)}, in the last ${ROWLESS_SHARE * 100}% back at most ${round(rowsInSliver)}; travel seen out ${round(seenShare(out.frames))}, back ${round(seenShare(back.frames))}; back ${trace}; the landing frame against rest, in the 40px past the rail: ${tails.join(", ")}`,
     };
   },
 };
