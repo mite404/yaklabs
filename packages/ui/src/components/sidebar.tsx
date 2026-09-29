@@ -291,8 +291,9 @@ function Sidebar({
   mobile?: "sheet" | "push";
   /**
    * On a desktop, a collapsed sidebar that peeks: drawn expanded, at full width, over the
-   * content, while its gap keeps the collapsed width so nothing beside it moves. `data-peek`
-   * names the phase for the host's stylesheet to move it by. Ignored while expanded.
+   * content, while its gap keeps its kind's collapsed width (the icon rail's, or none off
+   * canvas) so nothing beside it moves. `data-peek` names the phase for the host's stylesheet
+   * to move it by. Ignored while expanded.
    */
   peek?: SidebarPeek;
 }) {
@@ -360,7 +361,10 @@ function Sidebar({
         className={cn(
           "relative w-(--sidebar-width) bg-transparent transition-[width] duration-200 ease-linear group-data-instant/sidebar-wrapper:transition-none",
           "group-data-[collapsible=offcanvas]:w-0",
-          "group-data-peek:w-(--sidebar-width-icon)",
+          // A peeking sidebar draws expanded, so its gap keeps its own kind's collapsed width.
+          collapsible === "icon"
+            ? "group-data-peek:w-(--sidebar-width-icon)"
+            : "group-data-peek:w-0",
           "group-data-[side=right]:rotate-180",
           variant === "floating" || variant === "inset"
             ? "group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4)))]"
