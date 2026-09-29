@@ -1,38 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import type { ReactNode } from "react";
 import { AgentWorking } from "./AgentWorking";
-
-// Review stages share one surface so the greens are judged against the real paper.
-function Stage({ children }: { children: ReactNode }) {
-  return (
-    <div
-      style={{
-        display: "flex",
-        gap: 32,
-        alignItems: "flex-end",
-        padding: 24,
-        background: "var(--paper)",
-      }}
-    >
-      {children}
-    </div>
-  );
-}
-
-function Caption({ children }: { children: ReactNode }) {
-  return (
-    <span style={{ font: "12px var(--font-text)", color: "var(--soft-ink)" }}>{children}</span>
-  );
-}
-
-function Labeled({ caption, children }: { caption: string; children: ReactNode }) {
-  return (
-    <div style={{ display: "grid", justifyItems: "center", gap: 10 }}>
-      {children}
-      <Caption>{caption}</Caption>
-    </div>
-  );
-}
+import { InLine, Labeled, Stage } from "./motionStage";
 
 const SPEEDS = [650, 850, 1200, 1350, 1500];
 const VARIANTS = [
@@ -98,17 +66,8 @@ export const Speeds: Story = {
 /** In place, at the shipped default speed: beside a line of text, as in a thread or the sidebar. */
 export const InContext: Story = {
   render: () => (
-    <div
-      style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 8,
-        font: "14px var(--font-text)",
-        color: "var(--soft-ink)",
-      }}
-    >
+    <InLine>
       <AgentWorking />
-      Kay is working on it
-    </div>
+    </InLine>
   ),
 };
