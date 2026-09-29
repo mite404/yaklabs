@@ -100,6 +100,25 @@
   transition-duration: var(--panel-pin);
   transition-timing-function: var(--panel-ease);
 }
+/* A pin from a peek: the panel is already out, so only the workspace moves, sliding under the
+   panel to make room. The peek's edge, its hairline and shadow, holds for the pin's 250ms until
+   the workspace's own rounded border has arrived under it, where it had left a plain edge while
+   that border crept out from under the panel as the curve settled (Ethan). A pin from closed
+   changes no shadow, so nothing holds. Naming the properties outranks the utilities that turn the
+   transition off, so a key, a drag and reduced motion turn it off here again. */
+[data-slot="sidebar"][data-state="expanded"] > [data-slot="sidebar-container"] {
+  transition-property: left, right, width, box-shadow, clip-path;
+  transition-duration: var(--panel-pin), var(--panel-pin), var(--panel-pin), 0s, 0s;
+  transition-delay: 0s, 0s, 0s, var(--panel-pin), var(--panel-pin);
+}
+[data-slot="sidebar-wrapper"][data-instant] [data-slot="sidebar-container"] {
+  transition: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-slot="sidebar"][data-state="expanded"] > [data-slot="sidebar-container"] {
+    transition: none;
+  }
+}
 /* Docked by the toggle, a hint of a line parts the rail from the panel, as in Kay's own app: the
    rail's right edge in the workspace's own hairline. It is the rail's, not the panel's, so it is
    drawn from the first frame of a pin, the panel sliding out from behind it (on the panel's own
