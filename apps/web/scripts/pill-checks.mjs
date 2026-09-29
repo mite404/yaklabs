@@ -10,11 +10,14 @@ const SOON = "Coming soon";
 // A live place and one not built yet, whose pills are read with the panel docked and peeking.
 const SAMPLED = RAIL_PLACES.filter((place) => ["Lab", "Memory"].includes(place.name));
 
-// Runs in the page: the pill up now, as its words, inks, shape and box, with the rail behind it.
+// Runs in the page: the pill up now, as its words, inks, shape and box, with the rail behind it,
+// and the arrow a site elsewhere adds after its name. The tooltip's own pointer, which a pill
+// never has, is Base UI's arrow, the one part that carries a side.
 function readPill(el) {
   const style = getComputedStyle(el);
   const rail = document.querySelector('[data-slot="rail"]');
   const hint = el.querySelector("span");
+  const glyph = el.querySelector("svg.lucide-arrow-up-right");
   const box = el.getBoundingClientRect();
   return {
     words: el.textContent,
@@ -23,7 +26,9 @@ function readPill(el) {
     fill: style.backgroundColor,
     shell: getComputedStyle(rail).backgroundColor,
     round: Number.parseFloat(style.borderRadius) >= box.height / 2,
-    arrow: el.querySelector("[data-side], svg") !== null,
+    arrow: el.querySelector("[data-side]") !== null,
+    elsewhere: glyph === null ? null : getComputedStyle(glyph).color,
+    elsewhereHidden: glyph?.getAttribute("aria-hidden") ?? null,
     instant: el.dataset.instant ?? null,
     left: box.left,
     railRight: rail.getBoundingClientRect().right,
@@ -53,11 +58,19 @@ async function pillOn(page, place, { focus = false } = {}) {
     onText: contrast(look.text, look.fill),
     hintOnFill: contrast(look.hint, look.fill),
     onShell: contrast(look.fill, look.shell),
+    elsewhereOnFill: look.elsewhere === null ? null : contrast(look.elsewhere, look.fill),
   };
 }
 
+// Whether a site elsewhere's pill ends in its arrow, hidden from a screen reader and 3:1 on the
+// ink as a graphic must be (rule 16), and every other pill has none.
+const opensElsewhere = (external, pill) =>
+  external === true
+    ? pill.elsewhereOnFill >= 3 && pill.elsewhereHidden === "true"
+    : pill.elsewhere === null;
+
 // Whether a pill says what its place is, in the ink pill's look, legibly, clear of the rail.
-function pillReads({ name, soon }, pill) {
+function pillReads({ name, soon, external }, pill) {
   const words = soon === true ? `${name} · ${SOON}` : name;
   return (
     pill.words === words &&
@@ -66,13 +79,14 @@ function pillReads({ name, soon }, pill) {
     pill.onShell >= 3 &&
     pill.round === true &&
     pill.arrow === false &&
+    opensElsewhere(external, pill) &&
     pill.left >= pill.railRight
   );
 }
 
 // A pill's note for the check's detail.
 const pillNote = (label, pill) =>
-  `${label} ${JSON.stringify(pill.words)}: text ${round(pill.onText)}:1, hint ${round(pill.hintOnFill)}:1, shell ${round(pill.onShell)}:1, round ${pill.round}, arrow ${pill.arrow}, instant ${pill.instant}, ${round(pill.left - pill.railRight)}px past the rail`;
+  `${label} ${JSON.stringify(pill.words)}: text ${round(pill.onText)}:1, hint ${round(pill.hintOnFill)}:1, shell ${round(pill.onShell)}:1, round ${pill.round}, arrow ${pill.arrow}, ${pill.elsewhere === null ? "" : `opens elsewhere ${round(pill.elsewhereOnFill)}:1, `}instant ${pill.instant}, ${round(pill.left - pill.railRight)}px past the rail`;
 
 // P23's rest half: every place's pill in the collapsed rail, the next one opening at once.
 async function pillsAtRest(page, theme) {
@@ -164,7 +178,8 @@ async function pillOnFocus(browser, theme) {
 export const pillChecks = {
   // The rail names every place in an ink pill, 7:1 for its text and 3:1 against the rail in
   // either theme, and a place not built yet adds a softer "· Coming soon" that still clears
-  // 4.5:1; the next place's pill opens at once. The pills show in every state (ADR-139): with
+  // 4.5:1, and Documentation a softer arrow that says it opens elsewhere, 3:1 or more; the next
+  // place's pill opens at once. The pills show in every state (ADR-139): with
   // the panel closed, docked, and peeking, where they sit over the panel and keep it out; and
   // on keyboard focus.
   async P23(browser) {

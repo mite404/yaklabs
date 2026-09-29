@@ -127,6 +127,19 @@ function Face({ place, look }: { place: LivePlace; look: Look }) {
   );
 }
 
+// What a live place's pill says: its name, and after a site elsewhere the row's arrow, a step
+// softer, so the pill says it opens a new tab as the row does. The gap is the one shadcn's
+// tooltip keeps between its words and a key (tooltip.tsx).
+function PillWords({ place }: { place: LivePlace }) {
+  if (place.kind !== "external") return place.label;
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      {place.label}
+      <ArrowUpRight aria-hidden="true" className={`size-3.5 ${PILL_HINT}`} />
+    </span>
+  );
+}
+
 // A place that opens something: a square that names it in a pill, or a row that shows its name.
 function Place({
   place,
@@ -144,7 +157,7 @@ function Place({
       <SidebarMenuButton
         render={link}
         isActive={active}
-        tooltip={look === "square" ? pillOf(place.label) : undefined}
+        tooltip={look === "square" ? pillOf(<PillWords place={place} />) : undefined}
         className={LOOKS[look]}
       >
         <Face place={place} look={look} />

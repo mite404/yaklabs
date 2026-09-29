@@ -4,17 +4,24 @@
 
 /**
  * The rail's places top to bottom (ADR-094, amended): each one's name, its role, the lucide
- * glyph it draws (Kay draws its own mark), and whether the web build lacks it yet.
+ * glyph it draws (Kay draws its own mark), whether the web build lacks it yet, and whether it
+ * opens a site elsewhere, in a new tab (ADR-139).
  */
 export const RAIL_PLACES = [
-  { name: "Kay", role: "link", icon: null, soon: false },
-  { name: "Memory", role: "button", icon: "lucide-brain", soon: true },
-  { name: "Skills", role: "button", icon: "lucide-unplug", soon: true },
-  { name: "App store", role: "button", icon: "lucide-store", soon: true },
-  { name: "Analytics", role: "button", icon: "lucide-chart-column-increasing", soon: true },
-  { name: "Automations", role: "button", icon: "lucide-clock", soon: true },
-  { name: "Documentation", role: "link", icon: "lucide-book-open", soon: false },
-  { name: "Lab", role: "link", icon: "lucide-flask-conical", soon: false },
+  { name: "Kay", role: "link", icon: null, soon: false, external: false },
+  { name: "Memory", role: "button", icon: "lucide-brain", soon: true, external: false },
+  { name: "Skills", role: "button", icon: "lucide-unplug", soon: true, external: false },
+  { name: "App store", role: "button", icon: "lucide-store", soon: true, external: false },
+  {
+    name: "Analytics",
+    role: "button",
+    icon: "lucide-chart-column-increasing",
+    soon: true,
+    external: false,
+  },
+  { name: "Automations", role: "button", icon: "lucide-clock", soon: true, external: false },
+  { name: "Documentation", role: "link", icon: "lucide-book-open", soon: false, external: true },
+  { name: "Lab", role: "link", icon: "lucide-flask-conical", soon: false, external: false },
 ];
 
 /**
