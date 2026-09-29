@@ -1,15 +1,26 @@
 /* Microinteractions and motion. Every colour here is a brand token; the timing lives in one
    custom property per component so Storybook can scrub it without touching the keyframes. */
 
+/* The working ramp, shared by every "agent is busy" glyph so they read as one family. Light
+   mode: moss when solid, olive on the way out, sage near clear. */
+.agent-working,
+.agent-tree {
+  --working-strong: var(--moss);
+  --working-mid: var(--yak-green);
+  --working-soft: var(--sage);
+}
+/* Dark mode flips the ramp, so "solid" still means the most contrast against the paper. */
+:root[data-theme="dark"] :is(.agent-working, .agent-tree) {
+  --working-strong: var(--sage);
+  --working-mid: var(--olive);
+  --working-soft: var(--yak-green);
+}
+
 /* Agent working: Kay's 2x2 task-size glyph, animated. Each square fades in to the strongest
    green, then fades out through lighter greens. Colour follows opacity: solid is darkest.
    Two patterns: a wave (the right column a step behind the left, so the lit edge travels left
    to right) and an orbit (each square a step behind the last, clockwise). */
 .agent-working {
-  /* Light mode: moss when solid, olive on the way out, sage near clear. */
-  --working-strong: var(--moss);
-  --working-mid: var(--yak-green);
-  --working-soft: var(--sage);
   --working-duration: 1500ms;
   /* The right column runs 25% of a cycle behind, so it peaks while the left one fades.
      Written as a head start of 75% (a negative delay), so no square waits blank on load. */
@@ -37,12 +48,6 @@
   place-content: start;
   padding: 1px 0 0 2px;
   --working-radius: 0.5px;
-}
-/* Dark mode flips the ramp, so "solid" still means the most contrast against the paper. */
-:root[data-theme="dark"] .agent-working {
-  --working-strong: var(--sage);
-  --working-mid: var(--olive);
-  --working-soft: var(--yak-green);
 }
 .agent-working-cell {
   border-radius: var(--working-radius, 1px);
@@ -119,6 +124,99 @@
     background: var(--working-mid);
   }
   .agent-working-cell:nth-child(odd) {
+    opacity: 1;
+    background: var(--working-strong);
+  }
+}
+
+/* Agent tree: Kay's three-pill glyph (left, right, full-width base), climbed. A crest of green
+   runs down it, top to middle to base, alternating sides; the base then holds solid, darkest,
+   for a beat; and it fades as the next crest starts at the top, so the eye reads a climb that
+   never ends, the way a scrolling background makes a runner look like they are moving.
+   Geometry on whole pixels only: 3px pills, 1px gaps, in a 12px box pinned 1px down. */
+.agent-tree {
+  --working-duration: 1500ms;
+  display: inline-grid;
+  grid-template-columns: repeat(12, 1px);
+  grid-auto-rows: 3px;
+  row-gap: 1px;
+  box-sizing: border-box;
+  width: 12px;
+  height: 12px;
+  padding-top: 1px;
+  place-content: start;
+  flex: none;
+}
+.agent-tree-pill {
+  border-radius: 999px;
+  background: var(--working-strong);
+  opacity: 0;
+  animation: agent-tree-crest var(--working-duration) linear infinite;
+}
+.agent-tree-pill:nth-child(1) {
+  grid-column: 3 / span 7; /* x 2-9: the top branch, left */
+}
+.agent-tree-pill:nth-child(2) {
+  grid-column: 6 / span 7; /* x 5-12: the middle branch, right */
+  /* 25% of a loop behind the top, as a 75% head start so nothing waits blank on load */
+  animation-delay: calc(var(--working-duration) * -0.75);
+}
+.agent-tree-pill:nth-child(3) {
+  grid-column: 1 / span 12; /* x 0-12: the base */
+  animation-name: agent-tree-base;
+}
+/* A branch in its own time: in over 20%, a short hold, out through olive by 50%, then clear. */
+@keyframes agent-tree-crest {
+  0% {
+    opacity: 0;
+    background: var(--working-soft);
+  }
+  20%,
+  25% {
+    opacity: 1;
+    background: var(--working-strong);
+  }
+  37.5% {
+    opacity: 0.55;
+    background: var(--working-mid);
+  }
+  50%,
+  100% {
+    opacity: 0;
+    background: var(--working-soft);
+  }
+}
+/* The base in loop time: it fades as the top branch comes in (0-20%), comes in as the middle
+   one leaves (50-70%), and holds solid for the beat (70-100%). It starts solid, so the very
+   first frame already shows the tree's footing. */
+@keyframes agent-tree-base {
+  0% {
+    opacity: 1;
+    background: var(--working-strong);
+  }
+  10% {
+    opacity: 0.55;
+    background: var(--working-mid);
+  }
+  20%,
+  50% {
+    opacity: 0;
+    background: var(--working-soft);
+  }
+  70%,
+  100% {
+    opacity: 1;
+    background: var(--working-strong);
+  }
+}
+/* Under reduced motion the tree stands still: branches half lit, the base solid. */
+@media (prefers-reduced-motion: reduce) {
+  .agent-tree-pill {
+    animation: none;
+    opacity: 0.55;
+    background: var(--working-mid);
+  }
+  .agent-tree-pill:nth-child(3) {
     opacity: 1;
     background: var(--working-strong);
   }
