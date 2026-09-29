@@ -1,10 +1,10 @@
 import { Sidebar, SidebarContent, SidebarFooter, useSidebar } from "@yaklabs/ui/components/sidebar";
-import { useEffect, useRef, type RefObject } from "react";
+import { useEffect, useRef, type ReactNode, type RefObject } from "react";
 import { useLocation } from "react-router";
 import { Account, type Looks } from "./account";
 import { ProjectTree } from "./project-tree";
 import { RailPlaces } from "./rail-places";
-import { PeekHotZone, peekProps, useSidebarPeek } from "./sidebar-peek";
+import { PeekHotZone, peekProps, useSidebarPeek, type SidebarPeek } from "./sidebar-peek";
 import { SidebarResizeHandle } from "./sidebar-resize";
 
 // On a phone the sidebar is a drawer that pushes the page aside (ADR-121), so every arrival
@@ -18,6 +18,18 @@ function useSheetClosesOnArrival(): void {
     shownAt.current = key;
     setOpenMobile(false);
   }, [key, setOpenMobile]);
+}
+
+// What only the phone's drawer draws: the places as rows and the account, which the desktop's
+// rail carries instead, so each is mounted once per device.
+function PhoneOnly({ children }: { children: ReactNode }) {
+  const { isMobile } = useSidebar();
+  return isMobile ? children : null;
+}
+
+// Whether the panel rests behind the rail, where the strip past its edge can peek it.
+function restsAway(peek: SidebarPeek): boolean {
+  return peek.enabled && peek.phase === "away";
 }
 
 /** The id of the projects panel's navigation landmark, which the title bar's toggle controls. */
@@ -43,7 +55,6 @@ export function AppSidebar({
   onWidth,
   rail,
 }: Looks & SidebarWidth & { rail: RefObject<HTMLDivElement | null> }) {
-  const { isMobile } = useSidebar();
   const container = useRef<HTMLDivElement>(null);
   const peek = useSidebarPeek(container, rail);
   useSheetClosesOnArrival();
@@ -63,20 +74,21 @@ export function AppSidebar({
           aria-label="Sidebar"
           className="flex min-h-0 flex-1 flex-col"
         >
-          {isMobile && <RailPlaces look="row" />}
+          <PhoneOnly>
+            <RailPlaces look="row" />
+          </PhoneOnly>
           <SidebarContent>
             <ProjectTree />
           </SidebarContent>
         </div>
-        {/* Mounted once per device: the desktop's account sits at the rail's foot. */}
-        {isMobile && (
+        <PhoneOnly>
           <SidebarFooter>
             <Account theme={theme} chrome={chrome} side="top" align="start" />
           </SidebarFooter>
-        )}
+        </PhoneOnly>
         <SidebarResizeHandle width={width} onWidth={onWidth} controls={SIDEBAR_ID} />
       </Sidebar>
-      {peek.enabled && peek.phase === "away" && <PeekHotZone />}
+      {restsAway(peek) && <PeekHotZone />}
     </>
   );
 }

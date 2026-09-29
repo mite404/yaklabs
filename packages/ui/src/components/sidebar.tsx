@@ -272,6 +272,25 @@ function collapsedAs(
   return state === "collapsed" && peek === undefined ? collapsible : "";
 }
 
+// A peeking sidebar draws expanded, so its gap keeps its own kind's collapsed width: the icon
+// rail's, or none off canvas.
+function peekGap(collapsible: string): string {
+  return collapsible === "icon"
+    ? "group-data-peek:w-(--sidebar-width-icon)"
+    : "group-data-peek:w-0";
+}
+
+// Off canvas and not peeking, its rows are out of sight but upstream leaves them in the Tab
+// order: such a sidebar is made inert, out of the Tab order, the accessibility tree and
+// find-in-page, until it opens or peeks.
+function isAway(
+  state: SidebarContextProps["state"],
+  collapsible: string,
+  peeking: SidebarPeek | undefined,
+): boolean {
+  return state === "collapsed" && collapsible === "offcanvas" && peeking === undefined;
+}
+
 // oxlint-disable-next-line max-lines-per-function -- branches over collapsible=none, mobile sheet and desktop rail; each branch is a distinct render, not extra logic
 function Sidebar({
   side = "left",
@@ -362,10 +381,7 @@ function Sidebar({
         className={cn(
           "relative w-(--sidebar-width) bg-transparent transition-[width] duration-200 ease-linear group-data-instant/sidebar-wrapper:transition-none motion-reduce:transition-none",
           "group-data-[collapsible=offcanvas]:w-0",
-          // A peeking sidebar draws expanded, so its gap keeps its own kind's collapsed width.
-          collapsible === "icon"
-            ? "group-data-peek:w-(--sidebar-width-icon)"
-            : "group-data-peek:w-0",
+          peekGap(collapsible),
           "group-data-[side=right]:rotate-180",
           variant === "floating" || variant === "inset"
             ? "group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4)))]"
@@ -383,10 +399,7 @@ function Sidebar({
             : "group-data-[collapsible=icon]:w-(--sidebar-width-icon) group-data-[side=left]:border-r group-data-[side=right]:border-l",
           className,
         )}
-        // Off canvas and not peeking, its rows are out of sight but upstream leaves them in the
-        // Tab order: inert takes them out of it, out of the accessibility tree and out of
-        // find-in-page, until the sidebar opens or peeks.
-        inert={state === "collapsed" && collapsible === "offcanvas" && peeking === undefined}
+        inert={isAway(state, collapsible, peeking)}
         {...props}
       >
         <div

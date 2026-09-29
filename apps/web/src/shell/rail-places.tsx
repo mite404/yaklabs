@@ -110,16 +110,24 @@ function linkOf(place: LivePlace, hrefTo: (path: "/" | "/lab") => string) {
   return <Link to={hrefTo(place.to)} aria-label={place.label} />;
 }
 
-// A live place's glyph, and in a row its name after it: Kay's mark and serif name in ink, and
-// an arrow after a site elsewhere.
+// How each kind of live place draws its glyph and name: Kay's mark and serif name in ink, the
+// rest in the row's own ink.
+const FACES = {
+  home: { glyph: "text-ink", name: "font-serif text-lg text-ink" },
+  route: { glyph: undefined, name: "text-ink" },
+  external: { glyph: undefined, name: "text-ink" },
+} as const satisfies Record<LivePlace["kind"], { glyph: string | undefined; name: string }>;
+
+// A live place's glyph, and in a row its name after it, with an arrow after a site elsewhere.
 function Face({ place, look }: { place: LivePlace; look: Look }) {
   const { Glyph, label, kind } = place;
-  const glyph = <Glyph className={kind === "home" ? "text-ink" : undefined} />;
+  const face = FACES[kind]; // → the glyph's and the name's classes
+  const glyph = <Glyph className={face.glyph} />;
   if (look === "square") return glyph;
   return (
     <>
       {glyph}
-      <span className={kind === "home" ? "font-serif text-lg text-ink" : "text-ink"}>{label}</span>
+      <span className={face.name}>{label}</span>
       {kind === "external" && (
         <ArrowUpRight aria-hidden="true" className="ml-auto size-3.5! text-soft-ink" />
       )}
