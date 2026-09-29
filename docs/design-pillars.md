@@ -122,6 +122,25 @@ delay makes a control feel unresponsive.
 Around 100ms reads as instant, around 150 to 200ms reads as a soft arrival, and past about 300ms a
 hover starts to feel sluggish.
 
+### 27. A place not built yet keeps its name, and says so
+
+A place in the rail that the web build does not have yet stays in the rail, named in its pill and
+in the open sidebar and reached by keyboard, but it opens nothing and says "Coming soon", as the
+splash switch's Bonsai does (ADR-094, amended).
+It is drawn in faint ink, never at reduced opacity: the 45% of a disabled button (rule 8) takes a
+rail glyph to 2.0:1 on paper, under rule 16's 3:1.
+It has no hover fill and no step to ink, since there is nothing to press, so the fill still means
+"this opens something".
+The rail checks' P23 and P25 measure all of this in both themes.
+
+| Property | Value | Source |
+| --- | --- | --- |
+| Glyph and name | `--faint-ink`, an archived row's: 5.17:1 on paper, 5.46:1 dark | derived |
+| Hover | none: no fill, no step to ink, the arrow cursor | derived |
+| Pill | name, then "· Coming soon", `--on-ink` 72% over `--ink` (rule 4): 7.6:1, 6.9:1 | derived |
+| Open row | "Soon" after the name, 12px: all a 208px sidebar fits beside "Automations" | derived |
+| Screen reader | a button, `aria-disabled`, described as "Coming soon" | derived |
+
 ## Data visualisation
 
 ### 10. Bars are flat

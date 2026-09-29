@@ -1072,6 +1072,22 @@ which takes the corner because the signed-in account matters more.
 Each tab restores one of three layouts, a thread alone, a thread beside a simulated browser, or a
 thread beside the compose canvas, and the rail keeps the Kay mark with a documentation link beneath
 it.
+Amended 2026-09-29 (Ethan): the rail follows Kay's own. Under the mark come Memory, Skills, App
+store, Analytics and Automations, drawn with lucide's Brain, Unplug, Store, ChartColumnIncreasing
+and Clock; lucide has no brain with a pencil, and no column chart on a baseline without a left
+axis, which is what a crop of Kay's rail shows, so those two are the nearest. The documentation
+link moves down after them, and the Lab stays last. The web build has none of the five yet, so
+each is a button that keeps its name, in its pill collapsed and beside its glyph open, is reached
+by keyboard, opens nothing, and says so: "Coming soon" in the pill and to a screen reader, "Soon"
+in the open row, where a 208px sidebar has room for no more. It is drawn in faint ink with no
+hover fill, not at half opacity (design pillars, rule 27). P12, P23 and P25 hold the order, the
+pills and the unavailable state.
+Amended the same day (Ethan): the traffic lights are 14px, 2px up from 12, each grown about its
+own centre over the 12px slot it had: still 20px apart, the first 22px in from the bar's edge and
+all 22px down its 44px, with the toggle and the tabs after them where they were. A light centred
+on a whole pixel with whole-pixel edges has an even width, so 14 and 16 were the sizes on offer;
+14 leaves 6px between lights, where 16 would leave 4px and crowd them. P26 holds the lights'
+boxes and the toggle's place.
 
 ## ADR-095 - The Kay mark is the vector Kay's site declares
 
