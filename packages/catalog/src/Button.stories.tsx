@@ -41,7 +41,7 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 /** The yaklabs.ai "Apply for this role" button: outline at rest, dark green on hover. */
-export const Default: Story = { args: { label: "Apply for this role", size: "default" } };
+export const Default: Story = { args: { label: "Show my work", size: "default" } };
 
 /** Compact size used inside cards and dialogs. */
 export const Small: Story = { args: { label: "Show my work", size: "small" } };
