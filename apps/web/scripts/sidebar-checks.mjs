@@ -14,6 +14,9 @@ export const PIN_MS = 250;
 export const PANEL_EASE = "cubic-bezier(0.17, 1.02, 0.58, 1)";
 // The last share of the panel's travel back, where the tail fade may dim it as it lands.
 const LANDING_SHARE = 0.05;
+// The last share of the way back in which no row may show, and how faint "no row" is.
+const ROWLESS_SHARE = 0.1;
+const ROWLESS_OPACITY = 0.02;
 /** How long the pointer rests before the peek opens, in ms (peek.ts). */
 export const OPEN_MS = 80;
 /** How long the peek waits after the pointer leaves before it closes, in ms (peek.ts). */
@@ -98,10 +101,10 @@ function pinTransitions() {
   return document.getAnimations().filter((a) => moving.has(a.transitionProperty)).length;
 }
 
-// Catches the container's transitions as they start in `phase`, seeks them to each of `steps`
-// and reads the panel's edge (its right past the rail's, in CSS px) and opacity. One
-// synchronous pass, so no frame is drawn and no timer runs between the seeks; the last seek
-// leaves the slide a millisecond from its end, to finish on its own.
+// Catches the container's transitions as they start in `phase`, seeks them and its rows' to each
+// of `steps` and reads the panel's edge (its right past the rail's, in CSS px), its opacity and
+// its rows' opacity. One synchronous pass, so no frame is drawn and no timer runs between the
+// seeks; the last seek leaves the slide a millisecond from its end, to finish on its own.
 const seekSlide = (page, phase, steps) =>
   page.evaluate(
     ([want, at]) =>
@@ -109,6 +112,15 @@ const seekSlide = (page, phase, steps) =>
         const sidebar = document.querySelector('[data-slot="sidebar"]');
         const panel = document.querySelector('[data-slot="sidebar-container"]');
         const inner = document.querySelector('[data-slot="rail"]').getBoundingClientRect().right;
+        const rows = panel.querySelector('[data-slot="sidebar-content"]');
+        // The rows' opacity as drawn, inside the panel: their own and every box's up to it.
+        const rowsSeen = () => {
+          let seen = 1;
+          for (let box = rows; box !== panel; box = box.parentElement) {
+            seen *= Number(getComputedStyle(box).opacity);
+          }
+          return seen;
+        };
         const tick = () => {
           const running = panel.getAnimations();
           if ((sidebar.dataset.peek ?? "away") !== want || running.length === 0) {
@@ -120,10 +132,12 @@ const seekSlide = (page, phase, steps) =>
             return [a.transitionProperty, duration, delay, easing].join(" ");
           });
           const width = panel.getBoundingClientRect().width;
+          const all = panel.getAnimations({ subtree: true });
           const frames = at.map((ms) => {
-            for (const a of running) a.currentTime = ms;
+            for (const a of all) a.currentTime = ms;
             const edge = panel.getBoundingClientRect().right - inner;
-            return { ms, edge, opacity: Number(getComputedStyle(panel).opacity) };
+            const opacity = Number(getComputedStyle(panel).opacity);
+            return { ms, edge, opacity, rows: rowsSeen() };
           });
           done({ timings, width, frames });
         };
@@ -537,8 +551,9 @@ export const sidebarChecks = {
   // The peek slides back as it slides out: the same 220ms on the panel's curve both ways, seeked
   // to the same instants (the back's edge, past the rail's, mirrors the out's within 1% of the
   // panel's width). The stage clips the panel at the rail's edge, so the way back stays at 0.9 or
-  // more until its last 5% of travel (Ethan's curve lands gently, so the tail fade covers its
-  // last few pixels), and fades out only as it lands. Notes the
+  // more until its last 5% of travel, and fades out only as it lands. Its rows show in full on
+  // the way out and have faded before the last 10% of the way back, so no row's end is left in
+  // the sliver beside the rail (Ethan). Notes the
   // share of the 40px past the rail that the landing frame would change at full strength, the
   // tail fade's job (design pillars, rule 26).
   async P24(browser) {
@@ -563,6 +578,9 @@ export const sidebarChecks = {
     const away = back.frames.filter((f) => f.edge > back.width * LANDING_SHARE);
     const dimmest = Math.min(...away.map((f) => f.opacity));
     const landed = back.frames.at(-1).opacity;
+    const sliver = back.frames.filter((f) => f.edge <= back.width * ROWLESS_SHARE);
+    const rowsInSliver = Math.max(...sliver.map((f) => f.rows * f.opacity));
+    const rowsOut = Math.min(...out.frames.map((f) => f.rows));
     const ok =
       out.timings.includes(slide) === true &&
       back.timings.includes(slide) === true &&
@@ -570,8 +588,13 @@ export const sidebarChecks = {
       away.length > 0 &&
       dimmest >= 0.9 &&
       landed < 0.1 &&
+      sliver.length > 0 &&
+      rowsInSliver <= ROWLESS_OPACITY &&
+      rowsOut === 1 &&
       rested === "away";
-    const trace = back.frames.map((f) => `${f.ms}:${round(f.edge)}@${round(f.opacity)}`).join(" ");
+    const trace = back.frames
+      .map((f) => `${f.ms}:${round(f.edge)}@${round(f.opacity)}/${round(f.rows)}`)
+      .join(" ");
     const tails = [];
     for (const theme of ["light", "dark"]) {
       const share = await tailShare(browser, theme);
@@ -581,7 +604,7 @@ export const sidebarChecks = {
     }
     return {
       ok,
-      detail: `out [${out.timings.join(", ")}]; back [${back.timings.join(", ")}]; curve miss ${round(miss * 100)}%; back dimmest ${round(dimmest)} before its last ${LANDING_SHARE * 100}% of travel, ${round(landed)} as it lands, then ${rested}; travel seen out ${round(seenShare(out.frames))}, back ${round(seenShare(back.frames))}; back ${trace}; the landing frame against rest, in the 40px past the rail: ${tails.join(", ")}`,
+      detail: `out [${out.timings.join(", ")}]; back [${back.timings.join(", ")}]; curve miss ${round(miss * 100)}%; back dimmest ${round(dimmest)} before its last ${LANDING_SHARE * 100}% of travel, ${round(landed)} as it lands, then ${rested}; rows out at least ${round(rowsOut)}, in the last ${ROWLESS_SHARE * 100}% back at most ${round(rowsInSliver)}; travel seen out ${round(seenShare(out.frames))}, back ${round(seenShare(back.frames))}; back ${trace}; the landing frame against rest, in the 40px past the rail: ${tails.join(", ")}`,
     };
   },
 };

@@ -116,7 +116,7 @@
    passes behind it and never covers the rail, so the fade hides no motion. Out, it fades in over
    the slide's first 120ms on the strong ease-out. Back, it holds full strength and fades over
    the slide's last 120ms on that curve played backwards, ending with the slide: still 0.97 with
-   the edge 3px from home. The fade takes away only the soft shadow and the hairline across the
+   the edge 2px from home. The fade takes away only the soft shadow and the hairline across the
    workspace's 10px corner, which would otherwise vanish in one frame as the panel lands; at home
    the line is the workspace's own left border. The shadow is clipped to its right, off the
    title bar. Under reduced motion it neither slides nor fades (rule 24): it is there, then it
@@ -145,8 +145,20 @@
   transform: translateX(-100%);
   opacity: 0;
 }
+/* Back, the rows leave before the panel does, as a title's type goes before its bar: the panel's
+   content fades from the slide's first frame on the fade-in's own 120ms and curve, so no row's
+   end ("18", an ellipsis, a "+") is left in the sliver beside the rail as the panel lands, where
+   it read as text outside the panel (Ethan). The paper, its hairline and its shadow stay solid,
+   so the slide still reads. A pointer that returns brings the rows back on the same clock. */
+[data-slot="sidebar"][data-peek] [data-slot="sidebar-inner"] > * {
+  transition: opacity 120ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+[data-slot="sidebar"][data-peek="leaving"] [data-slot="sidebar-inner"] > * {
+  opacity: 0;
+}
 @media (prefers-reduced-motion: reduce) {
-  [data-slot="sidebar"][data-peek] > [data-slot="sidebar-container"] {
+  [data-slot="sidebar"][data-peek] > [data-slot="sidebar-container"],
+  [data-slot="sidebar"][data-peek] [data-slot="sidebar-inner"] > * {
     transform: none;
     transition: none;
   }
