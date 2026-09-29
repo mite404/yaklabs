@@ -1,7 +1,6 @@
 import { Sidebar, SidebarContent, SidebarFooter, useSidebar } from "@yaklabs/ui/components/sidebar";
 import { useEffect, useRef } from "react";
 import { useLocation } from "react-router";
-import { usePaths } from "../runtime";
 import { Account, type Looks } from "./account";
 import { ProjectTree } from "./project-tree";
 import { RailPlaces } from "./rail-places";
@@ -28,15 +27,7 @@ export const SIDEBAR_ID = "sidebar";
 // out over the workspace from the window's edge and back, and this keeps the rail's places and
 // face where they were, so the rail never blinks as the panel leaves it. At rest the rail covers
 // it exactly. Decorative: hidden from assistive technology and inert.
-function RailEcho({
-  looks,
-  hrefTo,
-  onLab,
-}: {
-  looks: Looks;
-  hrefTo: (path: "/" | "/lab") => string;
-  onLab: boolean;
-}) {
+function RailEcho({ looks }: { looks: Looks }) {
   return (
     <div
       aria-hidden="true"
@@ -46,7 +37,7 @@ function RailEcho({
       data-collapsible="icon"
       className="group absolute inset-y-0 left-0 flex w-(--sidebar-width-icon) flex-col bg-sidebar"
     >
-      <RailPlaces hrefTo={hrefTo} onLab={onLab} pills={false} echo />
+      <RailPlaces pills={false} echo />
       <SidebarFooter className="mt-auto">
         <Account theme={looks.theme} chrome={looks.chrome} side="top" align="start" />
       </SidebarFooter>
@@ -62,21 +53,11 @@ function usePills(peek: SidebarPeek): boolean {
 
 // What the peek puts around the sidebar while it can peek: the rail's echo beneath it and, at
 // rest, the strip past the rail's edge.
-function PeekScenery({
-  peek,
-  looks,
-  hrefTo,
-  onLab,
-}: {
-  peek: SidebarPeek;
-  looks: Looks;
-  hrefTo: (path: "/" | "/lab") => string;
-  onLab: boolean;
-}) {
+function PeekScenery({ peek, looks }: { peek: SidebarPeek; looks: Looks }) {
   if (!peek.enabled) return null;
   return (
     <>
-      <RailEcho looks={looks} hrefTo={hrefTo} onLab={onLab} />
+      <RailEcho looks={looks} />
       {peek.phase === "rail" && <PeekHotZone />}
     </>
   );
@@ -93,8 +74,6 @@ export type SidebarWidth = { width: number; onWidth: (px: number) => void };
  * out over the workspace (sidebar-peek.tsx). Its right edge resizes it, pinned or peeking.
  */
 export function AppSidebar({ theme, chrome, width, onWidth }: Looks & SidebarWidth) {
-  const { hrefTo } = usePaths();
-  const onLab = useLocation().pathname === "/lab";
   const panel = useRef<HTMLDivElement>(null);
   const peek = useSidebarPeek(panel);
   const pills = usePills(peek);
@@ -115,7 +94,7 @@ export function AppSidebar({ theme, chrome, width, onWidth }: Looks & SidebarWid
           aria-label="Sidebar"
           className="flex min-h-0 flex-1 flex-col"
         >
-          <RailPlaces hrefTo={hrefTo} onLab={onLab} pills={pills} />
+          <RailPlaces pills={pills} />
           <SidebarContent>
             <ProjectTree />
           </SidebarContent>
@@ -125,7 +104,7 @@ export function AppSidebar({ theme, chrome, width, onWidth }: Looks & SidebarWid
         </SidebarFooter>
         <SidebarResizeHandle width={width} onWidth={onWidth} controls={SIDEBAR_ID} />
       </Sidebar>
-      <PeekScenery peek={peek} looks={{ theme, chrome }} hrefTo={hrefTo} onLab={onLab} />
+      <PeekScenery peek={peek} looks={{ theme, chrome }} />
     </>
   );
 }

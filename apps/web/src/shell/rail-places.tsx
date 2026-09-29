@@ -14,10 +14,10 @@ import {
   FlaskConical,
   Store,
   Unplug,
-  type LucideIcon,
 } from "lucide-react";
-import { useId, type ReactElement, type ReactNode } from "react";
-import { Link } from "react-router";
+import { useId, type ComponentType, type ReactElement, type ReactNode } from "react";
+import { Link, useLocation } from "react-router";
+import { usePaths } from "../runtime";
 
 // The mark as meetkay.ai declares it (ADR-095): one polygon, drawn in the text colour.
 const KAY_MARK_POINTS =
@@ -32,17 +32,6 @@ const DOCS_URL = "https://docs.meetkay.ai";
 // peek's glyphs land exactly on the rail's.
 const RAIL_BUTTON =
   "h-10 gap-3 px-2.5 text-sm text-soft-ink hover:text-ink data-active:text-ink group-data-[collapsible=icon]:size-10! group-data-[collapsible=icon]:p-2.5! [&_svg]:size-5";
-
-// The places Kay's desktop app has and the web build does not yet, in the rail's order under
-// Kay (ADR-094, amended: Ethan, after Kay's own rail). Each keeps its name and glyph, says it
-// is coming, and opens nothing: there is no route behind any of them.
-const SOON_PLACES = [
-  { label: "Memory", Icon: Brain },
-  { label: "Skills", Icon: Unplug },
-  { label: "App store", Icon: Store },
-  { label: "Analytics", Icon: ChartColumnIncreasing },
-  { label: "Automations", Icon: Clock },
-] as const satisfies readonly { label: string; Icon: LucideIcon }[];
 
 // What a place not built yet says, as the splash switch's Bonsai does; the open sidebar's row
 // has room for the short form only (a 208px sidebar beside "Automations").
@@ -70,6 +59,18 @@ const PILL_OFFSET_PX = 8;
 // The rail's echo keeps its own slot, so a check that reads the sidebar's header finds one.
 const ECHO_HEADER = { "data-slot": "rail-echo-header" };
 
+// A place's glyph: a lucide icon, or Kay's own mark.
+type Glyph = ComponentType<{ className?: string }>;
+
+// One place in the rail, by what pressing it does: Kay's link home, drawn in the brand's mark
+// and serif; a route of the app, marked while it is open; a site elsewhere, in a new tab; or a
+// place the web build does not have yet, which opens nothing.
+type RailPlace =
+  | { kind: "home"; label: string; Glyph: Glyph; to: "/" }
+  | { kind: "route"; label: string; Glyph: Glyph; to: "/lab" }
+  | { kind: "external"; label: string; Glyph: Glyph; href: string }
+  | { kind: "soon"; label: string; Glyph: Glyph };
+
 /** Kay's mark, one polygon in the text colour; decorative, so its host carries the name. */
 export function KayMark({ className }: { className?: string }) {
   return (
@@ -79,21 +80,69 @@ export function KayMark({ className }: { className?: string }) {
   );
 }
 
+// The rail's places top to bottom (ADR-094, amended): Kay, then the places Kay's desktop app
+// has and the web build does not yet, each keeping its name and glyph (Ethan, after Kay's own
+// rail), then the documentation link, and the Lab last.
+const PLACES = [
+  { kind: "home", label: "Kay", Glyph: KayMark, to: "/" },
+  { kind: "soon", label: "Memory", Glyph: Brain },
+  { kind: "soon", label: "Skills", Glyph: Unplug },
+  { kind: "soon", label: "App store", Glyph: Store },
+  { kind: "soon", label: "Analytics", Glyph: ChartColumnIncreasing },
+  { kind: "soon", label: "Automations", Glyph: Clock },
+  { kind: "external", label: "Documentation", Glyph: BookOpen, href: DOCS_URL },
+  { kind: "route", label: "Lab", Glyph: FlaskConical, to: "/lab" },
+] as const satisfies readonly RailPlace[];
+
 // The pill a place names itself in, shown only while the rail is collapsed and at rest.
 const pillOf = (children: ReactNode, shown: boolean) =>
   ({ children, variant: "pill", sideOffset: PILL_OFFSET_PX, hidden: !shown }) as const;
+
+// What a live place opens: a route of the app, or a site of its own in a new tab.
+function linkOf(
+  place: Exclude<RailPlace, { kind: "soon" }>,
+  hrefTo: (path: "/" | "/lab") => string,
+) {
+  if (place.kind === "external") {
+    return <a href={place.href} target="_blank" rel="noreferrer" aria-label={place.label} />;
+  }
+  return <Link to={hrefTo(place.to)} aria-label={place.label} />;
+}
+
+// A live place's glyph and name as the open row shows them: Kay's mark and serif name in ink,
+// and an arrow after a site elsewhere.
+function Face({ place }: { place: Exclude<RailPlace, { kind: "soon" }> }) {
+  const { Glyph, label } = place;
+  if (place.kind === "home") {
+    return (
+      <>
+        <Glyph className="text-ink" />
+        <span className="font-serif text-lg text-ink">{label}</span>
+      </>
+    );
+  }
+  return (
+    <>
+      <Glyph />
+      <span className="text-ink">{label}</span>
+      {place.kind === "external" && (
+        <ArrowUpRight aria-hidden="true" className="ml-auto size-3.5! text-soft-ink" />
+      )}
+    </>
+  );
+}
 
 // One place in the rail's header, whose name shows in a pill while the rail is collapsed.
 function Place({
   label,
   link,
-  active = false,
+  active,
   pill,
   children,
 }: {
   label: string;
   link: ReactElement;
-  active?: boolean;
+  active: boolean;
   pill: boolean;
   children: ReactNode;
 }) {
@@ -114,7 +163,7 @@ function Place({
 // A place the web build does not have yet: a button that is there to be found, by pointer,
 // keyboard and screen reader ("Memory, dimmed, button, Coming soon"), and opens nothing. It
 // keeps the rail's square and padding, so its glyph sits where a live place's would.
-function SoonPlace({ label, Icon, pill }: { label: string; Icon: LucideIcon; pill: boolean }) {
+function SoonPlace({ label, Glyph, pill }: { label: string; Glyph: Glyph; pill: boolean }) {
   const hint = useId(); // → string, unique per drawing, so the rail's echo never repeats it
   return (
     <SidebarMenuItem>
@@ -132,7 +181,7 @@ function SoonPlace({ label, Icon, pill }: { label: string; Icon: LucideIcon; pil
         )}
         className={`${RAIL_BUTTON} ${SOON_BUTTON}`}
       >
-        <Icon />
+        <Glyph />
         <span>{label}</span>
         <span id={hint} className="sr-only">
           {SOON}
@@ -147,45 +196,32 @@ function SoonPlace({ label, Icon, pill }: { label: string; Icon: LucideIcon; pil
 
 /**
  * The rail's fixed places, above the projects: Kay, the places not built yet, the documentation
- * link, and the Lab last (ADR-094, amended).
+ * link, and the Lab last (ADR-094, amended). A route's place is marked while it is open.
  * @param pills Whether their names show in pills: the collapsed rail, not while it peeks.
  * @param echo Draws them for the rail's echo beneath the sidebar.
  */
-export function RailPlaces({
-  hrefTo,
-  onLab,
-  pills,
-  echo = false,
-}: {
-  hrefTo: (path: "/" | "/lab") => string;
-  onLab: boolean;
-  pills: boolean;
-  echo?: boolean;
-}) {
+export function RailPlaces({ pills, echo = false }: { pills: boolean; echo?: boolean }) {
+  const { hrefTo } = usePaths();
+  const at = useLocation().pathname; // → the open route, such as "/lab"
   return (
     <SidebarHeader className="gap-0.5 px-2 pt-2" {...(echo ? ECHO_HEADER : {})}>
       <TooltipProvider delay={PILL_DELAY_MS} closeDelay={0}>
         <SidebarMenu className="gap-0.5">
-          <Place label="Kay" link={<Link to={hrefTo("/")} aria-label="Kay" />} pill={pills}>
-            <KayMark className="text-ink" />
-            <span className="font-serif text-lg text-ink">Kay</span>
-          </Place>
-          {SOON_PLACES.map(({ label, Icon }) => (
-            <SoonPlace key={label} label={label} Icon={Icon} pill={pills} />
-          ))}
-          <Place
-            label="Documentation"
-            link={<a href={DOCS_URL} target="_blank" rel="noreferrer" aria-label="Documentation" />}
-            pill={pills}
-          >
-            <BookOpen />
-            <span className="text-ink">Documentation</span>
-            <ArrowUpRight aria-hidden="true" className="ml-auto size-3.5! text-soft-ink" />
-          </Place>
-          <Place label="Lab" link={<Link to={hrefTo("/lab")} />} active={onLab} pill={pills}>
-            <FlaskConical />
-            <span className="text-ink">Lab</span>
-          </Place>
+          {PLACES.map((place) =>
+            place.kind === "soon" ? (
+              <SoonPlace key={place.label} label={place.label} Glyph={place.Glyph} pill={pills} />
+            ) : (
+              <Place
+                key={place.label}
+                label={place.label}
+                link={linkOf(place, hrefTo)}
+                active={place.kind === "route" && at === place.to}
+                pill={pills}
+              >
+                <Face place={place} />
+              </Place>
+            ),
+          )}
         </SidebarMenu>
       </TooltipProvider>
     </SidebarHeader>
