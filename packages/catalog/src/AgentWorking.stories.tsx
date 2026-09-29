@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { AgentWorking } from "./AgentWorking";
 import { InLine, Labeled, Stage } from "./motionStage";
 
-const SPEEDS = [650, 850, 1200, 1350, 1500];
+const SPEEDS = [1500, 1800, 2000, 2200, 2500];
 const VARIANTS = [
   { pattern: "wave", cells: 4 },
   { pattern: "orbit", cells: 4 },
@@ -15,13 +15,13 @@ const meta = {
   component: AgentWorking,
   parameters: { layout: "centered" },
   argTypes: {
-    duration: { control: { type: "range", min: 100, max: 2000, step: 50 } },
+    duration: { control: { type: "range", min: 100, max: 3000, step: 50 } },
     pattern: { control: "inline-radio", options: ["wave", "orbit"] },
     cells: { control: "inline-radio", options: [4, 6] },
     // Only a screen reader hears it; a control that changes nothing on screen reads as broken.
     label: { table: { disable: true } },
   },
-  args: { duration: 1500, pattern: "wave", cells: 4 },
+  args: { duration: 2000, pattern: "wave", cells: 4 },
   decorators: [(Story) => <Stage>{Story()}</Stage>],
 } satisfies Meta<typeof AgentWorking>;
 export default meta;

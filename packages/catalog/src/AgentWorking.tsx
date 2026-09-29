@@ -33,17 +33,17 @@ type AgentWorkingProps = {
 
 /**
  * Kay's task-size glyph as an "agent working" indicator: squares of green that fade in and
- * out on a loop, as a left-to-right wave or a clockwise orbit. Holds still under reduced
- * motion.
+ * out on a loop, as a left-to-right wave or a clockwise orbit, each flash in one of seven
+ * brand greens. Holds still under reduced motion.
  */
 export function AgentWorking({
-  duration = 1500,
+  duration = 2000,
   pattern = "wave",
   cells = 4,
   label = "Agent working",
 }: AgentWorkingProps) {
   const style: StyleWithVars = {
-    "--working-duration": `${duration}ms`, // number → "1500ms"
+    "--working-duration": `${duration}ms`, // number → "2000ms"
     "--working-cells": cells, // the orbit divides one lap by this
   };
   const steps = CLOCKWISE_STEP[cells]; // → number[], one per square

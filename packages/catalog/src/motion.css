@@ -15,13 +15,34 @@
   --working-mid: var(--olive);
   --working-soft: var(--yak-green);
 }
+/* Dark mode's seven, all light enough to read on the dark paper. */
+:root[data-theme="dark"] .agent-working {
+  --shade-0: var(--sage);
+  --shade-1: var(--olive);
+  --shade-2: var(--chalk);
+  --shade-3: color-mix(in srgb, var(--sage) 55%, var(--olive));
+  --shade-4: color-mix(in srgb, var(--chalk) 70%, var(--yak-green));
+  --shade-5: color-mix(in srgb, var(--olive) 60%, var(--chalk));
+  --shade-6: color-mix(in srgb, var(--sage) 60%, var(--yak-green));
+}
 
 /* Agent working: Kay's 2x2 task-size glyph, animated. Each square fades in to the strongest
-   green, then fades out through lighter greens. Colour follows opacity: solid is darkest.
+   green it has drawn, then fades out; each flash draws its shade from a set of seven brand
+   greens, so the glyph never repeats itself the same way twice in a row.
    Two patterns: a wave (the right column a step behind the left, so the lit edge travels left
    to right) and an orbit (each square a step behind the last, clockwise). */
 .agent-working {
-  --working-duration: 1500ms;
+  --working-duration: 2000ms;
+  /* Seven shades of the brand greens, in an order that jumps between dark and light so no two
+     flashes in a row look alike. Light mode stays dark enough to read at full opacity on paper
+     (the lightest is 3.3:1); the fade toward clear supplies the tints. */
+  --shade-0: var(--moss);
+  --shade-1: color-mix(in srgb, var(--yak-green) 55%, var(--sage));
+  --shade-2: var(--chrome);
+  --shade-3: var(--yak-green);
+  --shade-4: color-mix(in srgb, var(--moss) 65%, var(--sage));
+  --shade-5: var(--chrome-painting);
+  --shade-6: color-mix(in srgb, var(--moss) 50%, var(--yak-green));
   /* The right column runs 25% of a cycle behind, so it peaks while the left one fades.
      Written as a head start of 75% (a negative delay), so no square waits blank on load. */
   --working-lag: calc(var(--working-duration) * -0.75);
@@ -53,12 +74,66 @@
   border-radius: var(--working-radius, 1px);
   background: var(--working-strong);
   opacity: 0;
-  animation: agent-working-wave var(--working-duration) linear infinite;
-  animation-delay: var(--working-offset, 0ms);
+  /* Two tracks on one clock: the opacity track is the motion, and the shade track steps to
+     the next green once per loop, 80% into the square's own cycle, while it is clear, so a
+     flash is one shade from its first frame to its last and never smears between two. */
+  animation:
+    agent-working-wave var(--working-duration) linear infinite,
+    agent-working-shade calc(var(--working-duration) * 7) steps(1, end) infinite;
+  animation-delay:
+    var(--working-offset, 0ms),
+    calc(var(--working-offset, 0ms) - var(--working-duration) * (0.2 + var(--shade-shift, 0)));
 }
 /* Grid order is row by row, so the right column is every even child, in both grids. */
 .agent-working-cell:nth-child(even) {
   --working-offset: var(--working-lag);
+}
+/* Each square starts somewhere else in the seven, so no two squares ever flash the same shade
+   in the same loop. The shifts are solved against each layout's own delays (the wave's right
+   column already runs a shade ahead, and the six-square orbit's middle-left one behind); of the
+   sets that keep all four layouts clash-free, this one puts the most contrast between
+   side-by-side squares. */
+.agent-working-cell:nth-child(2) {
+  --shade-shift: 3;
+}
+.agent-working-cell:nth-child(3) {
+  --shade-shift: 5;
+}
+.agent-working-cell:nth-child(4) {
+  --shade-shift: 1;
+}
+.agent-working-cell:nth-child(5) {
+  --shade-shift: 6;
+}
+.agent-working-cell:nth-child(6) {
+  --shade-shift: 2;
+}
+/* The seven shades, one per loop. A timing function runs per keyframe segment, so steps(1)
+   holds each shade for its whole segment (one loop) and then jumps; steps(7) would split every
+   segment into seven smeared blends. */
+@keyframes agent-working-shade {
+  0%,
+  100% {
+    background: var(--shade-0);
+  }
+  14.2857% {
+    background: var(--shade-1);
+  }
+  28.5714% {
+    background: var(--shade-2);
+  }
+  42.8571% {
+    background: var(--shade-3);
+  }
+  57.1429% {
+    background: var(--shade-4);
+  }
+  71.4286% {
+    background: var(--shade-5);
+  }
+  85.7143% {
+    background: var(--shade-6);
+  }
 }
 /* The motion fits in the first 65% of the cycle; each square then rests clear. With the 25%
    lag, the right column finishes as the loop ends, so the wave completes and all four squares
@@ -66,21 +141,17 @@
 @keyframes agent-working-wave {
   0% {
     opacity: 0;
-    background: var(--working-soft);
   }
   25%,
   35% {
     opacity: 1;
-    background: var(--working-strong);
   }
   50% {
     opacity: 0.55;
-    background: var(--working-mid);
   }
   65%,
   100% {
     opacity: 0;
-    background: var(--working-soft);
   }
 }
 /* Orbit: a comet going clockwise. A fast rise and a long fall, so the lit square leads and the
@@ -90,30 +161,26 @@
    is allowed, so the reduced-motion still frame below is never overridden. */
 @media (prefers-reduced-motion: no-preference) {
   .agent-working[data-pattern="orbit"] .agent-working-cell {
-    animation-name: agent-working-orbit;
-    animation-delay: calc(
+    --working-offset: calc(
       var(--working-duration) * (var(--working-step) / var(--working-cells) - 1)
     );
+    animation-name: agent-working-orbit, agent-working-shade;
   }
 }
 @keyframes agent-working-orbit {
   0% {
     opacity: 0;
-    background: var(--working-soft);
   }
   8%,
   18% {
     opacity: 1;
-    background: var(--working-strong);
   }
   40% {
     opacity: 0.55;
-    background: var(--working-mid);
   }
   65%,
   100% {
     opacity: 0;
-    background: var(--working-soft);
   }
 }
 /* No wave under reduced motion: the glyph holds still, half lit, still reading as "busy". */
