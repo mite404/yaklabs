@@ -9,12 +9,5 @@ import type { ComponentProps } from "react";
 export function QuietButton(
   props: Omit<ComponentProps<typeof Button>, "variant" | "size" | "className">,
 ) {
-  return (
-    <Button
-      variant="outline"
-      size="sm"
-      className="rounded-[var(--radius)] dark:bg-transparent"
-      {...props}
-    />
-  );
+  return <Button variant="outline" size="sm" className="dark:bg-transparent" {...props} />;
 }

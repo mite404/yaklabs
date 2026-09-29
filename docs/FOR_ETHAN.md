@@ -1097,6 +1097,10 @@ comes from the base-lyra preset, which hard-codes `rounded-none`, so the `--radi
 this one had not. It opts in now, and W6 reads its corners at rest, on hover and under focus.
 Lesson: a default that is wrong everywhere is fixed by an override everywhere, and the one place
 that forgets is the one people notice. The lasting fix is the default itself (a follow-up).
+Followed up (Ethan: "yes good idea"): the vendored button now rounds to `rounded-lg`, which is
+`--radius`, at every size, and none of the call sites that opted back in need to any more. A
+survey of every button's computed corner across the thread, Browser, Canvas and welcome views
+read the same before and after, and the four screenshots matched to the pixel.
 
 **The white frame.** Pressing "+" flashed the main pane to bare paper for one frame, 6.77s and
 10.89s into the recording, with "Opening New thread..." in its corner. It was not a page reload:

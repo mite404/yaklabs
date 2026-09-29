@@ -44,7 +44,7 @@ function SidebarToggle() {
       aria-label="Toggle sidebar"
       aria-expanded={isMobile ? openMobile : open}
       aria-controls={SIDEBAR_ID}
-      className="shrink-0 rounded-[var(--radius)] text-soft-ink hover:text-ink aria-expanded:bg-transparent aria-expanded:text-soft-ink aria-expanded:hover:bg-muted aria-expanded:hover:text-ink dark:aria-expanded:hover:bg-muted/50"
+      className="shrink-0 text-soft-ink hover:text-ink aria-expanded:bg-transparent aria-expanded:text-soft-ink aria-expanded:hover:bg-muted aria-expanded:hover:text-ink dark:aria-expanded:hover:bg-muted/50"
     />
   );
 }

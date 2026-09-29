@@ -22,14 +22,7 @@ function PaneButton({
   children: ReactNode;
 }) {
   return (
-    <Button
-      variant="ghost"
-      size="icon-sm"
-      className="rounded-[var(--radius)]"
-      aria-label={label}
-      disabled={disabled}
-      onClick={onClick}
-    >
+    <Button variant="ghost" size="icon-sm" aria-label={label} disabled={disabled} onClick={onClick}>
       {children}
     </Button>
   );

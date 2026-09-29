@@ -30,10 +30,6 @@ const ACTION = "h-8 rounded-xl px-3";
 
 const LABEL = "text-[11px] font-medium tracking-[0.1em] text-soft-ink uppercase";
 
-// The site's 4px button corners (design pillars rule 8) through shadcn's --radius, as the
-// shell's other icon buttons have them: the vendored base-lyra button is square by default.
-const SITE_CORNERS = "rounded-[var(--radius)]";
-
 function Greeting({ name }: { name: string | null }) {
   return (
     <div>
@@ -76,7 +72,6 @@ function Projects() {
         <Button
           variant="ghost"
           size="icon-xs"
-          className={SITE_CORNERS}
           aria-label="New project"
           onClick={() => shell?.newProject()}
         >

@@ -20,7 +20,7 @@ const NOT_HERE = "Not in the web build yet";
 
 const SECTION = "flex flex-col gap-2 border-b border-border px-4 py-3";
 const LABEL = "text-xs text-soft-ink";
-const FIELD_BUTTON = "rounded-lg text-soft-ink hover:text-ink";
+const FIELD_BUTTON = "text-soft-ink hover:text-ink";
 
 // The dialog keeps the thread it last showed while it fades out, since the shell forgets the
 // thread the moment the dialog is asked to close.
@@ -111,7 +111,7 @@ function PermissionsSection(props: AccessProps) {
             size="sm"
             disabled
             title={NOT_HERE}
-            className="h-8 rounded-lg px-3 text-[13px] disabled:pointer-events-auto"
+            className="h-8 px-3 text-[13px] disabled:pointer-events-auto"
           >
             Create Workspace
           </Button>

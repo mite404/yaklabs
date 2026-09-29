@@ -41,7 +41,7 @@ function CollapseToggle({ collapsed, onClick }: { collapsed: boolean; onClick: (
     <Button
       variant="ghost"
       size="icon-sm"
-      className={`rounded-[var(--radius)] text-soft-ink hover:text-ink ${collapsed ? "size-6" : ""}`}
+      className={`text-soft-ink hover:text-ink ${collapsed ? "size-6" : ""}`}
       aria-label={collapsed ? "Expand lane" : "Collapse lane"}
       data-lane-toggle=""
       onClick={onClick}
@@ -58,7 +58,7 @@ function CloseButton({ title, onClick }: { title: string; onClick: () => void })
     <Button
       variant="ghost"
       size="icon-sm"
-      className="rounded-[var(--radius)] text-soft-ink hover:text-ink"
+      className="text-soft-ink hover:text-ink"
       aria-label={`Close ${title}`}
       data-lane-close=""
       onClick={onClick}
