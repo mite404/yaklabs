@@ -1790,10 +1790,14 @@ Ethan answered the defaults it was built with, the same day:
 - A pin and an unpin move over 250ms, the panel, the workspace and the tabs in lockstep, on
   Ethan's curve, and the peek keeps its 220ms on the same curve ("set the click to 250ms ... use
   similar curve for both the peek and the toggle. DO NOT change the length of the animation or
-  the keyframes, only the curve"). Read off his sketch as `cubic-bezier(0.34, 1.11, 1, 1)`, it
-  would pass its mark by 0.8px, so its first handle is held at 1: `cubic-bezier(0.34, 1, 1, 1)`,
-  `--panel-ease` beside `--panel-peek` (220ms) and `--panel-pin` (250ms) in `index.css`. P19,
-  P24 and P31 read them.
+  the keyframes, only the curve"). The first reading, off a still sketch, was
+  `cubic-bezier(0.34, 1, 1, 1)`, which left the gate too gently ("niether curve is what i asked
+  for"). Ethan then showed the value graph of an After Effects move, "fast acceleration to a
+  slower and smooth settle", and the curve is fitted to that graph: `cubic-bezier(0.17, 1.02,
+  0.58, 1)`, within 0.2% of it at every sampled point, half the travel done by 13% of the time
+  and 90% by 43%. Its first handle sits a touch above the target, as in his graph, which carries
+  the panel a hundredth of a pixel past its mark. It is `--panel-ease` beside `--panel-peek`
+  (220ms) and `--panel-pin` (250ms) in `index.css`; P19, P24 and P31 read them.
 - Under reduced motion nothing slides: a pin and an unpin are instant, and the peek comes and
   goes with no slide and no fade, whatever closes it ("add reduced motion to opening/closing the
   panel"; rule 24). P20 holds both.

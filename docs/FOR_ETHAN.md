@@ -2405,19 +2405,24 @@ whip-pans through black, and the audience sees one move. The engineering rule un
 two mechanisms own the same property at different times, hand over on a frame where their
 outputs agree, and turn the motion off for exactly that frame.
 
-### Reading a curve off a napkin
+### Read the graph, not the thumbnail
 
-Ethan drew the motion he wanted: "fast in the beginning and then a bit of an ease into the final
-position". A CSS easing curve is that drawing with two handles, the same tangent handles as a
-keyframe in After Effects' graph editor. Time runs left to right, travel bottom to top; the first
-handle sets how hard it leaves, the second how softly it lands. Read off the sketch, the handles
-sit at (0.34, 1.11) and (1, 1). A handle above 1 means the curve pokes past the top: the panel
-would slide 0.8px past its mark and back. Holding it at 1 keeps the shape and drops the bounce:
+Ethan asked for motion that is "fast in the beginning and then a bit of an ease into the final
+position", with a small sketch of a curve. A CSS easing curve is the same object as a keyframe
+pair in After Effects' value graph: time runs left to right, value bottom to top, and the two
+handles are the keyframes' tangents. The first handle says how hard the move leaves, the second
+how softly it lands.
+
+The first try read the handles off the sketch, (0.34, 1) and (1, 1), and missed: the sketch was a
+thumbnail with no scale, and a handle one third of the way along leaves the gate gently. Ethan
+answered with a screen recording of the real thing, a text layer moving 500px to 1500px over 100
+frames, with its value graph open. Sampling the red curve pixel by pixel and fitting a cubic
+Bezier to the samples gave the handles his graph actually holds:
 
 ```css
-/* apps/web/src/index.css - one curve, two clocks, so the peek and the pin feel like one move */
+/* apps/web/src/index.css - fitted to the value graph of Ethan's After Effects move */
 :root {
-  --panel-ease: cubic-bezier(0.34, 1, 1, 1); /* Ethan's sketch, first handle held at 1 */
+  --panel-ease: cubic-bezier(0.17, 1.02, 0.58, 1); /* handles at 17% and 58% of the time */
   --panel-peek: 220ms; /* the hover peek, unchanged */
   --panel-pin: 250ms; /* a click on the toggle: was shadcn's 200ms linear */
 }
@@ -2429,14 +2434,15 @@ xychart-beta
   x-axis "ms" [0, 20, 40, 60, 80, 100, 120, 140, 160, 180, 200, 220]
   y-axis "travel %" 0 --> 100
   line "old drawer curve" [0, 24, 59, 81, 90, 94, 97, 98, 99, 100, 100, 100]
-  line "Ethan's curve" [0, 23, 40, 54, 65, 75, 82, 88, 93, 96, 99, 100]
+  line "first try, off the sketch" [0, 23, 40, 54, 65, 75, 82, 88, 93, 96, 99, 100]
+  line "fitted to the AE graph" [0, 39, 61, 76, 85, 91, 95, 98, 99, 100, 100, 100]
 ```
 
-Both lines leave the gate together (23% by 20ms), then part: the old drawer curve had covered 90%
-by 80ms and spent the rest crawling the last few pixels, while Ethan's keeps moving through the
-middle and settles over the last third. The editor's version: same shot length, same first
-frame, a different speed ramp. The feel of a move lives in its ramp, and a duration you are not
-allowed to touch still leaves the whole ramp to play with.
+The fitted curve is 39% of the way there after 20ms, where both others sit near 23%: that is the
+"fast acceleration". Past 90% it spends the second half of the move closing the last few
+pixels: the "slower and smooth settle". The fit sits within 0.2% of Ethan's graph at every
+sampled point. In edit-suite terms, the first try matched the shape of a speed ramp from a
+storyboard frame; the second measured the ramp off the actual clip.
 
 ### Fix the stamp, not the prints
 

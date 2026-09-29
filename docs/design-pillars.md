@@ -268,10 +268,10 @@ behind each rule below is told in `docs/FOR_ETHAN.md`.
 | A new thread's welcome picture | none, arrives with its words | none | derived (the paintings) |
 | Agent working glyph (wave, orbit) | 2000ms loop | `linear` fades | Ethan |
 | Agent tree glyph | 2000ms loop | `linear` fades, `cubic-bezier(0.4, 0, 0.6, 1)` scroll | Ethan |
-| Sidebar peek slide, out and back (rule 26) | 220ms | `cubic-bezier(0.34, 1, 1, 1)` (`--panel-ease`) | Ethan |
+| Sidebar peek slide, out and back (rule 26) | 220ms | `cubic-bezier(0.17, 1.02, 0.58, 1)` (`--panel-ease`) | Ethan |
 | Sidebar peek fade in, at the slide's start | 120ms | `cubic-bezier(0.23, 1, 0.32, 1)` | derived |
 | Sidebar peek fade back, to the slide's end | 120ms | `cubic-bezier(0.68, 0, 0.77, 0)` | derived |
-| Sidebar pin and unpin (the panel behind the rail, workspace and tabs in step) | 250ms (`--panel-pin`); none under reduced motion (rule 24) | `cubic-bezier(0.34, 1, 1, 1)` (`--panel-ease`) | Ethan |
+| Sidebar pin and unpin (the panel behind the rail, workspace and tabs in step) | 250ms (`--panel-pin`); none under reduced motion (rule 24) | `cubic-bezier(0.17, 1.02, 0.58, 1)` (`--panel-ease`) | Ethan |
 | Sidebar peek under reduced motion (rule 24) | none: no slide and no fade | none | Ethan |
 
 ### 18. A working indicator reads as steady work, never an alert
@@ -346,21 +346,19 @@ little, since each frame of a broken loop can look fine on its own.
 
 The projects panel's peek slides out from behind the rail's edge and back behind it on one curve
 and one duration, 220ms both ways, and a pin or an unpin by the toggle moves on the same curve
-over 250ms (Ethan). The curve is Ethan's sketch, fast out of the gate and easing into place:
-read off it as `cubic-bezier(0.34, 1.11, 1, 1)`, with the first handle held at 1 so the panel
-never passes its mark (0.8px of overshoot otherwise), `--panel-ease` in `index.css`. It covers
-half its travel by 24% of the time and 90% by 67%.
+over 250ms (Ethan). The curve is a fast acceleration into a long, smooth settle, fitted to the
+value graph of Ethan's After Effects example: `cubic-bezier(0.17, 1.02, 0.58, 1)`,
+`--panel-ease` in `index.css`. It covers half its travel by 13% of the time and 90% by 43%, and
+the rest of the time is the settle.
 The stage beside the rail clips the panel at the rail's edge (`overflow: clip`, never `hidden`,
 so no focus or scroll into view can scroll it), the way rule 22's shapes pass their gate: the
 panel never covers the rail's places, and the fade hides no motion (derived, ADR-139).
 Out, it fades in over the slide's first 120ms; back, it keeps full strength and fades over the
 slide's last 120ms, starting 100ms in, on the fade-in's curve played backwards (derived): still
-0.97 when its edge is 18px from home, and dimmer only over the last 5% of its travel, where the
-curve eases it in.
+0.97 when its edge is 2px from home.
 That tail fade takes away only the soft shadow and the hairline across the workspace's corner,
-which would otherwise vanish in one frame as the panel lands: 3.7% of the 40px strip past the
-rail's edge in the light theme and 2.5% in the dark, the landing frame at full strength against
-rest (derived).
+which would otherwise vanish in one frame as the panel lands: 2.5% of the 40px strip past the
+rail's edge in either theme, the landing frame at full strength against rest (derived).
 The first way back faded on the slide's own front-loaded curve over 160ms: at 0.32 after 33ms,
 with its edge still 83px out, it read as no motion at all.
 The sidebar checks' P24 seeks both directions to the same instants, holds them to this and
