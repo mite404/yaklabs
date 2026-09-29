@@ -1723,6 +1723,6 @@ instant. Its edge takes the canvas divider's handle (drag, arrows, Home and End,
 reset, the width kept as `kay.sidebar-width`), and the first tab starts 4px past that edge from the
 same width variable, as in the ChatGPT desktop app, so it follows a drag on every frame. Rail
 icons name themselves in an ink pill (13:1 against the shell).
-Amended 2026-09-29 (Ethan): the peek slides back as it slides out, 220ms on the drawer curve both
-ways; the window's frame clips it, so it keeps full strength on the way back and fades only over
-the slide's last 120ms (design pillars, rule 26).
+Amended 2026-09-29: the peek slides back as it slides out, 220ms on the drawer curve both ways
+(Ethan). The window's frame clips it, so it keeps full strength on the way back and fades only
+over the slide's last 120ms (derived; design pillars, rule 26).

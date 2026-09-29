@@ -217,7 +217,7 @@ behind each rule below is told in `docs/FOR_ETHAN.md`.
 | Menu opening | 120ms | `ease-out` | derived |
 | Modal fade, then rise | 160ms, 200ms | `ease-out` | derived |
 | A loading thread's "Opening ..." line | shown after 100ms | none, steps in | derived (rule 9) |
-| The empty canvas's splash, arriving | 150ms fade in | `ease-out` | css (ADR-113) |
+| The empty canvas's splash, arriving | 150ms fade in | `ease-out` | derived (ADR-113) |
 | A new thread's welcome picture | none, arrives with its words | none | derived (the paintings) |
 | Agent working glyph (wave, orbit) | 2000ms loop | `linear` fades | Ethan |
 | Agent tree glyph | 2000ms loop | `linear` fades, `cubic-bezier(0.4, 0, 0.6, 1)` scroll | Ethan |
@@ -293,7 +293,7 @@ Timing claims ("half clipped as the branch is half faded", "no two squares share
 browser test that seeks the animation and measures it; a screenshot of one good frame proves
 little, since each frame of a broken loop can look fine on its own.
 
-### 26. A panel that slides past the window's edge is clipped, not faded
+### 26. A panel slides back the way it slid out, and the window's edge clips it
 
 The sidebar's peek slides out from the window's edge and back to it on one curve and one
 duration, 220ms of `cubic-bezier(0.32, 0.72, 0, 1)` both ways (Ethan).
