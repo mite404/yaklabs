@@ -26,6 +26,11 @@ type ShareProps = { shell: Shell; thread: ThreadSummary };
 const shareOf = (shell: Shell, thread: ThreadSummary) =>
   liveShare(shell.workspace.shares, thread.id);
 
+// What Share says the thread is: private, or public until when, at the menu's length.
+function shareStatus(share: ThreadShare | undefined): string {
+  return share === undefined ? "Private" : `Until ${wakeText(new Date(share.expiresAt), "menu")}`;
+}
+
 // What a public thread's page offers: its end, its link, and taking it down.
 function PublicItems({ shell, thread, share }: ShareProps & { share: ThreadShare }) {
   return (
@@ -112,9 +117,8 @@ function LifetimeItems({ shell, thread, isPublic }: ShareProps & { isPublic: boo
  * never a guess.
  */
 export function ShareItem({ shell, thread }: ShareProps) {
-  const share = shareOf(shell, thread);
-  const status =
-    share === undefined ? "Private" : `Until ${wakeText(new Date(share.expiresAt), "menu")}`;
+  const share = shareOf(shell, thread); // → ThreadShare | undefined
+  const status = shareStatus(share); // → "Private" | "Until Fri 9:00"
   return (
     <DropdownMenuSub>
       <DropdownMenuSubTrigger
@@ -138,9 +142,8 @@ export function ShareItem({ shell, thread }: ShareProps) {
  * shows its glyph filled in, and its name says until when, so the state is never a guess.
  */
 export function ThreadShareButton({ shell, thread }: ShareProps) {
-  const share = shareOf(shell, thread);
-  const status =
-    share === undefined ? "Private" : `Until ${wakeText(new Date(share.expiresAt), "menu")}`;
+  const share = shareOf(shell, thread); // → ThreadShare | undefined
+  const status = shareStatus(share); // → "Private" | "Until Fri 9:00"
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
