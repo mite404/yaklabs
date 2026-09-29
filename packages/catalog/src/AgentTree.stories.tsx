@@ -12,7 +12,7 @@ const meta = {
   argTypes: {
     duration: { control: { type: "range", min: 100, max: 3000, step: 50 } },
     // Only a screen reader hears it; a control that changes nothing on screen reads as broken.
-    label: { control: false },
+    label: { table: { disable: true } },
   },
   args: { duration: 2000 },
   decorators: [(Story) => <Stage>{Story()}</Stage>],

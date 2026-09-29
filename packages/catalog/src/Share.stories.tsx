@@ -11,6 +11,9 @@ const meta = {
   title: "Share/Public page",
   component: ShareView,
   parameters: { layout: "fullscreen" },
+  // The link is an encoded card or a thread key read once as the page opens, and the loader is
+  // a stand-in for the network: each story is a different link, not a knob.
+  argTypes: { hash: { table: { disable: true } }, loadThread: { table: { disable: true } } },
 } satisfies Meta<typeof ShareView>;
 export default meta;
 type Story = StoryObj<typeof meta>;

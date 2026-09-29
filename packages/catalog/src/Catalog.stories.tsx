@@ -2,13 +2,40 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { CatalogCard } from "./CatalogCard";
 import { App } from "./App";
 import { scenarios } from "./fixtures";
+// A card in a thread is styled by the thread's sheet, which the app always has around it; the
+// card alone does not load it, so without this the context control would change nothing.
+import "./thread.css";
 
 const meta = {
   title: "Catalog/Approved answers",
   component: CatalogCard,
+  // Draggable turns the header into a handle: a grab cursor and a carry, seen by dragging it.
+  parameters: { controlsAudit: { onInteraction: ["draggable"] } },
+  argTypes: {
+    // Where the card lives: the full page, or a thread, which hides the page-only notes.
+    context: { control: "inline-radio", options: ["page", "thread"] },
+    // Slots the host fills with its own controls; the catalog has nothing to put there.
+    leading: { table: { disable: true } },
+    trailing: { table: { disable: true } },
+  },
+  // The card's own defaults, said out loud so each control starts on its real value rather
+  // than an empty radio or a "Set boolean" button.
+  args: { context: "page", shareable: true, draggable: false },
 } satisfies Meta<typeof CatalogCard>;
+
 export default meta;
 type Story = StoryObj<typeof meta>;
+
+const hidden = { table: { disable: true } };
+// The empty and rejected states have no header, so there is no share button or drag to toggle.
+const stateCard: Pick<Story, "argTypes"> = {
+  argTypes: { shareable: hidden, draggable: hidden },
+};
+// A rejected card says the same thing whatever its payload holds, short of a valid one, so its
+// payload has nothing to show either.
+const rejectedCard: Pick<Story, "argTypes"> = {
+  argTypes: { ...stateCard.argTypes, payload: hidden },
+};
 
 export const Trend: Story = { args: { payload: scenarios.trend.payload } };
 export const Snapshot: Story = {
@@ -26,14 +53,18 @@ export const SparseFallback: Story = {
 export const MissingData: Story = {
   args: { payload: scenarios.missing.payload },
 };
-export const Empty: Story = { args: { payload: scenarios.empty.payload } };
+export const Empty: Story = { ...stateCard, args: { payload: scenarios.empty.payload } };
 export const Unsupported: Story = {
+  ...rejectedCard,
   args: { payload: scenarios.unsupported.payload },
 };
 export const UnsafeProps: Story = {
+  ...rejectedCard,
   args: { payload: scenarios.unsafe.payload },
 };
+/** The whole evaluation app, which picks its own scenarios, so no card control reaches it. */
 export const ProductEvaluation: Story = {
   args: { payload: scenarios.trend.payload },
+  parameters: { controls: { disable: true } },
   render: () => <App />,
 };

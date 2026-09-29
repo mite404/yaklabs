@@ -35,6 +35,7 @@ const meta = {
   title: "Foundations/Button",
   component: ButtonStates,
   parameters: { layout: "fullscreen" },
+  argTypes: { size: { control: "inline-radio", options: ["default", "small"] } },
 } satisfies Meta<typeof ButtonStates>;
 export default meta;
 type Story = StoryObj<typeof meta>;
