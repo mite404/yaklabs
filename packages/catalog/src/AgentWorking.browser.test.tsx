@@ -31,6 +31,25 @@ function cellOffsets(): Offset[] {
   });
 }
 
+// Each square's shade at the moment it is fully lit, loop by loop: a row per loop, a column per
+// square, sampled every 20ms of the given loops.
+function peakShades(duration: number, loops: number): (string | undefined)[][] {
+  const cells = [...glyph().querySelectorAll(".agent-working-cell")];
+  const rows = Array.from({ length: loops }, () => cells.map((): string | undefined => undefined));
+  for (let t = 0; t < duration * loops; t += 20) {
+    for (const animation of glyph().getAnimations({ subtree: true })) {
+      animation.pause();
+      animation.currentTime = t + duration * 7; // well past every head start
+    }
+    const row = rows[Math.floor(t / duration)] ?? [];
+    cells.forEach((cell, i) => {
+      const { opacity, backgroundColor } = getComputedStyle(cell);
+      if (Number(opacity) > 0.99) row[i] ??= backgroundColor;
+    });
+  }
+  return rows;
+}
+
 // Distances between the distinct values, in reading order, which is also top-to-bottom and
 // left-to-right: [0, 4, 0, 4] → [4].
 function steps(values: number[]): number[] {
@@ -66,9 +85,24 @@ describe("AgentWorking", () => {
     });
     await wait(50);
 
-    const starts = startTimes(); // → six start times
-    expect(starts).toHaveLength(6);
+    const starts = startTimes(); // → two per square: its motion and its shade
+    expect(starts).toHaveLength(12);
     expect(new Set(starts).size).toBe(1);
+  });
+
+  it.each([
+    { pattern: "wave", cells: 4 },
+    { pattern: "wave", cells: 6 },
+    { pattern: "orbit", cells: 4 },
+    { pattern: "orbit", cells: 6 },
+  ] as const)("gives every square its own green each loop: $pattern, $cells", (variant) => {
+    flushSync(() => {
+      root.render(<AgentWorking duration={1000} {...variant} />);
+    });
+
+    const rows = peakShades(1000, 7); // → seven loops, one full turn of the shades
+    for (const row of rows) expect(new Set(row).size).toBe(variant.cells); // no two alike
+    expect(new Set(rows.flat()).size).toBe(7); // and all seven shades take a turn
   });
 
   it("puts all six squares on whole pixels with even gaps", () => {
