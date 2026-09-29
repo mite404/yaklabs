@@ -1,5 +1,5 @@
 // Checks for the projects panel beside the rail, on a desktop window with motion on: where
-// keyboard focus goes as the panel closes, and what focus holds a peek.
+// keyboard focus goes as the panel closes or peeks away, and what focus holds a peek.
 // oxlint-disable no-await-in-loop -- one keyboard drives one page, so each step waits for the last
 import { collect } from "./lever.mjs";
 import { panelEdgeChecks } from "./panel-edge-checks.mjs";
@@ -20,6 +20,13 @@ const LEAVE_FALLBACK_MS = 400;
 const GONE_MS = CLOSE_MS + SLIDE_MS + LEAVE_FALLBACK_MS;
 const [KAY] = RAIL_PLACES;
 const LAB = RAIL_PLACES.at(-1);
+// The panel's thread rows (the second opens a thread other than the demo's first), and the
+// name of the project row above them.
+const ROW = '[data-slot="sidebar-container"] a[data-thread]';
+const PROJECT = { name: "Demo store", exact: true };
+// How long focus is watched once the panel is away: Chrome lets go of focus in an inert panel
+// lazily, some hundreds of milliseconds on, so focus that looks kept at first can still drop.
+const SETTLE_MS = 800;
 
 // Runs in the page: the focused element as its role and name, or "body".
 function focusedNow() {
@@ -126,6 +133,75 @@ async function escapeFrom(browser, theme) {
   };
 }
 
+// Runs in the page: whether the peek is away and its panel inert.
+const isAway = () =>
+  document.querySelector('[data-slot="sidebar"]').dataset.peek === undefined &&
+  document.querySelector('[data-slot="sidebar-container"]').inert;
+
+// Waits for the panel to go away, lets focus settle, and reads where it sits and whether it
+// is ringed.
+async function focusOnceAway(page) {
+  await page.waitForFunction(isAway, null, { timeout: GONE_MS + 1000 });
+  await page.waitForTimeout(SETTLE_MS);
+  return {
+    focus: await page.evaluate(focusedNow),
+    ringed: await page.evaluate(() => document.activeElement.matches(":focus-visible")),
+  };
+}
+
+// P34's peek cases: a thread opened from a peek row by Enter or by a click, and a click on a
+// project row followed by the pointer leaving, each put the panel away with focus in it.
+const PEEK_EXITS = {
+  async enter(page) {
+    await tabOnto(page, page.locator(ROW).nth(1));
+    await page.keyboard.press("Enter");
+  },
+  async click(page) {
+    await page.locator(ROW).nth(1).click();
+  },
+  async leave(page) {
+    await page.locator('[data-slot="sidebar-container"]').getByRole("button", PROJECT).click();
+    await page.mouse.move(900, 400, { steps: 3 });
+  },
+};
+
+// One P34 peek case: focus ends on Toggle sidebar, ringed only when a key moved it.
+async function peekExit(browser, theme, [how, exit]) {
+  const { context, page } = await openDesk(browser, { theme });
+  await peek(page);
+  const from = page.url();
+  await exit(page);
+  const inPanel = await page.evaluate(
+    () => document.activeElement.closest('[data-slot="sidebar-container"]') !== null,
+  );
+  const { focus, ringed } = await focusOnceAway(page);
+  const moved = page.url() !== from;
+  await context.close();
+  return {
+    ok:
+      inPanel === true &&
+      focus === "button Toggle sidebar" &&
+      ringed === (how === "enter") &&
+      moved === (how !== "leave"),
+    note: `${theme} peek ${how}: focus in the panel ${inPanel}, then on ${focus} (ringed ${ringed}), a new thread ${moved}`,
+  };
+}
+
+// P34's docked case: Enter on a row opens its thread and leaves focus on the row.
+async function dockedEnter(browser, theme) {
+  const { context, page } = await openDesk(browser, { side: "open", theme });
+  const row = page.locator(ROW).nth(1);
+  const name = `a ${(await row.textContent()).trim()}`;
+  const from = page.url();
+  await tabOnto(page, row);
+  await page.keyboard.press("Enter");
+  await page.waitForURL((url) => url.href !== from);
+  await page.waitForTimeout(SETTLE_MS);
+  const focus = await page.evaluate(focusedNow);
+  await context.close();
+  return { ok: focus === name, note: `${theme} docked Enter on ${name}: focus on ${focus}` };
+}
+
 // The workspace lever's checks of where focus goes around the panel, by id.
 const focusChecks = {
   // Closing the docked panel by Ctrl/Cmd+B with keyboard focus on a project row or on the
@@ -145,6 +221,20 @@ const focusChecks = {
     const results = [];
     for (const theme of THEMES) {
       results.push(await railFocusReleases(browser, theme), await escapeFrom(browser, theme));
+    }
+    return { ok: results.every((r) => r.ok), detail: results.map((r) => r.note).join("; ") };
+  },
+
+  // A peek that goes away with focus in its panel (a thread opened from a row by Enter or a
+  // click, or the pointer leaving after a click on a row) hands focus to Toggle sidebar, never
+  // to the page's body; docked, a row keeps focus as its thread opens.
+  async P34(browser) {
+    const results = [];
+    for (const theme of THEMES) {
+      for (const exit of Object.entries(PEEK_EXITS)) {
+        results.push(await peekExit(browser, theme, exit));
+      }
+      results.push(await dockedEnter(browser, theme));
     }
     return { ok: results.every((r) => r.ok), detail: results.map((r) => r.note).join("; ") };
   },
