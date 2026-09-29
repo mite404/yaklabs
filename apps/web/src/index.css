@@ -95,7 +95,7 @@
    workspace's 10px corner, which would otherwise vanish in one frame as the panel lands; at home
    the line is the workspace's own left border. The shadow is clipped to its right, off the
    title bar. Reduced motion only fades it. A key's close, and the step behind the rail once the
-   slide ends, have no motion (data-peek-instant), and neither do the menu buttons inside it.
+   slide ends, have no motion (data-peek-instant).
    Outside every layer on purpose: the container's own `transition-[left,right,width]` is a
    utility, which a layered rule cannot outrank. */
 [data-slot="sidebar"][data-peek] > [data-slot="sidebar-container"] {
@@ -126,8 +126,7 @@
   }
 }
 [data-slot="sidebar"][data-peek="entering"] > [data-slot="sidebar-container"],
-[data-slot="sidebar-container"][data-peek-instant],
-[data-slot="sidebar-container"][data-peek-instant] [data-sidebar="menu-button"] {
+[data-slot="sidebar-container"][data-peek-instant] {
   transition: none;
 }
 /* While the sidebar's edge is dragged (sidebar-resize.tsx), the resize cursor holds over the
