@@ -18,6 +18,7 @@ import {
 } from "@yaklabs/ui/components/sheet";
 // oxlint-disable-next-line import/max-dependencies -- one file wiring every sidebar primitive (sheet, tooltip, separator, input, skeleton, button), as upstream does
 import { Skeleton } from "@yaklabs/ui/components/skeleton";
+import { flushSync } from "react-dom";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@yaklabs/ui/components/tooltip";
 import { cssVars } from "@yaklabs/ui/lib/utils";
 import { PanelLeftIcon } from "lucide-react";
@@ -29,6 +30,12 @@ const SIDEBAR_WIDTH_MOBILE = "18rem";
 const SIDEBAR_WIDTH_ICON = "3rem";
 const SIDEBAR_KEYBOARD_SHORTCUT = "b";
 
+// How a change to the sidebar moves: `instant` for one a key made, which never animates.
+type SidebarMotion = { instant?: boolean };
+
+/** Where a peeking sidebar is: about to slide out over the content, out, or sliding back. */
+type SidebarPeek = "entering" | "open" | "leaving";
+
 type SidebarContextProps = {
   state: "expanded" | "collapsed";
   open: boolean;
@@ -36,7 +43,12 @@ type SidebarContextProps = {
   openMobile: boolean;
   setOpenMobile: (open: boolean) => void;
   isMobile: boolean;
-  toggleSidebar: () => void;
+  toggleSidebar: (motion?: SidebarMotion) => void;
+  /**
+   * Runs a change to the sidebar with no motion: the wrapper carries `data-instant` while the
+   * change commits and its styles are computed, so no width transition starts from it.
+   */
+  instantly: (change: () => void) => void;
 };
 
 const SidebarContext = React.createContext<SidebarContextProps | null>(null);
@@ -86,21 +98,42 @@ function SidebarProvider({
     [setOpenProp, open],
   );
 
-  // Helper to toggle the sidebar.
-  const toggleSidebar = React.useCallback(() => {
-    if (isMobile) {
-      setOpenMobile((current) => !current);
-    } else {
-      setOpen((current) => !current);
+  const wrapper = React.useRef<HTMLDivElement>(null);
+  const instantly = React.useCallback((change: () => void) => {
+    const root = wrapper.current;
+    const already = root?.dataset.instant !== undefined;
+    if (root === null || already) {
+      change();
+      return;
     }
-  }, [isMobile, setOpen, setOpenMobile]);
+    root.dataset.instant = "";
+    flushSync(change);
+    root.getBoundingClientRect(); // styles computed with motion off, so no transition starts
+    delete root.dataset.instant;
+  }, []);
 
-  // Adds a keyboard shortcut to toggle the sidebar.
+  // Helper to toggle the sidebar.
+  const toggleSidebar = React.useCallback(
+    (motion?: SidebarMotion) => {
+      const toggle = () => {
+        if (isMobile) {
+          setOpenMobile((current) => !current);
+        } else {
+          setOpen((current) => !current);
+        }
+      };
+      if (motion?.instant === true) instantly(toggle);
+      else toggle();
+    },
+    [isMobile, setOpen, setOpenMobile, instantly],
+  );
+
+  // Adds a keyboard shortcut to toggle the sidebar, at once: a key press never animates.
   React.useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === SIDEBAR_KEYBOARD_SHORTCUT && (event.metaKey || event.ctrlKey)) {
         event.preventDefault();
-        toggleSidebar();
+        toggleSidebar({ instant: true });
       }
     };
 
@@ -123,13 +156,15 @@ function SidebarProvider({
       openMobile,
       setOpenMobile,
       toggleSidebar,
+      instantly,
     }),
-    [state, open, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar],
+    [state, open, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar, instantly],
   );
 
   return (
     <SidebarContext.Provider value={contextValue}>
       <div
+        ref={wrapper}
         data-slot="sidebar-wrapper"
         style={
           {
@@ -227,12 +262,23 @@ function SidebarPush({
   );
 }
 
+// What a desktop sidebar's children read to draw collapsed: the collapsible kind while it is
+// collapsed and not peeking; a peeking sidebar draws expanded.
+function collapsedAs(
+  state: SidebarContextProps["state"],
+  collapsible: string,
+  peek: SidebarPeek | undefined,
+): string {
+  return state === "collapsed" && peek === undefined ? collapsible : "";
+}
+
 // oxlint-disable-next-line max-lines-per-function -- branches over collapsible=none, mobile sheet and desktop rail; each branch is a distinct render, not extra logic
 function Sidebar({
   side = "left",
   variant = "sidebar",
   collapsible = "offcanvas",
   mobile = "sheet",
+  peek,
   className,
   children,
   dir,
@@ -243,8 +289,15 @@ function Sidebar({
   collapsible?: "offcanvas" | "icon" | "none";
   /** On a phone: a sheet over the page, or a drawer that pushes the page aside. */
   mobile?: "sheet" | "push";
+  /**
+   * On a desktop, a collapsed sidebar that peeks: drawn expanded, at full width, over the
+   * content, while its gap keeps the collapsed width so nothing beside it moves. `data-peek`
+   * names the phase for the host's stylesheet to move it by. Ignored while expanded.
+   */
+  peek?: SidebarPeek;
 }) {
   const { isMobile, state, openMobile, setOpenMobile } = useSidebar();
+  const peeking = state === "collapsed" ? peek : undefined;
 
   if (collapsible === "none") {
     return (
@@ -295,7 +348,8 @@ function Sidebar({
     <div
       className="group peer hidden text-sidebar-foreground md:block"
       data-state={state}
-      data-collapsible={state === "collapsed" ? collapsible : ""}
+      data-collapsible={collapsedAs(state, collapsible, peeking)}
+      data-peek={peeking}
       data-variant={variant}
       data-side={side}
       data-slot="sidebar"
@@ -304,8 +358,9 @@ function Sidebar({
       <div
         data-slot="sidebar-gap"
         className={cn(
-          "relative w-(--sidebar-width) bg-transparent transition-[width] duration-200 ease-linear",
+          "relative w-(--sidebar-width) bg-transparent transition-[width] duration-200 ease-linear group-data-instant/sidebar-wrapper:transition-none",
           "group-data-[collapsible=offcanvas]:w-0",
+          "group-data-peek:w-(--sidebar-width-icon)",
           "group-data-[side=right]:rotate-180",
           variant === "floating" || variant === "inset"
             ? "group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4)))]"
@@ -316,7 +371,7 @@ function Sidebar({
         data-slot="sidebar-container"
         data-side={side}
         className={cn(
-          "fixed inset-y-0 z-10 hidden h-svh w-(--sidebar-width) transition-[left,right,width] duration-200 ease-linear data-[side=left]:left-0 data-[side=left]:group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)] data-[side=right]:right-0 data-[side=right]:group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)] md:flex",
+          "fixed inset-y-0 z-10 hidden h-svh w-(--sidebar-width) transition-[left,right,width] duration-200 ease-linear group-data-instant/sidebar-wrapper:transition-none data-[side=left]:left-0 data-[side=left]:group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)] data-[side=right]:right-0 data-[side=right]:group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)] md:flex",
           // Adjust the padding for floating and inset variants.
           variant === "floating" || variant === "inset"
             ? "p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4))+2px)]"
@@ -349,7 +404,8 @@ function SidebarTrigger({ className, onClick, ...props }: React.ComponentProps<t
       className={cn(className)}
       onClick={(event) => {
         onClick?.(event);
-        toggleSidebar();
+        // A click with no detail is Enter or Space on the button: a key press, so no motion.
+        toggleSidebar({ instant: event.detail === 0 });
       }}
       {...props}
     >
@@ -368,7 +424,9 @@ function SidebarRail({ className, ...props }: React.ComponentProps<"button">) {
       data-slot="sidebar-rail"
       aria-label="Toggle Sidebar"
       tabIndex={-1}
-      onClick={toggleSidebar}
+      onClick={() => {
+        toggleSidebar();
+      }}
       title="Toggle Sidebar"
       className={cn(
         "absolute inset-y-0 z-20 hidden w-4 transition-all ease-linear group-data-[side=left]:-right-4 group-data-[side=right]:left-0 after:absolute after:inset-y-0 after:start-1/2 after:w-[2px] hover:after:bg-sidebar-border sm:flex ltr:-translate-x-1/2 rtl:-translate-x-1/2",
@@ -548,7 +606,7 @@ function SidebarMenuItem({ className, ...props }: React.ComponentProps<"li">) {
 }
 
 const sidebarMenuButtonVariants = cva(
-  "peer/menu-button group/menu-button flex w-full items-center gap-2 overflow-hidden rounded-none p-2 text-left text-xs ring-sidebar-ring outline-hidden transition-[width,height,padding] group-has-data-[sidebar=menu-action]/menu-item:pr-8 group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-2! hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-open:hover:bg-sidebar-accent data-open:hover:text-sidebar-accent-foreground data-active:bg-sidebar-accent data-active:font-medium data-active:text-sidebar-accent-foreground [&_svg]:size-4 [&_svg]:shrink-0 [&>span:last-child]:truncate",
+  "peer/menu-button group/menu-button flex w-full items-center gap-2 overflow-hidden rounded-none p-2 text-left text-xs ring-sidebar-ring outline-hidden transition-[width,height,padding] group-has-data-[sidebar=menu-action]/menu-item:pr-8 group-data-peek:transition-none group-data-instant/sidebar-wrapper:transition-none group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-2! hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 active:bg-sidebar-accent active:text-sidebar-accent-foreground disabled:pointer-events-none disabled:opacity-50 aria-disabled:pointer-events-none aria-disabled:opacity-50 data-open:hover:bg-sidebar-accent data-open:hover:text-sidebar-accent-foreground data-active:bg-sidebar-accent data-active:font-medium data-active:text-sidebar-accent-foreground [&_svg]:size-4 [&_svg]:shrink-0 [&>span:last-child]:truncate",
   {
     variants: {
       variant: {
@@ -781,3 +839,4 @@ export {
   SidebarTrigger,
   useSidebar,
 };
+export type { SidebarPeek };

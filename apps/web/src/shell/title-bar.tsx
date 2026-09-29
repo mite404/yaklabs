@@ -46,10 +46,32 @@ function SidebarToggle() {
   );
 }
 
+// The bar's left end, the lights and the toggle, as wide as the sidebar below it less 4px, so
+// the tabs (after the bar's 8px gap) start 4px past the sidebar's edge and follow it as it is
+// dragged, as ChatGPT's desktop app does: both read `--sidebar-width`. Collapsed, the rail is
+// narrower than the lights and the toggle, so the tabs start right after the toggle. Pinning
+// or unpinning eases this width over the sidebar's own 200ms, on the same linear curve, so the
+// two edges move as one, and like the sidebar it moves at once for a key or a drag. On a phone
+// it stands aside and the bar's grid places the toggle itself (ADR-116).
+function Lead() {
+  const { state } = useSidebar();
+  return (
+    <div
+      data-slot="title-lead"
+      data-state={state}
+      className="flex shrink-0 items-center gap-2 transition-[min-width] duration-200 ease-linear group-data-instant/sidebar-wrapper:transition-none max-md:contents md:min-w-[calc(var(--sidebar-width)-4px)] md:data-[state=collapsed]:min-w-[calc(var(--sidebar-width-icon)-4px)]"
+    >
+      <TrafficLights />
+      <SidebarToggle />
+    </div>
+  );
+}
+
 /**
  * The window's one title bar, across its whole width: decorative traffic lights, the sidebar
  * toggle and the open threads at the left; at the right, the layout, Collapse all (ADR-134)
- * and the bell, which is the last control in the corner. The account is not in the bar: it sits
+ * and the bell, which is the last control in the corner. The tabs start 4px past the sidebar's
+ * edge, wherever it is dragged to. The account is not in the bar: it sits
  * at the sidebar's foot (ADR-121). It is green chrome, flat or painted (ADR-110,
  * ADR-115). On a phone it is two rows (ADR-116): the project's name and what never scrolls on
  * top, Collapse all among them, with a "⋯" for the thread and project; below, the views,
@@ -66,8 +88,7 @@ export function TitleBar({ chrome }: Looks) {
       data-chrome={chrome.style}
       className="chrome-surface flex h-11 shrink-0 items-center gap-2 pr-3 select-none max-md:grid max-md:h-auto max-md:grid-cols-[auto_minmax(0,1fr)_repeat(3,auto)] max-md:grid-rows-[44px_auto] max-md:gap-x-1 max-md:gap-y-0 max-md:px-2 max-md:pb-1.5"
     >
-      <TrafficLights />
-      <SidebarToggle />
+      <Lead />
       <ProjectName shell={shell} />
       <TabStrip shell={shell} starting={starting} />
       <div className="flex shrink-0 items-center gap-2 max-md:contents">

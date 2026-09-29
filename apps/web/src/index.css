@@ -82,6 +82,55 @@
   }
 }
 
+/* The sidebar's peek (sidebar-peek.tsx): collapsed to its rail, the one sidebar slides out over
+   the workspace from the window's edge, the shell's own paper with a hairline at its right edge
+   and the softest shadow past it, and slides back. Out on the iOS drawer curve over 220ms with a
+   quicker fade, back over 160ms; transitions, so a pointer that returns mid-way turns it back
+   from where it is. The shadow is clipped to its right, off the title bar. Reduced motion only
+   fades it. A key's close, and the step back into the rail, have no motion (data-peek-instant),
+   and neither do the rail's buttons, which change size between the two.
+   Outside every layer on purpose: the container's own `transition-[left,right,width]` is a
+   utility, which a layered rule cannot outrank. */
+[data-slot="sidebar"][data-peek] > [data-slot="sidebar-container"] {
+  z-index: 20;
+  box-shadow:
+    1px 0 0 var(--hairline),
+    8px 0 24px -12px var(--shadow);
+  clip-path: inset(0 -40px 0 0);
+  transition:
+    transform 220ms cubic-bezier(0.32, 0.72, 0, 1),
+    opacity 120ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+[data-slot="sidebar"][data-peek="leaving"] > [data-slot="sidebar-container"] {
+  transition:
+    transform 160ms cubic-bezier(0.32, 0.72, 0, 1),
+    opacity 160ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+[data-slot="sidebar"]:is([data-peek="entering"], [data-peek="leaving"])
+  > [data-slot="sidebar-container"] {
+  transform: translateX(-100%);
+  opacity: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-slot="sidebar"][data-peek] > [data-slot="sidebar-container"] {
+    transform: none;
+    transition: opacity 120ms ease;
+  }
+}
+[data-slot="sidebar"][data-peek="entering"] > [data-slot="sidebar-container"],
+[data-slot="sidebar-container"][data-peek-instant],
+[data-slot="sidebar-container"][data-peek-instant] [data-sidebar="menu-button"] {
+  transition: none;
+}
+/* While the sidebar's edge is dragged (sidebar-resize.tsx), the resize cursor holds over the
+   whole window, as the canvas divider's does, and nothing on the way is selected. Outside every
+   layer, to outrank a link's or a button's own cursor utility. */
+html[data-dragging="sidebar"],
+html[data-dragging="sidebar"] * {
+  cursor: col-resize;
+  user-select: none;
+}
+
 /* The window's decorative traffic lights (ADR-094): a desktop window's own colours, the one
    place the app draws something that is not Kay's; the same in either theme, as the OS's are. */
 :root {
@@ -301,6 +350,7 @@
      and the evening in the dark one, both in the DOM, one shown. The scroll area drops its
      gutters for it (thread.css, data-empty), and the welcome fills it to centre the words. */
   .welcome {
+    --clearing: var(--paper);
     position: relative;
     isolation: isolate;
     display: grid;
@@ -332,6 +382,29 @@
     background: radial-gradient(ellipse 50% 50% at center, var(--paper) 25%, transparent 75%) center
       / max(100%, 40rem) max(100%, 28rem) no-repeat;
   }
+  /* The Vitruvian look draws the empty canvas's sheet (the .splash pieces above) across the
+     welcome's whole area on paper, as the canvas's raised surface is, square-cornered since the
+     welcome runs to the pane's edges. The clearing behind the words is sized to the canvas's
+     two-line copy, and this column is taller and wider, so the globe and Atlas's hands would run
+     behind the words (3.8:1 at worst). The column carries its own halo of paper, drawn over the
+     sheet and under the words, which follows the column's box however many projects it lists
+     and fades out at its edge, so the ring still shows above, below and to either side of it. */
+  .welcome .splash {
+    border-radius: 0;
+    background: var(--clearing);
+  }
+  .welcome-words {
+    position: relative;
+  }
+  .welcome .splash ~ .welcome-words::before {
+    content: "";
+    position: absolute;
+    inset: -0.75rem;
+    z-index: -1;
+    border-radius: 1.5rem;
+    background: var(--clearing);
+    box-shadow: 0 0 1.5rem 0.75rem var(--clearing);
+  }
 
   /* The open space lights up under a carry (ADR-091) on a layer below the splash drawing, so the
      drawing stays on top of the fill, as the words do. */
@@ -348,7 +421,6 @@
   }
 
   /* The canvas is a dotted field (ADR-089): open ground that invites something to be put down. */
-  --clearing: var(--paper);
   .canvas {
     background-color: var(--bg);
     /* One step of the dot grid. Everything on the row is a whole number of steps: the gap
@@ -380,29 +452,6 @@
   }
   @supports not selector(::-webkit-scrollbar) {
     .canvas {
-      /* The Vitruvian look draws the empty canvas's sheet (the .splash pieces above) across the
-     welcome's whole area on paper, as the canvas's raised surface is, square-cornered since the
-     welcome runs to the pane's edges. The clearing behind the words is sized to the canvas's
-     two-line copy, and this column is taller and wider, so the globe and Atlas's hands would run
-     behind the words (3.8:1 at worst). The column carries its own halo of paper, drawn over the
-     sheet and under the words, which follows the column's box however many projects it lists
-     and fades out at its edge, so the ring still shows above, below and to either side of it. */
-      .welcome .splash {
-        border-radius: 0;
-        background: var(--clearing);
-      }
-      .welcome-words {
-        position: relative;
-      }
-      .welcome .splash ~ .welcome-words::before {
-        content: "";
-        position: absolute;
-        inset: -0.75rem;
-        z-index: -1;
-        border-radius: 1.5rem;
-        background: var(--clearing);
-        box-shadow: 0 0 1.5rem 0.75rem var(--clearing);
-      }
       scrollbar-width: thin;
       scrollbar-color: var(--rule) transparent;
     }
