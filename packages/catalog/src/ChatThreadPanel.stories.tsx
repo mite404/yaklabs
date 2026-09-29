@@ -14,7 +14,34 @@ const MINUTE = 60_000;
 const meta = {
   title: "Thread/Chat thread panel",
   component: ChatThreadPanel,
-  parameters: { layout: "centered" },
+  // cardsCarry turns each card's header into a handle: a grab cursor and a carry, seen by
+  // dragging a card, so the controls audit leaves it to a hand check.
+  parameters: { layout: "centered", controlsAudit: { onInteraction: ["cardsCarry"] } },
+  argTypes: {
+    // The three a viewer can turn and see: the column's width, whether it draws its own frame,
+    // and whether a card's header can carry it out onto a canvas.
+    width: {
+      control: { type: "range", min: 320, max: 900, step: 10 },
+      description: "Panel width in px. Unset is the standard column: 80 characters plus gutters.",
+    },
+    // Each story picks its thread, its agent and its clock; as controls they are raw data, a
+    // test clock, or slots the host fills, and the draft is read once as the thread opens.
+    thread: { table: { disable: true } },
+    activity: { table: { disable: true } },
+    now: { table: { disable: true } },
+    dictation: { table: { disable: true } },
+    agent: { table: { disable: true } },
+    initialDraft: { table: { disable: true } },
+    empty: { table: { disable: true } },
+    headerActions: { table: { disable: true } },
+    hostAsk: { table: { disable: true } },
+    leading: { table: { disable: true } },
+    // A callback: the Actions tab logs each rename, so it has no control of its own.
+    onRename: { table: { disable: true } },
+  },
+  // The panel's own defaults, said out loud: an unset cardsCarry is on, so the checkbox starts
+  // ticked and the first click turns carrying off instead of setting what was already true.
+  args: { cardsCarry: true, bare: false },
 } satisfies Meta<typeof ChatThreadPanel>;
 export default meta;
 type Story = StoryObj<typeof meta>;

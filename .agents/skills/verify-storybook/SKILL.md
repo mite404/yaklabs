@@ -85,7 +85,7 @@ convenient story when the list names thirty is a sample, and reporting it as ver
 
 ## Drive
 
-Two harnesses, for two jobs.
+Three harnesses, for three jobs.
 
 **Render proof for many stories** (screenshot, ARIA tree, console errors):
 
@@ -116,6 +116,24 @@ export const ShareMenuOpens: Story = {
   },
 };
 ```
+
+**Controls proof** (every knob in the Controls panel does something):
+
+```bash
+node .agents/skills/verify-storybook/scripts/audit-controls.mjs [story-id...]
+```
+
+It moves every visible control on every story (or the ones named) and checks that the story's
+DOM and pixels change; it exits 1 on a `DEAD` control. Run it after adding a story or a prop,
+and before claiming the Storybook is ready to show anyone: an agent wrote these stories, and
+Storybook infers a control for every prop, so a control's presence proves nothing. Keep only
+controls a viewer can turn and see; hide the rest with `table: { disable: true }` (which drops
+the row; `control: false` leaves an empty one). Give every kept control an explicit starting
+value, or it shows as an empty radio or a "Set boolean" button. A control whose effect needs a
+click or a drag is declared on its story as
+`parameters: { controlsAudit: { onInteraction: ["placement"] } }` and printed as
+`CHECK BY HAND`: open the menu or drag the card, and see it. `VERIFY_CHROMIUM=<path>` points it at
+a local Chromium when Playwright's own build is missing.
 
 To explore before writing the play function, drive a story's standalone page in a browser tool:
 `http://127.0.0.1:6106/iframe.html?id=<story-id>&viewMode=story`. In Claude Code use the

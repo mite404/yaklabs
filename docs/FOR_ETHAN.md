@@ -1021,6 +1021,35 @@ The first entries are ideas from before any code existed; the rest are parts of 
   for the "⋯" that is not inside a tab (`:not(.chrome-pill *)`). Lesson: a shared accessible name
   is right for people and ambiguous for a selector; scope the query to the place you mean.
 
+### Half a pixel and an old clock: two bugs in the six-square glyph
+
+**The uneven gaps.** Six 3px squares with 1.5px gaps, centred in a 12px box, put the rows at
+y = 0, 4.5 and 9. A screen cannot light half a pixel, so each edge rounds: one gap came out 2px
+and the next 1px. It is the same as a film scan off by half a pixel of registration: nothing is
+wrong in any one frame, the misalignment only shows side by side. The fix is geometry that is
+whole numbers all the way down: 3px squares, 1px gaps, the glyph pinned 2px in and 1px down.
+
+**The broken wave after switching to six.** React keeps DOM nodes it can match by key. Going from
+4 to 6 squares, it reused four and made two new ones, and a CSS animation's clock starts when its
+element first runs it. Four squares were mid-loop, two started at zero; the wave fell apart. The
+fix is a key that includes the cell count, so a new count means all-new squares on one clock.
+Like re-slating every camera after a reset, not just the ones that were moved.
+
+`AgentWorking.browser.test.tsx` checks both: whole-pixel, even spacing, and one start time for
+every square after a switch. Both tests fail on the old code.
+
+### A variable the keyframe could not read
+
+The tree's slide and the top branch's fade were meant to share one ease-in-out curve, so the
+curve went in a custom property, `--tree-slide-ease`, read by both keyframes. The browser threw
+it away without a word: a keyframe's `animation-timing-function` does not resolve `var()`, so
+both fell back to the default `ease`, which front-loads the move. At the slide's midpoint the
+base was 80% of the way down, not 50%, and out of step with the fade. The test that asserts
+"half down, half faded" at the midpoint caught it; a screenshot would not have, since each
+frame looked plausible on its own. The fix writes the curve out in both keyframes, with a
+comment saying why. Lesson: when CSS silently ignores something, only a measured assertion
+tells you.
+
 ## 5. Director's Commentary
 
 ### The agent only states intent; the design system does the rest
@@ -1900,6 +1929,121 @@ plate in first.
 
 Senior-engineer takeaway: when a look depends on order, make the order the design. The three looks
 share one DOM and one stack; the attribute on `<html>` picks the plate, and nothing else moves.
+
+
+### One clock, two actors: a wave is a delay, not a second animation
+
+The "agent working" glyph (Storybook: Motion/Agent working) is Kay's 2x2 task-size squares,
+animated so a band of green sweeps left to right. There is only one keyframe track. Every square
+plays it; the right column is simply started 25% of a cycle later, so it peaks while the left
+column fades. Colour rides on opacity inside that one track: solid is moss, half-faded
+is olive, nearly clear is sage.
+
+```css
+/* packages/catalog/src/motion.css */
+.agent-working {
+  --working-duration: 2000ms; /* one knob; Storybook scrubs it */
+  /* a head start of 75% is the same as a lag of 25%, and never shows a blank first frame */
+  --working-lag: calc(var(--working-duration) * -0.75);
+}
+.agent-working-cell:nth-child(even) {
+  --working-offset: var(--working-lag); /* right column: same track, shifted */
+}
+```
+
+```mermaid
+sequenceDiagram
+  participant L as Left column
+  participant R as Right column
+  Note over L,R: one 2000ms cycle, same keyframes
+  L->>L: 0-25% fade in, sage → moss
+  R->>R: 25-50% fade in (25% behind)
+  L->>L: 25-35% hold solid, then 35-65% fade out
+  R->>R: 50-60% hold solid while left clears
+  L->>L: 65-100% rest, clear
+  R->>R: 60-90% fade out, moss → olive → sage
+  Note over L,R: 90-100% all four clear: the wave completes
+```
+
+The film version: two dancers, one piece of music, the second one counting in late. You do not
+choreograph a second routine, you cue the same one later. A canon in music works the same way.
+
+The first cut ran at 150ms: nearly seven loops a second, which the eye reads as flicker, not a
+travelling wave, and the fade through the greens lasted about 75ms, too short to register. It now
+ships at 2000ms (after stops at 1200 and 1500), with a rest in each loop: the motion fits in the
+first 65% of a square's cycle and it sits clear for the rest, so the wave lands before the next
+one starts. A rest is what separates steady work from an alarm; an alarm never pauses. The Speeds
+story plays five lengths side by side, because timing is a taste call that is easier to defend
+with the alternatives on screen than in words.
+
+Colour got its own track later. A second animation on each square walks through seven brand
+greens, one per loop, and jumps only while the square is clear, so every flash is one shade from
+its first frame to its last. Each square starts somewhere else in the seven. The starting points
+were solved, not guessed: the wave's right column already runs a shade ahead and the six-square
+orbit's middle-left square one behind, so a hand-picked set had two squares matching in every
+loop. A browser test now checks all four layouts: every loop, every square a different green,
+all seven taking a turn. It is a lighting board with seven gels on a wheel per lamp: the cue
+stays the same, but each lamp comes up in a different colour every time, so the eye never
+catches the pattern.
+
+The orbit variant runs on the same clock. Clockwise order is data, a table of each square's
+place in the lap (`CLOCKWISE_STEP` in `AgentWorking.tsx`), and CSS turns that place into a delay:
+step / cells of a loop. The orbit's keyframes rise fast and fall slowly, like a comet, because a
+symmetric fade has no front: the eye cannot tell which way a blob of light is going unless one
+edge is sharp. Six squares (two columns of three in the same 12px height) use the same table
+with six stops.
+
+The tree (Storybook: Motion/Agent tree) is a second glyph on the same clock and palette: Kay's
+three pills, a crest of green running down them, left then right, and the base holding solid for
+a beat. Then the base slides down under the icon's bottom edge, and as it is half clipped the top
+branch fades in over the same beat, on the same curve, one pill leaving as the other arrives. It
+borrows a trick from side-scrolling games and car shots on a
+soundstage: the car stays put and the background scrolls, so the eye reads motion the other way.
+It is also a cheat, the good kind: only the two lit pills move. The base scrolls out under the
+bottom edge while the top branch scrolls in over the top edge, both 4px on the same curve, so
+they read as one strip of film passing the gate, and the eye supplies the rest of the tree.
+Equal distance matters: the base only needed 3px to leave, but at 3px against the branch's 4px
+the two would drift apart and the strip would tear. Once the base is out of frame it jumps
+home, invisible, and fades back in where it began, like a stagehand resetting a prop during a
+blackout.
+
+Senior-engineer takeaway: when motion must stay in sync, derive every actor from one clock. A
+second keyframe track would drift the moment someone changed one duration and not the other.
+
+### A knob on the desk proves nothing: audit every control
+
+Storybook writes a control for every prop a component takes, so the Controls panel fills itself.
+That is the trap: a control's presence says nothing about whether it does anything. An audit of
+all 62 stories found 92 dead ones. Some only seeded state once (a draft, a start-open flag), some
+were raw data or slots only the host app can fill, one needed a stylesheet the story never
+loaded (a catalog card's thread look), and one started unticked while the component treated
+"unset" as on, so the first click set what was already true.
+
+```js
+// .agents/skills/verify-storybook/scripts/audit-controls.mjs: for each visible control, move it
+// and compare the story before and after, in the DOM and in pixels.
+const before = await snapshot(page); // → { dom, pixels }
+await setArgs(page, storyId, { [name]: value }); // the Controls panel's own message
+const after = await snapshot(page);
+if (before.dom === after.dom) findings.push({ kind: "dead", name }); // nothing moved
+```
+
+```mermaid
+flowchart LR
+  P[Every prop] --> I[Storybook infers a control]
+  I --> Q{Does moving it change the screen?}
+  Q -- yes --> K[Keep, with a real starting value]
+  Q -- only on click or drag --> H[Keep, mark it for a hand check]
+  Q -- no --> X[Hide the row: table disable]
+```
+
+It is a sound mixer with a fader for every channel in the building. Before a show you push each
+one and listen, and tape over the ones wired to nothing, because a guest who reaches for a dead
+fader decides the whole desk is broken.
+
+Senior-engineer takeaway: generated surfaces need an owner. When a tool creates UI for you, the
+question is not "does it render" but "does each part do what it says", and only a check that
+moves every part can answer it.
 
 ### Pull the arithmetic out of the scene
 

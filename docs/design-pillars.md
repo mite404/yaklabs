@@ -1,61 +1,84 @@
 # Design pillars - the YakLabs visual language
 
-Rules for building on-brand surfaces for Kay, reverse-engineered from yaklabs.ai and refined through prototyping.
+Rules for building on-brand surfaces for Kay, reverse-engineered from yaklabs.ai and refined through
+prototyping.
 Each rule states what to do, then why.
-Sources are marked: **css** (declared in yaklabs.ai's stylesheet), **derived** (our choice), **Ethan** (Ethan's pick), **estimated** (a guess awaiting confirmation).
-No brand colour is sampled from screenshots or recordings: the screen used had a blue-light filter, and filters and colour profiles shift pixels (ADR-051).
-Decisions behind these rules live in `docs/adr/adr.md` (ADR-033 to ADR-035); tokens live in `catalog-lab/src/tokens.css`.
+Sources are marked: **css** (declared in yaklabs.ai's stylesheet), **derived** (our choice),
+**Ethan** (Ethan's pick), **estimated** (a guess awaiting confirmation).
+No brand colour is sampled from screenshots or recordings: the screen used had a blue-light filter,
+and filters and colour profiles shift pixels (ADR-051).
+Decisions behind these rules live in `docs/adr/adr.md` (ADR-033 to ADR-035); tokens live in
+`packages/catalog/src/tokens.css`.
 
 ## Colour
 
 ### 1. There is no black: neutrals are olive-tinted
 
-Headings, body copy, and the "Apply for this role" button all share one olive-yellow hue (about 107° in OKLCH) at very low colour strength (chroma 0.002 to 0.009).
+Headings, body copy, and the "Apply for this role" button all share one olive-yellow hue (about
+107° in OKLCH) at very low colour strength (chroma 0.002 to 0.009).
 Near-black at that hue reads as a dark green-black; the lighter body copy reads as brown-green.
 Never use pure `#000` or a cool grey for text.
 
 ### 2. Tinted neutrals only show their tint at large sizes
 
 The same ink looks green-black in a 40px serif headline and plain black in 14px button text.
-Large glyphs carry enough ink area for the hue to register; small text does not, and a dark outline around it (as on the button) pushes it darker still.
+Large glyphs carry enough ink area for the hue to register; small text does not, and a dark outline
+around it (as on the button) pushes it darker still.
 Judge a tinted neutral at the size it will be used, never on a swatch.
 
 ### 3. Use the tinted ink only for display text
 
-Apply a more visibly tinted ink (olive-leaning, e.g. `#22251e`) only to display text: Newsreader headlines and thread titles, where the tint can actually be seen.
-Keep the site's declared ink (`#252524`) and body grey (`#4a4a47`) for UI and body text, where extra tint is invisible but can muddy contrast.
+Apply a more visibly tinted ink (olive-leaning, e.g. `#22251e`) only to display text: Newsreader
+headlines and thread titles, where the tint can actually be seen.
+Keep the site's declared ink (`#252524`) and body grey (`#4a4a47`) for UI and body text, where extra
+tint is invisible but can muddy contrast.
 This mirrors the site itself: the headline reads green-black, the button reads black.
 
 ### 4. Body copy is a lighter step of the same ink
 
-Headings use the ink; body copy is a solid grey at about 82% of it; meta text and outline borders use the ink at 0.72.
-Implement steps as solid colours (`color-mix`), not transparency, so text stays clean on tinted surfaces.
+Headings use the ink; body copy is a solid grey at about 82% of it; meta text and outline borders
+use the ink at 0.72.
+Implement steps as solid colours (`color-mix`), not transparency, so text stays clean on tinted
+surfaces.
 
 ### 5. Green comes from one hue family
 
-The only green declared in the site's CSS is the sage `#c7cfba` (hue 124°); the UI accent `#515e38` is derived on that same hue so buttons, charts, chips, and bubbles read as one family.
-Darker greens are mixed from the declared near-black green `#111411` rather than picked from the hero photo.
+The only green declared in the site's CSS is the sage `#c7cfba` (hue 124°); the UI accent `#515e38`
+is derived on that same hue so buttons, charts, chips, and bubbles read as one family.
+Darker greens are mixed from the declared near-black green `#111411` rather than picked from the
+hero photo.
 
 ### 6. Every colour goes through a semantic token
 
-Components use only named tokens, never raw hex. The core set uses yaklabs.ai's own names and values (`--paper`, `--paper-deep`, `--ink`, `--soft-ink`, `--rule`, `--hairline`, `--blue`, `--sage`, `--chalk`, `--moss`, `--rust`); colours the site does not declare carry a `--yak-` prefix, and roles such as `--accent`, `--bubble-*`, and `--btn-*` are built on top.
+Components use only named tokens, never raw hex. The core set uses yaklabs.ai's own names and values
+(`--paper`, `--paper-deep`, `--ink`, `--soft-ink`, `--rule`, `--hairline`, `--blue`, `--sage`,
+`--chalk`, `--moss`, `--rust`); colours the site does not declare carry a `--yak-` prefix, and roles
+such as `--accent`, `--bubble-*`, and `--btn-*` are built on top.
 
 ### The site's contrast pattern: two inks, two lines
 
-yaklabs.ai uses two text inks and two line weights, and nothing else: `--ink` for headings (13.3:1 on paper), `--soft-ink` for body and all secondary text (`#565650` from the site's brand.css, 6.4:1), `--rule` (ink at 72%) for strong lines and outlines (5.7:1), and `--hairline` (ink at 25%) for borders and dividers.
-We follow it exactly; a field's placeholder takes the rule's ink, one step greyer than body text, and text selection is `--blue` with ink, as on the site.
-The raw palette (`--yak-*`) exists only to feed the semantic layer, so rebranding is a one-block edit.
+yaklabs.ai uses two text inks and two line weights, and nothing else: `--ink` for headings (13.3:1
+on paper), `--soft-ink` for body and all secondary text (`#565650` from the site's brand.css,
+6.4:1), `--rule` (ink at 72%) for strong lines and outlines (5.7:1), and `--hairline` (ink at 25%)
+for borders and dividers.
+We follow it exactly; a field's placeholder takes the rule's ink, one step greyer than body text,
+and text selection is `--blue` with ink, as on the site.
+The raw palette (`--yak-*`) exists only to feed the semantic layer, so rebranding is a one-block
+edit.
 
 ### 16. Contrast is measured, never judged by eye
 
-Text needs at least 4.5:1 and UI parts and graphics (rings, outlines, chart marks) at least 3:1, checked against every surface the colour lands on, including hover, selected and dark mode.
-A colour that fails is flagged with its ratio before it ships, even when it was asked for: six colours that looked fine failed on measurement, most of them on the `#8a8a85` hover (ADR-065).
+Text needs at least 4.5:1 and UI parts and graphics (rings, outlines, chart marks) at least 3:1,
+checked against every surface the colour lands on, including hover, selected and dark mode.
+A colour that fails is flagged with its ratio before it ships, even when it was asked for: six
+colours that looked fine failed on measurement, most of them on the `#8a8a85` hover (ADR-065).
 
 ## Typography
 
 ### 7. Newsreader for display, Inter for everything else
 
-Newsreader (serif, optical sizing) is for display moments: page headlines, the wordmark, thread titles.
+Newsreader (serif, optical sizing) is for display moments: page headlines, the wordmark, thread
+titles.
 Inter (sans, optical sizing) is for interface and body text.
 Both are bundled locally (SIL Open Font License) so they render offline in the desktop app.
 
@@ -63,7 +86,9 @@ Both are bundled locally (SIL Open Font License) so they render offline in the d
 
 ### 8. The outline button is the default
 
-At rest a button is only an outline; on hover the fill and text colour change over 150ms with the default `ease` curve, and the border switches to the fill colour instantly (it is not in the transition).
+At rest a button is only an outline; on hover the fill and text colour change over 150ms with the
+default `ease` curve, and the border switches to the fill colour instantly (it is not in the
+transition).
 
 | Property | Value | Source |
 | --- | --- | --- |
@@ -84,27 +109,39 @@ At rest a button is only an outline; on hover the fill and text colour change ov
 
 ### 17. A toggle never moves when its label flips
 
-A button that switches between two labels keeps one whole-pixel width (128px, the widest label) and shares a whole-pixel line with the text beside it, so nothing in the footer shifts between states, not even by a rounded pixel (ADR-072).
+A button that switches between two labels keeps one whole-pixel width (128px, the widest label) and
+shares a whole-pixel line with the text beside it, so nothing in the footer shifts between states,
+not even by a rounded pixel (ADR-072).
 
 ### 9. A perceived delay is often just duration
 
-The button seemed to pause before filling, but its CSS has no delay: a 150ms `ease` transition is long enough to register as "a beat, then it arrives" rather than a snap.
-Before adding a delay to make something feel deliberate, try a slightly longer duration; a real delay makes a control feel unresponsive.
-Around 100ms reads as instant, around 150 to 200ms reads as a soft arrival, and past about 300ms a hover starts to feel sluggish.
+The button seemed to pause before filling, but its CSS has no delay: a 150ms `ease` transition is
+long enough to register as "a beat, then it arrives" rather than a snap.
+Before adding a delay to make something feel deliberate, try a slightly longer duration; a real
+delay makes a control feel unresponsive.
+Around 100ms reads as instant, around 150 to 200ms reads as a soft arrival, and past about 300ms a
+hover starts to feel sluggish.
 
 ## Data visualisation
 
 ### 10. Bars are flat
 
-Bars are one flat data colour with the button's 4px top corners; the darker eased base they used to have did not work with the colour scheme and was removed (ADR-055).
-Chart marks and their legend keys are graphite `#56564f` (6.4:1 on paper), a warm neutral, so green stays for button hovers (ADR-058).
+Bars are one flat data colour with the button's 4px top corners; the darker eased base they used to
+have did not work with the colour scheme and was removed (ADR-055).
+Chart marks and their legend keys are graphite `#56564f` (6.4:1 on paper), a warm neutral, so green
+stays for button hovers (ADR-058).
 
 ### 12. Cards come to rest 20px above the compose box
 
-The last card in a thread rests 20px above the compose box, or 20px above the card docked over it, and any card that grows (a data table, "Show my work") is nudged to that same line instead of opening underneath.
-One resting line means the eye always finds new content in the same place, the way a lower third always sits at the same height on screen.
-This holds even for a card that grows taller than the view: its top scrolls off, because the bottom edge is what tells the user the whole card has been shown (ADR-071).
-The gap is the token `--rest-gap`; the thread's bottom padding subtracts the compose row's 4px focus-ring inset (`--compose-inset`) so the visible gap is exactly 20px.
+The last card in a thread rests 20px above the compose box, or 20px above the card docked over it,
+and any card that grows (a data table, "Show my work") is nudged to that same line instead of
+opening underneath.
+One resting line means the eye always finds new content in the same place, the way a lower third
+always sits at the same height on screen.
+This holds even for a card that grows taller than the view: its top scrolls off, because the bottom
+edge is what tells the user the whole card has been shown (ADR-071).
+The gap is the token `--rest-gap`; the thread's bottom padding subtracts the compose row's 4px
+focus-ring inset (`--compose-inset`) so the visible gap is exactly 20px.
 
 | Property | Value | Source |
 | --- | --- | --- |
@@ -116,11 +153,18 @@ The gap is the token `--rest-gap`; the thread's bottom padding subtracts the com
 
 ### 13. Attention gets its own surface (light and dark)
 
-The thread's cards all sit on paper, so anything that needs the user (the Recap, a "Needs you" question) sits on the attention surface, a pale warm grey, and stands apart without a badge or a colour of alarm.
-Its choices are paper tiles, lighter than the card, so they separate by colour; hovering a row darkens it to a mid grey, where the usual inks fail, so the hovered row's text switches to the darkest ink.
+The thread's cards all sit on paper, so anything that needs the user (the Recap, a "Needs you"
+question) sits on the attention surface, a pale warm grey, and stands apart without a badge or a
+colour of alarm.
+Its choices are paper tiles, lighter than the card, so they separate by colour; hovering a row
+darkens it to a mid grey, where the usual inks fail, so the hovered row's text switches to the
+darkest ink.
 Green appears only as a button hover: Submit fills with the site's moss, as the outline button does.
-Both cards cast their shadow down and to the right, as if lit from the top left, and never on the top or left edge (ADR-069).
-The question card, labelled "Needs attention", is the exception: it sits on the app's paper with no grey fill at rest, its options, header and Skip fill with `--paper-deep` only on hover, and its label is a caution orange pill (ADR-067, ADR-068).
+Both cards cast their shadow down and to the right, as if lit from the top left, and never on the
+top or left edge (ADR-069).
+The question card, labelled "Needs attention", is the exception: it sits on the app's paper with no
+grey fill at rest, its options, header and Skip fill with `--paper-deep` only on hover, and its
+label is a caution orange pill (ADR-067, ADR-068).
 
 | Property | Value | Source |
 | --- | --- | --- |
@@ -138,8 +182,10 @@ The question card, labelled "Needs attention", is the exception: it sits on the 
 
 ### 14. A place to type is outlined, and its prompt is greyer
 
-A text field uses the outline button's 1px border and 4px corners, so it belongs to the same family as the button and never reads as plain text.
-Its placeholder is greyer than any statement around it, because a placeholder asks and a statement tells; on the strong surface a faint recessed fill keeps that greyer placeholder above 4.5:1.
+A text field uses the outline button's 1px border and 4px corners, so it belongs to the same family
+as the button and never reads as plain text.
+Its placeholder is greyer than any statement around it, because a placeholder asks and a statement
+tells; on the strong surface a faint recessed fill keeps that greyer placeholder above 4.5:1.
 
 | Property | Value | Source |
 | --- | --- | --- |
@@ -153,13 +199,102 @@ Its placeholder is greyer than any statement around it, because a placeholder as
 
 ### 15. The sage tint means "you"
 
-The user's bubble is the only place the sage-green tint appears, so it always means "this is what you said"; chips, badges, and tags use the neutral wash.
-The tokens are named `--bubble-tint`, `--bubble-tint-strong`, and `--bubble-line`, so the tint cannot be reused by accident.
+The user's bubble is the only place the sage-green tint appears, so it always means "this is what
+you said"; chips, badges, and tags use the neutral wash.
+The tokens are named `--bubble-tint`, `--bubble-tint-strong`, and `--bubble-line`, so the tint
+cannot be reused by accident.
+
+## Motion
+
+Two kinds of motion, with two sets of rules: **feedback** answers a user's action (a hover, a
+menu opening) and should be brief; **status** loops while the agent works and should feel steady.
+The status glyphs live in `packages/catalog/src/motion.css` (Storybook: Motion), and the reasoning
+behind each rule below is told in `docs/FOR_ETHAN.md`.
+
+| Motion | Duration | Curve | Source |
+| --- | --- | --- | --- |
+| Button fill and text on hover (rule 8) | 150ms | `ease` | css |
+| Menu opening | 120ms | `ease-out` | derived |
+| Modal fade, then rise | 160ms, 200ms | `ease-out` | derived |
+| Agent working glyph (wave, orbit) | 2000ms loop | `linear` fades | Ethan |
+| Agent tree glyph | 2000ms loop | `linear` fades, `cubic-bezier(0.4, 0, 0.6, 1)` scroll | Ethan |
+
+### 18. A working indicator reads as steady work, never an alert
+
+Status loops run at 2000ms and include a rest: all motion fits in the first 65% of a shape's
+cycle, and the rest of the loop is still (Ethan). The orbit is the one exception: a circle has
+no end to rest at, so its steadiness comes from an even pace instead.
+An alarm never pauses; a rest is what separates "busy" from "look at me".
+The first sketch ran at 150ms, about seven loops a second, and read as flicker; 2000ms was
+chosen after comparing 1500 to 2500ms side by side.
+
+### 19. Colour follows opacity: solid is darkest
+
+A shape at full opacity is the darkest green on the surface; as it fades it lightens, so the tints
+come from transparency, not from extra colours (Ethan).
+In dark mode the ramp flips, so "solid" still means the most contrast against the paper.
+Use only brand greens: moss, yak-green, sage, the chrome greens, and `color-mix` blends of them.
+Where a loop should feel alive rather than mechanical, draw each flash's shade from a set of
+seven, change it only while the shape is invisible (one shade per flash, never a smear), and keep
+neighbours on different shades (Ethan; the wave glyph).
+
+### 20. One clock per glyph; offsets, never a second track
+
+Every shape in a glyph plays the same keyframes from one `--working-duration`, offset by delays,
+so changing the duration can never pull them out of step (derived).
+Write offsets as negative delays (a head start), so the first frame is never blank.
+A second animation is allowed only for a different property on the same clock, such as the
+wave's shade track, which runs a whole number of loops.
+
+### 21. Things that move together travel the same distance on the same curve
+
+When two shapes move as one (the tree's base leaving as its top branch arrives), give them equal
+distance, equal duration and the same easing; a 3px move beside a 4px one tears the illusion
+apart halfway (Ethan).
+Use `cubic-bezier(0.4, 0, 0.6, 1)` (a symmetric ease-in-out) for moves, and `linear` for fades
+inside a loop.
+Write the curve out in each keyframe: `animation-timing-function` in a keyframe ignores `var()`
+and silently falls back to `ease`.
+
+### 22. Scroll through the frame; clip, never shrink
+
+A shape leaves or enters by sliding past the glyph's edge and being clipped (`overflow: hidden`),
+the way film passes a camera gate; the icon's footprint never changes (Ethan).
+Move only what is lit: a shape nobody can see does not need to travel, and resets while invisible.
+Direction reads from asymmetry, not colour: a fast rise and a long fall show which way a light is
+travelling (the orbit), a symmetric fade does not.
+
+### 23. Glyphs are 12px and live on whole pixels
+
+Status glyphs keep the icon's 12px box in every variant, so swapping one for another never shifts
+the text beside it (derived).
+Every edge, gap and offset is a whole CSS pixel: 1.5px gaps rendered as 2px and 1px on the same
+glyph; 3px squares or pills with 1px gaps are the small-size grid.
+Round a 3px shape by at most half a pixel, or it turns into a plus sign.
+
+### 24. Reduced motion holds a still frame that still reads as busy
+
+Under `prefers-reduced-motion: reduce`, loops stop and hold a half-lit frame (some shapes solid,
+some at 0.55), never a blank or a spinner that looks broken (derived).
+Feedback transitions drop to 0ms.
+A status glyph is an `<output>` with an `aria-label`, so it is announced once, not on every frame.
+
+### 25. Motion is judged frame by frame, and proved by measurement
+
+Every motion ships with a Speeds story (the same loop at several durations, side by side) and is
+checked on a contact sheet: the loop paused at even steps.
+Timing claims ("half clipped as the branch is half faded", "no two squares share a shade") get a
+browser test that seeks the animation and measures it; a screenshot of one good frame proves
+little, since each frame of a broken loop can look fine on its own.
 
 ## Open questions
 
-- Whether the stepped slider, dictation controls, links and the primary button should move from olive to ink, so green only appears on button hovers (tracked in `docs/LATER.md`).
+- Whether the stepped slider, dictation controls, links and the primary button should move from
+  olive to ink, so green only appears on button hovers (tracked in `docs/LATER.md`).
 
-- Rules 2 and 3 (and the display ink `#22251e`) rest on how the tint looked on a screen with a blue-light filter, which warms dark neutrals: re-check them with the filter off.
-- Ethan's warm greys (`#8a8a85`, `#cbcac4`) were picked on the same screen: keep them as deliberate choices, or re-pick them with the filter off.
-- Where the declared `#111411` near-black green is used (likely the hero background) and where the declared soft blue `#95aac8` appears.
+- Rules 2 and 3 (and the display ink `#22251e`) rest on how the tint looked on a screen with a
+  blue-light filter, which warms dark neutrals: re-check them with the filter off.
+- Ethan's warm greys (`#8a8a85`, `#cbcac4`) were picked on the same screen: keep them as deliberate
+  choices, or re-pick them with the filter off.
+- Where the declared `#111411` near-black green is used (likely the hero background) and where the
+  declared soft blue `#95aac8` appears.
