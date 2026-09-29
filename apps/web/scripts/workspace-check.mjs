@@ -1,7 +1,7 @@
 #!/usr/bin/env node
-// Measures the done predicate for the projects, sub-threads, shell, carry, collapsible lane and
-// sidebar (peek, resize, pills) work on the real app
-// and the real Storybook. Every check runs in its own browser context, so one failure never
+// Measures the done predicate for the projects, sub-threads, shell, carry, collapsible lane,
+// sidebar (peek, resize) and rail (places, pills, traffic lights) work on the real app and the
+// real Storybook. Every check runs in its own browser context, so one failure never
 // hides another, and a check never sees another's data.
 //
 //   pnpm dev:web                                        # http://127.0.0.1:5173
@@ -10,6 +10,7 @@
 import { canvasChecks } from "./canvas-checks.mjs";
 import { laneCollapseChecks } from "./lane-collapse-checks.mjs";
 import { collect, run } from "./lever.mjs";
+import { lightsChecks } from "./lights-checks.mjs";
 import { railChecks } from "./rail-checks.mjs";
 import { shellChecks } from "./shell-checks.mjs";
 import { sidebarChecks } from "./sidebar-checks.mjs";
@@ -25,5 +26,6 @@ await run(
     welcomeFrameChecks,
     sidebarChecks,
     railChecks,
+    lightsChecks,
   ),
 );

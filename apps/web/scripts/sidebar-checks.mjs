@@ -152,12 +152,15 @@ function sampleOffsets(page, ms) {
   );
 }
 
-// A computed rgb() colour's channels, and its relative luminance (WCAG).
-const channels = (css) =>
-  css
+// A computed colour's channels, 0 to 255, and its relative luminance (WCAG). A color-mix()
+// computes to color(srgb r g b), whose channels run 0 to 1.
+function channels(css) {
+  const values = css
     .match(/[\d.]+/g)
     .slice(0, 3)
     .map(Number);
+  return String(css).startsWith("color(srgb") ? values.map((v) => v * 255) : values;
+}
 function luminance(css) {
   const [r, g, b] = channels(css).map((v) => {
     const c = v / 255;
@@ -166,7 +169,7 @@ function luminance(css) {
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 
-/** WCAG's contrast of two computed rgb() colours. */
+/** WCAG's contrast of two computed colours, rgb() or color(srgb). */
 export function contrast(a, b) {
   const [hi, lo] = [luminance(a), luminance(b)].toSorted((x, y) => y - x);
   return (hi + 0.05) / (lo + 0.05);

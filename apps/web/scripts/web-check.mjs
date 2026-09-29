@@ -7,6 +7,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { arg, chromium, ROOT } from "./harness.mjs";
+import { RAIL_PLACES } from "./rail-places.mjs";
 
 const BASE = arg("--base", "http://127.0.0.1:5173");
 // The gap between lanes: one step of the canvas's dot grid (index.css --canvas-grid).
@@ -278,11 +279,14 @@ try {
   await page.waitForFunction(() => document.documentElement.dataset.theme === "light");
 
   const rail = page.locator('[data-slot="sidebar"]');
+  const placesShown = [];
+  for (const { role, name } of RAIL_PLACES) {
+    if (await rail.getByRole(role, { name, exact: true }).isVisible()) placesShown.push(name);
+  }
   record(
-    "the sidebar shows Kay, Documentation and Lab",
-    (await rail.getByRole("link", { name: "Kay", exact: true }).isVisible()) &&
-      (await rail.getByRole("link", { name: "Documentation" }).isVisible()) &&
-      (await rail.getByRole("link", { name: "Lab" }).isVisible()),
+    "the sidebar shows its places, Kay to Lab",
+    placesShown.length === RAIL_PLACES.length,
+    placesShown.join(", "),
   );
 
   const canvas = page
@@ -1465,21 +1469,22 @@ try {
     { viewport: { width: 1024, height: 768 } },
     async (own) => {
       await tabsOf(own).first().waitFor({ timeout: 15_000 });
-      const offsets = await own.locator('[data-slot="sidebar"]').evaluate((side) =>
-        ["Kay", "Documentation", "Lab"].map((name) => {
-          const link = [...side.querySelectorAll("a")].find(
-            (a) => (a.getAttribute("aria-label") ?? a.textContent.trim()) === name,
-          );
-          const square = link.getBoundingClientRect();
-          const glyph = link.querySelector("svg").getBoundingClientRect();
-          return [
-            glyph.left + glyph.width / 2 - (square.left + square.width / 2),
-            glyph.top + glyph.height / 2 - (square.top + square.height / 2),
-          ];
-        }),
-      );
+      const offsets = await own
+        .locator('[data-slot="sidebar"] [data-sidebar="header"]')
+        .evaluate((header) =>
+          [...header.querySelectorAll('[data-sidebar="menu-button"]')].map((place) => {
+            const square = place.getBoundingClientRect();
+            const glyph = place.querySelector("svg").getBoundingClientRect();
+            return [
+              glyph.left + glyph.width / 2 - (square.left + square.width / 2),
+              glyph.top + glyph.height / 2 - (square.top + square.height / 2),
+            ];
+          }),
+        );
       return {
-        ok: offsets.flat().every((offset) => Math.abs(offset) < 0.5),
+        ok:
+          offsets.length === RAIL_PLACES.length &&
+          offsets.flat().every((offset) => Math.abs(offset) < 0.5),
         detail: `icon centre minus square centre (x, y): ${offsets.map((pair) => pair.join(", ")).join("; ")}`,
       };
     },
