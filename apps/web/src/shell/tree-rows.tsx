@@ -93,7 +93,7 @@ function Named({
       }}
     >
       <TooltipTrigger render={row} />
-      <TooltipContent side="right" className="max-w-80 wrap-anywhere">
+      <TooltipContent side="right" className="max-w-80 whitespace-normal wrap-anywhere">
         {name}
       </TooltipContent>
     </Tooltip>

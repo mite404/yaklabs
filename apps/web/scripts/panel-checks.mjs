@@ -92,8 +92,7 @@ async function railFocusReleases(browser, theme) {
 }
 
 // The name pills up now.
-const pillsUp = (page) =>
-  page.locator('[data-slot="tooltip-content"][data-variant="pill"]:visible').count();
+const pillsUp = (page) => page.locator('[data-slot="tooltip-content"]:visible').count();
 
 // P28's Escape cases: with focus on Lab, the first Escape closes Lab's pill (a tooltip owns
 // Escape while it shows) and the next closes the peek, leaving focus on Lab; with focus Tabbed

@@ -47,9 +47,7 @@ async function pillOn(page, place, { focus = false } = {}) {
     const box = await target.boundingBox();
     await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2, { steps: 2 });
   }
-  const pill = page
-    .locator('[data-slot="tooltip-content"][data-variant="pill"]')
-    .filter({ hasText: place.name });
+  const pill = page.locator('[data-slot="tooltip-content"]').filter({ hasText: place.name });
   await pill.waitFor({ timeout: 2000 });
   await page.waitForTimeout(200);
   const look = await pill.evaluate(readPill);

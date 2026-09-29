@@ -1802,3 +1802,20 @@ back to subpixel. With keyboard focus on a rail place its pill is up, and Escape
 first, then the peek, as a menu takes Escape before the peek does. shadcn's `no-scrollbar`
 utility, which its `SidebarContent` names, is defined nowhere in the app, so the rail sets
 `scrollbar-width: none` itself.
+
+## ADR-140 - Every hover label is the rail's ink pill
+
+2026-09-29 - Accepted (Ethan: "also "unpin thread" hover needs to match our design language. do
+we have a specific hover popover defined in storybook? i don't think so", after keeping the
+rail's pills: "keep it it looks great").
+Storybook defines no hover label: it holds the catalog's hand-made primitives, and the
+app's labels came from the vendored shadcn tooltip, whose default was base-lyra's square box
+with an arrow, 12px text in the page's ink. Unpin, the Layout switch, Collapse all and a sidebar
+row's cut name drew that box while the rail drew its ink pill (ADR-139), two shapes for one job.
+The vendored tooltip now draws only the pill (design pillars, rule 28): no `variant`, no arrow,
+13px medium text on the page's ink, 12px corners, 8px off its trigger, 350ms of rest before the
+first opens and none before its neighbours. A name long enough to wrap keeps the pill's ends,
+since 12px is half a one-line pill's height. The rail's own provider and its delay props go,
+since the app's provider now carries the same values. A new label cannot come out in another
+shape without editing `packages/ui/src/components/tooltip.tsx`. P23 and P28 read the pills, and
+the web checks read a cut row's name on hover and focus and a name that wraps.

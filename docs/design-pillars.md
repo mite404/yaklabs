@@ -198,6 +198,33 @@ label is a caution orange pill (ADR-067, ADR-068).
 | Tiles (dark) | 18% night on the surface, paper 6.6:1 | derived |
 | Hover (dark) | 50% night on the surface (`#3a3b37`), paper 9.8:1 | derived |
 
+### 28. A hover label is an ink pill
+
+Anything that names itself on hover or focus (a rail place, Unpin, a layout, Collapse all, a
+sidebar row's cut name) does it in one look: the rail's ink pill, which Ethan kept ("it looks
+great"), not shadcn's square box with an arrow.
+There is one tooltip in `packages/ui` and it draws only this, so a new label cannot come out in
+another shape.
+The page's ink, turned over, stands out from the paper shell in either theme without a shadow.
+Its corners are half a one-line pill's height, so one line is a capsule, and a name long enough to
+wrap keeps the same ends instead of turning into a lozenge.
+It waits for the pointer to rest, so passing over a row of icons does not flash a label at each,
+and once one is up its neighbours open at once.
+Storybook has no story for it: Storybook holds the catalog's hand-made primitives, and this is
+the vendored shadcn tooltip. P23 reads the rail's pills in both themes.
+
+| Property | Value | Source |
+| --- | --- | --- |
+| Fill / text | `--ink` / `--on-ink`: 13.3:1 light, 16.1:1 dark | derived (ADR-139) |
+| Secondary words | `--on-ink` 72% over `--ink` (rule 4): 7.6:1, 6.9:1 | derived (ADR-139) |
+| Type | Inter 13px, medium, 16px line, one line unless a name must wrap (up to 320px) | derived |
+| Padding | 4px × 10px | derived |
+| Corners | 12px: half the one-line pill's 24px, a capsule on one line | derived |
+| Offset | 8px off its trigger, no arrow | derived (ADR-139) |
+| Delay | 350ms of rest, then the next opens at once | derived (ADR-139) |
+| Motion | in over 125ms, `cubic-bezier(0.23, 1, 0.32, 1)`, scale 0.97 and fade; out in 100ms | derived |
+| Reduced motion | fades only, no scale | derived |
+
 ## Inputs
 
 ### 14. A place to type is outlined, and its prompt is greyer

@@ -4,7 +4,6 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from "@yaklabs/ui/components/sidebar";
-import { TooltipProvider } from "@yaklabs/ui/components/tooltip";
 import {
   ArrowUpRight,
   BookOpen,
@@ -51,12 +50,6 @@ const OUT_OF_SCOPE_BUTTON =
 // rule 4's step for secondary text (7.6:1 light, 6.9:1 dark).
 const PILL_HINT = "text-[color-mix(in_srgb,var(--on-ink)_72%,var(--ink))]";
 
-// A rail place's name shows in a pill after the pointer rests on it 350ms; moving on to the
-// next place while one shows opens the next at once (Base UI's delay group).
-const PILL_DELAY_MS = 350;
-// The pill sits 8px off the place's square.
-const PILL_OFFSET_PX = 8;
-
 // A place's glyph: a lucide icon, or Kay's own mark.
 type Glyph = ComponentType<{ className?: string }>;
 
@@ -98,8 +91,7 @@ const PLACES = [
 // The pill a square names its place in, whatever the panel beside the rail is doing. It says
 // shown, since the menu button hides a pill unless the sidebar is collapsed, and the rail is
 // not the sidebar.
-const pillOf = (children: ReactNode) =>
-  ({ children, variant: "pill", sideOffset: PILL_OFFSET_PX, hidden: false }) as const;
+const pillOf = (children: ReactNode) => ({ children, hidden: false }) as const;
 
 // What a live place opens: a route of the app, or a site of its own in a new tab.
 function linkOf(place: LivePlace, hrefTo: (path: "/" | "/lab") => string) {
@@ -220,28 +212,26 @@ export function RailPlaces({ look }: { look: Look }) {
   const at = useLocation().pathname; // → the open route, such as "/lab"
   return (
     <SidebarHeader className="gap-0.5 px-2 pt-2">
-      <TooltipProvider delay={PILL_DELAY_MS} closeDelay={0}>
-        <SidebarMenu className="gap-0.5">
-          {PLACES.map((place) =>
-            place.kind === "outOfScope" ? (
-              <OutOfScopePlace
-                key={place.label}
-                label={place.label}
-                Glyph={place.Glyph}
-                look={look}
-              />
-            ) : (
-              <Place
-                key={place.label}
-                place={place}
-                look={look}
-                link={linkOf(place, hrefTo)}
-                active={place.kind === "route" && at === place.to}
-              />
-            ),
-          )}
-        </SidebarMenu>
-      </TooltipProvider>
+      <SidebarMenu className="gap-0.5">
+        {PLACES.map((place) =>
+          place.kind === "outOfScope" ? (
+            <OutOfScopePlace
+              key={place.label}
+              label={place.label}
+              Glyph={place.Glyph}
+              look={look}
+            />
+          ) : (
+            <Place
+              key={place.label}
+              place={place}
+              look={look}
+              link={linkOf(place, hrefTo)}
+              active={place.kind === "route" && at === place.to}
+            />
+          ),
+        )}
+      </SidebarMenu>
     </SidebarHeader>
   );
 }
