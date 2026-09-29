@@ -3,7 +3,8 @@
    into the page, so their helpers have to live inside them */
 // A new thread's welcome and its debug switch for the painting (ADR-135, ADR-136, ADR-138) on
 // the real app's demo scenario: where the switch shows, what each look paints, what waits for
-// its assets, how the switch is driven, and whether the words stay legible over each painting.
+// its assets, how the switch is driven, whether the words stay legible over each painting, and
+// whether its buttons keep the site's corners.
 // Every check opens its own browser context, so none sees another's data or stored look.
 import { BASE, shotPath, sidebarDrawn } from "./lever.mjs";
 
@@ -215,6 +216,25 @@ async function lowestWord(page) {
   return { ...rows.reduce((low, row) => (row.ratio < low.ratio ? row : low)), words: rows.length };
 }
 
+// Runs in the page: a button's computed corners, the site's button corners it should have (the
+// catalog's --btn-radius, 4px, which tokens.test.ts guards), and the state it was read in.
+function cornersOf(button) {
+  return {
+    radius: getComputedStyle(button).borderRadius,
+    site: getComputedStyle(document.documentElement).getPropertyValue("--btn-radius").trim(),
+    hover: button.matches(":hover"),
+    focus: button.matches(":focus-visible"),
+  };
+}
+
+// Runs in the page: every button in the shown welcome drawn with square corners.
+function squareButtons() {
+  const root = document.querySelector('[role="tabpanel"]:not([inert]) .welcome');
+  return [...root.querySelectorAll("button")]
+    .filter((button) => getComputedStyle(button).borderRadius === "0px")
+    .map((button) => button.getAttribute("aria-label") ?? button.textContent.trim());
+}
+
 // One look in one theme: a new thread painted so, and its lowest word.
 async function wordsOver(browser, { theme, look }) {
   const { page, context } = await openDemo(browser, { theme, query: `splash=${look}` });
@@ -403,6 +423,41 @@ export const welcomeChecks = {
       detail: rows
         .map((row) => `${row.look}/${row.theme} ${row.ratio} ("${row.label}", ${row.words} words)`)
         .join("; "),
+    };
+  },
+
+  // W6: the projects' "+" has the site's 4px button corners (design pillars rule 8) at rest, on
+  // hover and under keyboard focus, so its hover fill and focus ring are not square, and no
+  // button on the welcome keeps the vendored button's square default.
+  async W6(browser) {
+    const { page, context } = await openDemo(browser);
+    await startThread(page);
+    const plus = panelOf(page).getByRole("button", { name: "New project" });
+    const rest = await plus.evaluate(cornersOf);
+    await plus.hover();
+    const hover = await plus.evaluate(cornersOf);
+    await page.mouse.move(0, 0);
+    // A key press first, so the focus that follows is keyboard focus and shows its ring.
+    await page.keyboard.press("Shift");
+    await plus.focus();
+    const focus = await plus.evaluate(cornersOf);
+    const square = await page.evaluate(squareButtons);
+    // Padded, since the focus ring draws a pixel outside the button's own box.
+    const box = await plus.boundingBox();
+    await page.screenshot({
+      path: shotPath("W6-plus-focus"),
+      clip: { x: box.x - 8, y: box.y - 8, width: box.width + 16, height: box.height + 16 },
+    });
+    await context.close();
+    const states = [rest, hover, focus];
+    return {
+      ok:
+        rest.site === "4px" &&
+        states.every((state) => state.radius === rest.site) &&
+        hover.hover === true &&
+        focus.focus === true &&
+        square.length === 0,
+      detail: `site corners ${rest.site}; + at rest ${rest.radius}, hover ${hover.radius} (hovered ${hover.hover}), focus-visible ${focus.radius} (shown ${focus.focus}); square welcome buttons ${JSON.stringify(square)}`,
     };
   },
 };
