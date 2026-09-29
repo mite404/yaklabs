@@ -1784,3 +1784,15 @@ change:
 - Whether Documentation's pill says it opens elsewhere → yes: an ArrowUpRight after its name.
 - What a window too short for every place does → the places scroll with no scrollbar, and the
   Account stays at the rail's foot.
+
+Found while building it, the same day. Docked, the old sidebar drew every glyph on the page with
+coloured subpixel smoothing, and collapsed with greyscale: its one avatar sat inside the
+container's stacking context, so no blend reached the window's layer (ADR-110), while collapsed
+the rail's echo carried a second avatar outside it. The rail keeps its avatar in plain flow, so
+the text is greyscale in every state. For the same reason the collapsed rail is not bit for bit
+the old one: about 140 antialiased pixels in it differ by up to 23 levels, every glyph and the
+avatar on the same pixels, and a stacking context to match them would switch the page's text
+back to subpixel. With keyboard focus on a rail place its pill is up, and Escape closes the pill
+first, then the peek, as a menu takes Escape before the peek does. shadcn's `no-scrollbar`
+utility, which its `SidebarContent` names, is defined nowhere in the app, so the rail sets
+`scrollbar-width: none` itself.
