@@ -8,7 +8,7 @@ import {
 } from "@yaklabs/runtime";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
-import { LIFETIMES, publish, unpublish, type ShareClient } from "./share-thread";
+import { LIFETIMES, liveShare, publish, unpublish, type ShareClient } from "./share-thread";
 
 const NOW = new Date("2026-09-28T10:00:00.000Z");
 // What a thread link's fragment carries, checked so a missing one fails the test by name.
@@ -59,8 +59,8 @@ function client(respond: (request: Request) => Response) {
 }
 
 describe("publish makes a thread public for a while (ADR-131)", () => {
-  it("offers 1 hour, 3 hours, 1 day and 7 days", () => {
-    expect(LIFETIMES.map((each) => each.label)).toEqual(["1 hour", "3 hours", "1 day", "7 days"]);
+  it("offers 1 hour, 6 hours, 1 day and 7 days", () => {
+    expect(LIFETIMES.map((each) => each.label)).toEqual(["1 hour", "6 hours", "1 day", "7 days"]);
   });
 
   it("sends the gateway only sealed bytes, signed in, and keeps the link with its key", async () => {
@@ -122,5 +122,28 @@ describe("unpublish takes a share down (ADR-131)", () => {
   it("fails when the server keeps it", async () => {
     const { share } = client(() => answer(403));
     await expect(unpublish(share, record)).rejects.toThrow("The share server answered 403");
+  });
+});
+
+const shareEnding = (id: string, expiresAt: string): ThreadShare => ({
+  id,
+  threadId: thread.id,
+  link: `${BASE}/share.html#t=${id}.key`,
+  revokeToken: "revoke",
+  createdAt: NOW.toISOString(),
+  expiresAt,
+});
+
+describe("liveShare finds the share that still holds (ADR-131)", () => {
+  const newest = shareEnding("newest0000000000", "2026-09-28T11:00:00.000Z");
+  const older = shareEnding("older00000000000", "2026-09-28T09:00:00.000Z");
+
+  it("is the newest share while its time has not run out", () => {
+    expect(liveShare([newest, older], thread.id, NOW.getTime())).toBe(newest);
+  });
+
+  it("is undefined once the newest has ended, and for another thread", () => {
+    expect(liveShare([older], thread.id, NOW.getTime())).toBeUndefined();
+    expect(liveShare([newest], threadIdSchema.parse("t-2"), NOW.getTime())).toBeUndefined();
   });
 });

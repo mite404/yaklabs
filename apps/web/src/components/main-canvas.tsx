@@ -29,11 +29,25 @@ import { ThreadPane } from "./thread-pane";
 // What a thread started without a title is called until someone names it.
 const NEW_THREAD = "New thread";
 
-function Artifact({ card, leading }: { card: SharedCard; leading: ReactNode }) {
+function Artifact({
+  card,
+  leading,
+  trailing,
+}: {
+  card: SharedCard;
+  leading: ReactNode;
+  trailing: ReactNode;
+}) {
   return card.kind === "interactive" ? (
-    <InteractiveCard payload={card.payload} turnId="canvas" onChoose={() => {}} leading={leading} />
+    <InteractiveCard
+      payload={card.payload}
+      turnId="canvas"
+      onChoose={() => {}}
+      leading={leading}
+      trailing={trailing}
+    />
   ) : (
-    <CatalogCard payload={card.payload} context="thread" leading={leading} />
+    <CatalogCard payload={card.payload} context="thread" leading={leading} trailing={trailing} />
   );
 }
 
@@ -42,8 +56,10 @@ function Artifact({ card, leading }: { card: SharedCard; leading: ReactNode }) {
 function laneView(lane: Lane, threads: Map<string, ThreadSummary>): LaneView[] {
   if (lane.kind === "card") {
     const { id, title, width, collapsed, card } = lane;
-    const render = (leading: ReactNode) => <Artifact card={card} leading={leading} />;
-    return [{ id, title, width, collapsed, render }];
+    const render = (leading: ReactNode, trailing: ReactNode) => (
+      <Artifact card={card} leading={leading} trailing={trailing} />
+    );
+    return [{ id, title, width, collapsed, kind: "card", render }];
   }
   const thread = threads.get(lane.threadId);
   if (thread === undefined) return [];
@@ -53,8 +69,9 @@ function laneView(lane: Lane, threads: Map<string, ThreadSummary>): LaneView[] {
       title: thread.title,
       width: lane.width,
       collapsed: lane.collapsed,
-      render: (leading: ReactNode) => (
-        <ThreadPane key={thread.id} thread={thread} leading={leading} />
+      kind: "thread",
+      render: (leading: ReactNode, trailing: ReactNode) => (
+        <ThreadPane key={thread.id} thread={thread} leading={leading} trailing={trailing} />
       ),
     },
   ];

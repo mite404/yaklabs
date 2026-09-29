@@ -100,7 +100,7 @@ async function narrowBar(browser, { theme, width }) {
     m.overlaps.length === 0 &&
     m.outside.length === 0 &&
     m.namePx >= Math.min(m.nameFull, LEGIBLE_PX) &&
-    m.views.join("|") === "Thread|Browser|Canvas" &&
+    m.views.join("|") === "Thread|Canvas|Browser" &&
     m.below;
   await titleBar(page).screenshot({ path: shotPath(`P13-bar-${width}-${theme}`) });
   await layoutButton(page, "Canvas").click();
@@ -169,7 +169,7 @@ export const shellChecks = {
     await child.click();
     await page.waitForURL((url) => url.pathname !== home, { timeout: 10_000 });
     const childPath = pathOf(page);
-    const mainTitle = await mainPanel(page).locator(".thread-header").innerText();
+    const mainTitle = await mainPanel(page).getAttribute("aria-label");
     const lane = canvasOf(page).locator(':scope > article[aria-label="New thread"]');
     const laneShown = await lane.isVisible();
     await side.getByRole("link", { name: "Last week's sales" }).click();
@@ -403,7 +403,7 @@ export const shellChecks = {
     const toggle = await boxOf(bar.getByRole("button", { name: "Toggle sidebar" }));
     const strip = await boxOf(bar.getByRole("tablist", { name: "Open threads" }));
     const bell = await boxOf(bar.getByRole("button", { name: "Notifications" }));
-    const account = await boxOf(bar.getByRole("button", { name: "Account" }));
+    const accountsInBar = await bar.getByRole("button", { name: "Account" }).count();
     const rightmost = await bar
       .getByRole("button")
       .evaluateAll((els) => Math.max(...els.map((el) => el.getBoundingClientRect().right)));
@@ -423,13 +423,13 @@ export const shellChecks = {
       lightsHidden === "true" &&
       lightsBox.x + lightsBox.width <= toggle.x &&
       toggle.x + toggle.width <= strip.x &&
-      bell.x + bell.width <= account.x &&
-      near(account.x + account.width, rightmost) &&
+      accountsInBar === 0 &&
+      near(bell.x + bell.width, rightmost) &&
       side.y >= barBox.y + barBox.height - 1 &&
       narrow.x === 0;
     return {
       ok,
-      detail: `window ${JSON.stringify(win)} radius ${radius}; bar ${JSON.stringify(barBox)}; lights before toggle ${lightsBox.x + lightsBox.width <= toggle.x}; toggle before tabs ${toggle.x + toggle.width <= strip.x}; bell before account ${bell.x + bell.width <= account.x}; account rightmost ${near(account.x + account.width, rightmost)}; sidebar under bar ${side.y >= barBox.y + barBox.height - 1}; full-bleed at 700px ${narrow.x === 0}`,
+      detail: `window ${JSON.stringify(win)} radius ${radius}; bar ${JSON.stringify(barBox)}; lights before toggle ${lightsBox.x + lightsBox.width <= toggle.x}; toggle before tabs ${toggle.x + toggle.width <= strip.x}; accounts in the bar ${accountsInBar}; bell rightmost ${near(bell.x + bell.width, rightmost)}; sidebar under bar ${side.y >= barBox.y + barBox.height - 1}; full-bleed at 700px ${narrow.x === 0}`,
     };
   },
 

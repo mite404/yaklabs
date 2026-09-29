@@ -7,7 +7,7 @@ import { mkdirSync } from "node:fs";
 import path from "node:path";
 import { BASE } from "./lever.mjs";
 import { serveShares } from "./share-checks.mjs";
-import { headerOf, openThread, pick } from "./thread-actions-checks.mjs";
+import { menuButtonOf, openThread, pick } from "./thread-actions-checks.mjs";
 
 const THEMES = ["light", "dark"];
 const DESKTOP = { width: 1440, height: 900 };
@@ -26,7 +26,7 @@ async function openThemed(browser, theme) {
   const page = await context.newPage();
   await page.goto(`${BASE}/?scenario=demo`);
   await page.locator('[data-slot="sidebar"] [data-thread]').first().waitFor({ timeout: 20_000 });
-  await headerOf(page).getByRole("button", { name: "Thread actions" }).waitFor();
+  await menuButtonOf(page).waitFor();
   await page.evaluate(() => document.fonts.ready);
   return { context, page };
 }
@@ -48,7 +48,7 @@ const still = (page) =>
 
 // Opens the shown thread's Share submenu.
 async function openShare(page) {
-  await headerOf(page).getByRole("button", { name: "Thread actions" }).click();
+  await menuButtonOf(page).click();
   await page.getByRole("menuitem", { name: /^Share thread/ }).hover();
   await page.getByRole("menuitem", { name: "1 hour" }).waitFor();
   await still(page);
@@ -91,8 +91,10 @@ async function desktop(browser, theme, file) {
   await page.keyboard.press("Escape");
   await openThread(page, PINNED);
   await quiet(page);
-  await headerOf(page).screenshot({ path: file(`desktop-header-${theme}`) });
-  await headerOf(page).getByRole("button", { name: "Thread actions" }).click();
+  await page
+    .locator('[data-slot="title-bar"]')
+    .screenshot({ path: file(`desktop-tabbar-${theme}`) });
+  await menuButtonOf(page).click();
   await page.getByRole("menu").waitFor();
   await still(page);
   await page.screenshot({ path: file(`desktop-menu-${theme}`) });

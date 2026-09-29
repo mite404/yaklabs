@@ -529,6 +529,10 @@ function focusComposeIn(scroller: HTMLElement | null): void {
  * stands over the agent's question while it is open, since the user just asked for it.
  * @param leading A host's control before the title in the title bar, such as a lane's collapse
  * on the compose canvas (ADR-134).
+ * @param bare Draw the thread on the surface it stands on, with no window frame and no title
+ * bar of its own: a main thread's, whose tab carries its name, its rename and its menu (ADR-138),
+ * so `onRename`, `leading` and `headerActions` have nowhere to show. Lanes on the canvas keep
+ * the frame.
  */
 // fallow scores each prop as cognitive load: the ninth host knob tips 15 to 16 with no branch.
 // fallow-ignore-next-line complexity
@@ -546,6 +550,7 @@ export function ChatThreadPanel({
   hostAsk,
   leading,
   empty,
+  bare = false,
 }: {
   thread: Thread;
   width?: number;
@@ -561,6 +566,7 @@ export function ChatThreadPanel({
   leading?: ReactNode;
   /** What the scroll area shows while the thread has no turns, such as a welcome. */
   empty?: ReactNode;
+  bare?: boolean;
 }) {
   const { source, open } = dictationSetup(dictation);
   const [messages, setMessages] = useState(thread.messages);
@@ -571,6 +577,7 @@ export function ChatThreadPanel({
   const [awaiting, setAwaiting] = useAwaiting(thread, tell);
   const recap = useRecap({ thread, activity, now, awaiting, draft });
   const { scroller, setDockSlot } = useScroller();
+  const showEmpty = messages.length === 0 && empty !== undefined;
 
   function send() {
     const { attachments, files } = outbox.take();
@@ -619,18 +626,22 @@ export function ChatThreadPanel({
   }
 
   return (
-    <section className="thread-panel" style={{ width }} aria-label={thread.title}>
-      <ThreadHeader
-        title={thread.title}
-        leading={leading}
-        onRename={onRename}
-        actions={headerActions}
-      />
-      <div
-        className="thread-scroll"
-        ref={scroller}
-        data-empty={messages.length === 0 && empty !== undefined ? "" : undefined}
-      >
+    <section
+      className="thread-panel"
+      style={{ width }}
+      aria-label={thread.title}
+      data-bare={bare ? "" : undefined}
+      data-empty={showEmpty ? "" : undefined}
+    >
+      {!bare && (
+        <ThreadHeader
+          title={thread.title}
+          leading={leading}
+          onRename={onRename}
+          actions={headerActions}
+        />
+      )}
+      <div className="thread-scroll" ref={scroller} data-empty={showEmpty ? "" : undefined}>
         {messages.length === 0 && empty}
         {messages.map((message) => (
           <Turn

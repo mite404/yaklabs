@@ -36,6 +36,11 @@
   outline-offset: -2px;
   box-shadow: none; /* shadcn's half-strength ring outside the tab, which the strip clipped */
 }
+/* A tab's title field (ADR-138) shows its ring on the tab's box around it, like a focused tab,
+   so the field itself draws none. Outside every layer, to outrank the rule above. */
+.chrome-surface .tab-rename:focus-visible {
+  outline: none;
+}
 /* A lane's title clips with an ellipsis where it outgrows its bar (ADR-097). The rename button
    holds the text, and the heading cannot put an ellipsis inside a button, which lays out as one
    unbreakable box, so the button clips as a block of its own, held to the heading's width
@@ -48,6 +53,82 @@
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
+}
+
+/* A lane thread's "⋯" (ADR-138) shows only while its title bar is hovered or holds focus, and
+   while its menu is open; Share and the close stay put. It is faded, never hidden, so it keeps
+   its place in the tab order and the accessibility tree. Only where a fine pointer can hover: a
+   touch screen has no hover to reveal it by, so it stays. It fades in and out over 150ms on the
+   strong ease-out; a keyboard arriving on it sees it at once, since a key press is not something
+   to animate. Outside every layer on purpose: the ghost button's own `transition-all` is a
+   utility, which a layered rule cannot outrank. */
+@media (hover: hover) and (pointer: fine) {
+  .lane .thread-header [data-thread-menu] {
+    opacity: 0;
+    transition: opacity 150ms cubic-bezier(0.23, 1, 0.32, 1);
+  }
+  .lane .thread-header:is(:hover, :focus-within) [data-thread-menu],
+  .lane .thread-header [data-thread-menu][aria-expanded="true"],
+  .lane .thread-header [data-thread-menu]:focus-visible {
+    opacity: 1;
+  }
+  .lane .thread-header [data-thread-menu]:focus-visible {
+    transition: none;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .lane .thread-header [data-thread-menu] {
+      transition: none;
+    }
+  }
+}
+
+/* The sidebar's peek (sidebar-peek.tsx): collapsed to its rail, the one sidebar slides out over
+   the workspace from the window's edge, the shell's own paper with a hairline at its right edge
+   and the softest shadow past it, and slides back. Out on the iOS drawer curve over 220ms with a
+   quicker fade, back over 160ms; transitions, so a pointer that returns mid-way turns it back
+   from where it is. The shadow is clipped to its right, off the title bar. Reduced motion only
+   fades it. A key's close, and the step back into the rail, have no motion (data-peek-instant),
+   and neither do the rail's buttons, which change size between the two.
+   Outside every layer on purpose: the container's own `transition-[left,right,width]` is a
+   utility, which a layered rule cannot outrank. */
+[data-slot="sidebar"][data-peek] > [data-slot="sidebar-container"] {
+  z-index: 20;
+  box-shadow:
+    1px 0 0 var(--hairline),
+    8px 0 24px -12px var(--shadow);
+  clip-path: inset(0 -40px 0 0);
+  transition:
+    transform 220ms cubic-bezier(0.32, 0.72, 0, 1),
+    opacity 120ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+[data-slot="sidebar"][data-peek="leaving"] > [data-slot="sidebar-container"] {
+  transition:
+    transform 160ms cubic-bezier(0.32, 0.72, 0, 1),
+    opacity 160ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+[data-slot="sidebar"]:is([data-peek="entering"], [data-peek="leaving"])
+  > [data-slot="sidebar-container"] {
+  transform: translateX(-100%);
+  opacity: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  [data-slot="sidebar"][data-peek] > [data-slot="sidebar-container"] {
+    transform: none;
+    transition: opacity 120ms ease;
+  }
+}
+[data-slot="sidebar"][data-peek="entering"] > [data-slot="sidebar-container"],
+[data-slot="sidebar-container"][data-peek-instant],
+[data-slot="sidebar-container"][data-peek-instant] [data-sidebar="menu-button"] {
+  transition: none;
+}
+/* While the sidebar's edge is dragged (sidebar-resize.tsx), the resize cursor holds over the
+   whole window, as the canvas divider's does, and nothing on the way is selected. Outside every
+   layer, to outrank a link's or a button's own cursor utility. */
+html[data-dragging="sidebar"],
+html[data-dragging="sidebar"] * {
+  cursor: col-resize;
+  user-select: none;
 }
 
 /* The window's decorative traffic lights (ADR-094): a desktop window's own colours, the one
@@ -264,11 +345,12 @@
   /* A new thread's welcome (ADR-136): Kay's own greeting over one of Ethan's paintings, the
      landscape or the abstract strokes by <html data-splash> (splash.ts), under the same paper
      wash and the same clearing of plain paper behind the words, fading out in every direction,
-     so the two read as one treatment with a different picture. The greeting names the morning
-     in the light theme and the evening in the dark one, both in the DOM, one shown. The
-     scroll area drops its gutters for it (thread.css, data-empty), and the welcome fills it to
-     centre the words. */
+     so the two read as one treatment with a different picture. A third look, Vitruvian, draws
+     the empty canvas's sheet instead (below). The greeting names the morning in the light theme
+     and the evening in the dark one, both in the DOM, one shown. The scroll area drops its
+     gutters for it (thread.css, data-empty), and the welcome fills it to centre the words. */
   .welcome {
+    --clearing: var(--paper);
     position: relative;
     isolation: isolate;
     display: grid;
@@ -300,6 +382,29 @@
     background: radial-gradient(ellipse 50% 50% at center, var(--paper) 25%, transparent 75%) center
       / max(100%, 40rem) max(100%, 28rem) no-repeat;
   }
+  /* The Vitruvian look draws the empty canvas's sheet (the .splash pieces above) across the
+     welcome's whole area on paper, as the canvas's raised surface is, square-cornered since the
+     welcome runs to the pane's edges. The clearing behind the words is sized to the canvas's
+     two-line copy, and this column is taller and wider, so the globe and Atlas's hands would run
+     behind the words (3.8:1 at worst). The column carries its own halo of paper, drawn over the
+     sheet and under the words, which follows the column's box however many projects it lists
+     and fades out at its edge, so the ring still shows above, below and to either side of it. */
+  .welcome .splash {
+    border-radius: 0;
+    background: var(--clearing);
+  }
+  .welcome-words {
+    position: relative;
+  }
+  .welcome .splash ~ .welcome-words::before {
+    content: "";
+    position: absolute;
+    inset: -0.75rem;
+    z-index: -1;
+    border-radius: 1.5rem;
+    background: var(--clearing);
+    box-shadow: 0 0 1.5rem 0.75rem var(--clearing);
+  }
 
   /* The open space lights up under a carry (ADR-091) on a layer below the splash drawing, so the
      drawing stays on top of the fill, as the words do. */
@@ -318,8 +423,14 @@
   /* The canvas is a dotted field (ADR-089): open ground that invites something to be put down. */
   .canvas {
     background-color: var(--bg);
+    /* One step of the dot grid. Everything on the row is a whole number of steps: the gap
+       between lanes is one, so it holds exactly one column of dots; a strip is two; the row
+       starts one in; a default lane is 31. The dots scroll with the row (`local`), so panning
+       never slides them out of step with the lanes. */
+    --canvas-grid: 18px;
     background-image: radial-gradient(var(--hairline) 1px, transparent 1px);
-    background-size: 18px 18px;
+    background-size: var(--canvas-grid) var(--canvas-grid);
+    background-attachment: local;
     /* The canvas fills the window's bottom right corner, which the window rounds at 12px
        inside its 1px border from md up (window.tsx), so the canvas rounds that corner the same
        way, and a carry's ring below follows the curve rather than being cut off by it. */
@@ -475,7 +586,8 @@
      at its head, the same six dots as the bar's, and the title reads top to bottom beneath,
      clipped with an ellipsis where it outruns the strip. The whole strip takes hold of the lane,
      so a hand shows over all of it but its expand. As with the bar, the grip is only drawn on a
-     row that still reorders (ADR-122). */
+     row that still reorders (ADR-122). A collapsed card's strip is half the row's height (its
+     article is, in lane.tsx), so it reads as a card beside a thread's full-height one. */
   [data-reorder="true"] .lane[data-collapsed="true"] {
     cursor: grab;
   }
@@ -485,7 +597,7 @@
     width: var(--lane-width);
   }
   .lane[data-collapsed="true"] {
-    width: 32px;
+    width: calc(var(--canvas-grid) * 2);
   }
   .lane-strip-grip {
     display: none;

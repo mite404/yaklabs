@@ -1659,3 +1659,67 @@ loop, the flame graph and `MessagePort` agent, and the Cloudflare share deploy. 
 that stays is ADR-086's: visual regression and accessibility checks in CI, with the contrast
 guard.
 If a cut item looks needed, ask Ethan; do not decide it.
+
+## ADR-138 - A main thread stands on the pane, and a window's controls live in its title bar
+
+2026-09-28 - Accepted (Ethan's polish list after the parallel work merged). Amends ADR-126,
+ADR-127, ADR-131, ADR-134 and ADR-136.
+Only a lane on the canvas is a window now. A main thread draws on the pane itself: no frame, no
+inset, its text still at the thread's measure (the gutters widen, not the column). It has no title
+bar until it has turns, since its tab already says "New thread", and then only a plain title row,
+the one place a thread is renamed. The welcome runs to the pane's edges and behind the compose
+box, so the greeting and the box it starts with are one surface. The thread's "⋯" moved onto the
+active tab, left of the tab's close; a phone keeps its own in the top row (ADR-116).
+A lane's close is the last control in its own title bar, for a thread and a card alike, and Share
+sits before it, so the far end never moves. The row that held the close is gone, so an open lane's
+top is flush with a collapsed strip's. A thread's Share button opens the same options as the
+menu's Share item, which now offers 1 hour, 6 hours, 1 day and 7 days (the gateway's `SHARE_TTLS`
+changed from 3 hours to 6). A card's own Share keeps its link menu (ADR-064).
+The pin in a title bar (ADR-127) is gone. A pinned thread unpins from its sidebar row, where the
+button shows on hover or focus and always on a touch screen, or from the "⋯" menu.
+The shadcn menu takes Kay's menu shape (8px popup, 4px items, 13px text) in the vendored
+`dropdown-menu.tsx`: `--radius` and the palette variables reach colours and one radius, but the
+`base-lyra` preset hard-codes `rounded-none` and `text-xs` in each file, so variables alone left
+the menu looking like a different app. Welcome actions use the app's 8px corners (`rounded-xl`).
+A collapsed strip's expand is 24px, set 7px down, so its hover fill clears the strip's outline by
+5.5px at the corners and 6px at the sides (a 28px fill met the strip's 14px corner arc, 1.5px
+apart).
+Amended the same day (Ethan, after seeing it): a main thread has no title row at all, with turns
+or without, since the tab row already names it; renaming moved to the tab (a double click on its
+title, or Rename first in its menu). The thread's "⋯" shows only while the pointer is on its tab
+or on a lane thread's title bar, and while its menu is open or it holds focus: it is faded, not
+removed, so the keyboard still reaches it. A collapsed card is half the height of a collapsed
+thread's strip, top-aligned with the row, so the two kinds read apart at a glance. One glyph per
+action: Share, copy link and open page use the catalog's box-and-arrow, link and window icons
+(`@yaklabs/catalog/icons`) wherever they appear, and lucide keeps the actions the catalog has no
+icon for; the shell's Share2 (nodes) is gone.
+The canvas's empty prompt reads "Drag a text selection or UI card here" (it read "...or card / to
+start a new thread with context" in ADR-089). The gap between lanes is one step of the canvas's
+18px dot grid and a collapsed strip is two (36px, up from 32), with the dots anchored to the
+scrolling row, so every gap between collapsed lanes holds exactly one column of dots.
+Also amended the same day (Ethan): the account leaves the title bar for the foot of the sidebar,
+open and collapsed, so the bell is the bar's right-most control (this moves ADR-094's corner and
+extends ADR-121's phone placement to the desktop). The Share options end with a divider and
+"Share permissions", which opens a dialog after Amp's: the thread's URL with copy and open, a
+Workspace row, a Public Access row and a status box. Public Access is the real feature, wired to
+the same verbs as the lifetimes (No access, 1 hour, 6 hours, 1 day, 7 days). Workspace is a
+disabled "Create Workspace" that says it is not in the web build, since a team needs a backend
+that ADR-137 cut. The dialog is a shadcn-style primitive in `packages/ui`, its open state is the
+shell's (`askSharePermissions`, after the snooze card) so it opens from a lane, a tab or the
+sidebar. The compose box and the cards cast a shadow to the right and bottom only, and every
+button beside `.btn` takes its corners from `--btn-radius` (4px), so Cancel and Done match.
+The layout switch offers Thread, Canvas, then Browser (it was Thread, Browser, Canvas): one array,
+`PANES`, orders the desktop switch and the phone's row alike.
+The edge shadow was refitted to Kay's by measuring their compose box: about 5% dark just below
+the box easing out over some 20px, 1% dark at its right, nothing above. It is now `2px 13px 22px
+-12px` on `--shadow`: mostly downward, a whisper to the right, and the long soft fall-off.
+Amended once more the same day (Ethan): a pinned, snoozed or archived thread's mark hangs in the
+row's left gutter, so every title starts at the same x. The splash switch works again (it threw
+when opened: its label sat outside a menu group), offers Landscape, Abstract and Vitruvian, lists
+Bonsai as disabled until its assets exist, and shows only in the new thread's welcome on the
+Thread layout. The sidebar, collapsed to its rail, peeks: hovering the title bar's toggle or the
+rail slides it out over the workspace (220ms in, 160ms out, no reflow), while keys and pins are
+instant. Its edge takes the canvas divider's handle (drag, arrows, Home and End, a double click to
+reset, the width kept as `kay.sidebar-width`), and the first tab starts 4px past that edge from the
+same width variable, as in the ChatGPT desktop app, so it follows a drag on every frame. Rail
+icons name themselves in an ink pill (13:1 against the shell).

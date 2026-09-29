@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 // The window chrome's tokens (ADR-110 to ADR-115): [foreground, background, the ratio tokens.css
@@ -212,5 +212,65 @@ describe("the window chrome's tokens", () => {
 describe("the faint ink (ADR-129)", () => {
   it("dim an archived thread and keep it readable in either theme", () => {
     expect([...misses(FAINT.light, THEMES.light), ...misses(FAINT.dark, THEMES.dark)]).toEqual([]);
+  });
+});
+
+// The rules whose selectors name a button that sits beside `.btn` (Cancel, Done, Skip, Submit).
+// They take their corners from --btn-radius, so no two of them can drift apart again.
+const BUTTON_SELECTORS = [".btn", ".dictation-footer button:not(.btn)", ".awaiting-action"];
+
+// Every `selector { body }` pair in the catalog's stylesheets, with nested at-rules flattened.
+function rules(): { selector: string; body: string }[] {
+  const dir = new URL(".", import.meta.url);
+  return readdirSync(dir)
+    .filter((file) => file.endsWith(".css"))
+    .flatMap((file) => {
+      const css = readFileSync(new URL(file, dir), "utf8").replaceAll(/\/\*[\s\S]*?\*\//g, "");
+      return [...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)].map((match) => ({
+        selector: (match[1] ?? "").trim(),
+        body: match[2] ?? "",
+      }));
+    });
+}
+
+describe("the button radius", () => {
+  it("is one token, 4px, that every button beside .btn takes its corners from", () => {
+    const radii: Record<string, (string | undefined)[]> = {};
+    for (const selector of BUTTON_SELECTORS) {
+      const found = rules().filter((rule) => rule.selector === selector);
+      radii[selector] = found.map((rule) => /border-radius:\s*([^;]+);/.exec(rule.body)?.[1]);
+    }
+    expect({ token: ROOT.get("--btn-radius"), radii }).toEqual({
+      token: "4px",
+      radii: {
+        ".btn": ["var(--btn-radius)"],
+        ".dictation-footer button:not(.btn)": ["var(--btn-radius)"],
+        ".awaiting-action": ["var(--btn-radius)"],
+      },
+    });
+  });
+});
+
+describe("the edge shadow", () => {
+  it("drops below the box, more than it reaches right, and leaves the top and left clear", () => {
+    const reach = Object.values(THEMES).map((theme) => {
+      const [x = NaN, y = NaN, blur = NaN, spread = NaN] =
+        /^(-?\d+)px (-?\d+)px (\d+)px (-?\d+)px /
+          .exec(declared("--edge-shadow", theme))
+          ?.slice(1)
+          .map(Number) ?? [];
+      // How far the blur reaches past an edge is the blur and the spread plus the offset toward
+      // it. Nothing reaches the top; the left stays inside one sigma (half the blur), where
+      // the shadow is too faint to see; the bottom is the edge it falls from.
+      return {
+        bottomOverRight: y > x && x >= 0,
+        clearOfTop: blur + spread <= y,
+        leftUnseen: blur + spread - x <= blur / 2,
+      };
+    });
+    expect(reach).toEqual([
+      { bottomOverRight: true, clearOfTop: true, leftUnseen: true },
+      { bottomOverRight: true, clearOfTop: true, leftUnseen: true },
+    ]);
   });
 });

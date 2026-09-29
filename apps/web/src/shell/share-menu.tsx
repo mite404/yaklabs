@@ -1,5 +1,9 @@
+import { ExternalIcon, LinkIcon, ShareIcon } from "@yaklabs/catalog/icons";
 import type { ThreadShare, ThreadSummary } from "@yaklabs/runtime";
+import { Button } from "@yaklabs/ui/components/button";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
@@ -7,20 +11,24 @@ import {
   DropdownMenuSub,
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
+  DropdownMenuTrigger,
 } from "@yaklabs/ui/components/dropdown-menu";
-import { ExternalLink, Link, Share2, Timer, X } from "lucide-react";
+import { Timer, Users, X } from "lucide-react";
 import { MenuStatus, statusName } from "./menu-status";
 import type { Shell } from "./model";
-import { LIFETIMES } from "./share-thread";
+import { LIFETIMES, liveShare } from "./share-thread";
 import { wakeText } from "./wake-text";
 
 // What the submenu acts on: the shell's verbs and the thread.
 type ShareProps = { shell: Shell; thread: ThreadSummary };
 
-// The thread's live share, the newest one, if its time has not run out.
-function liveShare(shell: Shell, thread: ThreadSummary): ThreadShare | undefined {
-  const latest = shell.workspace.shares.find((share) => share.threadId === thread.id);
-  return latest !== undefined && Date.parse(latest.expiresAt) > Date.now() ? latest : undefined;
+// The thread's live share, if any (see `liveShare`).
+const shareOf = (shell: Shell, thread: ThreadSummary) =>
+  liveShare(shell.workspace.shares, thread.id);
+
+// What Share says the thread is: private, or public until when, at the menu's length.
+function shareStatus(share: ThreadShare | undefined): string {
+  return share === undefined ? "Private" : `Until ${wakeText(new Date(share.expiresAt), "menu")}`;
 }
 
 // What a public thread's page offers: its end, its link, and taking it down.
@@ -36,7 +44,7 @@ function PublicItems({ shell, thread, share }: ShareProps & { share: ThreadShare
             shell.copyPublicLink(thread.id);
           }}
         >
-          <Link aria-hidden="true" />
+          <LinkIcon />
           Copy public link
         </DropdownMenuItem>
         <DropdownMenuItem
@@ -44,7 +52,7 @@ function PublicItems({ shell, thread, share }: ShareProps & { share: ThreadShare
             window.open(share.link, "_blank", "noopener");
           }}
         >
-          <ExternalLink aria-hidden="true" />
+          <ExternalIcon />
           Open public page
         </DropdownMenuItem>
         <DropdownMenuItem
@@ -57,6 +65,27 @@ function PublicItems({ shell, thread, share }: ShareProps & { share: ThreadShare
         </DropdownMenuItem>
       </DropdownMenuGroup>
       <DropdownMenuSeparator />
+    </>
+  );
+}
+
+// What Share offers, wherever it opens: a public thread's link, page and Stop sharing first,
+// then how long to make it public, then the permissions dialog, which shows the same choices.
+function ShareOptions({ shell, thread }: ShareProps) {
+  const share = shareOf(shell, thread);
+  return (
+    <>
+      {share !== undefined && <PublicItems shell={shell} thread={thread} share={share} />}
+      <LifetimeItems shell={shell} thread={thread} isPublic={share !== undefined} />
+      <DropdownMenuSeparator />
+      <DropdownMenuItem
+        onClick={() => {
+          shell.askSharePermissions(thread.id);
+        }}
+      >
+        <Users aria-hidden="true" />
+        Share permissions
+      </DropdownMenuItem>
     </>
   );
 }
@@ -83,28 +112,56 @@ function LifetimeItems({ shell, thread, isPublic }: ShareProps & { isPublic: boo
 
 /**
  * The thread menu's Share item (ADR-131): it says whether the thread is private or public
- * until when, and opens how long to make it public (1 hour, 3 hours, 1 day, 7 days). A public
+ * until when, and opens how long to make it public (1 hour, 6 hours, 1 day, 7 days). A public
  * thread also offers its link, its page, and Stop sharing, so how long a page stays public is
  * never a guess.
  */
 export function ShareItem({ shell, thread }: ShareProps) {
-  const share = liveShare(shell, thread);
-  const status =
-    share === undefined ? "Private" : `Until ${wakeText(new Date(share.expiresAt), "menu")}`;
+  const share = shareOf(shell, thread); // → ThreadShare | undefined
+  const status = shareStatus(share); // → "Private" | "Until Fri 9:00"
   return (
     <DropdownMenuSub>
       <DropdownMenuSubTrigger
         className="whitespace-nowrap"
         aria-label={statusName("Share thread", status)}
       >
-        <Share2 aria-hidden="true" />
+        <ShareIcon />
         Share thread
         <MenuStatus>{status}</MenuStatus>
       </DropdownMenuSubTrigger>
       <DropdownMenuSubContent className="w-56">
-        {share !== undefined && <PublicItems shell={shell} thread={thread} share={share} />}
-        <LifetimeItems shell={shell} thread={thread} isPublic={share !== undefined} />
+        <ShareOptions shell={shell} thread={thread} />
       </DropdownMenuSubContent>
     </DropdownMenuSub>
+  );
+}
+
+/**
+ * The Share button in a thread's title bar: the same options as the thread menu's Share item
+ * (ADR-131), one press nearer. It sits left of the close, which is always last. A public thread
+ * shows its glyph filled in, and its name says until when, so the state is never a guess.
+ */
+export function ThreadShareButton({ shell, thread }: ShareProps) {
+  const share = shareOf(shell, thread); // → ThreadShare | undefined
+  const status = shareStatus(share); // → "Private" | "Until Fri 9:00"
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={statusName("Share thread", status)}
+            data-public={share === undefined ? undefined : ""}
+            className="rounded-[var(--radius)] text-soft-ink hover:text-ink data-public:text-ink"
+          />
+        }
+      >
+        <ShareIcon />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-56">
+        <ShareOptions shell={shell} thread={thread} />
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }

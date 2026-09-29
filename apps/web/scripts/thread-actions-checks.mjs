@@ -2,16 +2,21 @@
 // The thread menu's checks (ADR-126 to ADR-130) on the real app's demo scenario: every check
 // opens its own browser context, so no check sees another's data.
 import { BASE, openApp } from "./lever.mjs";
+import { gutterHolds, rowGutters } from "./thread-row-gutter.mjs";
 
-// A thread header's padding and its rule: its height is its title's line and these, so actions
-// that make it taller show as a difference.
-const HEADER_FRAME_PX = 14 * 2 + 1;
 // The menu's items, in Ethan's order (ADR-126).
 const ITEMS = ["Copy thread URL", "Share thread", "Pin thread", "Snooze", "Archive", "Delete"];
+// A tab's menu leads with Rename (ADR-138).
+const TAB_ITEMS = ["Rename", ...ITEMS];
 const DEMO = `${BASE}/?scenario=demo`;
 
-const shownPanel = (page) => page.locator('[role="tabpanel"]:not([inert]) .thread-panel').first();
+/** The thread panel on screen: a main thread has no title bar, so its name is the panel's label. */
+export const shownPanel = (page) =>
+  page.locator('[role="tabpanel"]:not([inert]) .thread-panel').first();
 export const headerOf = (page) => shownPanel(page).locator(".thread-header");
+// A main thread's "⋯" is on its active tab (ADR-138), not in a title bar of its own.
+export const menuButtonOf = (page) =>
+  page.locator('[data-slot="title-bar"]').getByRole("button", { name: "Thread actions" });
 const sidebarOf = (page) => page.locator('[data-slot="sidebar"]');
 const rowsOf = (page) => sidebarOf(page).locator("[data-thread]");
 const rowTitles = async (page) =>
@@ -40,7 +45,7 @@ export async function openThread(page, title) {
 
 // Opens the shown thread's "⋯" and picks an item by name.
 export async function pick(page, name) {
-  await headerOf(page).getByRole("button", { name: "Thread actions" }).click();
+  await menuButtonOf(page).click();
   await page.getByRole("menuitem", { name, exact: true }).click();
 }
 
@@ -69,33 +74,53 @@ async function rowOf(page, title) {
   };
 }
 
-/** The checks, keyed A1 to A8, each resolving to { ok, detail }; Share's are in share-checks.mjs. */
+// Picks a snooze tile, on the Snooze card in `scope`.
+async function snoozeIn(scope, tile) {
+  const card = scope.getByRole("region", { name: "Snooze" });
+  await card.waitFor();
+  await card.getByRole("radio", { name: new RegExp(tile) }).click();
+  await card.getByRole("button", { name: "Submit" }).click();
+  await card.waitFor({ state: "detached" });
+}
+
+// Opens a sub-thread from its row, where it comes up as a lane, and picks an item on the lane's
+// own "⋯".
+async function pinOrSnoozeChild(page, title, item) {
+  await rowsOf(page)
+    .filter({ hasText: title.slice(0, 14) })
+    .first()
+    .click();
+  const lane = page.locator(`article[data-lane][aria-label="${title}"]`);
+  await lane.getByRole("button", { name: "Thread actions" }).click();
+  await page.getByRole("menuitem", { name: item, exact: true }).click();
+  if (item === "Snooze") await snoozeIn(lane, "In 1 hour");
+}
+
+/** The checks, keyed A1 to A9, each resolving to { ok, detail }; Share's are in share-checks.mjs. */
 export const threadActionChecks = {
-  // The desktop header carries the "⋯" with the six items, and is no taller than its title.
+  // The active tab carries the "⋯" with Rename and the six items, and the main thread has no
+  // title bar of its own (ADR-138).
   async A1(browser) {
     const page = await openDemo(browser);
-    const height = (await headerOf(page).boundingBox()).height;
-    const title = (await headerOf(page).locator("h2").boundingBox()).height;
-    await headerOf(page).getByRole("button", { name: "Thread actions" }).click();
+    const bars = await headerOf(page).count();
+    await menuButtonOf(page).click();
     const items = await menuItems(page);
-    const ok =
-      JSON.stringify(items) === JSON.stringify(ITEMS) &&
-      Math.abs(height - (title + HEADER_FRAME_PX)) <= 0.01;
+    const ok = JSON.stringify(items) === JSON.stringify(TAB_ITEMS) && bars === 0;
     return {
       ok,
-      detail: `items [${items.join(" | ")}]; header ${height}px = title ${title}px + ${HEADER_FRAME_PX}px`,
+      detail: `items [${items.join(" | ")}]; main title bars ${bars}`,
     };
   },
 
-  // Pin lifts the thread to the top of its project and marks the title bar; the view stays;
-  // pressing the mark unpins, and the row goes back where it was.
+  // Pin lifts the thread to the top of its project and marks its row; the view stays; the row's
+  // Unpin (ADR-138) unpins, and the row goes back where it was.
   async A2(browser) {
     const page = await openDemo(browser, { ready: ".thread-panel" });
     await openThread(page, "Last week's sales");
     const url = page.url();
     const before = await rowTitles(page);
     await pick(page, "Pin thread");
-    const mark = headerOf(page).getByRole("button", { name: "Unpin thread" });
+    const mark = page.getByRole("button", { name: "Unpin Last week's sales" });
     await mark.waitFor();
     const pinned = await rowTitles(page);
     const pinnedRow = await rowOf(page, "Last week's sales");
@@ -175,7 +200,7 @@ export const threadActionChecks = {
     await card.getByRole("button", { name: "Submit" }).click();
     await card.waitFor({ state: "detached" });
     const row = await rowOf(page, serviceDesk);
-    await headerOf(page).getByRole("button", { name: "Thread actions" }).click();
+    await menuButtonOf(page).click();
     const snooze = (await page.getByRole("menuitem", { name: /^Snooze/ }).innerText()).trim();
     // Its name as a screen reader hears it: the wake time joined by a comma.
     const named = await page.getByRole("menuitem", { name: /^Snooze, \w{3} \d+:\d{2}$/ }).count();
@@ -226,6 +251,34 @@ export const threadActionChecks = {
       ok: gone && moved,
       detail: `gone ${gone}; left the page ${moved}; back at ${page.url()}`,
     };
+  },
+
+  // The marks hang in the row's left gutter, so a title starts at the same x marked or not: a
+  // pinned and snoozed main (two marks, stacked), a pinned and a snoozed sub-thread (left of
+  // its "↳"), an archived main.
+  async A9(browser) {
+    const page = await openDemo(browser);
+    const plain = await rowGutters(page);
+    await openThread(page, "Last week's sales");
+    await pick(page, "Pin thread");
+    await pick(page, "Snooze");
+    await snoozeIn(shownPanel(page), "In 1 hour");
+    await pinOrSnoozeChild(page, "Why is Tuesday quiet?", "Pin thread");
+    await pinOrSnoozeChild(page, "Saturday leads at every level", "Snooze");
+    await openThread(page, "Refund audit");
+    await pick(page, "Archive");
+    await page.mouse.move(5, 5);
+    const marked = await rowGutters(page);
+    const shown = marked.map(
+      (row) =>
+        `${row.title.slice(0, 12)} ${row.titleX.toFixed(1)}px [${row.marks.map((box) => box.mark).join("+")}]`,
+    );
+    const ok =
+      marked.length === plain.length &&
+      marked.filter((row) => row.marks.length > 0).length === 4 &&
+      marked.some((row) => row.marks.length === 2) &&
+      gutterHolds(plain, marked);
+    return { ok, detail: `title x from the fill's edge: ${shown.join("; ")}` };
   },
 
   // On a phone the one "⋯" sits in the bar's top row and holds the same items; the thread's own

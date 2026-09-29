@@ -7,7 +7,7 @@ import { createRequire } from "node:module";
 import path from "node:path";
 import { ROOT } from "./harness.mjs";
 import { BASE } from "./lever.mjs";
-import { headerOf, openDemo } from "./thread-actions-checks.mjs";
+import { menuButtonOf, openDemo, shownPanel } from "./thread-actions-checks.mjs";
 
 const LEVER_TOKEN = "lever-stands-in-for-workos";
 const DESKTOP = { width: 1440, height: 900 };
@@ -65,11 +65,11 @@ export async function serveShares(context) {
 
 // Opens the shown thread's Share submenu.
 async function openShare(page) {
-  await headerOf(page).getByRole("button", { name: "Thread actions" }).click();
+  await menuButtonOf(page).click();
   await page.getByRole("menuitem", { name: /^Share thread/ }).hover();
 }
 
-/** Share's checks, S1 to S3, each resolving to { ok, detail }. */
+/** Share's checks, S1 to S4, each resolving to { ok, detail }. */
 export const shareChecks = {
   // A thread made public for an hour: the link is copied, says until when, opens read-only on
   // the share page with its end beneath; Stop sharing ends it for anyone with the link.
@@ -80,8 +80,8 @@ export const shareChecks = {
     await serveShares(context);
     const page = await context.newPage();
     await page.goto(`${BASE}/?scenario=demo`);
-    await headerOf(page).getByRole("button", { name: "Thread actions" }).waitFor();
-    const title = await headerOf(page).locator("h2").innerText();
+    await menuButtonOf(page).waitFor();
+    const title = await shownPanel(page).getAttribute("aria-label");
     await openShare(page);
     const privately = String(
       await page.getByRole("menuitem", { name: /^Share thread/ }).innerText(),
@@ -154,6 +154,56 @@ export const shareChecks = {
     return {
       ok,
       detail: `from ${new URL(page.url()).pathname}, link ${new URL(link).pathname}; the card shows`,
+    };
+  },
+
+  // Share > Share permissions opens the dialog from the thread menu: its sections show, Public
+  // Access "1 hour" makes the Private box public and "No access" takes it back, and Escape closes
+  // it with focus back on the menu's button (ADR-131).
+  async S4(browser) {
+    const context = await browser.newContext({ viewport: DESKTOP, reducedMotion: "reduce" });
+    await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+    await serveShares(context);
+    const page = await context.newPage();
+    await page.goto(`${BASE}/?scenario=demo`);
+    await menuButtonOf(page).waitFor();
+    await openShare(page);
+    const divided = (await page.getByRole("separator").count()) > 0;
+    await page.getByRole("menuitem", { name: "Share permissions" }).click();
+    const dialog = page.getByRole("dialog", { name: "Share" });
+    await dialog.waitFor();
+    const sections = await Promise.all(
+      ["URL", "Permissions"].map((name) =>
+        dialog.getByRole("region", { name, exact: true }).count(),
+      ),
+    );
+    const workspace = dialog.getByRole("button", { name: "Create Workspace" });
+    const stubbed =
+      (await workspace.isDisabled()) && (await workspace.getAttribute("title")) !== null;
+    const access = dialog.getByRole("button", { name: /^Public Access/ });
+    const privately = (await dialog.getByRole("status").innerText()).replaceAll("\n", " ");
+    await access.click();
+    await page.getByRole("menuitemradio", { name: "1 hour" }).click();
+    await dialog.getByText(/^Public until/).waitFor();
+    const publicly = (await dialog.getByRole("status").innerText()).replaceAll("\n", " ");
+    const link = await dialog.getByRole("textbox", { name: "Public URL" }).inputValue();
+    await access.click();
+    await page.getByRole("menuitemradio", { name: "No access" }).click();
+    await dialog.getByText("Only you can see this thread.").waitFor();
+    await page.keyboard.press("Escape");
+    await dialog.waitFor({ state: "detached" });
+    const focused = await page.evaluate(() => document.activeElement?.getAttribute("aria-label"));
+    const ok =
+      divided &&
+      sections.every((count) => count === 1) &&
+      stubbed &&
+      privately.startsWith("Private") &&
+      /^Public until .* Anyone with the link/.test(publicly) &&
+      /\/share\.html#t=/.test(link) &&
+      focused === "Thread actions";
+    return {
+      ok,
+      detail: `box "${privately}" then "${publicly}"; public URL ${link.replace(/\.[\w-]+$/, ".<key>")}; Create Workspace disabled; focus back on "${focused}"`,
     };
   },
 };

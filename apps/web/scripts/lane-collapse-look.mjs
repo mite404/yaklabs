@@ -6,7 +6,7 @@ import { BASE, shotPath } from "./lever.mjs";
 // Long enough to outgrow a strip down a 900px window, so its end has to give way to an ellipsis.
 export const LONG_TITLE =
   "Why supplier invoices and deliveries disagree at the northern warehouse, week by week, since June, and what the stores could do about it before the quarter closes";
-export const STRIP_PX = 32;
+export const STRIP_PX = 36;
 
 export const near = (a, b) => Math.abs(a - b) <= 1;
 // A box grown by 2px each way, so a measure of its ink takes in the paper around it.
@@ -86,6 +86,72 @@ export function stripLook(lane) {
       buttons,
     };
   });
+}
+
+// A rect (x, y, width, height) grown by `by` on every side, `by` negative to shrink it.
+const grown = (rect, by) => ({
+  x: rect.x - by,
+  y: rect.y - by,
+  width: rect.width + 2 * by,
+  height: rect.height + 2 * by,
+});
+
+// How far inside a rounded box a point is from its edge: the negated signed distance to it.
+function depthIn(point, box, radius) {
+  const qx = Math.abs(point.x - box.x - box.width / 2) - (box.width / 2 - radius);
+  const qy = Math.abs(point.y - box.y - box.height / 2) - (box.height / 2 - radius);
+  return radius - Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) - Math.min(Math.max(qx, qy), 0);
+}
+
+// 65 points along each side and each corner arc of a rounded box.
+function outline(box, radius) {
+  const steps = Array.from({ length: 65 }, (_, i) => i / 64);
+  const sides = steps.flatMap((t) => [
+    { x: box.x + radius + t * (box.width - 2 * radius), y: box.y },
+    { x: box.x + radius + t * (box.width - 2 * radius), y: box.y + box.height },
+    { x: box.x, y: box.y + radius + t * (box.height - 2 * radius) },
+    { x: box.x + box.width, y: box.y + radius + t * (box.height - 2 * radius) },
+  ]);
+  const corners = steps.flatMap((t) =>
+    [0, 1, 2, 3].map((k) => ({
+      x:
+        (k === 0 || k === 3 ? box.x + box.width - radius : box.x + radius) +
+        radius * Math.cos(((k + t) * Math.PI) / 2),
+      y:
+        (k < 2 ? box.y + box.height - radius : box.y + radius) +
+        radius * Math.sin(((k + t) * Math.PI) / 2),
+    })),
+  );
+  return [...sides, ...corners];
+}
+
+/**
+ * How the strip's expand sits in the strip's head, measured: its size, and the least distance, in
+ * px, from its hover fill (the padding box, 1px in, with 3px corners) and from its focus ring (the
+ * border box grown by 1px) to the strip's inner edge (the padding box, 13px corners), over every
+ * point of their outlines. The strip's corner arc curves in under the fill's top corners, so the
+ * sides alone would not show a fill touching it.
+ * @returns {Promise<{ size: number; fill: number; ring: number }>}
+ */
+export async function toggleClearance(lane) {
+  const seen = await lane.evaluate((el) => {
+    const strip = el.querySelector("[data-lane-strip]");
+    const toggle = strip.querySelector("[data-lane-toggle]");
+    return {
+      strip: strip.getBoundingClientRect().toJSON(),
+      stripRadius: Number(getComputedStyle(strip).borderTopLeftRadius.replace("px", "")),
+      toggle: toggle.getBoundingClientRect().toJSON(),
+      toggleRadius: Number(getComputedStyle(toggle).borderTopLeftRadius.replace("px", "")),
+    };
+  });
+  const edge = grown(seen.strip, -1);
+  const least = (box, radius) =>
+    Math.min(...outline(box, radius).map((point) => depthIn(point, edge, seen.stripRadius - 1)));
+  return {
+    size: seen.toggle.width,
+    fill: least(grown(seen.toggle, -1), seen.toggleRadius - 1),
+    ring: least(grown(seen.toggle, 1), seen.toggleRadius + 1),
+  };
 }
 
 /**

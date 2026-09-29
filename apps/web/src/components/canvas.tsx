@@ -30,10 +30,8 @@ function OpenSpace({
       className="open-space @container relative isolate flex h-full min-w-[320px] flex-1 flex-col items-center justify-center gap-4 rounded-[var(--radius-card)] border border-dashed border-hairline p-6 text-center transition-colors data-lit:border-olive"
     >
       {splash && <SplashDrawing />}
-      <p className="font-serif text-xl text-ink">
-        Drag a text selection or card
-        <br />
-        to start a new thread with context
+      <p className="font-serif text-xl text-balance text-ink">
+        Drag a text selection or UI card here
       </p>
       <button type="button" className="btn btn-sm" data-blank="" onClick={onBlank}>
         Create blank thread
@@ -108,14 +106,21 @@ function laneIn(row: HTMLElement | null, id: LaneId): HTMLElement | null {
   return lane instanceof HTMLElement ? lane : null;
 }
 
+// What a lane hands the focus to: an open lane's close, at its title bar's far end, where the
+// collapse comes first in the bar; a collapsed one has only its expand.
+function focusTargetIn(lane: HTMLElement | null): Element | null {
+  return (
+    lane?.querySelector("[data-lane-close]") ?? lane?.querySelector("[data-lane-toggle]") ?? null
+  );
+}
+
 // Where the focus goes when the lane `id` closes with it: the next lane's close (its expand,
 // when it is collapsed and has no close), else the one before's, else Create blank thread.
 function focusAfter(row: HTMLElement, lanes: LaneView[], id: LaneId): Element | null {
   const at = lanes.findIndex((lane) => lane.id === id);
   const neighbour = lanes.slice(at + 1).at(0) ?? lanes.slice(0, at).at(-1);
   if (neighbour === undefined) return row.querySelector("[data-blank]");
-  // The close comes first in an open lane; a collapsed one has only its expand.
-  return laneIn(row, neighbour.id)?.querySelector("[data-lane-close], [data-lane-toggle]") ?? null;
+  return focusTargetIn(laneIn(row, neighbour.id));
 }
 
 // Before the lane `id` closes, hands on the focus it holds, which would otherwise fall back to
@@ -205,7 +210,7 @@ export function Canvas({
       aria-label="Compose canvas"
       data-drop={landing === null ? undefined : ""}
       data-reorder={reorderable}
-      className="canvas relative flex h-full overflow-x-auto p-4"
+      className="canvas relative flex h-full overflow-x-auto px-(--canvas-grid) py-4"
       onWheel={panRow}
       onPointerDown={pan.onPointerDown}
       onPointerMove={pan.onPointerMove}

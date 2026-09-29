@@ -82,8 +82,8 @@ function ThemeChoices({ theme }: { theme: ThemeChoice }) {
   );
 }
 
-// Where the menu opens from: the title bar's corner by default (ADR-094), or wherever the
-// host places its trigger, such as the sidebar's foot on a phone (ADR-121).
+// Where the menu opens from: below and to the end of its trigger by default, or wherever the
+// host places it, such as upward from the sidebar's foot (ADR-121).
 type Placement = { side?: "top" | "bottom"; align?: "start" | "end" };
 
 // The avatar in the trigger's corner, and the menu it opens.
@@ -97,14 +97,21 @@ function AccountMenu({
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
-          <Button variant="ghost" size="icon" className="rounded-full" aria-label="Account" />
+          // A 40px square, as a rail button is, so the avatar sits on the rail's centre line. Focus
+          // shows the site's own 2px ring (tokens.css), not shadcn's half-strength one, which is
+          // too faint on the sidebar's paper.
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label="Account"
+            className="size-10 rounded-full focus-visible:border-transparent focus-visible:ring-0 focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-offset-2 focus-visible:outline-(--focus)"
+          />
         }
       >
-        {/* The ring darkens in either theme, as the bar does not change; a blend is also what
-            keeps the page's text on greyscale smoothing, as it has always been (ADR-110). */}
-        <Avatar size="sm" className="dark:after:mix-blend-darken">
-          {face}
-        </Avatar>
+        {/* The ring keeps the avatar's own blend: it darkens on the sidebar's paper in light
+            and lightens in dark, and a blend is also what keeps the page's text on greyscale
+            smoothing (ADR-110). */}
+        <Avatar>{face}</Avatar>
       </DropdownMenuTrigger>
       <DropdownMenuContent side={side} align={align} className="w-56">
         {children}
@@ -120,7 +127,7 @@ function WorkOsAccount({ theme, chrome, side, align }: Looks & Placement) {
   const face = (
     <>
       {user.profilePictureUrl !== null && <AvatarImage src={user.profilePictureUrl} alt="" />}
-      {/* The ink, not the muted ink: on the bar's hover fill that is 7.21:1, the muted 4.47:1. */}
+      {/* The ink, not the muted ink, so the initials read on the fill and on the hover fill. */}
       <AvatarFallback className="text-ink">
         {initialsOf([user.firstName, user.lastName], user.email)}
       </AvatarFallback>
@@ -173,10 +180,9 @@ function LocalAccount({ theme, chrome, side, align }: Looks & Placement) {
 }
 
 /**
- * The account, with the theme and the bar's look; WorkOS's user when the build signs in. In
- * the title bar's corner by default (ADR-094); on a phone the sidebar places it at the
- * sidebar's foot instead, opening upward so its menu stays on screen (ADR-121).
- * @param side Which side of the trigger the menu opens on; the default suits the title bar.
- * @param align Which end of the trigger the menu aligns to; the default suits the title bar.
+ * The account, with the theme and the bar's look; WorkOS's user when the build signs in. The
+ * sidebar places it at its foot, opening upward so its menu stays on screen (ADR-121).
+ * @param side Which side of the trigger the menu opens on.
+ * @param align Which end of the trigger the menu aligns to.
  */
 export const Account = env.auth.kind === "workos" ? WorkOsAccount : LocalAccount;

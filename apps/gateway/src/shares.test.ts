@@ -54,8 +54,8 @@ describe("POST /api/shares keeps a sealed thread for a while (ADR-131)", () => {
     });
   });
 
-  it("offers exactly 1 hour, 3 hours, 1 day and 7 days", () => {
-    expect(SHARE_TTLS).toEqual([HOUR, 3 * HOUR, 24 * HOUR, 7 * 24 * HOUR]);
+  it("offers exactly 1 hour, 6 hours, 1 day and 7 days", () => {
+    expect(SHARE_TTLS).toEqual([HOUR, 6 * HOUR, 24 * HOUR, 7 * 24 * HOUR]);
   });
 
   it.each<[string, number, Uint8Array<ArrayBuffer>]>([

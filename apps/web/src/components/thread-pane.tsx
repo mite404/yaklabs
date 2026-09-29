@@ -1,6 +1,6 @@
 import { ChatThreadPanel } from "@yaklabs/catalog";
 import type { ThreadMessage } from "@yaklabs/catalog/thread";
-import type { ThreadId, ThreadSummary } from "@yaklabs/runtime";
+import type { Runtime, ThreadId, ThreadSummary } from "@yaklabs/runtime";
 import { useSidebar } from "@yaklabs/ui/components/sidebar";
 import {
   useEffect,
@@ -119,16 +119,19 @@ export function focusThreadIn(within: ParentNode): void {
   if (rest instanceof HTMLElement) rest.focus();
 }
 
-// A thread whose turns are not here, in the frame an open thread has: the paper, the border and
-// the title bar with its actions, so a lane keeps the bar it is taken by and the main pane
-// keeps its shape.
+// A thread whose turns are not here, in the frame an open thread has: a lane keeps its paper,
+// border and the title bar it is taken by; the main pane stays bare, with no bar of its own.
 function PendingFrame({
   thread,
   leading,
+  actions,
+  bare,
   children,
 }: {
   thread: ThreadSummary;
   leading: ReactNode;
+  actions: ReactNode;
+  bare: boolean;
   children: ReactNode;
 }) {
   return (
@@ -138,14 +141,15 @@ function PendingFrame({
       aria-label={thread.title}
       tabIndex={-1}
       data-pending=""
+      data-bare={bare ? "" : undefined}
     >
-      <header className="thread-header">
-        {leading !== undefined && <div className="header-leading">{leading}</div>}
-        <h2>{thread.title}</h2>
-        <div className="thread-header-actions">
-          <ThreadHeaderActions thread={thread} />
-        </div>
-      </header>
+      {!bare && (
+        <header className="thread-header">
+          {leading !== undefined && <div className="header-leading">{leading}</div>}
+          <h2>{thread.title}</h2>
+          <div className="thread-header-actions">{actions}</div>
+        </header>
+      )}
       <div
         className="flex flex-col items-start gap-2 px-(--thread-gutter) py-5 text-sm"
         data-pending-body=""
@@ -153,6 +157,31 @@ function PendingFrame({
         {children}
       </div>
     </section>
+  );
+}
+
+// What renames a thread from its own title bar: nothing for a bare pane, which has no bar and
+// is renamed from its tab.
+function renamer(
+  runtime: Runtime,
+  thread: ThreadSummary,
+  bare: boolean,
+): ((title: string) => void) | undefined {
+  if (bare) return undefined;
+  return (title) => {
+    inBackground(runtime.rename({ kind: "thread", id: thread.id }, title), "Renaming");
+  };
+}
+
+// What the thread's title bar carries at its end: its own actions, then the host's trailing
+// control. A bare pane has no bar.
+function barActions(thread: ThreadSummary, trailing: ReactNode, bare: boolean): ReactNode {
+  if (bare) return undefined;
+  return (
+    <>
+      <ThreadHeaderActions thread={thread} />
+      {trailing}
+    </>
   );
 }
 
@@ -164,17 +193,26 @@ function PendingFrame({
  * come from the snapshot, so a rename shows everywhere at once.
  * @param leading A control before the title in the title bar, such as a lane's collapse
  * (ADR-134); in the frame too while the turns come.
+ * @param trailing A control at the title bar's far end, after the thread's own actions, such as
+ * a lane's close.
  * @param welcome What the thread shows while it has no turns (ADR-136); the main pane's
  * greeting, and nothing in a lane.
+ * @param bare A main thread's own pane: no window frame and no title bar, so no actions or
+ * rename in the pane, since its tab carries the name, the rename and the menu (ADR-138). Only a
+ * lane on the canvas is a window.
  */
 export function ThreadPane({
   thread,
   leading,
+  trailing,
   welcome,
+  bare = false,
 }: {
   thread: ThreadSummary;
   leading?: ReactNode;
+  trailing?: ReactNode;
   welcome?: ReactNode;
+  bare?: boolean;
 }) {
   const runtime = useRuntime();
   const session = useSession();
@@ -184,6 +222,7 @@ export function ThreadPane({
   const follow = useFocusFollows(host, turns);
   const snooze = useSnoozeCard(thread);
   useFocusCard(host, snooze !== undefined);
+  const actions = barActions(thread, trailing, bare); // → the bar's end, or undefined when bare
   return (
     <div ref={host} className="contents" data-thread-pane="" {...follow}>
       {turns.kind === "open" ? (
@@ -191,17 +230,16 @@ export function ThreadPane({
           thread={{ title: thread.title, messages: turns.messages }}
           agent={runtime.agent(thread.id, session)}
           initialDraft={thread.draft}
-          onRename={(title) => {
-            inBackground(runtime.rename({ kind: "thread", id: thread.id }, title), "Renaming");
-          }}
+          onRename={renamer(runtime, thread, bare)}
           cardsCarry={!isMobile}
-          headerActions={<ThreadHeaderActions thread={thread} />}
+          headerActions={actions}
           hostAsk={snooze}
           leading={leading}
           empty={welcome}
+          bare={bare}
         />
       ) : (
-        <PendingFrame thread={thread} leading={leading}>
+        <PendingFrame thread={thread} leading={leading} actions={actions} bare={bare}>
           {turns.kind === "loading" ? (
             <p className="text-soft-ink">Opening {thread.title}…</p>
           ) : (

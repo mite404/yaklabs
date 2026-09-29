@@ -24,6 +24,37 @@
   overflow: hidden;
 }
 
+/* A bare thread (a main thread's) has no window of its own and no title bar: it fills the
+   surface it stands on, and its text keeps the same measure by widening the gutters, not the
+   column. The scroll area and the compose box each sit in their own grid row. Empty, the scroll
+   area (a welcome's art) runs on behind the compose box, so the greeting and the box it starts
+   with share one surface. */
+.thread-panel[data-bare] {
+  --thread-gutter: max(20px, calc((100cqw - var(--thread-measure)) / 2));
+  width: 100%;
+  height: var(--thread-height, 100%);
+  max-height: 100%;
+  grid-template-rows: minmax(0, 1fr) auto;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+.thread-panel[data-bare] > * {
+  grid-column: 1;
+}
+.thread-panel[data-bare] > .thread-scroll {
+  grid-row: 1;
+}
+.thread-panel[data-bare] > .thread-dock {
+  grid-row: 2;
+}
+.thread-panel[data-bare][data-empty] > .thread-scroll {
+  grid-row: 1 / -1;
+}
+.thread-panel[data-bare][data-empty] > .thread-dock {
+  z-index: 1;
+}
+
 /* Header and compose reserve the same scrollbar gutter as the scroll area,
    so all three share one text column on every platform. */
 .thread-header,
@@ -182,14 +213,18 @@
   border-radius: 12px;
   padding: 10px 8px 6px 12px;
   background: var(--compose-bg);
+  box-shadow: var(--edge-shadow);
 }
+/* The ring is listed first so it paints over the edge shadow, which stays underneath. */
 .compose-box:focus-within {
   border-color: var(--focus);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus) 16%, transparent);
+  box-shadow:
+    0 0 0 3px color-mix(in srgb, var(--focus) 16%, transparent),
+    var(--edge-shadow);
 }
 /* Clicked into, the compose box keeps its focused border but drops the ring. */
 :root[data-input="pointer"] .compose-box:focus-within {
-  box-shadow: none;
+  box-shadow: var(--edge-shadow);
 }
 .compose-box textarea {
   display: block;
@@ -570,7 +605,7 @@
 .awaiting-action {
   padding: 6px 14px;
   border: 1px solid var(--hairline);
-  border-radius: 4px;
+  border-radius: var(--btn-radius);
   background: transparent;
   color: var(--ink);
   font-size: 13px;
@@ -596,7 +631,7 @@
   content: "";
   position: absolute;
   inset: -1px;
-  border-radius: 4px;
+  border-radius: var(--btn-radius);
   /* Drawn as an inset shadow, not a border: border widths snap to whole pixels, so the
      thinning would step instead of flowing. */
   box-shadow: inset 0 0 0 1px var(--ink);
@@ -609,7 +644,7 @@
 @keyframes submit-ready {
   from {
     inset: -9px;
-    border-radius: 12px; /* concentric with the 4px border, 8px out */
+    border-radius: calc(var(--btn-radius) + 8px); /* concentric with the border, 8px out */
     box-shadow: inset 0 0 0 6px var(--ink);
     opacity: 0;
   }
@@ -618,10 +653,10 @@
   80% {
     box-shadow: inset 0 0 0 4px var(--ink);
   }
-  /* Lands exactly on the border (same box, same 4px corners), then disappears. */
+  /* Lands exactly on the border (same box, same corners), then disappears. */
   to {
     inset: -1px;
-    border-radius: 4px;
+    border-radius: var(--btn-radius);
     box-shadow: inset 0 0 0 1px var(--ink);
     opacity: 1;
   }

@@ -3,6 +3,7 @@ import { sealThread, threadLink } from "@yaklabs/catalog/threadShare";
 import {
   SHARE_TTLS,
   shareCreatedSchema,
+  type ThreadId,
   type ThreadShare,
   type ThreadSummary,
 } from "@yaklabs/runtime";
@@ -22,10 +23,23 @@ export type ShareClient = {
 };
 
 /** The lifetimes the Share submenu offers (ADR-131), in its words, as the gateway takes them. */
-export const LIFETIMES = ["1 hour", "3 hours", "1 day", "7 days"].map((label, i) => ({
+export const LIFETIMES = ["1 hour", "6 hours", "1 day", "7 days"].map((label, i) => ({
   label,
   seconds: SHARE_TTLS[i] ?? SHARE_TTLS[0],
 }));
+
+/**
+ * The thread's live share (ADR-131): the newest one the snapshot lists, if its time has not run
+ * out at `now`. Undefined means the thread is private.
+ */
+export function liveShare(
+  shares: ThreadShare[],
+  id: ThreadId,
+  now: number = Date.now(),
+): ThreadShare | undefined {
+  const latest = shares.find((share) => share.threadId === id);
+  return latest !== undefined && Date.parse(latest.expiresAt) > now ? latest : undefined;
+}
 
 // A refusal in words fit for a toast: sign-in, a build with no share server, or the status.
 function refusal(status: number): Error {

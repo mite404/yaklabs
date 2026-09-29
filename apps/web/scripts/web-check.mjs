@@ -9,6 +9,8 @@ import path from "node:path";
 import { arg, chromium, ROOT } from "./harness.mjs";
 
 const BASE = arg("--base", "http://127.0.0.1:5173");
+// The gap between lanes: one step of the canvas's dot grid (index.css --canvas-grid).
+const LANE_GAP_PX = 18;
 const OUT = arg(
   "--out",
   path.join(ROOT, ".artifacts/web", new Date().toISOString().slice(0, 19).replaceAll(":", "-")),
@@ -65,7 +67,7 @@ async function carryTo(from, to) {
 // The main threads a tab's sidebar lists, top to bottom.
 const mainTitles = (tab) => tab.locator('[data-thread="main"]').allTextContents();
 
-// The theme lives in the account menu, in the title bar's corner.
+// The theme lives in the account menu, at the sidebar's foot.
 async function chooseTheme(name) {
   await page.getByRole("button", { name: "Account" }).click();
   await page.getByRole("menuitemradio", { name }).click();
@@ -247,9 +249,17 @@ try {
   const surface = () =>
     page.evaluate(() => {
       const panel = document.querySelector(".thread-panel");
+      // The main thread is bare (ADR-138), so its paper is the nearest surface behind it.
+      let paper = panel;
+      while (
+        getComputedStyle(paper).backgroundColor === "rgba(0, 0, 0, 0)" &&
+        paper.parentElement
+      ) {
+        paper = paper.parentElement;
+      }
       return {
         page: getComputedStyle(document.documentElement).backgroundColor,
-        paper: getComputedStyle(panel).backgroundColor,
+        paper: getComputedStyle(paper).backgroundColor,
         ink: getComputedStyle(panel).color,
       };
     });
@@ -280,12 +290,12 @@ try {
     .getByRole("region", { name: "Compose canvas" });
   record(
     "the canvas opens empty and invites a drop",
-    await canvas.getByText("Drag a text selection or card").isVisible(),
+    await canvas.getByText("Drag a text selection or UI card here").isVisible(),
   );
 
   // A highlight carried out of the thread starts a thread where it lands.
   const picked = await highlight(18);
-  const empty = await canvas.getByText("Drag a text selection or card").boundingBox();
+  const empty = await canvas.getByText("Drag a text selection or UI card here").boundingBox();
   await carryTo(picked, { x: empty.x + empty.width / 2, y: empty.y - 40 });
   const lane = canvas.locator("article").first();
   await lane.locator(".thread-panel").waitFor({ timeout: 10_000 });
@@ -303,8 +313,10 @@ try {
     .locator(".card-heading")
     .first();
   await heading.scrollIntoViewIfNeeded();
-  await canvas.getByText("Drag a text selection or card").scrollIntoViewIfNeeded();
-  const openSpaceBox = await canvas.getByText("Drag a text selection or card").boundingBox();
+  await canvas.getByText("Drag a text selection or UI card here").scrollIntoViewIfNeeded();
+  const openSpaceBox = await canvas
+    .getByText("Drag a text selection or UI card here")
+    .boundingBox();
   const headingBox = await heading.boundingBox();
   await page.mouse.move(headingBox.x + 30, headingBox.y + headingBox.height / 2);
   await page.mouse.down();
@@ -414,7 +426,7 @@ try {
 
   // Two lanes outgrow the pane; the row pans by a sideways wheel, and by a vertical one over
   // the ground between and after the lanes.
-  const openSpace = canvas.getByText("Drag a text selection or card");
+  const openSpace = canvas.getByText("Drag a text selection or UI card here");
   await openSpace.scrollIntoViewIfNeeded();
   const openBox = await openSpace.boundingBox();
   const leftBefore = await canvas.evaluate((el) => el.scrollLeft);
@@ -490,7 +502,7 @@ try {
       lift.inPlace,
     `cursor ${grabHand}; ${JSON.stringify(lift)}`,
   );
-  await page.mouse.move(grip + laneWidths[0] + 16 + 60, titleBox.y + 30, { steps: 6 });
+  await page.mouse.move(grip + laneWidths[0] + LANE_GAP_PX + 60, titleBox.y + 30, { steps: 6 });
   await page.waitForTimeout(250);
   const slid = await page.evaluate(
     (expected) =>
@@ -498,12 +510,12 @@ try {
         new DOMMatrix(getComputedStyle(document.querySelector("[data-lifted]")).transform).e -
           expected,
       ) < 1,
-    laneWidths[1] + 16,
+    laneWidths[1] + LANE_GAP_PX,
   );
   record(
     "past a neighbour's centre the dimmed lane slides into the slot it would take",
     slid,
-    `expected a slide of ${Math.round(laneWidths[1] + 16)}px`,
+    `expected a slide of ${Math.round(laneWidths[1] + LANE_GAP_PX)}px`,
   );
   await page.mouse.move(grip + laneWidths[0] + laneWidths[1] + 32 + 60, titleBox.y + 30, {
     steps: 6,
@@ -615,14 +627,13 @@ try {
     labelsReloaded.join("|") === labelsAfter.join("|"),
     labelsReloaded.map((label) => label.slice(0, 12)).join(" → "),
   );
-  // A lane's title, and the main thread's, rename in place and keep the new name.
+  // A lane's title renames in place, and the main thread's from its tab (ADR-138); both keep the new name.
   const threadLane = canvas.locator("article").filter({ has: page.locator(".thread-title") });
   await threadLane.first().locator(".thread-title").click();
   await page.keyboard.press("ControlOrMeta+a");
   await page.keyboard.type("Weekend margins");
   await page.keyboard.press("Enter");
-  const mainPanel = page.locator('[data-slot="resizable-panel"]').first();
-  await mainPanel.locator(".thread-title").click();
+  await page.getByRole("tab", { name: "Last week's sales" }).dblclick();
   await page.keyboard.press("ControlOrMeta+a");
   await page.keyboard.type("Sales, last week");
   await page.keyboard.press("Enter");
@@ -631,7 +642,7 @@ try {
   await canvas.locator("article .thread-panel").first().waitFor({ timeout: 15_000 });
   await page.waitForTimeout(500);
   const laneTitle = await threadLane.first().locator(".thread-header").innerText();
-  const mainTitle = await mainPanel.locator(".thread-header").innerText();
+  const mainTitle = (await page.getByRole("tab", { selected: true }).innerText()).trim();
   record(
     "a lane's title and the main thread's rename in place and survive a reload",
     laneTitle === "Weekend margins" && mainTitle === "Sales, last week",
@@ -655,7 +666,7 @@ try {
       .click();
   }
   await page.reload({ waitUntil: "load" });
-  await canvas.getByText("Drag a text selection or card").waitFor({ timeout: 15_000 });
+  await canvas.getByText("Drag a text selection or UI card here").waitFor({ timeout: 15_000 });
   record(
     "a closed lane stays closed",
     closedOnce && (await canvas.locator("article").count()) === 0,
@@ -996,8 +1007,8 @@ try {
     `${forward.join(" → ")}; from the end: ${back.join("")}`,
   );
 
-  // A thread that cannot be opened keeps the frame an open one has, in the main pane and in a
-  // lane: the paper, the border and the title bar, with the reason and Try again inside it.
+  // A thread that cannot be opened keeps the frame an open one has: a lane its paper, border and
+  // title bar, the main pane its bare pane (ADR-138), with the reason and Try again inside it.
   // The title bar is what takes hold of a lane, so the failed lane still moves along the row.
   const fails = await openScenario("/t/t-002?scenario=thread-fails", 'button:text-is("Try again")');
   const failedTab = fails.locator('[role="tabpanel"]:not([inert])');
@@ -1035,11 +1046,10 @@ try {
   }
   const lanesAfter = await failedLanes();
   await fails.close();
-  const framed = frames.filter(
-    (frame) =>
-      frame.paper === true &&
-      frame.named === frame.title &&
-      (frame.place === "main" || frame.place === frame.title),
+  const framed = frames.filter((frame) =>
+    frame.place === "main"
+      ? frame.named !== null && frame.title === null
+      : frame.paper === true && frame.named === frame.title && frame.place === frame.title,
   );
   record(
     "a thread that cannot be opened keeps its frame and title bar, and its lane still moves",
@@ -1231,10 +1241,11 @@ try {
         const top = [
           '[aria-label="Toggle sidebar"]',
           '[aria-label^="Notifications"]',
-          '[aria-label="Thread actions"]',
+          // The bar's own "⋯", not the hidden tab strip's (ADR-138).
+          '[aria-label="Thread actions"]:not(.chrome-pill *)',
         ].map((selector) => takesTap(bar.querySelector(selector)));
         const views = [...bar.querySelectorAll('[role="group"][aria-label="Layout"] button')].map(
-          takesTap,
+          (el) => takesTap(el),
         );
         return {
           project: bar.querySelector('[data-slot="project-name"]').textContent,
@@ -1396,16 +1407,55 @@ try {
   );
 
   await onOwnPage(
-    "on desktop the sidebar has no Account button, since the rail shares its children",
+    "on desktop the one Account button is at the sidebar's foot, and the bell is the bar's last control",
     "/t/t-005?scenario=demo",
     {},
     async (own) => {
       await own.locator('[data-slot="sidebar"]').first().waitFor({ timeout: 15_000 });
-      const count = await own
-        .locator('[data-slot="sidebar"]')
+      const all = await own.getByRole("button", { name: "Account" }).count();
+      const account = own.locator('[data-slot="sidebar"]').getByRole("button", { name: "Account" });
+      const inSidebar = await account.count();
+      const inTitleBar = await own
+        .locator('header[data-slot="title-bar"]')
         .getByRole("button", { name: "Account" })
         .count();
-      return { ok: count === 0, detail: `${count} Account button(s) in the desktop sidebar` };
+      const inNav = await own
+        .locator('[role="navigation"][aria-label="Sidebar"]')
+        .getByRole("button", { name: "Account" })
+        .count();
+      const face = await account.boundingBox();
+      const sidebarBox = await own.locator('[data-slot="sidebar-container"]').boundingBox();
+      const foot = face.y + face.height >= sidebarBox.y + sidebarBox.height - 16;
+      const bell = await own
+        .locator('header[data-slot="title-bar"]')
+        .getByRole("button", { name: /^Notifications/ })
+        .boundingBox();
+      const rightmost = await own
+        .locator('header[data-slot="title-bar"]')
+        .getByRole("button")
+        .evaluateAll((els) => Math.max(...els.map((el) => el.getBoundingClientRect().right)));
+      const bellLast = Math.abs(bell.x + bell.width - rightmost) < 1;
+      await account.click();
+      const opened = await own.getByRole("menu").boundingBox();
+      const view = own.viewportSize();
+      const onScreen =
+        opened !== null &&
+        opened.x >= 0 &&
+        opened.y >= 0 &&
+        opened.x + opened.width <= view.width &&
+        opened.y + opened.height <= view.height;
+      await own.keyboard.press("Escape");
+      return {
+        ok:
+          all === 1 &&
+          inSidebar === 1 &&
+          inTitleBar === 0 &&
+          inNav === 0 &&
+          foot &&
+          bellLast &&
+          onScreen,
+        detail: `${all} Account button(s) on the page; ${inSidebar} in the sidebar, ${inTitleBar} in the bar, ${inNav} inside the navigation landmark; at the foot ${foot}; bell is the bar's last control ${bellLast}; menu on screen ${onScreen}`,
+      };
     },
   );
 
