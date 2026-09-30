@@ -1,6 +1,7 @@
 import type { AgentEvent, SharedFile } from "@yaklabs/catalog/agent";
 import type { CardAttachment } from "@yaklabs/catalog/interactive";
-import type { ThreadMessage } from "@yaklabs/catalog/thread";
+import { blockSchema } from "@yaklabs/catalog/prose";
+import { endedSchema, failureSchema, workSchema } from "@yaklabs/catalog/reply";
 import { z } from "zod";
 import {
   laneIdSchema,
@@ -42,8 +43,13 @@ const agentEventSchema: z.ZodType<AgentEvent> = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("question-rejected"), reason: z.string(), question: z.unknown() }),
 ]);
 
-/** One stored turn. Card payloads stay `unknown`: the catalog validates them when it renders. */
-export const threadMessageSchema: z.ZodType<ThreadMessage> = z.discriminatedUnion("role", [
+/**
+ * One stored turn: a user's request or answer, or an agent's reply as the seam folded it
+ * (ADR-147). Card payloads and a question stay `unknown`: the catalog validates them when it
+ * renders. Left untyped so its tests can hold it equal to `ThreadMessage`, since a field this
+ * schema lacks is dropped from every turn it reads.
+ */
+export const threadMessageSchema = z.discriminatedUnion("role", [
   z.object({
     id: idSchema,
     role: z.literal("user"),
@@ -51,6 +57,7 @@ export const threadMessageSchema: z.ZodType<ThreadMessage> = z.discriminatedUnio
     time: z.string(),
     attachments: z.array(cardAttachmentSchema).optional(),
     files: z.array(z.object({ id: z.string(), label: z.string() })).optional(),
+    question: z.string().optional(),
   }),
   z.object({
     id: idSchema,
@@ -60,6 +67,12 @@ export const threadMessageSchema: z.ZodType<ThreadMessage> = z.discriminatedUnio
     payload: z.unknown().optional(),
     interactive: z.unknown().optional(),
     streaming: z.boolean().optional(),
+    blocks: z.array(blockSchema).optional(),
+    work: workSchema.optional(),
+    activity: z.string().optional(),
+    ended: endedSchema.optional(),
+    failure: failureSchema.optional(),
+    asks: z.unknown().optional(),
   }),
 ]);
 

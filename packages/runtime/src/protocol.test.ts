@@ -1,5 +1,7 @@
-import { describe, expect, it } from "vitest";
-import { commandSchema, noticeSchema } from "./protocol";
+import type { ThreadMessage } from "@yaklabs/catalog/thread";
+import { describe, expect, expectTypeOf, it } from "vitest";
+import type { z } from "zod";
+import { commandSchema, noticeSchema, type threadMessageSchema } from "./protocol";
 
 const attachment = {
   turnId: "a1",
@@ -126,6 +128,10 @@ describe("commandSchema checks the thread menu's writes (ADR-126)", () => {
 });
 
 describe("noticeSchema", () => {
+  it("parses exactly a stored turn, so a field the catalog adds to one fails to compile", () => {
+    expectTypeOf<z.infer<typeof threadMessageSchema>>().toEqualTypeOf<ThreadMessage>();
+  });
+
   it("rejects a stored turn with an unknown role", () => {
     const messages = [{ id: "s1", role: "system", text: "Hi", time: "9:00" }];
     expect(noticeSchema.safeParse({ kind: "opened", requestId: "r1", messages }).success).toBe(
