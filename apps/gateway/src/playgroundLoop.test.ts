@@ -101,16 +101,16 @@ describe("the tool loop turns", () => {
   it("text streamed before a tool call into narration for the running work", async () => {
     const first = round(
       "tool_use",
-      tool(0, "update_work", work("running")),
-      text(1, "Adding Monday to Friday."),
+      text(0, "Adding Monday to Friday."),
+      tool(1, "update_work", work("running")),
     );
 
     const { events } = await eventsFor("Chart it.", first, done);
 
     expect(events.slice(0, 3)).toEqual([
+      { type: "text", blockId: "r1b0", delta: "Adding Monday to Friday." },
       { type: "work", ...work("running") },
-      { type: "text", blockId: "r1b1", delta: "Adding Monday to Friday." },
-      { type: "narration", blockId: "r1b1", workId: "sum" },
+      { type: "narration", blockId: "r1b0", workId: "sum" },
     ]);
   });
 
@@ -124,6 +124,27 @@ describe("the tool loop turns", () => {
     expect(results).toMatchObject({
       content: [{ is_error: true, content: "The input was not valid JSON." }],
     });
+  });
+});
+
+describe("the tool loop keeps", () => {
+  it("text written after a tool call in the same round as answer prose", async () => {
+    const first = round(
+      "tool_use",
+      text(0, "Checking"),
+      tool(1, "update_work", work("running")),
+      text(2, "Friday is busiest."),
+    );
+
+    const { events } = await eventsFor("Chart it.", first, round("end_turn"));
+
+    expect(events).toEqual([
+      { type: "text", blockId: "r1b0", delta: "Checking" },
+      { type: "work", ...work("running") },
+      { type: "text", blockId: "r1b2", delta: "Friday is busiest." },
+      { type: "narration", blockId: "r1b0", workId: "sum" },
+      { type: "end", reason: "answered" },
+    ]);
   });
 });
 

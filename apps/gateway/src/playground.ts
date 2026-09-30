@@ -6,7 +6,13 @@ import {
   type PlaygroundRequest,
 } from "@yaklabs/catalog/playground";
 import { toUpstreamMessages } from "./playgroundHistory";
-import { assistantContent, newRound, readEvent, shownTextIds, type Round } from "./playgroundRound";
+import {
+  assistantContent,
+  narrationTextIds,
+  newRound,
+  readEvent,
+  type Round,
+} from "./playgroundRound";
 import {
   initialTurn,
   narrate,
@@ -77,7 +83,7 @@ const decide = (
 ): Decision => {
   if (broken) return { kind: "stop", drafts: failureDrafts(NO_RESPONSE, "upstream") };
   const toolRound = asked || (round.stop === "tool_use" && results.length > 0);
-  const narration = toolRound ? narrate(state, shownTextIds(round)) : [];
+  const narration = toolRound ? narrate(state, narrationTextIds(round)) : [];
   if (asked) return { kind: "stop", drafts: [...narration, { type: "end", reason: "asked" }] };
   if (round.stop === null) return { kind: "stop", drafts: failureDrafts(NO_RESPONSE, "upstream") };
   if (round.stop === "max_tokens")
