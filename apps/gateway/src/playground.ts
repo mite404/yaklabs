@@ -6,17 +6,9 @@ import {
   type PlaygroundRequest,
 } from "@yaklabs/catalog/playground";
 import { toUpstreamMessages } from "./playgroundHistory";
+import { assistantContent, newRound, readEvent, type Round } from "./playgroundRound";
 import {
-  assistantContent,
-  narrationTextIds,
-  newRound,
-  readEvent,
-  type Round,
-} from "./playgroundRound";
-import {
-  hasAnswer,
   initialTurn,
-  narrate,
   stamp,
   translateToolUse,
   type EventDraft,
@@ -30,14 +22,12 @@ type Messages = Anthropic.MessageParam[];
 type UpstreamEvents = AsyncIterable<Anthropic.RawMessageStreamEvent>;
 
 // How a round ended, with the turn state it left behind (every seq it used included).
-// `narrated` is set once the text before the round's first tool call went to running work.
 type RoundEnd = {
   state: TurnState;
   round: Round;
   results: Anthropic.ToolResultBlockParam[];
   asked: boolean;
   broken: boolean;
-  narrated: boolean;
 };
 
 // What the loop does after a round: stop with closing events, or send the results and go on.
@@ -53,7 +43,8 @@ illustrative numbers whose source says they are illustrative.
 The user sees each tool call as its own part of the page, so tools carry the content:
 - Before each step of work, call update_work with a short factual label. Reuse its workId to \
 update it, and mark it done or failed when the step ends.
-- Never write prose before a tool call. Progress belongs in update_work labels, not in text.
+- Never write prose before a tool call: the user reads every word of text as your answer the \
+moment you write it. Progress belongs in update_work labels, not in text.
 - Show numbers only with show_card. Reuse a cardId to replace that card.
 - When you need a decision only the user can make, call ask_question and then stop.
 - Settle each work item with report_outcome. Its evidence says how you got the result (the \
@@ -82,11 +73,11 @@ const failureDrafts = (limitation: string, reason: "limit" | "upstream"): EventD
 
 // A turn that answered: a reply with nothing to show says so rather than ending blank.
 const answeredDrafts = (state: TurnState): EventDraft[] => [
-  ...(hasAnswer(state)
+  ...(state.shown
     ? []
     : [{ type: "failure" as const, workId: null, limitation: NO_ANSWER, recovery: null }]),
   // A reply that showed nothing is the model failing, so the page can offer Try again.
-  { type: "end", reason: hasAnswer(state) ? "answered" : "upstream" },
+  { type: "end", reason: state.shown ? "answered" : "upstream" },
 ];
 
 // The round's verdict. Pure: `messages` is what the next round sends when there is one.
@@ -128,16 +119,6 @@ const openRound = (
     { signal },
   );
 
-// The text before the round's first tool call becomes narration once a tool call has shown
-// which work is running; the blocks before a tool call are whole by the time it arrives.
-const narrateLead = (end: RoundEnd): { end: RoundEnd; events: PlaygroundEvent[] } => {
-  if (end.narrated) return { end, events: [] };
-  const drafts = narrate(end.state, narrationTextIds(end.round)); // → narration drafts
-  if (drafts.length === 0) return { end, events: [] };
-  const { state, events } = stamp(end.state, drafts);
-  return { end: { ...end, state, narrated: true }, events };
-};
-
 // One upstream event folded into the round, with the page events it makes. Pure.
 const advance = (
   end: RoundEnd,
@@ -148,17 +129,11 @@ const advance = (
   const read: RoundEnd = { ...end, round: step.round, state: text.state };
   if (step.tool === undefined) return { end: read, events: text.events };
   const { state, events, result } = translateToolUse(read.state, step.tool); // → Translation
-  if (result === "asked") {
-    // The page stops reading at a question, so narration goes first; asking changes no work,
-    // so the question is translated again from the narrated state to keep `seq` in order.
-    const lead = narrateLead(read); // → { end, events }
-    const asked = translateToolUse(lead.end.state, step.tool);
-    const settled: RoundEnd = { ...lead.end, state: asked.state, asked: true };
-    return { end: settled, events: [...text.events, ...lead.events, ...asked.events] };
-  }
-  const translated: RoundEnd = { ...read, state, results: [...read.results, result] };
-  const narrated = narrateLead(translated); // → { end, events }
-  return { end: narrated.end, events: [...text.events, ...events, ...narrated.events] };
+  const settled: RoundEnd =
+    result === "asked"
+      ? { ...read, state, asked: true }
+      : { ...read, state, results: [...read.results, result] };
+  return { end: settled, events: [...text.events, ...events] };
 };
 
 // Only the upstream failing (an APIError, which covers a dropped connection and an abort)
@@ -182,7 +157,6 @@ async function* streamRound(
     results: [],
     asked: false,
     broken: false,
-    narrated: false,
   };
   try {
     for await (const event of events) {

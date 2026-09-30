@@ -22,7 +22,13 @@ describe("a turn never ends silently", () => {
     expect(events).toEqual([emptyAnswer, { type: "end", reason: "upstream" }]);
   });
 
-  it("when every line of text was narration for work", async () => {
+  it("and adds nothing to a reply that answered", async () => {
+    const { events } = await eventsFor("Which day?", round("end_turn", text(0, "Friday.")));
+
+    expect(events.map(({ type }) => type)).toEqual(["text", "end"]);
+  });
+
+  it("and counts text written before a tool call as the answer", async () => {
     const first = round(
       "tool_use",
       text(0, "Adding Monday to Friday."),
@@ -31,13 +37,8 @@ describe("a turn never ends silently", () => {
 
     const { events } = await eventsFor("Chart it.", first, round("end_turn"));
 
-    expect(events.slice(-2)).toEqual([emptyAnswer, { type: "end", reason: "upstream" }]);
-  });
-
-  it("and adds nothing to a reply that answered", async () => {
-    const { events } = await eventsFor("Which day?", round("end_turn", text(0, "Friday.")));
-
-    expect(events.map(({ type }) => type)).toEqual(["text", "end"]);
+    expect(events.map(({ type }) => type)).toEqual(["text", "work", "end"]);
+    expect(events.at(-1)).toEqual({ type: "end", reason: "answered" });
   });
 });
 

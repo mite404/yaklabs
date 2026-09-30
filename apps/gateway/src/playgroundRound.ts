@@ -134,17 +134,6 @@ const ordered = (round: Round): Block[] =>
     .map(([, block]) => block);
 
 /**
- * Ids of the shown text blocks that came before the round's first tool call, in order: the
- * round's narration. Text after a tool call is answer prose and stays out.
- */
-export const narrationTextIds = (round: Round): string[] => {
-  const blocks = ordered(round);
-  const firstTool = blocks.findIndex((block) => block.kind === "tool");
-  const lead = firstTool === -1 ? blocks : blocks.slice(0, firstTool);
-  return lead.flatMap((block) => (block.kind === "text" && block.started ? [block.blockId] : []));
-};
-
-/**
  * The round as the assistant message the model reads back next round: visible text and the
  * finished tool calls, in order. Thinking is dropped, which Kimi accepts; a call whose input
  * is not an object is sent with an empty one beside its error result.

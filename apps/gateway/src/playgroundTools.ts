@@ -18,19 +18,16 @@ export type EventDraft = Unstamped<PlaygroundEvent>;
 
 /**
  * Everything one turn counts, carried from event to event so every limit is checked against
- * the same numbers: the next `seq`, rounds opened, tool calls made, the distinct cards shown,
- * the running work items (most recent last) and validation failures per tool name. `prose`
- * holds the text blocks still shown as answer (narration takes one out) and `shown` whether a
- * card, outcome, failure or question reached the page.
+ * the same numbers: the next `seq`, rounds opened, tool calls made, the distinct cards shown
+ * and validation failures per tool name. `shown` is whether text, a card, an outcome, a
+ * failure or a question reached the page.
  */
 export type TurnState = Readonly<{
   seq: number;
   round: number;
   toolCalls: number;
   cardIds: readonly string[];
-  running: readonly string[];
   failures: Readonly<Record<string, number>>;
-  prose: readonly string[];
   shown: boolean;
 }>;
 
@@ -57,9 +54,7 @@ export const initialTurn: TurnState = {
   round: 0,
   toolCalls: 0,
   cardIds: [],
-  running: [],
   failures: {},
-  prose: [],
   shown: false,
 };
 
@@ -83,22 +78,11 @@ type Handler = (state: TurnState, input: unknown, id: string) => Verdict;
 const formatIssues = (error: z.ZodError): string =>
   error.issues.map((issue) => `${issue.path.join(".") || "input"}: ${issue.message}`).join("; ");
 
-const withRunning = (state: TurnState, workId: string, running: boolean): TurnState => {
-  const others = state.running.filter((id) => id !== workId);
-  return { ...state, running: running ? [...others, workId] : others };
-};
-
 const updateWork: Handler = (state, input) => {
   const parsed = updateWorkInputSchema.safeParse(input);
   if (!parsed.success) return { kind: "invalid", reason: formatIssues(parsed.error) };
   const { workId, label, status } = parsed.data;
-  const next = withRunning(state, workId, status === "running");
-  return {
-    kind: "shown",
-    state: next,
-    drafts: [{ type: "work", workId, label, status }],
-    reply: "ok",
-  };
+  return { kind: "shown", state, drafts: [{ type: "work", workId, label, status }], reply: "ok" };
 };
 
 const showCard: Handler = (state, input) => {
@@ -149,7 +133,7 @@ const reportOutcome: Handler = (state, input) => {
   if (!parsed.success) return { kind: "invalid", reason: formatIssues(parsed.error) };
   const { workId, result, evidence } = parsed.data;
   const drafts: EventDraft[] = [{ type: "outcome", workId, result, evidence }];
-  return { kind: "shown", state: withRunning(state, workId, false), drafts, reply: "ok" };
+  return { kind: "shown", state, drafts, reply: "ok" };
 };
 
 const reportFailure: Handler = (state, input) => {
@@ -158,8 +142,7 @@ const reportFailure: Handler = (state, input) => {
   const { workId, limitation, recovery_prompt: prompt } = parsed.data;
   const recovery = prompt === undefined ? null : { label: RECOVERY_LABEL, prompt };
   const drafts: EventDraft[] = [{ type: "failure", workId: workId ?? null, limitation, recovery }];
-  const next = workId === undefined || workId === null ? state : withRunning(state, workId, false);
-  return { kind: "shown", state: next, drafts, reply: "ok" };
+  return { kind: "shown", state, drafts, reply: "ok" };
 };
 
 // The tools the prompt offers, by name. A name missing here is an unknown tool; a Map, so a
@@ -208,10 +191,11 @@ const rejectCall = (
 };
 
 // Which events count as an answer the user can see. A Record over every type, so a new event
-// type fails the build until it is placed here.
+// type fails the build until it is placed here. Text counts from its first delta, which always
+// carries a visible character (`playgroundRound` holds leading whitespace back).
 const SHOWS_ANSWER: Readonly<Record<EventDraft["type"], boolean>> = {
   start: false,
-  text: false,
+  text: true,
   narration: false,
   work: false,
   card: true,
@@ -221,19 +205,9 @@ const SHOWS_ANSWER: Readonly<Record<EventDraft["type"], boolean>> = {
   end: false,
 };
 
-// A text block joins the prose once it carries something other than whitespace.
-const withProse = (state: TurnState, blockId: string, delta: string): TurnState =>
-  state.prose.includes(blockId) || !/\S/.test(delta)
-    ? state
-    : { ...state, prose: [...state.prose, blockId] };
-
 // What one draft changes about the answer the page shows.
-const noteShown = (state: TurnState, draft: EventDraft): TurnState => {
-  if (draft.type === "text") return withProse(state, draft.blockId, draft.delta);
-  if (draft.type === "narration")
-    return { ...state, prose: state.prose.filter((blockId) => blockId !== draft.blockId) };
-  return SHOWS_ANSWER[draft.type] && !state.shown ? { ...state, shown: true } : state;
-};
+const noteShown = (state: TurnState, draft: EventDraft): TurnState =>
+  SHOWS_ANSWER[draft.type] && !state.shown ? { ...state, shown: true } : state;
 
 /** Numbers drafts from the turn's next `seq`, in order, noting what they show. */
 export function stamp(
@@ -247,9 +221,6 @@ export function stamp(
   const noted = drafts.reduce((next, draft) => noteShown(next, draft), state); // → TurnState
   return { state: { ...noted, seq: state.seq + drafts.length }, events };
 }
-
-/** Whether the turn has shown the user anything that reads as an answer. */
-export const hasAnswer = (state: TurnState): boolean => state.shown || state.prose.length > 0;
 
 /**
  * Checks one tool call with the catalog's own validators and translates it into page events
@@ -280,14 +251,4 @@ export function translateToolUse(state: TurnState, call: ToolCall): Translation 
       return unhandled;
     }
   }
-}
-
-/**
- * The narration events for text a round streamed before its tool calls: each block becomes
- * progress for the most recent running work item. With no work running, the text stays prose.
- */
-export function narrate(state: TurnState, blockIds: readonly string[]): EventDraft[] {
-  const workId = state.running.at(-1);
-  if (workId === undefined) return [];
-  return blockIds.map((blockId) => ({ type: "narration", blockId, workId }));
 }
