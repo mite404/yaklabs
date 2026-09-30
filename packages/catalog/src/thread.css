@@ -623,7 +623,7 @@
   max-width: 510px; /* the prose's measure */
   margin: 0;
   padding-left: 22px; /* .work-narration's indent */
-  list-style: disc; /* as the prose's lists: nested in the steps' list it would turn to circles */
+  list-style: disc; /* said, as the narration's: nested in the steps it would be circles */
   color: var(--soft-ink);
   font-size: 13px;
   line-height: 20px;
@@ -647,6 +647,7 @@
 }
 .work-narration {
   padding-left: 22px;
+  list-style: disc; /* said, since a host's reset (the app's Tailwind) takes the bullets away */
   color: var(--soft-ink);
 }
 .work-logs {
