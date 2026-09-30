@@ -1,3 +1,4 @@
+import type { ReplyChunk } from "@yaklabs/catalog/reply";
 import type { Agent, AgentEvent } from "@yaklabs/catalog/agent";
 import { gatewayRequestSchema, type GatewayRequest } from "gateway/contract";
 import { Hono } from "hono";
@@ -104,9 +105,13 @@ function agentFor(reply: Reply, seen: Seen = {}, accessToken?: string): Agent {
   });
 }
 
-async function collect(pieces: AsyncIterable<string>): Promise<string[]> {
+// The worker streams words alone; a structured chunk would show up here as its JSON.
+const wordsOf = (piece: ReplyChunk): string =>
+  typeof piece === "string" ? piece : JSON.stringify(piece);
+
+async function collect(pieces: AsyncIterable<ReplyChunk>): Promise<string[]> {
   const collected: string[] = [];
-  for await (const piece of pieces) collected.push(piece);
+  for await (const piece of pieces) collected.push(wordsOf(piece));
   return collected;
 }
 
@@ -123,7 +128,7 @@ describe("createGatewayAgent streams", () => {
     const controller = new AbortController();
     const pieces: string[] = [];
     for await (const piece of agent.respond(ask, controller.signal)) {
-      pieces.push(piece);
+      pieces.push(wordsOf(piece));
       controller.abort();
     }
     expect(pieces).toEqual(["Net "]);

@@ -138,6 +138,9 @@ async function reply(
   let text = "";
   for await (const piece of agent.respond(event, signal)) {
     if (signal.aborted) break;
+    // The protocol carries words alone; the seam's structured events (ADR-146) wait on a
+    // chunk that can hold them, so the worker keeps and forwards only the text.
+    if (typeof piece !== "string") continue;
     text += piece;
     loop.host.post({ kind: "chunk", requestId, text: piece });
   }

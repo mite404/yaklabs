@@ -1,3 +1,4 @@
+import type { ReplyChunk } from "@yaklabs/catalog/reply";
 import type { AgentEvent } from "@yaklabs/catalog/agent";
 import { describe, expect, it, onTestFinished, vi } from "vitest";
 import { z } from "zod";
@@ -46,9 +47,13 @@ function ready(runtime: Runtime): Promise<Ready> {
   );
 }
 
-async function collect(pieces: AsyncIterable<string>): Promise<string[]> {
+// The worker streams words alone; a structured chunk would show up here as its JSON.
+const wordsOf = (piece: ReplyChunk): string =>
+  typeof piece === "string" ? piece : JSON.stringify(piece);
+
+async function collect(pieces: AsyncIterable<ReplyChunk>): Promise<string[]> {
   const collected: string[] = [];
-  for await (const piece of pieces) collected.push(piece);
+  for await (const piece of pieces) collected.push(wordsOf(piece));
   return collected;
 }
 
@@ -137,7 +142,7 @@ describe("the runtime in a Web Worker keeps threads on the device", () => {
     const controller = new AbortController();
     const pieces: string[] = [];
     for await (const piece of runtime.agent(id).respond(ask, controller.signal)) {
-      pieces.push(piece);
+      pieces.push(wordsOf(piece));
       controller.abort();
     }
     expect(pieces).toHaveLength(1);
