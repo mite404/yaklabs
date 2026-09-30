@@ -23,14 +23,13 @@ const morning: Thread = {
 };
 
 // The thread's scrolling turns and its reading tools, found from the story's canvas, once the
-// thread has the focus: the tools show only in the focused thread, so the story clicks into the
-// compose box first, as a reader would.
+// pointer is over the thread: the tools follow the pointer, so the story moves it onto the turns
+// first, as a reader would.
 async function parts(canvasElement: HTMLElement) {
   const scroller = canvasElement.querySelector<HTMLElement>(".thread-scroll");
   const bar = canvasElement.querySelector<HTMLElement>(".reading-tools");
-  const box = canvasElement.querySelector<HTMLElement>(".compose-box textarea");
-  if (!scroller || !bar || !box) throw new Error("the thread or its reading tools did not render");
-  await userEvent.click(box);
+  if (!scroller || !bar) throw new Error("the thread or its reading tools did not render");
+  await userEvent.hover(scroller);
   return { scroller, bar, tools: within(bar) };
 }
 
@@ -39,6 +38,9 @@ async function unfold(tools: Awaited<ReturnType<typeof parts>>["tools"]) {
   await userEvent.hover(tools.getByRole("button", { name: "Your requests" }));
   return tools.findByRole("button", { name: "Search this thread" });
 }
+
+// A bar's computed opacity: 0 while it is clear, 1 once it has faded up.
+const opacity = (bar: HTMLElement) => Number(getComputedStyle(bar).opacity);
 
 // A computed colour's alpha: 1 for an opaque one. Chromium serialises a color-mix as
 // `color(srgb r g b / a)` and a plain colour as `rgb(...)` or `rgba(...)`.
@@ -83,9 +85,9 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 /**
- * The reading tools float at the right just above the compose box, in the thread that has the
- * focus. At rest they are one bookmark on a translucent wash; the pointer on it unfolds the bar
- * leftward to show Search too.
+ * The reading tools float at the right just above the compose box, and follow the pointer: up
+ * while it is over the thread's turns. At rest they are one bookmark on a translucent wash; the
+ * pointer on it unfolds the bar leftward to show Search too.
  */
 export const Overview: Story = {
   play: async ({ canvasElement }) => {
@@ -137,10 +139,11 @@ export const OpensSolid: Story = {
 };
 
 /**
- * One thread's tools at a time: across two threads, only the one the reader has clicked into
- * shows its bar; the other's is hidden until it is the one in focus.
+ * One thread's tools at a time: across two threads, only the one the pointer is over shows its
+ * bar, fading up over 300ms as the pointer arrives and back as it leaves; over the compose box
+ * it stays clear, so it never sits over what the reader is typing.
  */
-export const OnlyTheFocusedThread: Story = {
+export const FollowsThePointer: Story = {
   render: (args) => (
     <div style={{ display: "flex", gap: 24 }}>
       <ChatThreadPanel {...args} width={420} />
@@ -153,21 +156,26 @@ export const OnlyTheFocusedThread: Story = {
   ),
   play: async ({ canvasElement }) => {
     const panels = [...canvasElement.querySelectorAll<HTMLElement>(".thread-panel")];
-    const boxes = panels.map((panel) => panel.querySelector<HTMLTextAreaElement>("textarea"));
+    const scrollers = panels.map((panel) => panel.querySelector<HTMLElement>(".thread-scroll"));
     const bars = panels.map((panel) => panel.querySelector<HTMLElement>(".reading-tools"));
-    const [firstBox, secondBox] = boxes;
+    const [firstScroller, secondScroller] = scrollers;
     const [firstBar, secondBar] = bars;
-    if (!firstBox || !secondBox || !firstBar || !secondBar)
+    const secondBox = panels[1]?.querySelector<HTMLElement>(".compose-box textarea");
+    if (!firstScroller || !secondScroller || !firstBar || !secondBar || !secondBox)
       throw new Error("two threads did not render");
-    await userEvent.click(secondBox);
+    await userEvent.hover(secondScroller);
     await waitFor(async () => {
-      await expect(getComputedStyle(firstBar).visibility).toBe("hidden");
-      await expect(getComputedStyle(secondBar).visibility).toBe("visible");
+      await expect(opacity(secondBar)).toBe(1);
+      await expect(opacity(firstBar)).toBe(0);
     });
-    await userEvent.click(firstBox);
+    await userEvent.hover(secondBox);
     await waitFor(async () => {
-      await expect(getComputedStyle(firstBar).visibility).toBe("visible");
-      await expect(getComputedStyle(secondBar).visibility).toBe("hidden");
+      await expect(opacity(secondBar)).toBe(0);
+    });
+    await userEvent.hover(firstScroller);
+    await waitFor(async () => {
+      await expect(opacity(firstBar)).toBe(1);
+      await expect(opacity(secondBar)).toBe(0);
     });
   },
 };

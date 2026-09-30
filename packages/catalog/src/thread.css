@@ -91,21 +91,25 @@
   pointer-events: auto;
   transition:
     background-color 150ms cubic-bezier(0.23, 1, 0.32, 1),
-    opacity 150ms cubic-bezier(0.23, 1, 0.32, 1);
+    opacity 300ms cubic-bezier(0.23, 1, 0.32, 1);
 }
 .reading-tools:is([data-open], :has([aria-expanded="true"])) {
   background: var(--paper);
 }
-/* One thread's tools at a time: the bar shows only in the thread that holds the focus (its
-   compose box, its turns, or the bar itself), so across a canvas of lanes the reader sees the
-   binder for the thread they are in and no other. Hidden, it takes no tab stop; visibility waits
-   out the fade so the bar is gone only once it has faded. */
-.thread-panel:not(:focus-within) .reading-tools {
-  opacity: 0;
-  visibility: hidden;
-  transition:
-    opacity 150ms cubic-bezier(0.23, 1, 0.32, 1),
-    visibility 0s linear 150ms;
+/* The bar follows the pointer (Ethan): it is clear until the pointer is over the thread, fades
+   up over 300ms on the strong ease-out as the pointer leaves the compose box for the turns, and
+   fades back as it leaves the thread. The panel reports the pointer's zone (data-pointer, from
+   its own pointer events, so a story's synthetic hover can prove it). A tool that is open, or a
+   keyboard in the bar, holds it up; a touch screen, with no pointer to follow, keeps it. Clear,
+   not hidden: a keyboard can still reach it, and reaching it shows it. */
+@media (hover: hover) and (pointer: fine) {
+  .reading-tools {
+    opacity: 0;
+  }
+  .thread-panel[data-pointer="thread"] .reading-tools,
+  .reading-tools:is([data-open], :has([aria-expanded="true"]), :has(:focus-visible)) {
+    opacity: 1;
+  }
 }
 /* The list of requests is the same wash, blurred behind so its 13px rows stay legible over the
    turns it opens above; the bar's own solid fill anchors it. */
@@ -189,8 +193,7 @@
 @media (prefers-reduced-motion: reduce) {
   .reading-more,
   .reading-tools .reading-more,
-  .reading-tools,
-  .thread-panel:not(:focus-within) .reading-tools {
+  .reading-tools {
     transition: none;
   }
 }

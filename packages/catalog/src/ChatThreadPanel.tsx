@@ -648,6 +648,40 @@ function focusComposeIn(scroller: HTMLElement | null): void {
   );
 }
 
+/** Where the pointer is over the thread: off it, over its turns and tools, or over the compose box. */
+type PointerZone = "away" | "thread" | "compose";
+
+// Tracks the pointer's zone from the panel's and the compose row's own pointer events rather
+// than CSS :hover, so a story's synthetic hover can prove what follows it (the reading tools).
+// Leaving the compose row for the turns reads as the thread; leaving the panel reads as away,
+// which fires after the row's leave when the pointer goes straight out.
+function usePointerZone(): {
+  zone: PointerZone;
+  panel: { onPointerEnter: () => void; onPointerLeave: () => void };
+  compose: { onPointerEnter: () => void; onPointerLeave: () => void };
+} {
+  const [zone, setZone] = useState<PointerZone>("away");
+  return {
+    zone,
+    panel: {
+      onPointerEnter: () => {
+        setZone("thread");
+      },
+      onPointerLeave: () => {
+        setZone("away");
+      },
+    },
+    compose: {
+      onPointerEnter: () => {
+        setZone("compose");
+      },
+      onPointerLeave: () => {
+        setZone("thread");
+      },
+    },
+  };
+}
+
 // The compose box's draft, with a read that is current between renders too, so a host can set
 // the draft and send it in one go (ThreadHandle).
 function useDraft(initial: string): {
@@ -795,6 +829,7 @@ export function ChatThreadPanel({
   const recap = useRecap({ thread, activity, now, awaiting, draft });
   const { scroller, setDockSlot } = useScroller();
   const away = useAwayFromEnd(scroller);
+  const pointer = usePointerZone(); // → where the pointer is, for the reading tools (thread.css)
   const running = runningActivity(messages); // → the latest streaming reply's narration
   const showEmpty = messages.length === 0 && empty !== undefined;
 
@@ -874,6 +909,8 @@ export function ChatThreadPanel({
       aria-label={thread.title}
       data-bare={bare ? "" : undefined}
       data-empty={showEmpty ? "" : undefined}
+      data-pointer={pointer.zone}
+      {...pointer.panel}
     >
       {!bare && (
         <ThreadHeader
@@ -969,7 +1006,11 @@ export function ChatThreadPanel({
             />
           </div>
         )}
-        <div className="thread-compose" data-footnote={footnote === undefined ? undefined : ""}>
+        <div
+          className="thread-compose"
+          data-footnote={footnote === undefined ? undefined : ""}
+          {...pointer.compose}
+        >
           <ComposeBox
             draft={draft}
             onDraftChange={editDraft}

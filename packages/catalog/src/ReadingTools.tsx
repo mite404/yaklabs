@@ -171,13 +171,15 @@ function usePointerIn(bar: RefObject<HTMLElement | null>) {
 }
 
 /**
- * A thread's reading tools, floating above its compose box, and only in the thread that has the
- * focus (thread.css), so one thread's tools show at a time across the canvas. At rest the bar is
- * one bookmark on a translucent fill; with the pointer on it, a keyboard in it, or either tool
- * open, it unfolds leftward to show Search too, and open it fills solid. Search the thread's
- * words and step through the turns that hold them, or jump back to any request the user sent,
- * listed by its first 15 characters and its time. An Alt-click on the bookmark goes straight to
- * the latest request. Where a jump lands, and how it shows, is the host's.
+ * A thread's reading tools, floating above its compose box. The bar follows the pointer
+ * (thread.css): clear until the pointer is over the thread's turns, fading up as it leaves the
+ * compose box and back as it leaves the thread, so across a canvas of lanes one bar shows at a
+ * time. At rest it is one bookmark on a translucent fill; with the pointer on it, a keyboard in
+ * it, or either tool open, it unfolds leftward to show Search too, and open it fills solid and
+ * stays. Search the thread's words and step through the turns that hold them, or jump back to any
+ * request the user sent, listed by its first 15 characters and its time. An Alt-click on the
+ * bookmark goes straight to the latest request. Where a jump lands, and how it shows, is the
+ * host's.
  * @param messages The thread's turns as they stand now, including ones sent since it opened.
  * @param onJump Brings the turn with this id into view.
  */
