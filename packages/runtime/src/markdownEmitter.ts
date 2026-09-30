@@ -85,16 +85,33 @@ function contentGrowth(before: readonly Inline[], after: readonly Inline[]): Rep
   return [...head, ...contentChunks(after.slice(before.length))];
 }
 
-// The chunks that grow a block already shown into what it has become.
-function blockGrowth(before: Block, after: Block | undefined): ReplyChunk[] {
-  if (before.kind === "list" && after?.kind === "list") {
-    const at = before.items.length - 1;
-    const more = after.items.slice(at + 1).flatMap((item) => contentChunks(item, "item"));
-    return [...contentGrowth(before.items.at(at) ?? [], after.items.at(at) ?? []), ...more];
+// A block's runs of words: a list's items, or a paragraph's or heading's one run.
+function partsOf(block: Block): Inline[][] {
+  switch (block.kind) {
+    case "list":
+      return block.items;
+    case "paragraph":
+    case "heading":
+      return [block.content];
+    case "card":
+    case "limitation":
+      return [];
+    default: {
+      const unhandled: never = block;
+      return unhandled;
+    }
   }
-  if ((before.kind === "paragraph" || before.kind === "heading") && after?.kind === before.kind)
-    return contentGrowth(before.content, after.content);
-  return [];
+}
+
+// The chunks that grow a block already shown into what it has become: the rest of its last
+// run of words, then each list item after it.
+function blockGrowth(before: Block, after: Block | undefined): ReplyChunk[] {
+  const shown = partsOf(before);
+  const grown = after?.kind === before.kind ? partsOf(after) : [];
+  const last = shown.length - 1;
+  if (last < 0 || grown.length === 0) return [];
+  const more = grown.slice(last + 1).flatMap((item) => contentChunks(item, "item"));
+  return [...contentGrowth(shown[last] ?? [], grown[last] ?? []), ...more];
 }
 
 // The chunks that grow `before` into `after`, where `before` is a prefix of `after`.
