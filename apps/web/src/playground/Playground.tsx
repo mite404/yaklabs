@@ -126,7 +126,7 @@ function ExchangeView({
 }
 
 /**
- * The live playground page (ADR-148): the user's messages go to the gateway, which runs the
+ * The live playground page (ADR-155): the user's messages go to the gateway, which runs the
  * model's tool loop and streams typed events back. `reducePlayground` holds all behaviour;
  * this component only dispatches, streams and renders. Nothing is saved.
  */

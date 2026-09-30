@@ -1,5 +1,9 @@
 {
   "permissions": {
-    "allow": ["mcp__Figma"]
+    "allow": [
+      "mcp__Figma",
+      "Bash(git commit:*)",
+      "Bash(git push:*)"
+    ]
   }
 }

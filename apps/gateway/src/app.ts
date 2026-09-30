@@ -135,7 +135,7 @@ export const createApp = ({ verifyToken, upstream, shares }: Dependencies) => {
       .post("/api/messages", requireSession, messagesBody, (c) =>
         ndjsonReply(c, () => openReply(upstream, c.req.valid("json"))),
       )
-      // The playground (ADR-148): the gateway owns the prompt, the tools and the tool loop, and
+      // The playground (ADR-155): the gateway owns the prompt, the tools and the tool loop, and
       // streams typed events. Signed in only, since every round costs money. A closed browser
       // aborts the request's signal, which stops the rounds' token spend.
       .post("/api/playground", requireSession, playgroundBody, (c) =>

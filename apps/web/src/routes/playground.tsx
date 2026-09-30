@@ -6,7 +6,7 @@ export function meta() {
 }
 
 /**
- * The live playground (ADR-148), a standalone route outside `_app`'s runtime: it talks to the
+ * The live playground (ADR-155), a standalone route outside `_app`'s runtime: it talks to the
  * gateway directly and keeps nothing. Sign-in guards it wherever the build has sign-in.
  */
 export default function PlaygroundRoute() {

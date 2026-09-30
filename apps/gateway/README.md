@@ -21,7 +21,7 @@ one allowed origin in WorkOS (ADR-086).
     request, without the upstream body or the key.
 - `POST /api/playground` takes the playground's history (`playgroundRequestSchema` in
   `@yaklabs/catalog/playground`), behind the same token check, and runs the tool loop for
-  `/playground` (ADR-148):
+  `/playground` (ADR-155):
   - the prompt and the tool loop live here, never in the browser (`src/playground.ts`); the
     five tool definitions are shared schema from `@yaklabs/catalog/playground`;
   - each round's tool calls are checked with the catalog's own validators; a bad call goes back

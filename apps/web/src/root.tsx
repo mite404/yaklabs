@@ -41,7 +41,9 @@ export function Layout({ children }: { children: ReactNode }) {
 }
 
 // WorkOS AuthKit in the browser (ADR-084); the provider also finishes the sign-in when the
-// callback route loads with a code. Dev mode keeps tokens in localStorage on localhost only.
+// callback route loads with a code. Dev mode everywhere keeps the refresh token in localStorage:
+// without a custom auth domain, the alternative is a cookie on api.workos.com, which the
+// browser blocks as third-party, so every reply after the first token expired failed (ADR-147).
 function Providers({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   if (env.auth.kind === "none") return children;
@@ -49,7 +51,7 @@ function Providers({ children }: { children: ReactNode }) {
     <AuthKitProvider
       clientId={env.auth.clientId}
       redirectUri={env.auth.redirectUri}
-      devMode={window.location.hostname === "localhost"}
+      devMode
       onRedirectCallback={({ state }) =>
         void navigate(safeReturnTo(state, window.location.origin), { replace: true })
       }
