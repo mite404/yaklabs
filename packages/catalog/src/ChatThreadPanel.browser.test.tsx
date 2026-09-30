@@ -295,6 +295,40 @@ it("lets a host set the draft and send it in one go", async () => {
   replies[0]?.finish();
 });
 
+it("lets a host step a card by its stop's label, and the choice rides with the next message", async () => {
+  const { agent, replies } = controlledAgent();
+  const handle = createRef<ThreadHandle>();
+  flushSync(() => {
+    root.render(<ChatThreadPanel thread={threads.profit} agent={agent} ref={handle} />);
+  });
+  const slider = host.querySelector<HTMLInputElement>('input[type="range"]');
+  expect(slider?.getAttribute("aria-valuetext")).toBe("Gross profit");
+
+  flushSync(() => {
+    handle.current?.choose("Net profit");
+  });
+  expect(slider?.getAttribute("aria-valuetext")).toBe("Net profit");
+  expect(host.textContent).toContain("Net profit · Sep 14–20");
+
+  flushSync(() => {
+    handle.current?.choose("No such measure");
+  });
+  expect(slider?.getAttribute("aria-valuetext")).toBe("Net profit");
+
+  handle.current?.setDraft("What about the drop?");
+  handle.current?.send();
+  await vi.waitFor(() => {
+    expect(replies).toHaveLength(1);
+  });
+  expect(replies[0]?.event).toMatchObject({
+    kind: "message",
+    attachments: [{ state: { measure: "Net profit" } }],
+  });
+  // Sent, the card keeps the view the agent now knows.
+  expect(slider?.getAttribute("aria-valuetext")).toBe("Net profit");
+  replies[0]?.finish();
+});
+
 it("leaves no turn behind for a reply that ends having said nothing", async () => {
   const { agent, replies } = controlledAgent();
   flushSync(() => {

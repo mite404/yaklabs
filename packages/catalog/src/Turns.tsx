@@ -228,6 +228,7 @@ function EndedNote({
  * @param onRetry Asks for a reply that stopped short again; without it there is no Try again.
  * @param stamp How long ago this reply arrived, on the thread's latest reply alone: "just now",
  * then in 20-minute steps (turnTime.ts). Absent on every other turn.
+ * @param measure The stop its interactive card shows, when the host holds the choice.
  */
 export function AgentTurn({
   message,
@@ -236,6 +237,7 @@ export function AgentTurn({
   shareable = true,
   onRetry,
   stamp,
+  measure,
   ref,
 }: {
   message: AgentMessage;
@@ -244,6 +246,7 @@ export function AgentTurn({
   shareable?: boolean;
   onRetry?: (turnId: string) => void;
   stamp?: string;
+  measure?: string;
   ref?: Ref<HTMLElement>;
 }) {
   const carries = cardsCarry !== false;
@@ -271,6 +274,7 @@ export function AgentTurn({
           payload={message.interactive}
           turnId={message.id}
           onChoose={onChoose}
+          measure={measure}
           draggable={carries}
           shareable={shareable}
         />

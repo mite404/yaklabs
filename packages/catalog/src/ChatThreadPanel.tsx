@@ -22,7 +22,7 @@ import { DictationModal, type DictationSource } from "./DictationModal";
 import { IconButton } from "./IconButton";
 import { StepIcon } from "./icons";
 import { labAgent } from "./labAgent";
-import { resolveInteractive, type CardAttachment } from "./interactive";
+import { attachmentLabel, resolveInteractive, type CardAttachment } from "./interactive";
 import { ReadingTools } from "./ReadingTools";
 import { Recap } from "./Recap";
 import { shouldShowRecap, type RecapItem, type ThreadActivity } from "./recapRules";
@@ -392,12 +392,14 @@ function Turn({
   onRetry,
   cardsCarry,
   stamp,
+  measure,
 }: {
   message: ThreadMessage;
   onChoose: (attachment: CardAttachment) => void;
   onRetry: (turnId: string) => void;
   cardsCarry: boolean | undefined;
   stamp: string | undefined;
+  measure: string | undefined;
 }) {
   return message.role === "user" ? (
     <UserTurn ref={landOn} message={message} />
@@ -409,6 +411,7 @@ function Turn({
       onRetry={onRetry}
       cardsCarry={cardsCarry}
       stamp={stamp}
+      measure={measure}
     />
   );
 }
@@ -429,6 +432,8 @@ type Outbox = {
   /** The compose box's chips, cards first. */
   attachments: { id: string; label: string; kind: "card" | "file" }[];
   choose: (attachment: CardAttachment) => void;
+  /** The stop a card shows: the choice pending for it, else what the agent last saw. */
+  measureOf: (turnId: string) => string | undefined;
   remove: (id: string) => void;
   attach: (picked: File[]) => void;
   /** Empties the outbox for a send and remembers what the agent now knows of each card. */
@@ -449,6 +454,7 @@ function useOutbox(initial: ThreadMessage[]): Outbox {
       return next;
     });
   };
+  const measureOf = (turnId: string) => pending[turnId]?.state.measure ?? reported[turnId];
   const remove = (id: string) => {
     setFiles((current) => current.filter((item) => item.id !== id));
     setPending((current) => {
@@ -486,10 +492,40 @@ function useOutbox(initial: ThreadMessage[]): Outbox {
       ...files.map((item) => ({ id: item.id, label: item.file.name, kind: "file" as const })),
     ],
     choose,
+    measureOf,
     remove,
     attach,
     take,
   };
+}
+
+// The latest turn that carries an interactive card, searched from the end.
+function latestInteractive(messages: ThreadMessage[]): ThreadMessage | undefined {
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const message = messages[i];
+    if (message.role === "agent" && message.interactive !== undefined) return message;
+  }
+  return undefined;
+}
+
+// The card choice a host asks for by label: on the turn named, else the latest turn with an
+// interactive card; undefined when no such card or stop exists.
+function choiceOf(
+  messages: ThreadMessage[],
+  measure: string,
+  turnId: string | undefined,
+): CardAttachment | undefined {
+  const turn =
+    turnId === undefined
+      ? latestInteractive(messages)
+      : messages.find((message) => message.id === turnId);
+  if (turn?.role !== "agent") return undefined;
+  const result = resolveInteractive(turn.interactive);
+  if (result.kind !== "approved") return undefined;
+  const { control, period } = result.selection.props;
+  const stop = control.stops.find((each) => each.label === measure);
+  if (stop === undefined) return undefined;
+  return { turnId: turn.id, label: attachmentLabel(stop, period), state: { measure: stop.label } };
 }
 
 // Only a valid question becomes a card; a malformed one goes back to the agent, which asks
@@ -926,6 +962,10 @@ export function ChatThreadPanel({
     answer: (text) => {
       if (awaiting !== undefined) answer(text);
     },
+    choose: (measure, turnId) => {
+      const choice = choiceOf(messages, measure, turnId); // → the attachment, or none
+      if (choice !== undefined) outbox.choose(choice);
+    },
     stop: replies.stop,
     retry,
   }));
@@ -973,6 +1013,7 @@ export function ChatThreadPanel({
               onRetry={retry}
               cardsCarry={cardsCarry}
               stamp={item.message === stamped ? stampOf(item.message.time, clock) : undefined}
+              measure={outbox.measureOf(item.message.id)}
             />
           ),
         )}

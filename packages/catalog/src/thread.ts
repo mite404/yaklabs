@@ -50,8 +50,8 @@ export type ThreadMessage =
 
 /**
  * What a host that drives the thread can do (a scripted demo, a test): fill and send the
- * compose box, answer the docked question, stop every reply in flight, or try a stopped reply
- * again. Every call takes the same path a person's click would.
+ * compose box, answer the docked question, step a card, stop every reply in flight, or try a
+ * stopped reply again. Every call takes the same path a person's click would.
  */
 export type ThreadHandle = {
   setDraft(text: string): void;
@@ -59,6 +59,12 @@ export type ThreadHandle = {
   send(): void;
   /** Answers the docked question with a tile's label or typed text. */
   answer(text: string): void;
+  /**
+   * Steps an interactive card to the stop named by its label, as the card's own control would,
+   * so the choice rides along with the next message (ADR-030): the card on the turn named, or
+   * the latest turn that carries one. Nothing happens for a label the card lacks.
+   */
+  choose(measure: string, turnId?: string): void;
   /** Stops every reply still streaming; each is marked cancelled, never complete. */
   stop(): void;
   /**
