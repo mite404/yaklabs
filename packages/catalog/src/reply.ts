@@ -16,14 +16,16 @@ export type StepStatus = "pending" | "running" | "done" | "failed" | "cancelled"
 
 /**
  * One step of the work behind a reply (ADR-139): a check, a tool run, or a child thread the
- * agent spawned (`threadId`). `outcome` is what a reader needs; `evidence` is a catalog card
- * that backs it. Only `outcome` and `evidence` go in Work details; the logs go one level deeper.
+ * agent spawned (`threadId`). `outcome` is what a reader needs; `basis` is a few short lines on
+ * how it was reached; `evidence` is a catalog card that backs it. Only these go in Work details;
+ * the logs go one level deeper.
  */
 export type WorkStep = {
   id: string;
   label: string;
   status: StepStatus;
   outcome?: string;
+  basis?: string[];
   evidence?: unknown;
   threadId?: string;
 };
@@ -92,6 +94,7 @@ export const workStepSchema = z.object({
   label: z.string(),
   status: z.enum(["pending", "running", "done", "failed", "cancelled"]),
   outcome: z.string().optional(),
+  basis: z.array(z.string()).optional(),
   evidence: z.unknown().optional(),
   threadId: z.string().optional(),
 });

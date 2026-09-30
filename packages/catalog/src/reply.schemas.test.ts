@@ -43,6 +43,7 @@ const events: ReplyEvent[] = [
       label: "Count cases",
       status: "done",
       outcome: "46 open",
+      basis: ["Counted open tickets at close", "Left out the weekend"],
       evidence: { rows: 3 },
       threadId: "t-1",
     },

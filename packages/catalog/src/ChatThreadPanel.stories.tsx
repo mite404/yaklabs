@@ -842,8 +842,9 @@ export const AnsweredQuestions: Story = {
 };
 
 /**
- * Work details open: each step's state in a word, its outcome and its evidence, a branch marking
- * the one that ran as a child thread. Technical details stay folded until asked for.
+ * Work details open: each step's state in a word, its outcome, the lines that say how it was
+ * found, and its evidence, a branch marking the one that ran as a child thread. Technical details
+ * stay folded until asked for.
  */
 export const WorkDetailsOpen: Story = {
   args: { thread: threads.brief },
@@ -852,6 +853,9 @@ export const WorkDetailsOpen: Story = {
     await userEvent.click(canvas.getByRole("button", { name: /Work finished/ }));
     await expect(canvas.getByText("Weekly workload")).toBeVisible();
     await expect(canvas.getByText("Child thread:")).toBeInTheDocument();
+    const [workload] = canvas.getAllByRole("list", { name: "How this was found" });
+    await expect(within(workload).getAllByRole("listitem")).toHaveLength(2);
+    await expect(workload).toHaveTextContent("Took the busiest day's count as the peak");
     const technical = canvas.getByRole("button", { name: "Technical details" });
     await expect(technical).toHaveAttribute("aria-expanded", "false");
     await userEvent.click(technical);

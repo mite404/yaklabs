@@ -228,6 +228,10 @@ const brief: Thread = {
             label: "Weekly workload",
             status: "done",
             outcome: "Closed cases by day, Sep 14–20: the peak was Saturday at 62.",
+            basis: [
+              "Counted the cases closed each day in the service desk export",
+              "Took the busiest day's count as the peak",
+            ],
             evidence: scenarios.table.payload,
             threadId: "workload-check",
           },
@@ -236,6 +240,7 @@ const brief: Thread = {
             label: "Cases by team",
             status: "done",
             outcome: "Support closed 84, Operations 71 and Success 56.",
+            basis: ["Grouped the week's closed cases by the team that closed them"],
           },
         ],
         logs: [

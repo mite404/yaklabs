@@ -617,6 +617,17 @@
   font-size: 15px;
   line-height: 24px;
 }
+/* How the outcome was reached (pillar 30): a few lines under it, set as the narration one fold
+   down is, a step smaller in the body ink, so the finding stays the loudest line of the row. */
+.work-step-basis {
+  max-width: 510px; /* the prose's measure */
+  margin: 0;
+  padding-left: 22px; /* .work-narration's indent */
+  list-style: disc; /* as the prose's lists: nested in the steps' list it would turn to circles */
+  color: var(--soft-ink);
+  font-size: 13px;
+  line-height: 20px;
+}
 .work-step > .card {
   margin-top: 10px; /* with the row's 2px, the 12px a card keeps from the text above it */
 }
