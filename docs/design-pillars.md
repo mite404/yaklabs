@@ -397,6 +397,39 @@ The Pixels results list displays up to ten complete rows before scrolling (Ethan
 follows
 the rendered rows so source-path wrapping and font changes do not hide entries (derived).
 
+### 29. Quiet prose: one reading treatment, streaming or finished
+
+Every agent reply renders through the catalog's own prose component (ADR-140, ADR-146), never a
+Markdown renderer's defaults, and the same rules hold while the words stream and after they
+finish, so nothing restyles as a reply completes. Emphasis is authored, never inferred: a mark on
+a run of text, set as `<strong>`, `<em>` or `<code>`.
+
+| Property | Value | Source |
+| --- | --- | --- |
+| Body | Inter 15px on a 24px line, `--soft-ink` | Ethan (Candidate A) |
+| Paragraph gap | 16px | Ethan |
+| Heading | body size, 600, `--ink`, 32px above and 4px below | Ethan |
+| Emphasis | 600 in `--ink`; italics from Inter's own italic cut, `font-synthesis: none` | Ethan |
+| Measure | 510px for text; a card between paragraphs takes the thread's 80ch | Ethan |
+| Card between paragraphs | 16px above and below | derived (the paragraph gap) |
+| Code | 13px on 20px, ui-monospace, on `--paper-deep`, 3px corners | derived |
+| Narration under a streaming reply | 13px on 20px, `--soft-ink`, the working glyph before it | derived (ADR-139) |
+| A reply that stopped short | its label in 600 `--ink`, why in `--soft-ink`, a 2px `--hairline` rule at the left | derived (ADR-139) |
+
+### 30. The answered surface, the folded request and the running status
+
+Three surfaces the legibility demo added, all built from the thread's own tokens (ADR-142,
+ADR-149).
+
+| Property | Value | Source |
+| --- | --- | --- |
+| Answered surface | `--paper`, 1px `--hairline`, 12px corners, 12px 16px padding | Ethan (screenshot) |
+| Question over answer | 13px on 20px `--soft-ink`, then 15px on 24px 500 `--ink`, 2px apart; pairs 12px apart | derived |
+| Folded request | eight lines (192px), a fade over the last 48px, Show more in 13px `--soft-ink` to `--ink` over 150ms | Ethan (screenshot) |
+| Running status by the compose box | paper, `--hairline`, 8px corners, 13px on 20px, shown 48px or more above the end | derived (ADR-142) |
+| Child footnote | 12px `--soft-ink`; the Running pill in `--bubble-tint-strong` with `--bubble-line`, 11px 500 | Ethan (ADR-142) |
+| Work details header | 13px 500, its chevron first, its count in 12px `--soft-ink` beside the label | derived (ADR-143's float) |
+
 ## Open questions
 
 - Whether the stepped slider, dictation controls, links and the primary button should move from

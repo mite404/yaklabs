@@ -155,6 +155,18 @@ docks beside it or slides out from behind its edge. Think of a camera gate: the 
 frame, bolted to the camera, and the panel is film passing behind it. The frame is never in the
 way of the picture, and the picture never slides over the frame (ADR-144).
 
+Then the interview demo moved into the house it was built for. The weekly brief had lived on a page
+of its own, with a cardboard sidebar and a stage machine of its own, while the real shell sat next
+door. Ethan asked for the real thing: `/demo/weekly-brief` now draws the whole app, title bar and
+tabs, rail, projects panel, the bare main thread, over a runtime built in the page from a script,
+and a player that types into the real compose box, answers the real Needs attention card, presses
+the real Stop. To get there the reply seam learned to carry more than words (ADR-146): progress
+narration, blocks of prose, cards, steps of work, a question, a failure, folded into a turn by one
+pure function. Every reply in the app now reads as Quiet prose, a reply that stops short says so
+and offers Try again, an answer shows with the question it answered, a long request folds behind
+Show more, and a jump to your latest request finally lands centred (ADR-147 to ADR-150). Three
+scenarios play in under a minute each at 1x, with a 2x for the impatient.
+
 ## 2. Cast & Crew
 
 The first entries are ideas from before any code existed; the rest are parts of the running app.
@@ -267,6 +279,32 @@ The first entries are ideas from before any code existed; the rest are parts of 
   it cannot open. The page seals the thread and keeps the key in the link's `#`, which browsers
   never send, so the vault stores a locked box with a destruction date stamped on it (KV's TTL)
   and a hash of the receipt that lets its owner pull it early (ADR-131).
+- **The reply fold** (`packages/catalog/src/reply.ts`) is the editor at the Steenbeck: the
+  stream arrives as words and events, and one function, `applyChunk`, cuts each chunk into the
+  turn's structure: prose blocks, the work record, the narration line, how it ended. The panel
+  never reads a chunk itself; it hands every one to the fold and shows what comes back
+  (ADR-146).
+- **Quiet prose** (`packages/catalog/src/QuietProse.tsx`) is the house typesetter. It takes the
+  fold's blocks and sets them in one treatment, 15px on 24px, emphasis at 600, real italics, a
+  card between paragraphs at the thread's width, the same before and after a reply finishes
+  (ADR-140).
+- **Work details** (`packages/catalog/src/WorkDetails.tsx`) is the production binder clipped
+  under a reply: each step with its state in a word, what it found and the card that backs it,
+  and one disclosure deeper the narration the agent moved past and its technical lines
+  (ADR-139).
+- **The demo runtime** (`apps/web/src/demo/runtime.ts`, with `store.ts`, `edits.ts`,
+  `replies.ts` and `verbs.ts`) is a soundstage built to the plans of the real one: the same
+  `Runtime` doors, an in-memory workspace, a scripted agent for the main thread that spawns,
+  runs and settles child threads as its steps name them, and the lab stand-in for every other
+  thread (ADR-147).
+- **The player** (`apps/web/src/demo/player.ts`) is the actor who plays the user: it types each
+  request into the compose box, answers the docked question, presses Stop and Try again, all
+  through the panel's own handle, and waits on the runtime for each reply to settle. One clock
+  (`clock.ts`) paces it and the agent alike, so Pause holds everything and 2x speeds everything.
+- **The Door's paths** (`apps/web/src/runtime.tsx`) are the call sheet's addresses: the Door now
+  says where a thread lives, where home is and which thread a pathname names, so the same shell
+  runs under `/t/:threadId` and under the demo's route without a single link knowing the
+  difference.
 
 ## 3. Behind the Scenes
 
@@ -481,6 +519,30 @@ The first entries are ideas from before any code existed; the rest are parts of 
 - **A dim ink chosen by calculation.** "Dimmed" is easy to overdo until the title fails
   contrast. `--faint-ink` was computed to sit visibly under soft ink yet still clear 4.5:1 on both
   papers in both themes (ADR-129).
+- **Events on the seam, not a controlled panel.** Two whole shapes were on the table: widen
+  `Agent.respond` to yield events beside words, or turn the panel into a view whose host owns
+  the messages. The seam won: existing agents keep working unchanged (a word stream is a subtype),
+  the demo exercises the path a real backend would take, and the diff stays in the catalog and
+  the demo. The controlled panel is the eventual shape once the runtime persists structured
+  turns, and is recorded as such (ADR-146).
+- **The turn is its own placeholder.** A reply's turn appears the moment it is asked for, so
+  "Thinking…" shows at once even for an agent that goes quiet before speaking, and a reply that
+  ends having shown nothing leaves no turn. One list of turns, no separate list of pending ones.
+- **Stop marks turns cancelled at once.** It does not wait for each stream to notice the abort:
+  a stream waiting on a slow source may not wake for a while, and Stop has to show at once. Chunks
+  that arrive after are ignored, and a browser test proves it.
+- **The runway, not a taller thread.** A jump to a turn near the end could not centre because the
+  scroller had no room below its last turn. The fix adds exactly the missing room as padding and
+  takes it back when the reader scrolls it out of view or a new turn lands, rather than padding
+  every thread with half a screen of nothing (ADR-148).
+- **Work details leads with its chevron.** At the header's far right the chevron sat under the
+  reading tools, which float over the newest turn's bottom-right corner by design (ADR-143). A
+  control hidden under a control is worse than a word covered, so the chevron moved first.
+- **Beats wait on replies, except when they overlap.** A user beat after a reply waits for that
+  reply to settle; one marked to overlap counts from the beat before it. Without the exception,
+  the background scenario's Stop would wait for the very job it is meant to stop (ADR-147).
+- **One clock for the script and the agent.** The player's keystrokes and the agent's word pauses
+  wait on the same clock, so Pause is one flag and 2x one number, and the two can never drift.
 
 ## 4. Bloopers
 
@@ -1284,6 +1346,40 @@ Stepping quickly through search matches left a trail: each jump started its own 
 nothing cleared the last one. With reduced motion, where the glow now holds still, three turns
 sat outlined at once and none of them said "you are here". A jump now clears every glow in the
 thread before it lights the new one.
+
+### The maths was right and the room was wrong
+
+Ethan reported that a jump to a previous request did not centre it. The centring function was
+measured first, in the long scenario: a jump to the tenth request landed 2px off centre, a search
+hit likewise. Then a jump to the latest request landed 217px low. Nothing was wrong with the sum;
+the scroller had reached its maximum scroll and had no room below the last turn to scroll into.
+Every fix that touched the centring math would have failed. The fix adds the missing room, exactly
+the shortfall, as padding a jump lays down and takes back (ADR-148). Reproduce before you fix: the
+bug was where the eye said it was, not where the code said it was.
+
+### The server that would not die
+
+The demo's browser check kept reading `<strong>` at weight 700 where the stylesheet said 600, after
+the stylesheet had been rewritten and the dev server "restarted". The served module was the old
+file, comments and all. The restart had killed nothing: the kill pattern matched the shell that ran
+it, which died first, and the fresh server, finding 5173 taken, quietly took 5174. The check ran
+against the survivor for half an hour. Check the listener before trusting the restart: `ps` and the
+port, not the log line that says "started".
+
+### An array method the library did not have
+
+`steps.with(at, step)` is the tidiest way to replace one element, and TypeScript refused it: the
+catalog's `lib` predates it. A map with an index check does the same in one line. The lesson is
+smaller than the fix: run the package's own typecheck before the repo's, because the repo-wide run
+stops at the first package and hides the rest.
+
+### A word stream that no longer typed
+
+Widening the seam to carry events broke the worker in a place no test named: its reply loop
+concatenated every chunk with `+=`, and the lint step, not the typecheck, was what went red in CI.
+The loop now forwards words and passes over events until the protocol can carry them (ADR-146).
+When a type widens, grep for every consumer that assumed the narrow one; the compiler only finds
+the ones that break loudly.
 
 ## 5. Director's Commentary
 
@@ -2812,3 +2908,82 @@ same `messages` the panel renders from means the binder and the page can never d
 Senior-engineer takeaway: a tool that points at things should not also move them. Give it the
 data, take back an intent, and let the owner of the scroll, the focus or the network carry it
 out.
+
+### One fold builds the turn: the transcript is a view over events
+
+The panel used to append text to a bubble. Now a reply is a stream of chunks, words and events
+alike, and one pure function turns them into the turn the reader sees. The panel does not know
+what a "step" or a "failure" is; it knows how to hand a chunk to the fold and draw the result.
+
+```ts
+// packages/catalog/src/reply.ts: the whole reply, one chunk at a time
+let turn = startReply("reply-1", "now");                       // → { text: "", streaming: true }
+turn = applyChunk(turn, { kind: "activity", text: "Thinking." }); // → activity set
+turn = applyChunk(turn, { kind: "step", step: running });         // → work.steps: [running]
+turn = applyChunk(turn, { kind: "text", text: "46", mark: "strong" }); // → blocks: [paragraph]
+turn = applyChunk(turn, { kind: "failure", failure });            // → ended: "interrupted"
+```
+
+```mermaid
+sequenceDiagram
+  participant A as Agent.respond()
+  participant P as ChatThreadPanel
+  participant F as applyChunk (pure)
+  participant D as Dock
+  A->>P: "Thinking." (activity)
+  P->>F: fold
+  F-->>P: turn with activity
+  A->>P: step, words, card
+  P->>F: fold each
+  F-->>P: turn with blocks and work
+  A->>P: question
+  P->>D: dock Needs attention
+  A-->>P: stream ends
+  P->>F: completeReply
+```
+
+Why it matters: the same fold serves the lab stand-in, the scripted demo and, later, a gateway
+that streams structured chunks. Testing the reading experience is testing a function with an
+array in and a turn out; no browser needed until the pixels are the question.
+
+The film version: rushes arrive out of the camera as a stream; the editor's cut is what the
+audience sees. Nobody shows rushes. The fold is the editor.
+
+Senior-engineer takeaway: when a stream grows a second kind of item, do not add a second
+consumer. Widen the type, keep one fold, and let the compiler's `never` check tell you where a new
+kind of chunk has no cut yet.
+
+### Lay runway, then land
+
+Centring a turn is one line of arithmetic. Landing it is a question of room: the scroller can only
+scroll as far as its content lets it. When the target is near the end, the right answer lies past
+the last pixel, and the browser clamps.
+
+```ts
+// packages/catalog/src/threadReveal.ts: the room a jump needs, in px; 0 when the reach is enough
+export function runwayFor(target: Span, view: Viewport): number {
+  const band = view.height - view.insetTop - view.insetBottom;
+  const centered = target.top - view.insetTop - (band - (target.bottom - target.top)) / 2;
+  return Math.max(Math.ceil(centered - view.maxScrollTop), 0); // → the shortfall past the end
+}
+```
+
+```mermaid
+flowchart LR
+  J[jump to turn] --> R{runwayFor > 0?}
+  R -- no --> C[centre and glow]
+  R -- yes --> L["set --jump-runway (padding)"] --> C
+  C --> W[wait out the jump's own scroll]
+  W --> E{reader scrolls with the end in view, or a turn lands}
+  E -- yes --> X[release the runway: nothing moves]
+```
+
+The runway is padding, so it costs nothing to lay and nothing to remove when removing it moves
+nothing. The reader never sees it as a thing; they see the turn where they expected it.
+
+The film version: a dolly move that ends at the edge of the set needs track laid past the edge.
+You lay it, take the shot, and strike it before the next setup.
+
+Senior-engineer takeaway: when a correct calculation lands wrong, look for the constraint that
+clamped it before you touch the calculation. Then relax the constraint for exactly as long as the
+move needs.

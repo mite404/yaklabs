@@ -1987,3 +1987,104 @@ since 12px is half a one-line pill's height. The rail's own provider and its del
 since the app's provider now carries the same values. A new label cannot come out in another
 shape without editing `packages/ui/src/components/tooltip.tsx`. P23 and P28 read the pills, and
 the web checks read a cut row's name on hover and focus and a name that wraps.
+
+## ADR-146 - The reply seam carries events, not only words
+
+2026-09-30 - Accepted (Ethan's goals for the legibility demo: an interleaved conversation, honest
+failures, work details behind a disclosure). Widens ADR-041; builds on ADR-139 and ADR-140.
+A reply streams as chunks: words, as a model streams tokens, and the events around them: progress
+narration, a block boundary (paragraph, heading, list item), a card, a step of the work with its
+status and outcome, a technical line, a question the agent is blocked on, and a failure. A plain
+word stream is still a valid reply, so the lab stand-in and the gateway runtime are untouched;
+the worker's loop forwards the words and passes over the events until its protocol can carry them.
+One pure fold (`applyChunk`, `packages/catalog/src/reply.ts`) builds an agent turn from the
+stream: words grow the plain text always and the structured blocks once the reply has any
+structure, runs of one mark join into one `<strong>`, narration supersedes and is kept, and a
+failure ends the turn as interrupted (words shown) or failed (none), never as complete. The panel
+owns the lifecycle around it: the turn appears as the reply is asked for and is its own
+"Thinking…" placeholder; a question docks the Needs attention card; Stop marks every reply in
+flight and its unfinished steps cancelled at once; Try again sends the same request again as a new
+turn and keeps the old one with its label; a reply that ends having shown nothing leaves no turn.
+Every agent turn now renders through the catalog's own Quiet prose (`QuietProse.tsx`): a plain
+reply is one paragraph, so `/t/profit` and the demo read the same. The turn model
+(`ThreadMessage`) gains `blocks`, `work`, `activity`, `ended` and `failure`; a user turn records
+the `question` it answered. The runtime's protocol schema still parses the old fields only, so
+structured turns are not persisted yet: that is the seam the worker learns next, not a change made
+here (ADR-137).
+Alternatives weighed: a controlled panel whose host owns the messages (the eventual shape once the
+runtime is the source of truth for turns; every host would change today), and a worker scenario
+with a structured protocol (the backend project the goals defer).
+
+## ADR-147 - The scripted demo plays on the real shell from an in-memory runtime
+
+2026-09-30 - Accepted (Ethan: "/demo/weekly-brief should render the whole app shell and the main
+chat thread component"). Supersedes the standalone demo page of ADR-139 and ADR-140.
+`/demo/weekly-brief` is a route layout that composes the same shell as `/t/:threadId` (the
+window, its title bar and tabs, the rail, the projects panel, the deck of panes) over a runtime
+built in the page, no worker: an in-memory workspace seeded from a scenario script, whose agent
+for the main thread streams the script's reply events through the widened seam (ADR-146). A step
+that names a child thread creates that child in the workspace and its lane on the canvas, marks
+it replying while it runs, and writes its outcome into it when it finishes, so the sidebar's
+working glyphs, the canvas and the bell show real threads. Every other thread is answered by the
+lab stand-in, and the workspace's other verbs work in memory.
+The Door (`runtime.tsx`) owns the page's paths (`Paths`: a thread's, home's, the Lab's, and the
+thread a pathname names), so the shell's links stay under the demo's address; `ProvidedRuntime`
+puts a started runtime in the Door, and `Window` takes a `banner` for the demo's controls, drawn
+between the title bar and the body.
+A player performs the scenario's user beats through the thread's own controls (`ThreadHandle`:
+fill and send the compose box, answer the docked question, stop, try again), so the demo
+exercises the path a person's click takes. A beat after a reply waits for that reply to settle;
+one marked to overlap counts from the beat before it, so a second request goes out while the
+first reply streams. A presenter who answers the question first is not answered for again. One
+clock carries the rate (1x or 2x) and the pause, so Pause holds the streaming too. Restart
+remounts the shell on a fresh workspace; the 2x setting outlives it. Under reduced motion the
+words of one block arrive together. A thread pane whose thread was worked on elsewhere (a child a
+parent finished) reads its turns again once that work settles, so a lane opened mid-run does not
+keep saying "Working on it".
+The demo says it is scripted and that nothing is sent, in its own bar. Three scenarios, each
+under a minute at 1x (`scripts.test.ts` guards it): the weekly brief (narration, two children in
+parallel, a finding with a card between paragraphs, one decision, a draft), an interrupted reply
+with its retry and a check that fails, and work in the background with a question asked meanwhile
+and a stop. Words stream at 70ms, about fourteen a second: quick enough to read as live, slow
+enough to follow the emphasis as it lands.
+Known gap: Share still publishes through the gateway from the demo; "Nothing is sent" is not yet
+true for that one action.
+
+## ADR-148 - A jump lays runway so any turn can centre
+
+2026-09-30 - Accepted (Ethan: a jumped-to request and a search hit "should be vertically centered
+within the chat main thread component"; measured, they were not near the end). Amends ADR-022 and
+ADR-143.
+Measured in the long scenario: a jump to the tenth request lands its middle 2px off the
+scroller's middle, a search hit likewise, and a jump to the latest request 217px low. The centring
+was right; the scroller had no room below its last turn, so the scroll clamped at its end.
+A jump now lays runway: extra bottom padding (`--jump-runway`) equal to the shortfall, so the turn
+can sit centred, then scrolls. The runway is released when a new turn lands, or when the reader
+scrolls with the natural end in view, where releasing moves nothing; the jump's own smooth scroll
+is waited out first (`scrollend`, or 600ms where a browser lacks it). A thread that fits its view
+has nothing to scroll and keeps only the glow. The reading tools story now requires the target to
+be centred, the latest request and the last search hit included.
+
+## ADR-149 - An answer reads with its question; a long request folds
+
+2026-09-30 - Accepted (Ethan's screenshots: the answered-question surface "we can just straight up
+copy", and the folded long message with Show more).
+Answering the Needs attention card no longer echoes the choice as a user bubble. The turn records
+the question it answered and the thread shows question and answer together on one paper surface
+with a hairline, the question in soft ink over the answer in ink; consecutive answers share the
+surface, each pair keeping its own turn id so a jump or a search still lands on it. The list of
+requests skips answers, since an answer is not a request.
+A user bubble taller than eight lines (192px at its 24px line) folds to that height under a fade
+over its last two lines, with Show more inside the bubble; Show less folds it back. Line breaks
+the user typed or pasted stay where they were. Nothing else about the bubble changes (ADR-025,
+ADR-047).
+
+## ADR-150 - Child threads carry one glyph
+
+2026-09-30 - Accepted (Ethan: "some icon for child threads since those will either be spawned by
+an agent or will be a new thread a user has spun off from a main thread").
+A branch leaving a trunk (`ChildThreadIcon`) marks a child thread wherever it is named: the
+sidebar row, where "↳" stood, and a step of work that ran in a child. The same glyph serves an
+agent-spawned child and one the user spun off; the working glyph beside it says which is busy.
+Below a child's compose box: "Controlled by parent thread", with a Running pill in the user
+bubble's fill while its work is in flight by the runtime's own state (ADR-141, ADR-142).
