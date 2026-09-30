@@ -58,8 +58,8 @@ const appendText = (round: Round, index: number, block: TextBlock, delta: string
   return out === "" ? step : { ...step, text: { blockId: next.blockId, delta: out } };
 };
 
-// A block's opening. Ids are the gateway's own (`t{round}_{index}`), unique across the turn
-// whatever the model mints.
+// A block's opening. Ids are the gateway's own (text `r{round}b{index}`, tool calls
+// `t{round}_{index}`), unique across the turn whatever the model mints.
 const startBlock = (round: Round, index: number, content: Anthropic.ContentBlock): RoundStep => {
   if (content.type === "text") {
     const blockId = `r${round.number}b${index}`;

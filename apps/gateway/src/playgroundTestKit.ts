@@ -215,3 +215,22 @@ const upstreamBodySchema = z.object({ messages: z.array(z.unknown()) });
 /** The messages the gateway sent upstream in request `n`. */
 export const sentMessages = async (requests: readonly Request[], n: number): Promise<unknown[]> =>
   upstreamBodySchema.parse(await requests[n]?.clone().json()).messages;
+
+/** The events after `start`, without their seq, for readable expectations. */
+export const shape = async (response: Response): Promise<Record<string, unknown>[]> =>
+  (await readEvents(response))
+    .slice(1)
+    .map((event): Record<string, unknown> =>
+      Object.fromEntries(Object.entries(event).filter(([key]) => key !== "seq")),
+    );
+
+/** The streamed events of one request, saying `said`, to an app scripted with `rounds`. */
+export const eventsFor = async (said: string, ...rounds: (() => Response)[]) => {
+  const { app, requests } = playgroundApp(...rounds);
+  const events = await shape(await postPlayground(app, say(said)));
+  return { events, requests };
+};
+
+/** A round whose server-sent events are exactly `body`, well-formed or not. */
+export const rawRound = (body: string) => (): Response =>
+  new Response(body, { headers: { "Content-Type": "text/event-stream" } });

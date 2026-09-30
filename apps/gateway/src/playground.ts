@@ -1,4 +1,4 @@
-import type { Anthropic } from "@anthropic-ai/sdk";
+import { APIError, type Anthropic } from "@anthropic-ai/sdk";
 import {
   PLAYGROUND_PROTOCOL,
   playgroundTools,
@@ -14,6 +14,7 @@ import {
   type Round,
 } from "./playgroundRound";
 import {
+  hasAnswer,
   initialTurn,
   narrate,
   stamp,
@@ -29,12 +30,14 @@ type Messages = Anthropic.MessageParam[];
 type UpstreamEvents = AsyncIterable<Anthropic.RawMessageStreamEvent>;
 
 // How a round ended, with the turn state it left behind (every seq it used included).
+// `narrated` is set once the text before the round's first tool call went to running work.
 type RoundEnd = {
   state: TurnState;
   round: Round;
   results: Anthropic.ToolResultBlockParam[];
   asked: boolean;
   broken: boolean;
+  narrated: boolean;
 };
 
 // What the loop does after a round: stop with closing events, or send the results and go on.
@@ -69,11 +72,20 @@ const MAX_ROUNDS = 8;
 const TOOLS: Anthropic.Tool[] = [...playgroundTools];
 const CUT_SHORT = "I stopped before finishing this reply.";
 const NO_RESPONSE = "The model stopped responding.";
+const NO_ANSWER = "I finished without an answer.";
 const encoder = new TextEncoder();
 
 const failureDrafts = (limitation: string, reason: "limit" | "upstream"): EventDraft[] => [
   { type: "failure", workId: null, limitation, recovery: null },
   { type: "end", reason },
+];
+
+// A turn that answered: a reply with nothing to show says so rather than ending blank.
+const answeredDrafts = (state: TurnState): EventDraft[] => [
+  ...(hasAnswer(state)
+    ? []
+    : [{ type: "failure" as const, workId: null, limitation: NO_ANSWER, recovery: null }]),
+  { type: "end", reason: "answered" },
 ];
 
 // The round's verdict. Pure: `messages` is what the next round sends when there is one.
@@ -82,21 +94,19 @@ const decide = (
   messages: Messages,
 ): Decision => {
   if (broken) return { kind: "stop", drafts: failureDrafts(NO_RESPONSE, "upstream") };
-  const toolRound = asked || (round.stop === "tool_use" && results.length > 0);
-  const narration = toolRound ? narrate(state, narrationTextIds(round)) : [];
-  if (asked) return { kind: "stop", drafts: [...narration, { type: "end", reason: "asked" }] };
+  if (asked) return { kind: "stop", drafts: [{ type: "end", reason: "asked" }] };
   if (round.stop === null) return { kind: "stop", drafts: failureDrafts(NO_RESPONSE, "upstream") };
   if (round.stop === "max_tokens")
     return { kind: "stop", drafts: failureDrafts(CUT_SHORT, "limit") };
-  if (!toolRound) return { kind: "stop", drafts: [{ type: "end", reason: "answered" }] };
-  if (state.round >= MAX_ROUNDS)
-    return { kind: "stop", drafts: [...narration, ...failureDrafts(CUT_SHORT, "limit")] };
+  if (round.stop !== "tool_use" || results.length === 0)
+    return { kind: "stop", drafts: answeredDrafts(state) };
+  if (state.round >= MAX_ROUNDS) return { kind: "stop", drafts: failureDrafts(CUT_SHORT, "limit") };
   const next: Messages = [
     ...messages,
     { role: "assistant", content: assistantContent(round) },
     { role: "user", content: results },
   ];
-  return { kind: "continue", drafts: narration, messages: next };
+  return { kind: "continue", drafts: [], messages: next };
 };
 
 // Sends one round upstream; resolves once the upstream accepts it, or throws its APIError.
@@ -117,6 +127,16 @@ const openRound = (
     { signal },
   );
 
+// The text before the round's first tool call becomes narration once a tool call has shown
+// which work is running; the blocks before a tool call are whole by the time it arrives.
+const narrateLead = (end: RoundEnd): { end: RoundEnd; events: PlaygroundEvent[] } => {
+  if (end.narrated) return { end, events: [] };
+  const drafts = narrate(end.state, narrationTextIds(end.round)); // → narration drafts
+  if (drafts.length === 0) return { end, events: [] };
+  const { state, events } = stamp(end.state, drafts);
+  return { end: { ...end, state, narrated: true }, events };
+};
+
 // One upstream event folded into the round, with the page events it makes. Pure.
 const advance = (
   end: RoundEnd,
@@ -127,9 +147,21 @@ const advance = (
   const read: RoundEnd = { ...end, round: step.round, state: text.state };
   if (step.tool === undefined) return { end: read, events: text.events };
   const { state, events, result } = translateToolUse(read.state, step.tool); // → Translation
-  const shown = [...text.events, ...events];
-  if (result === "asked") return { end: { ...read, state, asked: true }, events: shown };
-  return { end: { ...read, state, results: [...read.results, result] }, events: shown };
+  const translated: RoundEnd =
+    result === "asked"
+      ? { ...read, state, asked: true }
+      : { ...read, state, results: [...read.results, result] };
+  const narrated = narrateLead(translated); // → { end, events }
+  return { end: narrated.end, events: [...text.events, ...events, ...narrated.events] };
+};
+
+// Only the upstream failing (an APIError, which covers a dropped connection and an abort)
+// means the model stopped responding. Anything else is a bug: it is logged, and the turn
+// still ends with the upstream failure so the page never hangs.
+const noteFailure = (error: unknown): void => {
+  if (error instanceof APIError) return;
+  // oxlint-disable-next-line eslint/no-console -- a bug in the loop must reach the Worker's logs
+  console.error("[playground] round failed:", error);
 };
 
 // Streams one round's page events and returns how it ended. An upstream failure mid-round
@@ -144,6 +176,7 @@ async function* streamRound(
     results: [],
     asked: false,
     broken: false,
+    narrated: false,
   };
   try {
     for await (const event of events) {
@@ -153,7 +186,8 @@ async function* streamRound(
       // A question ends the turn here; leaving the loop cancels the rest of the round.
       if (end.asked) return end;
     }
-  } catch {
+  } catch (error) {
+    noteFailure(error);
     return { ...end, broken: true };
   }
   return end;
@@ -167,7 +201,8 @@ const tryOpenRound = async (
 ): Promise<UpstreamEvents | undefined> => {
   try {
     return await openRound(upstream, messages, signal);
-  } catch {
+  } catch (error) {
+    noteFailure(error);
     return undefined;
   }
 };

@@ -19,7 +19,9 @@ export type EventDraft = Unstamped<PlaygroundEvent>;
 /**
  * Everything one turn counts, carried from event to event so every limit is checked against
  * the same numbers: the next `seq`, rounds opened, tool calls made, the distinct cards shown,
- * the running work items (most recent last) and validation failures per tool name.
+ * the running work items (most recent last) and validation failures per tool name. `prose`
+ * holds the text blocks still shown as answer (narration takes one out) and `shown` whether a
+ * card, outcome, failure or question reached the page.
  */
 export type TurnState = Readonly<{
   seq: number;
@@ -28,6 +30,8 @@ export type TurnState = Readonly<{
   cardIds: readonly string[];
   running: readonly string[];
   failures: Readonly<Record<string, number>>;
+  prose: readonly string[];
+  shown: boolean;
 }>;
 
 /** A tool call read whole from the stream; `input` is `{ ok: false }` when its JSON broke. */
@@ -55,6 +59,8 @@ export const initialTurn: TurnState = {
   cardIds: [],
   running: [],
   failures: {},
+  prose: [],
+  shown: false,
 };
 
 // Tool calls one turn may make; Kimi was seen making one per round.
@@ -152,7 +158,8 @@ const reportFailure: Handler = (state, input) => {
   const { workId, limitation, recovery_prompt: prompt } = parsed.data;
   const recovery = prompt === undefined ? null : { label: RECOVERY_LABEL, prompt };
   const drafts: EventDraft[] = [{ type: "failure", workId: workId ?? null, limitation, recovery }];
-  return { kind: "shown", state, drafts, reply: "ok" };
+  const next = workId === undefined || workId === null ? state : withRunning(state, workId, false);
+  return { kind: "shown", state: next, drafts, reply: "ok" };
 };
 
 // The tools the prompt offers, by name. A name missing here is an unknown tool; a Map, so a
@@ -200,7 +207,32 @@ const rejectCall = (
   return { state: next, events: [], result: toolResult(call.id, reason, true) };
 };
 
-/** Numbers drafts from the turn's next `seq`, in order. */
+// What one draft changes about the answer the page shows.
+const noteShown = (state: TurnState, draft: EventDraft): TurnState => {
+  switch (draft.type) {
+    case "text":
+      return state.prose.includes(draft.blockId) || !/\S/.test(draft.delta)
+        ? state
+        : { ...state, prose: [...state.prose, draft.blockId] };
+    case "narration":
+      return { ...state, prose: state.prose.filter((blockId) => blockId !== draft.blockId) };
+    case "card":
+    case "outcome":
+    case "failure":
+    case "question":
+      return state.shown ? state : { ...state, shown: true };
+    case "start":
+    case "work":
+    case "end":
+      return state;
+    default: {
+      const unhandled: never = draft;
+      return unhandled;
+    }
+  }
+};
+
+/** Numbers drafts from the turn's next `seq`, in order, noting what they show. */
 export function stamp(
   state: TurnState,
   drafts: readonly EventDraft[],
@@ -209,8 +241,12 @@ export function stamp(
     ...draft,
     seq: state.seq + index,
   }));
-  return { state: { ...state, seq: state.seq + drafts.length }, events };
+  const noted = drafts.reduce((next, draft) => noteShown(next, draft), state); // → TurnState
+  return { state: { ...noted, seq: state.seq + drafts.length }, events };
 }
+
+/** Whether the turn has shown the user anything that reads as an answer. */
+export const hasAnswer = (state: TurnState): boolean => state.shown || state.prose.length > 0;
 
 /**
  * Checks one tool call with the catalog's own validators and translates it into page events

@@ -2,13 +2,14 @@ import { describe, expect, it } from "vitest";
 import {
   BAR_CARD,
   QUESTION,
+  eventsFor,
   overloaded,
   playgroundApp,
   postPlayground,
-  readEvents,
   round,
   say,
   sentMessages,
+  shape,
   text,
   tool,
   toolJson,
@@ -28,22 +29,6 @@ const cutShort = {
   recovery: null,
 };
 const noResponse = { ...cutShort, limitation: "The model stopped responding." };
-
-// The events after `start`, without their seq, for readable expectations.
-const shape = async (response: Response) =>
-  (await readEvents(response))
-    .slice(1)
-    .map((event): Record<string, unknown> =>
-      Object.fromEntries(Object.entries(event).filter(([key]) => key !== "seq")),
-    );
-
-// The streamed events of one request to an app scripted with `rounds`.
-const eventsFor = async (said: string, ...rounds: (() => Response)[]) => {
-  const { app, requests } = playgroundApp(...rounds);
-  const events = await shape(await postPlayground(app, say(said)));
-  return { events, requests };
-};
-
 describe("the tool loop shows", () => {
   it("a valid card and tells the model it was shown", async () => {
     const card = { cardId: "week", card: BAR_CARD };
@@ -127,6 +112,22 @@ describe("the tool loop turns", () => {
   });
 });
 
+describe("the tool loop stops", () => {
+  it("narrating onto work once a failure names it", async () => {
+    const fails = round(
+      "tool_use",
+      tool(0, "update_work", work("running")),
+      tool(1, "report_failure", { workId: "sum", limitation: "I cannot fetch the week." }),
+    );
+    const card = { cardId: "week", card: BAR_CARD };
+    const next = round("tool_use", text(0, "Here is the week."), tool(1, "show_card", card));
+
+    const { events } = await eventsFor("Chart it.", fails, next, done);
+
+    expect(events.filter(({ type }) => type === "narration")).toEqual([]);
+  });
+});
+
 describe("the tool loop keeps", () => {
   it("text written after a tool call in the same round as answer prose", async () => {
     const first = round(
@@ -141,9 +142,51 @@ describe("the tool loop keeps", () => {
     expect(events).toEqual([
       { type: "text", blockId: "r1b0", delta: "Checking" },
       { type: "work", ...work("running") },
-      { type: "text", blockId: "r1b2", delta: "Friday is busiest." },
       { type: "narration", blockId: "r1b0", workId: "sum" },
+      { type: "text", blockId: "r1b2", delta: "Friday is busiest." },
       { type: "end", reason: "answered" },
+    ]);
+  });
+});
+
+describe("the tool loop narrates", () => {
+  it("as soon as the round's first tool call is shown, and each block once", async () => {
+    const first = round(
+      "tool_use",
+      text(0, "Adding Monday to Friday."),
+      tool(1, "update_work", work("running")),
+      tool(2, "show_card", { cardId: "week", card: BAR_CARD }),
+    );
+
+    const { events } = await eventsFor("Chart it.", first, done);
+
+    expect(events.slice(0, 4).map(({ type }) => type)).toEqual([
+      "text",
+      "work",
+      "narration",
+      "card",
+    ]);
+    expect(events.filter(({ type }) => type === "narration")).toEqual([
+      { type: "narration", blockId: "r1b0", workId: "sum" },
+    ]);
+  });
+
+  it("the text before a question once, before the turn ends", async () => {
+    const asks = round(
+      "tool_use",
+      text(0, "Sizing the plan."),
+      tool(1, "update_work", work("running")),
+      tool(2, "ask_question", { question: QUESTION }),
+    );
+
+    const { events } = await eventsFor("Plan next week.", asks);
+
+    expect(events.map(({ type }) => type)).toEqual([
+      "text",
+      "work",
+      "narration",
+      "question",
+      "end",
     ]);
   });
 });
