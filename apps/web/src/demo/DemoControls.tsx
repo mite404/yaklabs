@@ -5,7 +5,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@yaklabs/ui/components/
 import { Pause, Play, RotateCcw } from "lucide-react";
 import { useCallback, useEffect, useState, useSyncExternalStore, type ReactElement } from "react";
 import { useNavigate } from "react-router";
-import type { Player, PlayerState } from "./player";
+import type { Player, PlayerState, PlayerStatus } from "./player";
 import { DEMO_BASE, useDemo } from "./provider";
 import { scripts } from "./scripts";
 
@@ -21,22 +21,18 @@ function minutes(ms: number): string {
   return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
 }
 
+// What each status is called; the time played follows all but Ready.
+const STATUS_WORDS: Record<PlayerStatus, string> = {
+  idle: "Ready",
+  playing: "Playing",
+  paused: "Paused",
+  done: "Done",
+};
+
 // What the status says: ready, or where the playthrough stands and how long it has played.
 function statusText(state: PlayerState, elapsed: number): string {
-  switch (state.status) {
-    case "idle":
-      return "Ready";
-    case "playing":
-      return `Playing · ${minutes(elapsed)}`;
-    case "paused":
-      return `Paused · ${minutes(elapsed)}`;
-    case "done":
-      return `Done · ${minutes(elapsed)}`;
-    default: {
-      const unhandled: never = state.status;
-      return unhandled;
-    }
-  }
+  const word = STATUS_WORDS[state.status];
+  return state.status === "idle" ? word : `${word} · ${minutes(elapsed)}`;
 }
 
 // The player's state, re-rendering on each change, and every quarter second while it plays so

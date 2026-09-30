@@ -53,8 +53,8 @@ export function childOf(script: Script, local: string): ChildOf {
   return { id: threadIdSchema.parse(`demo-${script.id}-${local}`), local, ...named };
 }
 
-/** A thread's one-line preview: its last turn's first line. */
-export function previewOf(turns: ThreadMessage[]): string {
+// A thread's one-line preview: its last turn's first line.
+function previewOf(turns: ThreadMessage[]): string {
   return turns.at(-1)?.text.split("\n")[0] ?? "";
 }
 
