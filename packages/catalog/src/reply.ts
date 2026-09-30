@@ -36,8 +36,12 @@ export type WorkStep = {
  */
 export type Work = { steps: WorkStep[]; logs: string[]; narration: string[]; summary?: string };
 
-/** Why a reply stopped short, in words for the reader. */
-export type Failure = { title: string; detail: string };
+/**
+ * Why a reply stopped short, in words for the reader. `retry: false` says asking again cannot
+ * help (a sign-in is missing, the request itself was refused), so no Try again is offered;
+ * absent, it is.
+ */
+export type Failure = { title: string; detail: string; retry?: false };
 
 /** How a reply that did not complete ended: cut off after some text, before any, or by the user. */
 export type Ended = "interrupted" | "failed" | "cancelled";
@@ -108,7 +112,11 @@ export const workSchema = z.object({
 });
 
 /** Parses a `Failure`. */
-export const failureSchema = z.object({ title: z.string(), detail: z.string() });
+export const failureSchema = z.object({
+  title: z.string(),
+  detail: z.string(),
+  retry: z.literal(false).optional(),
+});
 
 /** Parses an `Ended`. */
 export const endedSchema = z.enum(["interrupted", "failed", "cancelled"]);

@@ -831,6 +831,20 @@ export const Cancelled: Story = {
   },
 };
 
+/**
+ * A reply that could not start where asking again cannot help, such as a missing sign-in: it
+ * says why, and offers no Try again that would only fail the same way.
+ */
+export const RetryWithheld: Story = {
+  args: { thread: threads["no-retry"] },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByText("Could not start")).toBeVisible();
+    await expect(canvas.getByText(/answers signed-in users only/)).toBeVisible();
+    await expect(canvas.queryByRole("button", { name: "Try again" })).toBeNull();
+  },
+};
+
 /** Answers to the agent's questions (ADR-039): one surface, each question over its answer. */
 export const AnsweredQuestions: Story = {
   args: { thread: threads.answered },

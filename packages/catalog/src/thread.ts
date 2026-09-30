@@ -389,6 +389,30 @@ export const threads: Record<string, Thread> = {
       },
     ],
   },
+  /** A reply that could not start and that asking again cannot help: it says why, no Try again. */
+  "no-retry": {
+    title: "Live numbers",
+    messages: [
+      {
+        id: "u1",
+        role: "user",
+        time: "11:05",
+        text: "Pull this week's numbers from the live model.",
+      },
+      {
+        id: "a1",
+        role: "agent",
+        time: "11:05",
+        text: "",
+        ended: "failed",
+        failure: {
+          title: "Sign-in needed",
+          detail: "The live model answers signed-in users only. Nothing was sent.",
+          retry: false,
+        },
+      },
+    ],
+  },
   /** A reply the user stopped: what finished is kept, what was running says it stopped. */
   cancelled: {
     title: "Refund audit",

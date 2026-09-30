@@ -52,6 +52,7 @@ const events: ReplyEvent[] = [
   { kind: "summary", text: "Counted the backlog" },
   { kind: "question", question: { question: "Which week?" } },
   { kind: "failure", failure: { title: "Reply interrupted", detail: "The source went quiet." } },
+  { kind: "failure", failure: { title: "Sign-in needed", detail: "Nothing sent.", retry: false } },
 ];
 
 describe("the seam's schemas", () => {
@@ -75,6 +76,11 @@ describe("the seam's schemas", () => {
     const step = { kind: "step", step: { id: "s1", label: "Count cases" } };
     expect(replyEventSchema.safeParse(step).success).toBe(false);
     expect(replyChunkSchema.safeParse(42).success).toBe(false);
+  });
+
+  it("refuse a failure that offers retry: true, since only false says anything", () => {
+    const failure = { title: "Reply interrupted", detail: "Try again.", retry: true };
+    expect(failureSchema.safeParse(failure).success).toBe(false);
   });
 
   it("parse the blocks, the work and the ending a folded reply holds", () => {

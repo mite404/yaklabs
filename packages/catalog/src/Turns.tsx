@@ -34,8 +34,11 @@ const ENDED_LABELS: Record<Ended, string> = {
   cancelled: "Stopped by you",
 };
 
-// Whether a stopped reply offers to try again: not one the user stopped, who can simply ask.
+// Whether a stopped reply offers to try again: not one the user stopped, who can simply ask, nor
+// one whose failure says asking again cannot help.
 const RETRYABLE: Record<Ended, boolean> = { interrupted: true, failed: true, cancelled: false };
+const retryable = (message: AgentMessage, ended: Ended): boolean =>
+  RETRYABLE[ended] && message.failure?.retry !== false;
 
 // Calls `onChange` with whether `el`'s content runs taller than `maxPx`, now and as it resizes
 // (a narrower panel wraps more lines). Returns the function that stops watching.
@@ -208,7 +211,7 @@ function EndedNote({
     <div className="turn-ended" data-ended={ended}>
       <p className="turn-ended-label">{ENDED_LABELS[ended]}</p>
       {message.failure !== undefined && <p>{message.failure.detail}</p>}
-      {RETRYABLE[ended] && onRetry !== undefined && (
+      {retryable(message, ended) && onRetry !== undefined && (
         <button
           type="button"
           className="btn btn-sm"

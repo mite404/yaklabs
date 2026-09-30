@@ -183,6 +183,11 @@ describe("applyChunk", () => {
     expect(after.failure).toEqual(failure);
   });
 
+  it("keeps a failure's word that asking again cannot help", () => {
+    const failure = { title: "Sign-in needed", detail: "Nothing was sent.", retry: false as const };
+    expect(fold([{ kind: "failure", failure }])).toMatchObject({ ended: "failed", failure });
+  });
+
   it("keeps the question a reply ends on, so the dock can be read back from the record", () => {
     const turn = fold(["Ready.", { kind: "question", question: { question: "Which order?" } }]);
     expect(turn).toEqual({
