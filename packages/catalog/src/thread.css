@@ -394,11 +394,13 @@
   background: transparent;
   color: var(--ink);
 }
-.turn-user time {
+/* The thread's one stamp, under its latest reply: how long ago it arrived, in 20-minute steps
+   (turnTime.ts). A user's turn carries no time; the reply dates the exchange. */
+.turn-stamp {
   font-size: 11px;
+  line-height: 16px;
   color: var(--soft-ink);
   font-variant-numeric: tabular-nums;
-  padding-right: 4px;
 }
 
 /* 16px between a turn's parts, the prose's own paragraph gap, so a card or a note after the

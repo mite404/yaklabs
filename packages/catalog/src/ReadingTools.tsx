@@ -12,6 +12,7 @@ import { BookmarkIcon, CloseIcon, SearchIcon, StepIcon } from "./icons";
 import { Menu, type MenuItem, type TriggerProps } from "./Menu";
 import { matchStatus, matchesOf, requestsOf, stepMatch, type Request } from "./threadReading";
 import type { ThreadMessage } from "./thread";
+import { timeLabel } from "./turnTime";
 
 // What the bookmark button says, read aloud and on hover.
 const BOOKMARKS = "Your requests";
@@ -23,7 +24,7 @@ function bookmarkItems(requests: Request[], onJump: (turnId: string) => void): M
   return requests.map((request) => ({
     id: request.id,
     label: request.label,
-    detail: request.time,
+    detail: timeLabel(request.time),
     hint: request.text,
     onSelect: () => {
       onJump(request.id);

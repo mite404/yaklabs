@@ -45,6 +45,7 @@ import {
   watchEndDistance,
 } from "./threadReveal";
 import { groupAnswers, latestEnded, requestBefore, runningActivity } from "./transcript";
+import { stampOf } from "./turnTime";
 import { AgentTurn, AnsweredTurns, UserTurn } from "./Turns";
 import "./thread.css";
 
@@ -301,7 +302,7 @@ function useAgent(
     const id = `reply-${++replies.current}`;
     live.current.set(id, controller);
     asked.current.set(id, event);
-    setMessages((current) => [...current, startReply(id, "now")]);
+    setMessages((current) => [...current, startReply(id, new Date().toISOString())]);
     void (async () => {
       try {
         await readReply(agent.respond(event, controller.signal), controller.signal, {
@@ -382,11 +383,13 @@ function Turn({
   onChoose,
   onRetry,
   cardsCarry,
+  stamp,
 }: {
   message: ThreadMessage;
   onChoose: (attachment: CardAttachment) => void;
   onRetry: (turnId: string) => void;
   cardsCarry: boolean | undefined;
+  stamp: string | undefined;
 }) {
   return message.role === "user" ? (
     <UserTurn ref={landOn} message={message} />
@@ -397,8 +400,16 @@ function Turn({
       onChoose={onChoose}
       onRetry={onRetry}
       cardsCarry={cardsCarry}
+      stamp={stamp}
     />
   );
+}
+
+// The thread's latest reply once it has settled: the one turn that carries a stamp, so a reader
+// glancing back knows how fresh the answer is. A reply still streaming carries none yet.
+function latestReply(messages: ThreadMessage[]): ThreadMessage | undefined {
+  const last = messages.at(-1);
+  return last?.role === "agent" && last.streaming !== true ? last : undefined;
 }
 
 // What rides along with the next message: card choices, latest per card (ADR-031), and files
@@ -574,12 +585,11 @@ type RecapState = {
 function useRecap(input: {
   thread: Thread;
   activity: ThreadActivity | undefined;
-  now: number | undefined;
+  clock: number;
   awaiting: AwaitingInput | undefined;
   draft: string;
 }): RecapState {
-  const { thread, activity, now, awaiting, draft } = input;
-  const clock = useClock(now);
+  const { thread, activity, clock, awaiting, draft } = input;
   const [lastInputAt, setLastInputAt] = useState(activity?.lastUserInputAt);
   const [dismissedAt, setDismissedAt] = useState<number>();
   const [peeking, setPeeking] = useState(false);
@@ -826,7 +836,9 @@ export function ChatThreadPanel({
   useLayoutEffect(() => {
     questions.current = ask;
   });
-  const recap = useRecap({ thread, activity, now, awaiting, draft });
+  const clock = useClock(now); // → the time, ticking, for the recap and the latest reply's stamp
+  const recap = useRecap({ thread, activity, clock, awaiting, draft });
+  const stamped = latestReply(messages); // → the reply that carries the thread's one stamp
   const { scroller, setDockSlot } = useScroller();
   const away = useAwayFromEnd(scroller);
   const pointer = usePointerZone(); // → where the pointer is, for the reading tools (thread.css)
@@ -842,7 +854,7 @@ export function ChatThreadPanel({
         id: `local-${current.length}`,
         role: "user",
         text,
-        time: "now",
+        time: new Date().toISOString(),
         attachments,
         files: files.map((item) => ({ id: item.id, label: item.file.name })),
       },
@@ -866,7 +878,13 @@ export function ChatThreadPanel({
     recap.noteInput();
     setMessages((current) => [
       ...current,
-      { id: `local-${current.length}`, role: "user", text, question, time: "now" },
+      {
+        id: `local-${current.length}`,
+        role: "user",
+        text,
+        question,
+        time: new Date().toISOString(),
+      },
     ]);
     replies.tell({ kind: "answer", text });
   }
@@ -944,6 +962,7 @@ export function ChatThreadPanel({
               onChoose={outbox.choose}
               onRetry={retry}
               cardsCarry={cardsCarry}
+              stamp={item.message === stamped ? stampOf(item.message.time, clock) : undefined}
             />
           ),
         )}

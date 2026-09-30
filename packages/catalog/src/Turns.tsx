@@ -87,17 +87,13 @@ function BubbleText({ text }: { text: string }) {
 }
 
 /**
- * The user's turn: a tinted bubble resting on the thread (ADR-025). Past eight lines the text
- * folds behind a fade and a Show more, so a long paste never pushes the reply out of view.
+ * The user's turn: a tinted bubble resting on the thread (ADR-025), with no time of its own: the
+ * latest reply's stamp dates the exchange. Past eight lines the text folds behind a fade and a
+ * Show more, so a long paste never pushes the reply out of view.
  */
 export function UserTurn({ message, ref }: { message: UserMessage; ref?: Ref<HTMLElement> }) {
   return (
-    <article
-      ref={ref}
-      className="turn turn-user"
-      data-turn-id={message.id}
-      aria-label={`You, ${message.time}`}
-    >
+    <article ref={ref} className="turn turn-user" data-turn-id={message.id} aria-label="You">
       <BubbleText text={message.text} />
       {message.attachments !== undefined && message.attachments.length > 0 && (
         <ul className="sent-context" aria-label="Sent with this message">
@@ -118,7 +114,6 @@ export function UserTurn({ message, ref }: { message: UserMessage; ref?: Ref<HTM
           ))}
         </ul>
       )}
-      <time>{message.time}</time>
     </article>
   );
 }
@@ -231,6 +226,8 @@ function EndedNote({
  * @param shareable Whether a card offers its own share link; not on a page already shared
  * (ADR-064, ADR-131).
  * @param onRetry Asks for a reply that stopped short again; without it there is no Try again.
+ * @param stamp How long ago this reply arrived, on the thread's latest reply alone: "just now",
+ * then in 20-minute steps (turnTime.ts). Absent on every other turn.
  */
 export function AgentTurn({
   message,
@@ -238,6 +235,7 @@ export function AgentTurn({
   cardsCarry,
   shareable = true,
   onRetry,
+  stamp,
   ref,
 }: {
   message: AgentMessage;
@@ -245,6 +243,7 @@ export function AgentTurn({
   cardsCarry: boolean | undefined;
   shareable?: boolean;
   onRetry?: (turnId: string) => void;
+  stamp?: string;
   ref?: Ref<HTMLElement>;
 }) {
   const carries = cardsCarry !== false;
@@ -255,7 +254,7 @@ export function AgentTurn({
       ref={ref}
       className="turn turn-agent"
       data-turn-id={message.id}
-      aria-label={`Agent, ${message.time}`}
+      aria-label="Agent"
       aria-busy={message.streaming === true ? true : undefined}
     >
       <Words message={message} cardsCarry={cardsCarry} shareable={shareable} />
@@ -278,6 +277,7 @@ export function AgentTurn({
       )}
       {ended !== undefined && <EndedNote message={message} ended={ended} onRetry={onRetry} />}
       {worked && <WorkDetails work={work} cardsCarry={cardsCarry} />}
+      {stamp !== undefined && <time className="turn-stamp">{stamp}</time>}
     </article>
   );
 }
