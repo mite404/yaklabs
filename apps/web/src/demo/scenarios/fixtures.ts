@@ -44,10 +44,28 @@ export const issuesChart = {
 } satisfies Selection;
 
 /**
+ * Friday's open cases as the reply first drew them, before the check set aside two billing
+ * cases logged twice: shown under the settled card's id, so the settled one takes its place.
+ */
+export const issuesDraft = {
+  ...issuesChart,
+  props: {
+    ...issuesChart.props,
+    title: "Still open on Friday, by category (draft)",
+    rows: [
+      { label: "Billing", value: 14 },
+      { label: "Product", value: 4 },
+      { label: "Access", value: 2 },
+    ],
+  },
+} satisfies Selection;
+
+/**
  * First response times by weekday, as a chart the catalog does not have: a child asked for a
  * pie, and the boundary refuses it whole rather than drawing something else (ADR-023, ADR-024).
  * The refusal is the point: the same card shows the catalog's limit in the reply and behind
- * Work details, and the child's number stands on its own words.
+ * Work details, the child's number stands on its own words, and the reply says what it could not
+ * draw and offers a bar chart instead (a limitation with a recovery).
  */
 export const responsePie = {
   catalogVersion: "1",
@@ -168,12 +186,22 @@ export const running = (id: string, label: string): WorkStep => ({
   status: "running",
   threadId: id,
 });
-/** A child thread's step, finished, with what it found and the card that backs it. */
-export const done = (id: string, label: string, outcome: string, evidence?: unknown): WorkStep => ({
+/**
+ * A child thread's step, finished, with what it found, the card that backs it, and the lines
+ * that say how it was found.
+ */
+export const done = (
+  id: string,
+  label: string,
+  outcome: string,
+  evidence?: unknown,
+  basis?: string[],
+): WorkStep => ({
   id,
   label,
   status: "done",
   outcome,
   evidence,
   threadId: id,
+  ...(basis !== undefined && { basis }),
 });
