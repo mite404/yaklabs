@@ -28,20 +28,25 @@ export type LaneReports = {
 
 // The lane's collapse, in the container it folds (ADR-134): the thread's or the card's title
 // bar while it is open, the head of its strip while it is collapsed. It says what it will do.
-// In the strip it is 24px, not the bar's 28: the strip's 14px corner arc curves in under a 28px
-// fill's top corners (1.5px apart, against 4px at the sides), so the smaller fill sits 6px from
-// the strip's inner edge on the sides and 5.5px from the arc, its focus ring 3.5px.
+// A 20px fill with a 13px glyph, a fifth under the bar's other controls (Ethan): in the bar it
+// sits in the gutter, flush with the lane's edge, so the title's first character starts where
+// the compose box does; in the strip the smaller fill clears the 14px corner arc with room to
+// spare, its focus ring included.
 function CollapseToggle({ collapsed, onClick }: { collapsed: boolean; onClick: () => void }) {
   return (
     <Button
       variant="ghost"
       size="icon-sm"
-      className={`text-soft-ink hover:text-ink ${collapsed ? "size-6" : ""}`}
+      className="size-5 text-soft-ink hover:text-ink"
       aria-label={collapsed ? "Expand lane" : "Collapse lane"}
       data-lane-toggle=""
       onClick={onClick}
     >
-      {collapsed ? <ChevronsLeftRight /> : <ChevronsRightLeft />}
+      {collapsed ? (
+        <ChevronsLeftRight className="size-[13px]" />
+      ) : (
+        <ChevronsRightLeft className="size-[13px]" />
+      )}
     </Button>
   );
 }

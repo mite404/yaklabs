@@ -242,11 +242,13 @@
   border-bottom: 1px solid var(--hairline);
 }
 /* A host's control before the title (ADR-134), such as a lane's collapse: first in the bar's
-   row, its glyph pulled back onto the text column's edge. */
+   row, in the gutter, flush with the lane's edge and closing the row's gap, so the title's first
+   character starts on the text column, where the compose box's edge is (Ethan). The control is
+   20px, the gutter's width, so it fits the margin as a list's marker does. */
 .thread-header > .header-leading {
   display: flex;
   flex-shrink: 0;
-  margin: -4px 0 -4px -7px;
+  margin: 0 -8px 0 calc(-1 * var(--thread-gutter));
 }
 /* The thread title is a display moment: brand serif (Newsreader). It keeps its own width, so a
    lane's bar stays free around it to lift the lane by (ADR-089), and shrinks when crowded. */
@@ -519,9 +521,10 @@
   font-weight: 600;
 }
 
-/* Work details (ADR-139; WorkDetails.tsx): the disclosure's header pulled back onto the text
-   column, so "Work details" starts where the prose does and its hover fill reaches 8px into the
-   gutter, as a card's rows reach into its padding. The nested Technical details match. */
+/* The one disclosure above a reply (ADR-139, amended; WorkDetails.tsx): its header pulled back
+   onto the text column, so its label starts where the prose does and its hover fill reaches 8px
+   into the gutter, as a card's rows reach into its padding. Live, the label sits beside the
+   working glyph, as the sidebar's rows do. The nested Technical details match. */
 .work-details .disclosure-header {
   width: calc(100% + 16px);
   margin: 0 -8px;
