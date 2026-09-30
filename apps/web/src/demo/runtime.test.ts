@@ -106,6 +106,7 @@ describe("the demo runtime's workspace", () => {
     const returned = scriptFor("returned");
     const before = Date.now();
     const runtime = createDemoRuntime(returned, instant);
+    const after = Date.now();
     const ws = workspaceOf(runtime.state());
     expect(ws.threads.map((each) => each.title).toSorted()).toEqual([
       "Central depot",
@@ -117,8 +118,8 @@ describe("the demo runtime's workspace", () => {
     const main = await runtime.open(runtime.main);
     expect(main.map((turn) => turn.role)).toEqual(["user", "agent"]);
     const asked = Date.parse(main[0].time); // → when the user last spoke
-    expect(before - asked).toBeGreaterThanOrEqual(25 * 60_000);
-    expect(before - asked).toBeLessThan(26 * 60_000);
+    expect(asked).toBeGreaterThanOrEqual(before - 25 * 60_000);
+    expect(asked).toBeLessThanOrEqual(after - 25 * 60_000);
     expect(Date.parse(main[1].time) - asked).toBe(1000);
     const reply = main[1];
     expect(reply.role === "agent" ? reply.work?.steps.map((step) => step.threadId) : []).toEqual([
@@ -191,7 +192,11 @@ describe("the demo runtime's scripted replies", () => {
 });
 
 describe("the demo runtime's children", () => {
-  const [workload, issues] = [idOf("demo-brief-workload"), idOf("demo-brief-issues")];
+  const [workload, issues, response] = [
+    idOf("demo-brief-workload"),
+    idOf("demo-brief-issues"),
+    idOf("demo-brief-response"),
+  ];
 
   it("makes, runs and settles the children its steps name, replying as they work", async () => {
     const runtime = createDemoRuntime(brief, instant);
@@ -203,7 +208,9 @@ describe("the demo runtime's children", () => {
       [main],
       [main, workload],
       [main, workload, issues],
-      [main, issues],
+      [main, workload, issues, response],
+      [main, issues, response],
+      [main, response],
       [main],
       [],
     ]);
@@ -211,8 +218,13 @@ describe("the demo runtime's children", () => {
     expect(ws.threads.filter((each) => each.place.kind === "child")).toEqual([
       expect.objectContaining({ id: workload, title: "Weekly workload", turnCount: 2 }),
       expect.objectContaining({ id: issues, title: "Open issues by category", turnCount: 2 }),
+      expect.objectContaining({ id: response, title: "First response times", turnCount: 2 }),
     ]);
-    expect(ws.lanes[main]?.map((lane) => lane.id)).toEqual([`l-${workload}`, `l-${issues}`]);
+    expect(ws.lanes[main]?.map((lane) => lane.id)).toEqual([
+      `l-${workload}`,
+      `l-${issues}`,
+      `l-${response}`,
+    ]);
     const turns = await runtime.open(workload);
     expect(turns[0]).toMatchObject({
       role: "user",

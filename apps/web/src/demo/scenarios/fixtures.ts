@@ -42,6 +42,30 @@ export const issuesChart = {
   },
 } satisfies Selection;
 
+/**
+ * First response times by weekday, as a chart the catalog does not have: a child asked for a
+ * pie, and the boundary refuses it whole rather than drawing something else (ADR-023, ADR-024).
+ * The refusal is the point: the same card shows the catalog's limit in the reply and behind
+ * Work details, and the child's number stands on its own words.
+ */
+export const responsePie = {
+  catalogVersion: "1",
+  component: "PieChart",
+  props: {
+    title: "First response, share of slow replies by weekday",
+    source: SOURCE,
+    unit: "minutes",
+    variant: "share",
+    rows: [
+      { label: "Mon", value: 31 },
+      { label: "Tue", value: 36 },
+      { label: "Wed", value: 44 },
+      { label: "Thu", value: 52 },
+      { label: "Fri", value: 41 },
+    ],
+  },
+};
+
 /** September's matched invoices by site. */
 export const sitesChart = {
   catalogVersion: "1",

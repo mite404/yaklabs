@@ -123,6 +123,16 @@ async function cardBetweenParagraphs(page) {
   await until(() => card.evaluate(betweenParagraphs), "a paragraph after the card");
 }
 
+async function refusedChartShowsLimit(page) {
+  const refused = agentTurns(page).first().locator(".quiet-prose .card.state");
+  await refused.waitFor({ timeout: 30_000 });
+  const words = await refused.innerText();
+  assert.match(words, /CATALOG LIMIT/);
+  assert.match(words, /No unvalidated content was rendered/);
+  assert.equal(await refused.locator("svg, table").count(), 0, "nothing drawn for it");
+  return words.split("\n")[1];
+}
+
 async function questionDocks(page, run) {
   await mainOf(page)
     .getByText(/needs attention/i)
@@ -160,6 +170,10 @@ async function workDetails(page, run) {
   assert.equal(await technical.getAttribute("aria-expanded"), "false");
   await technical.click();
   assert.ok((await turn.locator("pre code").count()) > 0, "the logs sit in pre code");
+  const steps = turn.locator(".work-step");
+  assert.equal(await steps.count(), 3, "three children, one step each");
+  assert.equal(await steps.locator(".card:not(.state)").count(), 2, "two cards passed");
+  assert.equal(await steps.locator(".card.state").count(), 1, "one card was refused");
   const narration = mainOf(page).getByText("Selecting the support records.", { exact: true });
   assert.equal(await narration.count(), 1, "the narration shows once in the transcript");
   assert.equal(await narration.evaluate((el) => el.closest(".work-technical") !== null), true);
@@ -263,6 +277,7 @@ export const briefSteps = [
   ["the finding streams in Quiet prose: 15px/24px, strong at 600, while busy", findingStreams],
   ["Pause holds the stream, and Play goes on from there", pauseHolds],
   ["a card sits between two paragraphs", cardBetweenParagraphs],
+  ["a chart outside the catalog shows the catalog's limit, nothing drawn", refusedChartShowsLimit],
   ["the decision docks as Needs attention", questionDocks],
   ["the player answers: Your answers shows Oldest first", playerAnswers],
   ["the draft arrives under its heading", draftArrives],

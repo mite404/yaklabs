@@ -1,10 +1,18 @@
 import { card, em, heading, list, paragraph, strong, text } from "@yaklabs/catalog/prose";
 import { activity, at, stream, log, type Script, type Timed } from "../script";
-import { done, issuesChart, orderQuestion, running, step, workloadChart } from "./fixtures";
+import {
+  done,
+  issuesChart,
+  orderQuestion,
+  responsePie,
+  running,
+  step,
+  workloadChart,
+} from "./fixtures";
 
-// Scenario 1: the whole arc. A request, quiet narration, two children working in parallel,
-// a finding with selective emphasis and a card between its paragraphs, one real decision, and
-// an honest draft. About 55 seconds at 1x before reading time.
+// Scenario 1: the whole arc. A request, quiet narration, three children working in parallel,
+// a finding with selective emphasis and a card between its paragraphs, a chart the catalog
+// refuses, one real decision, and an honest draft. About 60 seconds at 1x before reading time.
 const briefFinding = stream(
   [
     paragraph([
@@ -28,6 +36,12 @@ const briefFinding = stream(
         " This is a weekday comparison, not a complete week, so Saturday's usual spike is missing from these numbers.",
       ),
     ]),
+    paragraph([
+      text("First responses slowed: the median was "),
+      strong("41 minutes"),
+      text(", up from 28 the week before, and Thursday was the slowest day."),
+    ]),
+    card(responsePie),
     heading([text("What I'd flag")]),
     list([
       [strong("Access requests"), text(" are few but old: two cases, nine days open on average.")],
@@ -82,7 +96,8 @@ const briefDraft = (order: "oldest" | "billing"): Timed[] =>
 export const brief: Script = {
   id: "brief",
   label: "Weekly brief",
-  shows: "The whole arc: narration, parallel checks, a finding, one decision, a draft.",
+  shows:
+    "The whole arc: narration, parallel checks, a refused chart, a finding, a decision, a draft.",
   project: "Support desk",
   thread: "Weekly brief",
   children: {
@@ -93,6 +108,10 @@ export const brief: Script = {
     issues: {
       title: "Open issues by category",
       request: "Group Friday's open cases by category with their median age.",
+    },
+    response: {
+      title: "First response times",
+      request: "Find the median first-response time for each weekday.",
     },
   },
   beats: [
@@ -109,7 +128,8 @@ export const brief: Script = {
         log(600, "source: support-desk fixtures · weekdays Sep 22 to 26 · 2 files"),
         step(500, running("workload", "Weekly workload")),
         step(400, running("issues", "Open issues by category")),
-        activity(300, "Checking this week's workload and open issues."),
+        step(300, running("response", "First response times")),
+        activity(300, "Checking this week's workload, open issues and response times."),
         step(
           2800,
           done(
@@ -133,6 +153,16 @@ export const brief: Script = {
           200,
           "check:open-issues status=done rows=3 columns=[category, open_cases, median_days_open]",
         ),
+        step(
+          1400,
+          done(
+            "response",
+            "First response times",
+            "Median first response 41 minutes, up from 28 the week before.",
+            responsePie,
+          ),
+        ),
+        log(200, "check:response-times status=done rows=5 chart=PieChart"),
         activity(400, "Writing the brief."),
         ...briefFinding,
         at(700, { kind: "question", question: orderQuestion }),
