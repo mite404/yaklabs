@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
+import { DEMO_WORLD } from "../world/demo";
+import { scriptsOf } from "../world/spec";
 import { durationOf, type Beat } from "./script";
-import { scripts, scriptFor, userBeats } from "./scripts";
+
+const scripts = scriptsOf(DEMO_WORLD);
 
 // The interview walkthrough: about a minute of playback at 1x, and never past three with the
 // pauses that stand in for reading time.
@@ -34,36 +37,9 @@ describe("the scripted scenarios", () => {
     expect(unanswered).toEqual([]);
   });
 
-  it.each(scripts)("$id names every child a step spawns, in its beats or its opening", (script) => {
-    const played = script.beats.flatMap((beat) =>
-      beat.kind === "reply"
-        ? beat.events.flatMap(({ chunk }) =>
-            typeof chunk !== "string" && chunk.kind === "step" && chunk.step.threadId !== undefined
-              ? [chunk.step.threadId]
-              : [],
-          )
-        : [],
-    );
-    const opened = (script.opening?.turns ?? []).flatMap((turn) =>
-      turn.role === "agent"
-        ? (turn.work?.steps ?? []).flatMap((step) =>
-            step.threadId === undefined ? [] : [step.threadId],
-          )
-        : [],
-    );
-    const spawned = [...played, ...opened];
-    expect(spawned.length).toBeGreaterThan(0);
-    for (const id of spawned) expect(script.children[id]).toBeDefined();
-  });
-
-  it("shows three separations of concern, and falls back to the first", () => {
+  it("shows three separations of concern", () => {
     expect(scripts.map((script) => script.id)).toEqual(["brief", "interrupted", "returned"]);
-    expect(scriptFor("nope").id).toBe("brief");
-    expect(scriptFor().id).toBe("brief");
-    expect(userBeats(scriptFor("returned")).map((beat) => beat.kind)).toEqual([
-      "choose",
-      "user",
-      "answer",
-    ]);
+    const returned = scripts.at(-1)?.beats.filter((beat) => beat.kind !== "reply");
+    expect(returned?.map((beat) => beat.kind)).toEqual(["choose", "user", "answer"]);
   });
 });

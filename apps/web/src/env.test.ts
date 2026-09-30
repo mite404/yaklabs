@@ -2,12 +2,18 @@ import { describe, expect, it } from "vitest";
 import { parseEnv } from "./env";
 
 describe("parseEnv", () => {
-  it("defaults to the lab agent and no sign-in", () => {
+  it("defaults to the lab agent, no sign-in and the Demo on", () => {
     expect(parseEnv({}, "http://localhost:5173")).toEqual({
       agent: { kind: "lab" },
       auth: { kind: "none" },
       shareBase: "http://localhost:5173",
+      demo: true,
     });
+  });
+
+  it("leaves the Demo out when VITE_DEMO is off, and refuses any other value", () => {
+    expect(parseEnv({ VITE_DEMO: "off" }, "").demo).toBe(false);
+    expect(() => parseEnv({ VITE_DEMO: "yes" }, "")).toThrow(/VITE_DEMO/);
   });
 
   it("keeps public threads on the gateway, whichever agent answers (ADR-131)", () => {

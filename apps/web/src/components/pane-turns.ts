@@ -7,12 +7,24 @@ import { isWorking } from "../shell/working";
 import { usePanelRegistry } from "./panel-registry";
 import { LOADING, turnsBefore, type Turns } from "./turns";
 
+// A thread's turns only ever grow, so a count that drops means they were written over
+// elsewhere (a scripted show restarted): the pane reads them again.
+function useRewritten(turnCount: number, reread: () => void): void {
+  const was = useRef(turnCount);
+  useEffect(() => {
+    const dropped = turnCount < was.current;
+    was.current = turnCount;
+    if (dropped) reread();
+  }, [turnCount, reread]);
+}
+
 /**
  * The thread's turns: none at once for a thread the snapshot says holds none, else asked of the
  * worker while they are loading, which a retry goes back to. What a thread starts with is read
  * once, as its pane mounts, so the turns it gains while on screen never send it back to the
  * frame; the pane is keyed by the thread's id, so it never changes threads. `reread` asks again
- * without the frame, and each answer is a new `revision` of the turns.
+ * without the frame, and each answer is a new `revision` of the turns; it also runs by itself
+ * when the thread's turn count drops, since turns only shrink when rewritten elsewhere.
  */
 export function useTurns(thread: ThreadSummary): {
   turns: Turns;
@@ -57,6 +69,7 @@ export function useTurns(thread: ThreadSummary): {
     };
     void load();
   }, [runtime, id]);
+  useRewritten(thread.turnCount, reread);
   return { turns, retry, reread, revision };
 }
 

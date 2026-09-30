@@ -22,7 +22,7 @@ import { keepScenario, legacyFrom, unknownScenario, wantedFrom, type Wanted } fr
 
 /**
  * The page's addresses: a thread's, home's and the Lab's, and the thread a pathname names. The
- * Door owns them, so the same shell runs under `/t/:threadId` or under a demo's own route.
+ * Door owns them, so a mock scenario's links keep `?scenario=`.
  */
 export type Paths = {
   pathTo: (id: ThreadId) => string;
@@ -45,9 +45,6 @@ type Openable = Exclude<Wanted, { kind: "unknown" }>;
 // The v1 canvas's two keys (ADR-089), which the worker's 1 → 2 migration reads once.
 const LEGACY_HIDDEN = "kay.canvas.hidden";
 const LEGACY_ORDER = "kay.canvas.order";
-
-// What a provided runtime shows before its host has it: starting, from nowhere yet.
-const STARTING: RuntimeState = { kind: "starting", source: null };
 
 const DoorContext = createContext<Door | null>(null);
 
@@ -143,8 +140,7 @@ function useWanted(): Wanted {
 
 function useDoor(): Door {
   const door = useContext(DoorContext);
-  if (door === null)
-    throw new Error("The runtime hooks need <RuntimeProvider> or <ProvidedRuntime> above them");
+  if (door === null) throw new Error("The runtime hooks need <RuntimeProvider> above them");
   return door;
 }
 
@@ -214,21 +210,22 @@ export function RuntimeProvider({ children }: { children: ReactNode }) {
 }
 
 /**
- * Puts a runtime its host already runs in the Door, at the host's own addresses: a scripted
- * demo's, say. Nothing here starts or restarts it; null reads as starting until the host has it.
+ * Puts a runtime its host composes over the Door's own (the scripted Demo's overlay beside the
+ * worker) in the Door, keeping the Door's addresses, restart and the state it shows before a
+ * runtime answers. Null reads as that state until the host has its runtime.
+ * @throws Outside a {@link RuntimeProvider}.
  */
 export function ProvidedRuntime({
   runtime,
-  paths,
   children,
 }: {
   runtime: Runtime | null;
-  paths: Paths;
   children: ReactNode;
 }) {
+  const { before, restart, paths } = useDoor();
   const door = useMemo<Door>(
-    () => ({ runtime, before: STARTING, restart: null, paths }),
-    [runtime, paths],
+    () => ({ runtime, before, restart, paths }),
+    [runtime, before, restart, paths],
   );
   return <DoorContext value={door}>{children}</DoorContext>;
 }

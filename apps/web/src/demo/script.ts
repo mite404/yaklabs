@@ -51,6 +51,7 @@ export type Script = {
    * name, so a watcher never takes a prototype for shipped work or the other way round.
    */
   standing: string;
+  // TODO(U5b): the World spec names the project (world/demo.ts); drop this once U5b lands.
   project: string;
   thread: string;
   children: Record<string, ChildScript>;

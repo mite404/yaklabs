@@ -2,10 +2,22 @@ import type { AgentEvent } from "@yaklabs/catalog/agent";
 import type { ThreadHandle } from "@yaklabs/catalog/thread";
 import { describe, expect, it } from "vitest";
 import type { Clock } from "./clock";
-import { createPlayer, cuesOf, type Player } from "./player";
-import { createDemoRuntime, type DemoRuntime } from "./runtime";
+import { DEMO_WORLD } from "../world/demo";
+import { ids } from "../world/ids";
+import { scriptsOf, show, worldOf } from "../world/spec";
+import { createWorld, type World } from "../world/world";
+import { createPlayer, cuesOf, type Played, type Player } from "./player";
 import { at, type Beat, type Script } from "./script";
-import { scriptFor, userBeats } from "./scripts";
+
+// The Demo's script by its id.
+function scriptFor(id: string): Script {
+  const found = scriptsOf(DEMO_WORLD).find((script) => script.id === id);
+  if (found === undefined) throw new Error(`The Demo has no script "${id}"`);
+  return found;
+}
+
+// Every beat of a script the user performs, in order.
+const userBeats = (script: Script): Beat[] => script.beats.filter((beat) => beat.kind !== "reply");
 
 // A clock on which every wait is over after one turn of the event loop; `before` sees each.
 function clockThat(before: (ms: number) => void = () => {}): Clock {
@@ -24,9 +36,25 @@ function clockThat(before: (ms: number) => void = () => {}): Clock {
   };
 }
 
-// A stand-in for the thread panel: it sends what its handle is told to the runtime's agent, as
+// A world playing `script` alone, its show's takes on `clock`, and what a player watches of it.
+function staged(script: Script, clock: Clock): { world: World; played: Played } {
+  const spec = worldOf({ projects: [{ id: ids.project, name: "Demo", threads: [show(script)] }] });
+  const world = createWorld(spec, { panels: new Map(), clock: () => clock });
+  const main = ids.show(script.id);
+  const running = world.showOf(main);
+  if (running === undefined) throw new Error(`No show plays on ${main}`);
+  const played: Played = {
+    main,
+    progress: () => running.progress(),
+    subscribe: (listener) => running.subscribe(listener),
+    open: (id) => world.open(id),
+  };
+  return { world, played };
+}
+
+// A stand-in for the thread panel: it sends what its handle is told to the world's agent, as
 // the panel would, and notes each call.
-function fakePanel(runtime: DemoRuntime): { handle: ThreadHandle; calls: string[] } {
+function fakePanel(world: World, main: Played["main"]): { handle: ThreadHandle; calls: string[] } {
   const calls: string[] = [];
   const live = new Set<AbortController>();
   let draft = "";
@@ -35,7 +63,7 @@ function fakePanel(runtime: DemoRuntime): { handle: ThreadHandle; calls: string[
     live.add(stop);
     void (async () => {
       const chunks = [];
-      for await (const chunk of runtime.agent(runtime.main).respond(event, stop.signal)) {
+      for await (const chunk of world.agent(main).respond(event, stop.signal)) {
         if (stop.signal.aborted) break;
         chunks.push(chunk);
       }
@@ -123,19 +151,19 @@ describe("the demo player", () => {
     "performs every user beat of %s through the panel, in order, and ends done",
     async (id) => {
       const script = scriptFor(id);
-      const runtime = createDemoRuntime(script, clockThat());
-      const panel = fakePanel(runtime);
+      const { world, played } = staged(script, clockThat());
+      const panel = fakePanel(world, played.main);
       const player = createPlayer({
         script,
-        runtime,
+        runtime: played,
         clock: clockThat(),
-        panels: new Map([[runtime.main, panel.handle]]),
+        panels: new Map([[played.main, panel.handle]]),
       });
       expect(player.state().status).toBe("idle");
       player.play();
       await finished(player);
       expect(panel.calls).toEqual(userBeats(script).map((beat) => noted(beat)));
-      expect(runtime.progress().settled.size).toBe(runtime.progress().started);
+      expect(played.progress().settled.size).toBe(played.progress().started);
     },
   );
 });
@@ -151,14 +179,14 @@ describe("the demo player and the presenter", () => {
         { kind: "reply", events: [at(0, "Done.")] },
       ],
     };
-    const runtime = createDemoRuntime(script, clockThat());
-    const panel = fakePanel(runtime);
+    const { world, played } = staged(script, clockThat());
+    const panel = fakePanel(world, played.main);
     const clock = presenterAnswersFirst(panel.handle);
     const player = createPlayer({
       script,
-      runtime,
+      runtime: played,
       clock,
-      panels: new Map([[runtime.main, panel.handle]]),
+      panels: new Map([[played.main, panel.handle]]),
     });
     player.play();
     await finished(player);
@@ -176,8 +204,14 @@ describe("the demo player's time", () => {
       resume: () => paused.push(false),
     };
     const script = scriptFor("brief");
-    const runtime = createDemoRuntime(script, clock);
-    const player = createPlayer({ script, runtime, clock, panels: new Map(), now: () => wall });
+    const { played } = staged(script, clock);
+    const player = createPlayer({
+      script,
+      runtime: played,
+      clock,
+      panels: new Map(),
+      now: () => wall,
+    });
     player.play();
     wall += 400;
     player.pause();
