@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { markSchema, type Block, type Inline, type Mark } from "./prose";
+import { card, markSchema, type Block, type Inline, type Mark } from "./prose";
 import type { ThreadMessage } from "./thread";
 
 /** Where one step of the agent's work stands. Words, never colour alone, tell them apart. */
@@ -44,8 +44,12 @@ export type ReplyEvent =
   | { kind: "link"; text: string; href: string }
   /** Opens a new block; `item` opens the next item of the list at hand, or a list. */
   | { kind: "block"; block: "paragraph" | "heading" | "list" | "item" }
-  /** A catalog card, placed after the prose so far; the next text starts a new paragraph. */
-  | { kind: "card"; payload: unknown }
+  /**
+   * A catalog card, placed after the prose so far; the next text starts a new paragraph. A card
+   * whose `id` names an earlier card in this reply takes that card's place instead, so a draft
+   * chart becomes the settled one where the reader already saw it.
+   */
+  | { kind: "card"; payload: unknown; id?: string }
   /** A step of the work, new or updated, by its id. */
   | { kind: "step"; step: WorkStep }
   /** One technical line, kept behind Technical details. */
@@ -100,7 +104,7 @@ export const replyEventSchema = z.discriminatedUnion("kind", [
     kind: z.literal("block"),
     block: z.enum(["paragraph", "heading", "list", "item"]),
   }),
-  z.object({ kind: z.literal("card"), payload: z.unknown() }),
+  z.object({ kind: z.literal("card"), payload: z.unknown(), id: z.string().optional() }),
   z.object({ kind: z.literal("step"), step: workStepSchema }),
   z.object({ kind: z.literal("log"), text: z.string() }),
   z.object({ kind: z.literal("summary"), text: z.string() }),
@@ -148,6 +152,15 @@ function appendInline(blocks: Block[], inline: Inline): Block[] {
 
 function appendTo(content: Inline[], inline: Inline): Inline[] {
   return inline.kind === "run" ? appendRun(content, inline) : [...content, inline];
+}
+
+// Places a card where the earlier card of its id stands, else after the prose so far.
+function placeCard(blocks: Block[], placed: Extract<Block, { kind: "card" }>): Block[] {
+  const at =
+    placed.id === undefined
+      ? -1
+      : blocks.findIndex((block) => block.kind === "card" && block.id === placed.id);
+  return at === -1 ? [...blocks, placed] : blocks.map((block, i) => (i === at ? placed : block));
 }
 
 // Opens a block. `item` adds an item to the list at hand, or starts a list.
@@ -201,7 +214,7 @@ function endedBy(message: AgentMessage): Ended {
 /**
  * Folds one chunk of a reply into the agent's turn: pure, so the same stream always builds the
  * same turn. Text grows the plain `text` always and the `blocks` once the reply has structure;
- * narration supersedes and is kept; a failure ends the turn as interrupted or failed. A
+ * a card with an earlier card's id takes its place; narration supersedes and is kept; a failure ends the turn as interrupted or failed. A
  * `question` is kept on the turn as what it asks, so the dock can be read back from the record;
  * the host docks it as it streams.
  */
@@ -224,10 +237,7 @@ export function applyChunk(message: AgentMessage, chunk: ReplyChunk): AgentMessa
     case "block":
       return { ...message, blocks: openBlock(blocksOf(message), chunk.block) };
     case "card":
-      return {
-        ...message,
-        blocks: [...blocksOf(message), { kind: "card", payload: chunk.payload }],
-      };
+      return { ...message, blocks: placeCard(blocksOf(message), card(chunk.payload, chunk.id)) };
     case "activity":
       return narrate(message, work, chunk.text);
     case "step":

@@ -12,12 +12,16 @@ export type Inline =
   | { kind: "run"; text: string; mark?: Mark }
   | { kind: "link"; text: string; href: string };
 
-/** One block of a response: prose, a heading, a list, or a catalog card between paragraphs. */
+/**
+ * One block of a response: prose, a heading, a list, or a catalog card between paragraphs. A
+ * card with an `id` can be sent again, a draft and then its settled version, and the later one
+ * takes the earlier one's place.
+ */
 export type Block =
   | { kind: "paragraph"; content: Inline[] }
   | { kind: "heading"; content: Inline[] }
   | { kind: "list"; items: Inline[][] }
-  | { kind: "card"; payload: unknown };
+  | { kind: "card"; payload: unknown; id?: string };
 
 /** Parses a `Mark`. */
 export const markSchema = z.enum(["strong", "em", "code"]);
@@ -35,7 +39,7 @@ export const blockSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("paragraph"), content: z.array(inlineSchema) }),
   z.object({ kind: z.literal("heading"), content: z.array(inlineSchema) }),
   z.object({ kind: z.literal("list"), items: z.array(z.array(inlineSchema)) }),
-  z.object({ kind: z.literal("card"), payload: z.unknown() }),
+  z.object({ kind: z.literal("card"), payload: z.unknown(), id: z.string().optional() }),
 ]);
 
 /** A plain run of text. */
@@ -52,7 +56,9 @@ export const link = (value: string, href: string): Inline => ({ kind: "link", te
 export const paragraph = (content: Inline[]): Block => ({ kind: "paragraph", content });
 export const heading = (content: Inline[]): Block => ({ kind: "heading", content });
 export const list = (items: Inline[][]): Block => ({ kind: "list", items });
-export const card = (payload: unknown): Block => ({ kind: "card", payload });
+/** A catalog card; with an `id`, a later card of the same id replaces it in place. */
+export const card = (payload: unknown, id?: string): Extract<Block, { kind: "card" }> =>
+  id === undefined ? { kind: "card", payload } : { kind: "card", payload, id };
 
 function inlineText(content: Inline[]): string {
   return content.map((segment) => segment.text).join("");

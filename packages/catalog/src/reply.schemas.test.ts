@@ -28,6 +28,8 @@ const events: ReplyEvent[] = [
   { kind: "link", text: "the queue", href: "https://example.com/queue" },
   { kind: "block", block: "item" },
   { kind: "card", payload: { component: "BarChart" } },
+  { kind: "card", payload: { component: "LineChart", draft: true }, id: "trend" },
+  { kind: "card", payload: { component: "LineChart" }, id: "trend" },
   {
     kind: "step",
     step: {

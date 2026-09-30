@@ -44,6 +44,12 @@ function Inlines({ content }: { content: Inline[] }) {
   return content.map((inline, i) => <InlineView key={i} inline={inline} />);
 }
 
+// A block's key: its place (see Inlines), or a card's id when it has one, so a later version of
+// that card updates the one on screen, keeping its state, rather than mounting a new one.
+function blockKey(block: Block, place: number): string {
+  return block.kind === "card" && block.id !== undefined ? `card:${block.id}` : `${place}`;
+}
+
 function BlockView({
   block,
   carries,
@@ -115,8 +121,12 @@ export function Prose({
   return (
     <div className="quiet-prose">
       {blocks.map((block, i) => (
-        // oxlint-disable-next-line react/no-array-index-key -- see Inlines
-        <BlockView key={i} block={block} carries={cardsCarry !== false} shareable={shareable} />
+        <BlockView
+          key={blockKey(block, i)}
+          block={block}
+          carries={cardsCarry !== false}
+          shareable={shareable}
+        />
       ))}
     </div>
   );

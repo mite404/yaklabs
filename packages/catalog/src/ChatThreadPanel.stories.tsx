@@ -5,7 +5,7 @@ import type { Agent } from "./agent";
 import type { ReplyChunk } from "./reply";
 import { useCarryTarget } from "./carry";
 import { ChatThreadPanel } from "./ChatThreadPanel";
-import { scenarios } from "./fixtures";
+import { scenarios, trend } from "./fixtures";
 import { threads } from "./thread";
 
 // A fixed clock keeps idle-time stories deterministic.
@@ -711,6 +711,56 @@ export const Streaming: Story = {
       "1 check",
     );
     await expect(canvas.queryByRole("button", { name: "Stop" })).toBeNull();
+  },
+};
+
+// The team comparison twice under one id: a draft while its check runs, then the settled card.
+const settledTeams = {
+  ...trend,
+  component: "BarChart",
+  props: {
+    ...trend.props,
+    title: "Cases by team",
+    variant: "comparison",
+    rows: [
+      { label: "Support", value: 84 },
+      { label: "Success", value: 56 },
+      { label: "Operations", value: 71 },
+    ],
+  },
+};
+const draftTeams = {
+  ...settledTeams,
+  props: {
+    ...settledTeams.props,
+    title: "Cases by team (draft)",
+    rows: settledTeams.props.rows.slice(0, 2),
+  },
+};
+const replacedStream: ReplyChunk[] = [
+  { kind: "step", step: { id: "teams", label: "Cases by team", status: "running" } },
+  "Here is each team's count so far.",
+  { kind: "card", payload: draftTeams, id: "teams" },
+  { kind: "text", text: "Support leads either way." },
+  { kind: "step", step: { id: "teams", label: "Cases by team", status: "done" } },
+  { kind: "card", payload: settledTeams, id: "teams" },
+];
+
+/**
+ * A card sent again under its id (ADR-147, widened): the draft chart shown while its check runs
+ * becomes the settled one in the same place, the same card on screen, not a second one below.
+ */
+export const CardReplaced: Story = {
+  args: { thread: threads.trend, agent: scriptedAgent(replacedStream, 300) },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.type(canvas.getByRole("textbox", { name: "Message" }), "Compare teams{Enter}");
+    const draft = await canvas.findByRole("heading", { name: "Cases by team (draft)" });
+    const shown = draft.closest("section"); // → the card on screen
+    const settled = await canvas.findByRole("heading", { name: "Cases by team" });
+    await expect(settled.closest("section")).toBe(shown);
+    await expect(canvas.queryByRole("heading", { name: "Cases by team (draft)" })).toBeNull();
+    await expect(canvas.getByText("Support leads either way.")).toBeVisible();
   },
 };
 

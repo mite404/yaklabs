@@ -89,6 +89,36 @@ describe("applyChunk", () => {
     expect(turn.text).toBe("Before.After.");
   });
 
+  it("replaces a card in place when a later card carries its id", () => {
+    const draft = { component: "BarChart", props: { title: "Draft" } };
+    const settled = { component: "BarChart", props: { title: "Settled" } };
+    const turn = fold([
+      "Before.",
+      { kind: "card", payload: draft, id: "issues" },
+      { kind: "card", payload: { component: "LineChart" } },
+      { kind: "text", text: "After." },
+      { kind: "card", payload: settled, id: "issues" },
+      { kind: "text", text: " Still after." },
+    ]);
+    expect(turn.blocks).toEqual([
+      { kind: "paragraph", content: [{ kind: "run", text: "Before." }] },
+      { kind: "card", payload: settled, id: "issues" },
+      { kind: "card", payload: { component: "LineChart" } },
+      { kind: "paragraph", content: [{ kind: "run", text: "After. Still after." }] },
+    ]);
+  });
+
+  it("appends a card whose id no earlier card carries", () => {
+    const turn = fold([
+      { kind: "card", payload: 1, id: "a" },
+      { kind: "card", payload: 2, id: "b" },
+    ]);
+    expect(turn.blocks).toEqual([
+      { kind: "card", payload: 1, id: "a" },
+      { kind: "card", payload: 2, id: "b" },
+    ]);
+  });
+
   it("supersedes narration and keeps what it replaced", () => {
     const turn = fold([
       { kind: "activity", text: "Thinking." },
