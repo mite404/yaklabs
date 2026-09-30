@@ -12,6 +12,7 @@ import {
   summarize,
   type CardAttachment,
   type InteractiveSelection,
+  type Stop,
 } from "./interactive";
 import "./interactive.css";
 
@@ -22,6 +23,12 @@ function prefersReducedMotion(): boolean {
   // Runs during render, so it must survive environments without a window (server rendering, tests).
   if (typeof window === "undefined") return false;
   return window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+}
+
+// The stop to show: the host's, by label, when it holds one the card has; else the card's own.
+function shownIndex(stops: Stop[], measure: string | undefined, own: number): number {
+  const held = measure === undefined ? -1 : stops.findIndex((each) => each.label === measure);
+  return held === -1 ? own : held;
 }
 
 // One axis for every stop: rescaling per stop would make net look as tall as gross.
@@ -78,8 +85,7 @@ export function InteractiveCard({
 
   const { props } = result.selection;
   const stops = props.control.stops;
-  const held = measure === undefined ? -1 : stops.findIndex((each) => each.label === measure);
-  const index = held === -1 ? own : held; // → the host's stop when it holds one, else the card's
+  const index = shownIndex(stops, measure, own);
   const stop = stops[index];
   const sentence = fillSentence(props.sentence, summarize(stop, props.period));
   const animate = !prefersReducedMotion();
