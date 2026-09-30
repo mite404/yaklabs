@@ -22,10 +22,10 @@ export type V2Plan = {
   lanes: { mainId: ThreadId; lanes: Lane[] }[];
 };
 
-/** The project a v1 database's conversations join, and the one the device starts with. */
-export const DEMO_PROJECT = { id: projectIdSchema.parse("demo-store"), name: "Demo store" };
-/** The main thread a v1 database's `profit` conversation becomes. */
-export const PROFIT = threadIdSchema.parse("profit");
+// The project a v1 database's conversations join.
+const DEMO_PROJECT = { id: projectIdSchema.parse("demo-store"), name: "Demo store" };
+// The main thread a v1 database's `profit` conversation becomes.
+const PROFIT = threadIdSchema.parse("profit");
 
 // Oldest first; the id breaks ties so the order never depends on insertion.
 function byUpdated(a: V1Row, b: V1Row): number {
