@@ -481,6 +481,11 @@ The first entries are ideas from before any code existed; the rest are parts of 
 - **A dim ink chosen by calculation.** "Dimmed" is easy to overdo until the title fails
   contrast. `--faint-ink` was computed to sit visibly under soft ink yet still clear 4.5:1 on both
   papers in both themes (ADR-129).
+- **Kimi through OpenRouter, in Anthropic's dialect.** OpenRouter is best known for its
+  OpenAI-style API, but it also answers in Anthropic's Messages format. Speaking that one kept
+  the browser's stream decoder untouched, so swapping Claude for Kimi K2.6 changed three lines of
+  gateway config, not both ends of the pipe. The key's $25 credit limit doubles as the spending
+  cap (ADR-146).
 
 ## 4. Bloopers
 
@@ -2812,3 +2817,46 @@ same `messages` the panel renders from means the binder and the page can never d
 Senior-engineer takeaway: a tool that points at things should not also move them. Give it the
 data, take back an intent, and let the owner of the scroll, the focus or the network carry it
 out.
+
+### Swap the lens, keep the camera: one adapter owns the upstream
+
+Moving from Claude to Kimi could have meant rewiring the whole signal chain. It did not, because
+only one file decides where the gateway's requests go.
+
+```ts
+// apps/gateway/src/upstream.ts: the one place that knows who serves the model
+export function openRouterClient(apiKey: string, options = {}): Anthropic {
+  return new Anthropic({
+    ...options, // test seams only: fetch, maxRetries
+    baseURL: "https://openrouter.ai/api", // → POST https://openrouter.ai/api/v1/messages
+    authToken: apiKey, // → Authorization: Bearer <key>, the header OpenRouter reads
+    apiKey: null, // → no x-api-key header beside it
+  });
+}
+
+// apps/gateway/src/worker.ts: the rest of the app only sees "a Messages API client"
+upstream: openRouterClient(OPENROUTER_API_KEY), // → Anthropic, pointed at OpenRouter
+```
+
+```mermaid
+sequenceDiagram
+  participant W as Browser worker
+  participant G as Gateway (Hono)
+  participant O as OpenRouter /v1/messages
+  participant K as Kimi K2.6
+  W->>G: POST /api/messages (turns, WorkOS token)
+  G->>O: Anthropic-format request (model, Bearer key)
+  O->>K: translated for Kimi's provider
+  K-->>O: reasoning, then the answer
+  O-->>G: Anthropic stream events (thinking_delta, text_delta)
+  G-->>W: same NDJSON as before
+  W->>W: MessageStream.fromReadableStream keeps only text
+```
+
+The film version: the camera body (browser, worker, gateway routes) stays on the dolly, and we
+changed the lens. OpenRouter's Anthropic-format endpoint is the mount adapter that lets a
+different maker's glass fit without touching the rig.
+
+Senior-engineer takeaway: keep the choice of vendor behind one small door, and make sure the
+contract on the far side of it is one you already speak. The unit test that pins the upstream
+URL, the Bearer header and a body with no stray fields is what lets a swap like this be boring.
