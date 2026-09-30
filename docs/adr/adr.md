@@ -2009,6 +2009,33 @@ since the app's provider now carries the same values. A new label cannot come ou
 shape without editing `packages/ui/src/components/tooltip.tsx`. P23 and P28 read the pills, and
 the web checks read a cut row's name on hover and focus and a name that wraps.
 
+## ADR-146 - The gateway streams Kimi K2.6 through OpenRouter's Anthropic-format endpoint
+
+2026-09-30 - Accepted (Ethan: "it's time to wire up the backend so that this vertical slice can
+actually work live", then "i'd like to use moonshot/kimi-k2.6 for this demo since its cheap").
+Reopens two of ADR-137's cuts, a model key in the gateway and a Worker deploy, and changes
+ADR-085's and ADR-088's model; the sign-in code stays as ADR-084 and ADR-088 wrote it.
+`POST /api/messages` now streams from `moonshotai/kimi-k2.6` on OpenRouter ($0.65 in and $3.41
+out per million tokens on 2026-09-30, against $5 and $25 for `claude-opus-5`), with the key in a
+Worker secret named `OPENROUTER_API_KEY`. The key carries a $25 credit limit set in OpenRouter,
+which is the slice's spending cap: Anthropic's per-workspace limits were the other way to cap a
+signed-in visitor's spend, and Ethan found them hard to set up.
+The gateway speaks OpenRouter's Anthropic-compatible Messages endpoint (`/api/v1/messages`, in
+OpenRouter's OpenAPI spec) through the Anthropic SDK it already used, with `baseURL`
+`https://openrouter.ai/api` and the key as a Bearer token (`src/upstream.ts`). OpenRouter's
+OpenAI-format `/chat/completions` would also serve Kimi, but it streams a different event shape,
+so both the gateway's stream and the browser worker's decoder would change; on this endpoint the
+NDJSON the browser reads with `MessageStream.fromReadableStream` stays exactly as it was, and
+nothing outside `apps/gateway` changes. The request drops `thinking: { type: "adaptive" }`, an
+Anthropic setting; Kimi reasons by default, its reasoning arrives as `thinking_delta` events the
+browser already skips, and `max_tokens` 8192 caps reasoning and reply together.
+Proven with the real key: a direct call answered in Anthropic's event shapes, and a turn built by
+the runtime's `toModelRequest` (a card and a `[Card view: Net profit]` line) went through the
+gateway's own app and came back as text through the browser's decoder. That round trip took
+about 23 seconds, which is slow for a demo and not yet broken down between reasoning and the
+answer. The WorkOS half was stubbed, since a real token needs a person's sign-in, and the
+`/demo/weekly-brief` route is untouched, as it never reaches the gateway.
+
 ## ADR-147 - The reply seam carries events, not only words
 
 2026-09-30 - Accepted (Ethan's goals for the legibility demo: an interleaved conversation, honest

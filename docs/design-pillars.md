@@ -385,7 +385,8 @@ measures that share; P29 and P30 hold the rail still, and its edge its own, at e
 
 The Pixels workbench uses neon green (`#39ff14`) for changed pixels. Comparator proof uses red
 (`#ff0000`) for its deliberately introduced mistakes (Ethan). These diagnostic colors are not
-product status colors. Their roles live in `apps/verify/src/diff-palette.ts`; grayscale supplies
+product status colors. Their roles live in `tools/verify-ui-drift/src/diff-palette.ts`; grayscale
+supplies
 unchanged context. Older evidence keeps its original overlay color rather than rewriting artifacts.
 
 Workbench density uses five-sixths of `--space` for its primary spacing, about 17% less than the

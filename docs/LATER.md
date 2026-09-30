@@ -6,12 +6,10 @@ this list when it ships.
 
 ## Waiting on Ethan
 
-Sign-in and everything that needs it is cut for the interview (ADR-137): the five items below
-are not to be started, and stay here only so the reason is not lost.
+Ethan reopened the live path (ADR-146): the gateway now streams from Kimi K2.6 through
+OpenRouter, with `OPENROUTER_API_KEY` set as a Worker secret. The four items below are what
+stands between that and a signed-in visitor getting a reply.
 
-- **Put a model key in the gateway.** `apps/gateway` streams from Claude once `ANTHROPIC_API_KEY`
-  is set as a Worker secret; no key was available where the slice was built, so the real-model
-  path is proven only against a fake upstream (ADR-088).
 - **Deploy the Worker and register its address.** The share page and the thread now ship in the
   one Cloudflare Worker (ADR-086); creating it from the repo publishes under Ethan's account, and
   its address must join WorkOS's redirect URIs and CORS origins (ADR-084).

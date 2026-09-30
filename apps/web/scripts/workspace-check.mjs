@@ -5,7 +5,7 @@
 // never hides another, and a check never sees another's data.
 //
 //   pnpm dev:web                                        # http://127.0.0.1:5173
-//   .agents/skills/verify-storybook/scripts/control-storybook.sh launch   # http://127.0.0.1:6106
+//   .agents/skills/verify-storybook-component/scripts/control-storybook.sh launch   # http://127.0.0.1:6106
 //   node apps/web/scripts/workspace-check.mjs [--base URL] [--storybook URL] [--only P1,P4] [--out dir]
 import { canvasChecks } from "./canvas-checks.mjs";
 import { laneCollapseChecks } from "./lane-collapse-checks.mjs";

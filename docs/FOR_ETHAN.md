@@ -15,7 +15,8 @@ Ideas we agreed on but have not started live in `docs/LATER.md`.
 The thread now keeps every expanded card 20px above the compose box (ADR-038), and a question the
 agent is blocked on gets its own "Needs you" card instead of hiding inside the recap (ADR-039).
 Every component is now run, not just read: all 40 stories render in headless Chromium with an axe
-check on each commit and in CI, beside oxlint, oxfmt, `tsc` and fallow, and a `verify-storybook`
+check on each commit and in CI, beside oxlint, oxfmt, `tsc` and fallow, and a
+`verify-storybook-component`
 skill lets an agent screenshot whatever a change reaches.
 The lab has become an app. The repo is now a pnpm monorepo in Better-T-Stack's layout
 (ADR-087): the catalog is a package beside its stories, `apps/web` is the React Router site that
@@ -555,6 +556,11 @@ The first entries are ideas from before any code existed; the rest are parts of 
   mark that dates the whole exchange, so the request above needs none (ADR-152).
 - **One clock for the script and the agent.** The player's keystrokes and the agent's word pauses
   wait on the same clock, so Pause is one flag and 2x one number, and the two can never drift.
+- **Kimi through OpenRouter, in Anthropic's dialect.** OpenRouter is best known for its
+  OpenAI-style API, but it also answers in Anthropic's Messages format. Speaking that one kept
+  the browser's stream decoder untouched, so swapping Claude for Kimi K2.6 changed three lines of
+  gateway config, not both ends of the pipe. The key's $25 credit limit doubles as the spending
+  cap (ADR-146).
 
 ## 4. Bloopers
 
@@ -828,7 +834,8 @@ The first entries are ideas from before any code existed; the rest are parts of 
   its place, and no path shows the hand while one is down. The story now makes a selection under a
   held button and expects the I-beam. Lesson: when two events can reach one decision, the decision
   needs the same facts from both.
-- **The screening room that never got the new pages.** The verify-storybook harness kept failing
+- **The screening room that never got the new pages.** The verify-storybook-component harness kept
+  failing
   the grab story while the story suite passed, before and after the fix alike, and a stash-and-shoot
   "before" looked identical to "after". The tell was a timestamp in the stack trace that never
   changed: the private Storybook was serving the catalog from a build cache made in the previous
@@ -1393,6 +1400,21 @@ The loop now forwards words and passes over events until the protocol can carry 
 When a type widens, grep for every consumer that assumed the narrow one; the compiler only finds
 the ones that break loudly.
 
+### The other axe on the stage
+
+Two of three drift runs died at random, each time on a different capture, with "Axe is already
+running". The page had two axe runners: the drift tool injects its own `window.axe` through
+AxeBuilder, and Storybook's a11y addon auto-runs axe after every story render
+(`a11y: { test: "error" }` in `preview.ts`). The addon's axe chunk assigns `window.axe` the
+moment it loads, so a chunk landing between the tool's injection and its `axe.runPartial` left
+the tool knocking on a run the addon had already started, and the capture failed. A probe
+mirroring the capture's real timing (screenshot, aria snapshot, then axe) hit the race about
+once in thirty captures; at ten captures a run, one run in three went BROKEN. Fix:
+`a11y.manual:!true` in the story URL's globals keeps the addon's run off the tool's set, and
+the tool's own axe check is untouched: every cell still reports its axe results. Lesson: when
+two crews shoot the same scene with one camera, decide who rolls; a URL global is the quietest
+call sheet.
+
 ## 5. Director's Commentary
 
 ### The agent only states intent; the design system does the rest
@@ -1749,7 +1771,7 @@ flowchart LR
   H --> A[fallow audit<br/>only what this commit adds]
   A --> P[Push / PR]
   P --> C{CI: same checks<br/>+ Storybook build<br/>+ audit vs PR base}
-  E -.->|agent proving a change| V[verify-storybook<br/>affected stories → screenshots + ARIA trees]
+  E -.->|agent proving a change| V[verify-storybook-component<br/>affected stories → screenshots + ARIA trees]
 ```
 
 The film version: the linter is the script supervisor reading pages, the story tests are the table
@@ -1861,9 +1883,9 @@ were compared byte for byte, and the only differences were those known animation
 
 ```sh
 # The same lever, before and after; cmp says identical or nothing.
-node .agents/skills/verify-storybook/scripts/shoot.mjs $IDS --out before
+node .agents/skills/verify-storybook-component/scripts/shoot.mjs $IDS --out before
 git mv catalog-lab packages/catalog   # ... the whole move ...
-node .agents/skills/verify-storybook/scripts/shoot.mjs $IDS --out after
+node .agents/skills/verify-storybook-component/scripts/shoot.mjs $IDS --out after
 for f in before/*.png; do cmp -s "$f" "after/$(basename "$f")" || echo "differs: $f"; done
 ```
 
@@ -2363,7 +2385,7 @@ loaded (a catalog card's thread look), and one started unticked while the compon
 "unset" as on, so the first click set what was already true.
 
 ```js
-// .agents/skills/verify-storybook/scripts/audit-controls.mjs: for each visible control, move it
+// .agents/skills/verify-storybook-component/scripts/audit-controls.mjs: for each visible control, move it
 // and compare the story before and after, in the DOM and in pixels.
 const before = await snapshot(page); // → { dom, pixels }
 await setArgs(page, storyId, { [name]: value }); // the Controls panel's own message
@@ -2757,7 +2779,8 @@ moves past it, and is struck only once the shot is over.
 
 ### A continuity desk for pixels
 
-`apps/verify` adds a review room without building a second set of scenes. The production catalog
+`tools/verify-ui-drift` adds a review room without building a second set of scenes. The production
+catalog
 owns the components, Storybook owns their examples, and the verification CLI photographs those
 examples in Chromium, Firefox, and WebKit. The React review app only reads the evidence.
 
@@ -2791,7 +2814,7 @@ The senior-engineer habit is to keep the claims smaller than the evidence. Five 
 three engines and two themes means 30 captures, not complete product coverage. A screenshot diff
 does not establish accessibility. An axe pass does not establish taste. The review room makes each
 claim and its missing evidence visible. The commands and operating limits live in
-`apps/verify/README.md`.
+`tools/verify-ui-drift/README.md`.
 
 ### The review room needs a monitor, not just a checklist
 
@@ -2823,7 +2846,8 @@ complement the designer's judgment rather than assigning a numerical score to ta
 ### The wide shot belongs beside the close-up
 
 Storybook photographs components in isolation. The production SPA's demo now supplies the wide shot,
-including the title bar, sidebar, and workspace. `pnpm verify run --app` records both through the
+including the title bar, sidebar, and workspace. `pnpm verify-ui-drift run --app` records both
+through the
 same comparator. It does not rebuild the shell in a story. The inventory names all available stories
 and distinguishes them from the five-story smoke test, just as a shot list distinguishes planned
 coverage from footage already in the bin.
@@ -2999,3 +3023,77 @@ You lay it, take the shot, and strike it before the next setup.
 Senior-engineer takeaway: when a correct calculation lands wrong, look for the constraint that
 clamped it before you touch the calculation. Then relax the constraint for exactly as long as the
 move needs.
+
+### The label says what's in the case; the truck says who it's for
+
+Two tools checked components under nearly the same name: the `verify-storybook` skill and the
+`apps/verify` app. A teammate could not tell which one to reach for, or that the app never ships.
+The rename splits the two questions a name has to answer. The name says what the tool does, and
+the folder says who it is for:
+
+```yaml
+# pnpm-workspace.yaml - a third shelf beside apps and packages
+packages:
+  - apps/* # ships: web, gateway (and storybook, for now)
+  - packages/* # shared: @yaklabs/catalog, ui, runtime, config
+  - tools/* # the team's own: verify-ui-drift
+```
+
+```mermaid
+flowchart LR
+  E[Component change] --> S[verify-storybook-component skill<br/>one browser, no memory<br/>does this take look right?]
+  S --> P[Pull request]
+  P --> D[tools/verify-ui-drift<br/>3 engines x 2 themes vs baselines<br/>has anything drifted?]
+  D -->|drift or axe violation| F[CI fails]
+  D -->|intended change| A[A person approves locally<br/>new baseline committed]
+```
+
+"Internal" never went into the name. Every workspace here is already private, so the folder carries
+that signal once and for all, and `pnpm verify-ui-drift run` stays about the job. Storybook is an
+internal tool too; it still lives in `apps/` and is the obvious next move onto the `tools/` shelf.
+
+Senior-engineer takeaway: when two things share a verb, name them by the question each answers,
+and let the location tell who they serve.
+
+### Swap the lens, keep the camera: one adapter owns the upstream
+
+Moving from Claude to Kimi could have meant rewiring the whole signal chain. It did not, because
+only one file decides where the gateway's requests go.
+
+```ts
+// apps/gateway/src/upstream.ts: the one place that knows who serves the model
+export function openRouterClient(apiKey: string, options = {}): Anthropic {
+  return new Anthropic({
+    ...options, // test seams only: fetch, maxRetries
+    baseURL: "https://openrouter.ai/api", // → POST https://openrouter.ai/api/v1/messages
+    authToken: apiKey, // → Authorization: Bearer <key>, the header OpenRouter reads
+    apiKey: null, // → no x-api-key header beside it
+  });
+}
+
+// apps/gateway/src/worker.ts: the rest of the app only sees "a Messages API client"
+upstream: openRouterClient(OPENROUTER_API_KEY), // → Anthropic, pointed at OpenRouter
+```
+
+```mermaid
+sequenceDiagram
+  participant W as Browser worker
+  participant G as Gateway (Hono)
+  participant O as OpenRouter /v1/messages
+  participant K as Kimi K2.6
+  W->>G: POST /api/messages (turns, WorkOS token)
+  G->>O: Anthropic-format request (model, Bearer key)
+  O->>K: translated for Kimi's provider
+  K-->>O: reasoning, then the answer
+  O-->>G: Anthropic stream events (thinking_delta, text_delta)
+  G-->>W: same NDJSON as before
+  W->>W: MessageStream.fromReadableStream keeps only text
+```
+
+The film version: the camera body (browser, worker, gateway routes) stays on the dolly, and we
+changed the lens. OpenRouter's Anthropic-format endpoint is the mount adapter that lets a
+different maker's glass fit without touching the rig.
+
+Senior-engineer takeaway: keep the choice of vendor behind one small door, and make sure the
+contract on the far side of it is one you already speak. The unit test that pins the upstream
+URL, the Bearer header and a body with no stray fields is what lets a swap like this be boring.
