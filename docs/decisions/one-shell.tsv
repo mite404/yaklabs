@@ -1,0 +1,4 @@
+ts	phase	decision	why	evidence	result
+2026-09-30T18:26:22Z	frame	ran this phase under poteto-mode's figure-it-out playbook rather than Feature	the rework spans the splash, the runtime, the playground and two deletions, so it needs phases and an audit trail	.agents/skills/figure-it-out/SKILL.md	todo list #21-#25 created
+2026-09-30T18:26:22Z	frame	explorers run as the harness's read-only Explore agent on sonnet	no poteto-agent definition exists on this machine (~/.claude/agents is absent), so the prescribed routing collapsed to the built-in agent	ls ~/.claude/agents	four explorers launched
+2026-09-30T18:26:22Z	frame	grounded with four parallel read-only explorers before any design	one slice each: routes and splash, runtime and scenarios, the demo runtime, the playground and the reply seam; keeps the raw dumps out of this thread	how skill, explorer prompt template	running
