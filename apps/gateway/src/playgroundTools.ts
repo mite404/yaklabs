@@ -207,29 +207,32 @@ const rejectCall = (
   return { state: next, events: [], result: toolResult(call.id, reason, true) };
 };
 
+// Which events count as an answer the user can see. A Record over every type, so a new event
+// type fails the build until it is placed here.
+const SHOWS_ANSWER: Readonly<Record<EventDraft["type"], boolean>> = {
+  start: false,
+  text: false,
+  narration: false,
+  work: false,
+  card: true,
+  outcome: true,
+  failure: true,
+  question: true,
+  end: false,
+};
+
+// A text block joins the prose once it carries something other than whitespace.
+const withProse = (state: TurnState, blockId: string, delta: string): TurnState =>
+  state.prose.includes(blockId) || !/\S/.test(delta)
+    ? state
+    : { ...state, prose: [...state.prose, blockId] };
+
 // What one draft changes about the answer the page shows.
 const noteShown = (state: TurnState, draft: EventDraft): TurnState => {
-  switch (draft.type) {
-    case "text":
-      return state.prose.includes(draft.blockId) || !/\S/.test(draft.delta)
-        ? state
-        : { ...state, prose: [...state.prose, draft.blockId] };
-    case "narration":
-      return { ...state, prose: state.prose.filter((blockId) => blockId !== draft.blockId) };
-    case "card":
-    case "outcome":
-    case "failure":
-    case "question":
-      return state.shown ? state : { ...state, shown: true };
-    case "start":
-    case "work":
-    case "end":
-      return state;
-    default: {
-      const unhandled: never = draft;
-      return unhandled;
-    }
-  }
+  if (draft.type === "text") return withProse(state, draft.blockId, draft.delta);
+  if (draft.type === "narration")
+    return { ...state, prose: state.prose.filter((blockId) => blockId !== draft.blockId) };
+  return SHOWS_ANSWER[draft.type] && !state.shown ? { ...state, shown: true } : state;
 };
 
 /** Numbers drafts from the turn's next `seq`, in order, noting what they show. */

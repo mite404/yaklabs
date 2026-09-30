@@ -1,6 +1,13 @@
 import type { AwaitingInput } from "@yaklabs/catalog/awaiting";
 import type { PlaygroundEvent, UserInput } from "@yaklabs/catalog/playground";
-import { EMPTY_BODY, applyToBody, currentWork, settleWorks, type Body } from "./body";
+import {
+  EMPTY_BODY,
+  applyToBody,
+  currentWork,
+  settleWorks,
+  type Body,
+  type BodyEvent,
+} from "./body";
 import { assertNever } from "./never";
 
 export type Asked = { questionId: string; question: AwaitingInput };
@@ -88,32 +95,42 @@ export function statusLine(turn: AgentTurn): string | undefined {
   return answered ? undefined : (work.narration ?? work.label);
 }
 
+// What each event does to a reply's phase. Keyed by event type, so a new event type fails the
+// build here until it has a place.
+type EventOf = { [E in PlaygroundEvent as E["type"]]: E };
+type Arrivals = { [K in keyof EventOf]: (body: Body, event: EventOf[K]) => AgentTurn };
+
+const streamOn = (body: Body, event: BodyEvent): AgentTurn => ({
+  phase: "streaming",
+  body: applyToBody(body, event),
+});
+
+const ARRIVALS: Arrivals = {
+  start: (body) => ({ phase: "streaming", body }),
+  text: streamOn,
+  narration: streamOn,
+  work: streamOn,
+  card: streamOn,
+  outcome: streamOn,
+  failure: streamOn,
+  question: (body, event) => ({
+    phase: "asked",
+    body: settleWorks(body),
+    asked: { questionId: event.questionId, question: event.question },
+  }),
+  end: (body, event) => ({ phase: "done", body: settleWorks(body), reason: event.reason }),
+};
+
+// `type` travels beside `event` so the lookup and the handler's input stay paired.
+function arrive<K extends keyof EventOf>(type: K, body: Body, event: EventOf[K]): AgentTurn {
+  return ARRIVALS[type](body, event);
+}
+
 function receive(turn: AgentTurn, event: PlaygroundEvent): AgentTurn {
   if (turn.phase !== "waiting" && turn.phase !== "streaming") return turn;
   const current = turn.phase === "waiting" ? EMPTY_BODY : turn.body;
   if (event.seq <= current.lastSeq) return turn;
-  const body = { ...current, lastSeq: event.seq };
-  switch (event.type) {
-    case "start":
-      return { phase: "streaming", body };
-    case "text":
-    case "narration":
-    case "work":
-    case "card":
-    case "outcome":
-    case "failure":
-      return { phase: "streaming", body: applyToBody(body, event) };
-    case "question":
-      return {
-        phase: "asked",
-        body: settleWorks(body),
-        asked: { questionId: event.questionId, question: event.question },
-      };
-    case "end":
-      return { phase: "done", body: settleWorks(body), reason: event.reason };
-    default:
-      return assertNever(event);
-  }
+  return arrive(event.type, { ...current, lastSeq: event.seq }, event); // → AgentTurn
 }
 
 function breakOff(turn: AgentTurn, cause: Cause): AgentTurn {

@@ -13,8 +13,8 @@ import { openRouterClient } from "./upstream";
 type StreamEvent = Anthropic.RawMessageStreamEvent;
 type Fetch = (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
 
-/** The one token the test verifier accepts. */
-export const TOKEN = "workos-access-token";
+// The one token the test verifier accepts.
+const TOKEN = "workos-access-token";
 
 /** A valid catalog card. */
 export const BAR_CARD: Selection = {

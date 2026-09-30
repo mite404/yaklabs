@@ -207,15 +207,12 @@ const tryOpenRound = async (
   }
 };
 
-/**
- * The playground's tool loop, the only part that talks to the model: it opens a round, turns
- * each upstream event into page events, answers the tool calls and goes round again until the
- * model answers, asks, hits a limit or stops responding. The first event is `start`, the last
- * is `end`, and `seq` counts up from 0 without a gap. A closed browser (`signal`) stops it.
- *
- * @throws the first round's `APIError` before `start`, so the route can answer 502 instead.
- */
-export async function* playgroundEvents(
+// The playground's tool loop, the only part that talks to the model: it opens a round, turns
+// each upstream event into page events, answers the tool calls and goes round again until the
+// model answers, asks, hits a limit or stops responding. The first event is `start`, the last
+// is `end`, and `seq` counts up from 0 without a gap. A closed browser (`signal`) stops it.
+// It throws the first round's `APIError` before `start`, so the route can answer 502 instead.
+async function* playgroundEvents(
   upstream: PlaygroundUpstream,
   request: PlaygroundRequest,
   signal: AbortSignal,

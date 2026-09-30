@@ -1,7 +1,7 @@
 import { AgentTree, AwaitingInputCard, CatalogCard, UserTurn } from "@yaklabs/catalog";
 import type { UserInput } from "@yaklabs/catalog/playground";
 import { Button } from "@yaklabs/ui/components/button";
-import { useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
 import { QuietProse } from "../demo/QuietProse";
 import type { Body, Failure, Item } from "./body";
 import { parseQuietProse } from "./markdown";
@@ -17,13 +17,43 @@ export type ReplyActions = {
   locked: boolean;
 };
 
-function TextItem({ source }: { source: string }) {
+// Each item kind's own view, looked up by kind so a new kind fails the build until it has one.
+type ItemOf = { [I in Item as I["kind"]]: I };
+type ItemProps<K extends keyof ItemOf> = { item: ItemOf[K]; body: Body; actions: ReplyActions };
+type ItemViews = { [K in keyof ItemOf]: (props: ItemProps<K>) => ReactNode };
+
+function TextItem({ item, body }: ItemProps<"text">) {
+  const source = body.text[item.blockId] ?? "";
   const blocks = useMemo(() => parseQuietProse(source), [source]); // → Block[]
   if (blocks.length === 0) return null;
   return <QuietProse blocks={blocks} />;
 }
 
-function FailureItem({ failure, actions }: { failure: Failure; actions: ReplyActions }) {
+function CardItem({ item, body }: ItemProps<"card">) {
+  const card = body.cards[item.cardId];
+  if (card === undefined) return null;
+  return (
+    <div className="pg-card">
+      <CatalogCard payload={card.selection} context="thread" shareable={false} />
+      {card.note !== undefined && <p className="pg-note">{card.note}</p>}
+    </div>
+  );
+}
+
+function OutcomeItem({ item, body }: ItemProps<"outcome">) {
+  const outcome = body.works[item.workId]?.outcome;
+  if (outcome === undefined) return null;
+  return (
+    <div className="quiet-prose pg-outcome">
+      <p>
+        <strong>{outcome.result}</strong>
+      </p>
+      {outcome.evidence.length > 0 && <ul>{lineItems(outcome.evidence)}</ul>}
+    </div>
+  );
+}
+
+function Limitation({ failure, actions }: { failure: Failure; actions: ReplyActions }) {
   const { recovery } = failure;
   return (
     <section className="pg-failure" aria-label="Limitation">
@@ -50,39 +80,24 @@ function FailureItem({ failure, actions }: { failure: Failure; actions: ReplyAct
   );
 }
 
-function ItemView({ item, body, actions }: { item: Item; body: Body; actions: ReplyActions }) {
-  switch (item.kind) {
-    case "text":
-      return <TextItem source={body.text[item.blockId] ?? ""} />;
-    case "card": {
-      const card = body.cards[item.cardId];
-      if (card === undefined) return null;
-      return (
-        <div className="pg-card">
-          <CatalogCard payload={card.selection} context="thread" shareable={false} />
-          {card.note !== undefined && <p className="pg-note">{card.note}</p>}
-        </div>
-      );
-    }
-    case "outcome": {
-      const outcome = body.works[item.workId]?.outcome;
-      if (outcome === undefined) return null;
-      return (
-        <div className="quiet-prose pg-outcome">
-          <p>
-            <strong>{outcome.result}</strong>
-          </p>
-          {outcome.evidence.length > 0 && <ul>{lineItems(outcome.evidence)}</ul>}
-        </div>
-      );
-    }
-    case "failure": {
-      const failure = body.failures.at(item.index);
-      return failure === undefined ? null : <FailureItem failure={failure} actions={actions} />;
-    }
-    default:
-      return assertNever(item);
-  }
+function FailureItem({ item, body, actions }: ItemProps<"failure">) {
+  const failure = body.failures.at(item.index);
+  return failure === undefined ? null : <Limitation failure={failure} actions={actions} />;
+}
+
+// Each entry renders its view as an element, so hooks stay inside the components; calling the
+// entry (not rendering it as JSX) lets TypeScript pair the kind with its props.
+const ITEM_VIEWS: ItemViews = {
+  text: (props) => <TextItem {...props} />,
+  card: (props) => <CardItem {...props} />,
+  outcome: (props) => <OutcomeItem {...props} />,
+  failure: (props) => <FailureItem {...props} />,
+};
+
+// `kind` travels beside the props so the lookup and the view's input stay paired.
+function ItemView<K extends keyof ItemOf>({ kind, ...props }: ItemProps<K> & { kind: K }) {
+  const render = ITEM_VIEWS[kind]; // → (props: ItemProps<K>) => ReactNode
+  return render(props);
 }
 
 function itemKey(item: Item, body: Body): string {
@@ -162,7 +177,13 @@ function BodyView({
   return (
     <>
       {body.items.map((item) => (
-        <ItemView key={itemKey(item, body)} item={item} body={body} actions={actions} />
+        <ItemView
+          key={itemKey(item, body)}
+          kind={item.kind}
+          item={item}
+          body={body}
+          actions={actions}
+        />
       ))}
       <Status text={status} />
       <WorkDetails body={body} />

@@ -59,11 +59,9 @@ function toEvent(raw: unknown): PlaygroundEvent {
   return parsed.data;
 }
 
-/**
- * Parses one NDJSON line with the shared event schema.
- * @throws {PlaygroundProtocolError} When the line is not JSON or not a known event.
- */
-export function parseEventLine(line: string): PlaygroundEvent {
+// One NDJSON line through the shared event schema; throws PlaygroundProtocolError when the
+// line is not JSON or not a known event.
+function parseEventLine(line: string): PlaygroundEvent {
   const raw = parseJson(line); // → unknown | NOT_JSON
   if (raw === NOT_JSON) throw new PlaygroundProtocolError("A stream line is not JSON.");
   return toEvent(raw);
