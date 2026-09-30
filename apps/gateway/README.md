@@ -22,13 +22,14 @@ one allowed origin in WorkOS (ADR-086).
 - `POST /api/playground` takes the playground's history (`playgroundRequestSchema` in
   `@yaklabs/catalog/playground`), behind the same token check, and runs the tool loop for
   `/playground` (ADR-148):
-  - the prompt and the five tools live here, never in the browser (`src/playground.ts`);
+  - the prompt and the tool loop live here, never in the browser (`src/playground.ts`); the
+    five tool definitions are shared schema from `@yaklabs/catalog/playground`;
   - each round's tool calls are checked with the catalog's own validators; a bad call goes back
     to the model as an error result and never reaches the page (`src/playgroundTools.ts`);
   - the reply streams as `application/x-ndjson`, one `PlaygroundEvent` per line, from `start`
     to `end`, with `seq` counting up without a gap;
-  - a turn stops at 8 rounds or 16 tool calls, and a refused first round answers 502 like
-    `/api/messages`.
+  - a turn stops at 8 rounds; tool calls past 16 in a turn get an error result instead of
+    running, and a refused first round answers 502 like `/api/messages`.
 - Every other path is a static file from `apps/web/build/client`; a path that is not a file gets
   `index.html`, and the app's router takes it from there. The Worker runs only for `/api/*`.
 - It stores nothing and logs no conversation content.
