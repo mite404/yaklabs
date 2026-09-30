@@ -12,7 +12,7 @@ import { accessibility, mutationProof, openStory, sampleTokens, screenshot } fro
 import { inventoryCss } from "./colors.ts";
 import { firstLine, idSchema, proved, reportSchema, verdict } from "./report.ts";
 import type { Cell, Engine, Fingerprint, Probe, Report, Theme } from "./report.ts";
-import { summarize } from "./summary.ts";
+import { referenceNotice, summarize } from "./summary.ts";
 import {
   BASELINES,
   command,
@@ -226,6 +226,43 @@ async function runEngineMatrix(
   }
 }
 
+// One engine's whole matrix. A launch failure or a crash mid-matrix is recorded and printed as it
+// happens, so the next engine still runs and nobody waits for the summary to learn of it.
+async function captureEngine(
+  engine: Engine,
+  context: {
+    servers: { stories: Server; app: Server | null };
+    environment: string;
+    names: string[];
+    options: RunOptions;
+    report: Report;
+  },
+  directory: string,
+) {
+  const { servers, environment, names, options, report } = context;
+  let browser: Browser;
+  try {
+    browser = await browsers[engine].launch(
+      engine === "chromium"
+        ? { args: ["--disable-partial-raster", "--force-color-profile=srgb"] }
+        : {},
+    );
+  } catch (error) {
+    report.cells.push(...notRunCells(engine, report.selectedStories, options.themes, error));
+    report.errors.push(`${engine} did not launch: ${String(error)}`);
+    process.stdout.write(`${engine} did not launch: ${firstLine(String(error))}\n`);
+    return;
+  }
+  try {
+    await runEngineMatrix(browser, engine, servers, environment, names, options, report, directory);
+  } catch (error) {
+    report.errors.push(`${engine}: ${String(error)}`);
+    process.stdout.write(`${engine} stopped: ${firstLine(String(error))}\n`);
+  } finally {
+    await browser.close();
+  }
+}
+
 /** Builds code once, captures the requested matrix, and writes an immutable report last.
  * @throws When the source cannot be read or the report cannot be persisted.
  */
@@ -270,43 +307,11 @@ export async function runVerification(options: RunOptions): Promise<Report> {
           : await chooseStories(options, all, server.port, directory);
       if (report.selectedStories.includes(APP_SHELL.id)) app = await buildApp(id, directory);
       const environment = await environmentName();
-      if (options.mode === "comparison" && !known.includes(environment))
-        process.stdout.write(
-          `No approved references exist for this machine (${environment}), so captures are recorded but not compared. References exist for: ${known.join(", ") || "none"}.\n`,
-        );
+      const notice = referenceNotice(options.mode, environment, known); // → string | null
+      if (notice !== null) process.stdout.write(`${notice}\n`);
       const names = [...new Set(report.inventory.customProperties.map((token) => token.name))];
-      for (const engine of options.engines) {
-        let browser: Browser;
-        try {
-          browser = await browsers[engine].launch(
-            engine === "chromium"
-              ? { args: ["--disable-partial-raster", "--force-color-profile=srgb"] }
-              : {},
-          );
-        } catch (error) {
-          report.cells.push(...notRunCells(engine, report.selectedStories, options.themes, error));
-          report.errors.push(`${engine} did not launch: ${String(error)}`);
-          process.stdout.write(`${engine} did not launch: ${firstLine(String(error))}\n`);
-          continue;
-        }
-        try {
-          await runEngineMatrix(
-            browser,
-            engine,
-            { stories: server, app },
-            environment,
-            names,
-            options,
-            report,
-            directory,
-          );
-        } catch (error) {
-          report.errors.push(`${engine}: ${String(error)}`);
-          process.stdout.write(`${engine} stopped: ${firstLine(String(error))}\n`);
-        } finally {
-          await browser.close();
-        }
-      }
+      const context = { servers: { stories: server, app }, environment, names, options, report };
+      for (const engine of options.engines) await captureEngine(engine, context, directory);
     } finally {
       await app?.close();
       await server.close();

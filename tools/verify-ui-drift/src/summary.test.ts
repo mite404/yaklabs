@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Cell, Probe, RenderedCell, Report } from "./report.ts";
-import { summarize } from "./summary.ts";
+import { referenceNotice, summarize } from "./summary.ts";
 
 const fingerprint = {
   environment: "darwin-arm64",
@@ -135,5 +135,20 @@ describe("run summary", () => {
     const lines = summarize(report([changed]), []);
     expect(text(lines)).toContain("button.chromium.light: 1 pixel changed");
     expect(text(lines)).toContain("pnpm verify-ui-drift review");
+  });
+});
+
+describe("reference notice", () => {
+  it("warns before capture on a machine with no references, and only then", () => {
+    expect(referenceNotice("comparison", "darwin-arm64", ["linux-x64-debian-12"])).toContain(
+      "darwin-arm64",
+    );
+    expect(referenceNotice("comparison", "darwin-arm64", [])).toContain(
+      "References exist for: none",
+    );
+    expect(
+      referenceNotice("comparison", "linux-x64-debian-12", ["linux-x64-debian-12"]),
+    ).toBeNull();
+    expect(referenceNotice("selftest", "darwin-arm64", [])).toBeNull();
   });
 });

@@ -89,6 +89,17 @@ function failHeadline(changed: number, violations: number): string {
   return `${parts.join(" and ")}: each needs a decision.`;
 }
 
+/** What to say before capture when this machine has no approved references: a comparison here
+ * would record captures and compare none. Null when there is nothing to warn about. */
+export function referenceNotice(
+  mode: Report["mode"],
+  environment: string,
+  known: string[],
+): string | null {
+  if (mode !== "comparison" || known.includes(environment)) return null;
+  return `No approved references exist for this machine (${environment}), so captures are recorded but not compared. References exist for: ${known.join(", ") || "none"}.`;
+}
+
 /** Turns a finished report into plain lines for the terminal: a headline, the reasons behind it,
  * and the next step. Changes and axe violations are listed whenever they exist, so an incomplete
  * run can never hide them.
