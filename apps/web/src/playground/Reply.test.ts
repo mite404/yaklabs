@@ -35,4 +35,10 @@ describe("AgentReply", () => {
       "Try again",
     );
   });
+
+  it("puts Try again inside the failure section it recovers from", () => {
+    const start = { type: "start", seq: 0, v: 1 } as const;
+    const html = shown([start, failure, { type: "end", seq: 2, reason: "upstream" }]);
+    expect(html).toMatch(/aria-label="Limitation"(?:(?!<\/section>).)*Try again/s);
+  });
 });

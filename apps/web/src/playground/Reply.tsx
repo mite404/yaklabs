@@ -15,6 +15,9 @@ export type ReplyActions = {
   onSend: (user: UserInput) => void;
   onRetry: (() => void) | undefined;
   locked: boolean;
+  // Set only when the gateway ended the reply at a limit or an upstream failure: its last
+  // failure section then offers Try again beside the limitation.
+  retryEnded?: (() => void) | undefined;
 };
 
 // Each item kind's own view, looked up by kind so a new kind fails the build until it has one.
@@ -53,7 +56,15 @@ function OutcomeItem({ item, body }: ItemProps<"outcome">) {
   );
 }
 
-function Limitation({ failure, actions }: { failure: Failure; actions: ReplyActions }) {
+function Limitation({
+  failure,
+  actions,
+  onRetry,
+}: {
+  failure: Failure;
+  actions: ReplyActions;
+  onRetry: (() => void) | undefined;
+}) {
   const { recovery } = failure;
   return (
     <section className="pg-failure" aria-label="Limitation">
@@ -76,13 +87,22 @@ function Limitation({ failure, actions }: { failure: Failure; actions: ReplyActi
           </Button>
         </>
       )}
+      <TryAgain onRetry={onRetry} />
     </section>
   );
 }
 
 function FailureItem({ item, body, actions }: ItemProps<"failure">) {
   const failure = body.failures.at(item.index);
-  return failure === undefined ? null : <Limitation failure={failure} actions={actions} />;
+  if (failure === undefined) return null;
+  const last = item.index === body.failures.length - 1;
+  return (
+    <Limitation
+      failure={failure}
+      actions={actions}
+      onRetry={last ? actions.retryEnded : undefined}
+    />
+  );
 }
 
 // Each entry renders its view as an element, so hooks stay inside the components; calling the
@@ -210,11 +230,12 @@ export function AgentReply({ turn, actions }: { turn: AgentTurn; actions: ReplyA
   const body = turn.body;
   const status = statusLine(turn);
   const shown = body !== null && (body.items.length > 0 || body.workOrder.length > 0);
+  const retryEnded = turn.phase === "done" && canRetry(turn) ? actions.onRetry : undefined;
   return (
     <>
       {shown && (
         <article className="turn turn-agent" aria-busy={turn.phase === "streaming" || undefined}>
-          <BodyView body={body} status={status} actions={actions} />
+          <BodyView body={body} status={status} actions={{ ...actions, retryEnded }} />
         </article>
       )}
       {turn.phase === "asked" && (
@@ -234,11 +255,6 @@ export function AgentReply({ turn, actions }: { turn: AgentTurn; actions: ReplyA
       {turn.phase === "failed" && (
         <div className="turn turn-agent">
           <CauseSection cause={turn.cause} actions={actions} />
-        </div>
-      )}
-      {turn.phase === "done" && canRetry(turn) && actions.onRetry !== undefined && (
-        <div className="turn turn-agent">
-          <TryAgain onRetry={actions.onRetry} />
         </div>
       )}
     </>
