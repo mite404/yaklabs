@@ -76,3 +76,40 @@ export function ScreenIcon() {
     </svg>
   );
 }
+
+/** A magnifier, for searching a thread. */
+export function SearchIcon() {
+  return (
+    <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true">
+      <circle cx="7" cy="7" r="4.5" {...STROKE} />
+      <path d="m10.5 10.5 3 3" {...STROKE} />
+    </svg>
+  );
+}
+
+/** A bookmark ribbon, for the requests sent in a thread. */
+export function BookmarkIcon() {
+  return (
+    <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true">
+      <path d="M4.5 2.5h7v11L8 10.5l-3.5 3z" {...STROKE} />
+    </svg>
+  );
+}
+
+/** A chevron pointing up, or down when `down`: to the previous or next match. */
+export function StepIcon({ down = false }: { down?: boolean }) {
+  return (
+    <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true">
+      <path d={down ? "M3.5 6 8 10.5 12.5 6" : "M3.5 10 8 5.5l4.5 4.5"} {...STROKE} />
+    </svg>
+  );
+}
+
+/** A cross, for closing. */
+export function CloseIcon() {
+  return (
+    <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true">
+      <path d="m4 4 8 8M12 4l-8 8" {...STROKE} />
+    </svg>
+  );
+}

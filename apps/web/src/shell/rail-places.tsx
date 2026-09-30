@@ -204,7 +204,7 @@ function OutOfScopePlace({ label, Glyph, look }: { label: string; Glyph: Glyph; 
 /**
  * The app's fixed places: Kay, the places outside the demo, the documentation link, and the Lab
  * last (ADR-094, amended). A route's place is marked while it is open.
- * @param look Squares that name their places in pills, for the desktop's rail (ADR-143); or
+ * @param look Squares that name their places in pills, for the desktop's rail (ADR-144); or
  *   labelled rows, for the phone's drawer (ADR-121).
  */
 export function RailPlaces({ look }: { look: Look }) {

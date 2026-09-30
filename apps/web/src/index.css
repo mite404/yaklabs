@@ -82,7 +82,7 @@
   }
 }
 
-/* The projects panel's motion (ADR-143, design pillars rule 26): one curve for the peek and the
+/* The projects panel's motion (ADR-144, design pillars rule 26): one curve for the peek and the
    pin, a fast acceleration into a long, smooth settle, fitted to the value graph of Ethan's After
    Effects example (its handles at 17% and 58% of the time). Half the travel is done by 13% of the
    time and 90% by 43%. The peek slides in 220ms, the pin by the toggle in 250ms (Ethan). */
@@ -144,7 +144,7 @@
   }
 }
 
-/* The projects panel's peek (sidebar-peek.tsx, ADR-143): closed, the panel slides out over the
+/* The projects panel's peek (sidebar-peek.tsx, ADR-144): closed, the panel slides out over the
    workspace from behind the rail's edge, the shell's own paper with a hairline at its right
    edge and the softest shadow past it, and slides back the same way: both over 220ms on the
    panel's curve (Ethan), one `--peek-slide`, so the two cannot drift apart. Transitions, so a

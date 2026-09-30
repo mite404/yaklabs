@@ -359,7 +359,7 @@ async function peekHolds(page) {
   };
 }
 
-// P19's quiet half: resting on a rail place names it in a pill instead of peeking (ADR-143),
+// P19's quiet half: resting on a rail place names it in a pill instead of peeking (ADR-144),
 // however long the pointer stays.
 async function placesStayQuiet(page) {
   const seen = [];

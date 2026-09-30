@@ -161,7 +161,7 @@ function useClosesOnArrival(intent: RefObject<PeekIntent | null>): void {
 }
 
 /**
- * The projects panel's peek (ADR-143), for the panel whose container is `container`: while it is
+ * The projects panel's peek (ADR-144), for the panel whose container is `container`: while it is
  * closed on a desktop, it slides out from behind the rail's edge over the workspace once the
  * pointer rests on the title bar's toggle, on the rail off its places and account, or on the
  * strip just past the rail, and slides back 250ms after the pointer leaves them all, the rail

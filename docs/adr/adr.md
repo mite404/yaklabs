@@ -1824,7 +1824,49 @@ Verification must cover scrolling, continued input while work runs, the running-
 change, and a task card on the canvas. Warnings and requests for input remain explicit; a green
 pill must not conceal blocked or failed work.
 
-## ADR-143 - The rail stays on the desktop, and the projects panel extends from its edge
+## ADR-143 - A thread's reading tools float above its compose box
+
+2026-09-29 - Accepted (Ethan: "components in the thread section of Storybook", in every main
+thread and the scripted demo). Builds on ADR-022's jump-to-centre and ADR-138.
+Every thread with turns carries a small bar at the right just above its compose box: Search this
+thread, and Your requests. Search matches a turn's own words, not the cards it carries, ignoring
+case; Enter steps to the next match and Shift+Enter back, both wrapping, and the count reads
+"4 matches" until one is showing, then "2 of 4". Escape on any of its controls closes it and
+hands the focus back to its button. Your requests lists every message the user sent, oldest
+first, by its first 15 characters (code points, so an emoji is never split) and its time, the full
+text on hover; an Alt-click (Option on a Mac) on the button skips the list and goes to the latest
+request. Every jump is the recap's jump (ADR-022): the turn lands centred and glows, and only the
+last turn jumped to glows. Under reduced motion the glow holds its first frame until it clears.
+The bar lives in the catalog (`ReadingTools.tsx`, `threadReading.ts`), mounted by the chat
+thread panel itself, so the web app's main pane, its lanes and the Storybook all get it with no
+wiring in the host. It is built from the catalog's own primitives (IconButton, Menu, `.field`),
+not shadcn: the catalog and its Storybook have no Tailwind, and bringing them in is a separate
+decision. The bar is paper with a hairline and the menu's 8px corners, and fades in with the
+pointer on the thread over 150ms on the strong ease-out, like a lane's menu; a keyboard and a
+touch screen see it at once. It stands over the conversation rather than in a title bar, since a
+main thread has none (ADR-138).
+Amended the same day (Ethan): the bar moved from the turns' top-right corner to the right just
+above the compose box, its right edge on the box's and 8px clear of it, and 8px clear of a docked
+question or recap when one is up (the dock learns `--dock-space` from the panel). Its list of
+requests opens upward. It floats over the conversation's resting gap, so the newest turn still
+rests 20px above the box (pillar 12), and while the bar shows it covers that turn's bottom-right
+corner.
+Amended again the same day (Ethan): the float stays. The bar no longer fades with the pointer on
+the thread; it rests as one Search button and unfolds leftward to show every tool while the
+pointer is on it, a keyboard is in it (when the last input was not a pointer, ADR-053), or search
+or the list of requests is open, so the button under the pointer never moves. The fold clips its
+track from 0fr to 1fr over 150ms on the strong ease-out, and the bar's focus rings sit inside
+their buttons so the clip cannot cut them. A touch screen has no hover, so it keeps the bar
+unfolded. The pointer state comes from the bar's pointer events, not CSS `:hover`, so a story can
+prove it; the first move outside the bar also folds it, since a list that closes under the
+pointer leaves the bar no leave event.
+The turns now take a tab stop (`region "Messages"`) once there are any, with the focus ring
+inside the panel's clip, so a keyboard can scroll a thread of plain words; axe had flagged it on
+the first text-only fixture. The Menu primitive gained an item `id` (two requests can share a
+label), a quiet `detail` at the right, and a height capped at the viewport, past which it
+scrolls. The unmounted draft in `apps/web/src/demo/` is gone.
+
+## ADR-144 - The rail stays on the desktop, and the projects panel extends from its edge
 
 2026-09-29 - Accepted (Ethan: "the projects and their threads need to extend from the collapsed
 sidenav bar. that way the icons are still accessible as navigation while still being able to look
@@ -1929,7 +1971,7 @@ P24 holds the peek solid on the way out and the rows at 0 over the last quarter 
 P36 holds the rows full through a pin and at 0 over an unpin's last quarter; P37 holds the edge
 on every frame of a pin from a peek. All three fail on the old stylesheet.
 
-## ADR-144 - Every hover label is the rail's ink pill
+## ADR-145 - Every hover label is the rail's ink pill
 
 2026-09-29 - Accepted (Ethan: "also "unpin thread" hover needs to match our design language. do
 we have a specific hover popover defined in storybook? i don't think so", after keeping the
@@ -1937,7 +1979,7 @@ rail's pills: "keep it it looks great").
 Storybook defines no hover label: it holds the catalog's hand-made primitives, and the
 app's labels came from the vendored shadcn tooltip, whose default was base-lyra's square box
 with an arrow, 12px text in the page's ink. Unpin, the Layout switch, Collapse all and a sidebar
-row's cut name drew that box while the rail drew its ink pill (ADR-143), two shapes for one job.
+row's cut name drew that box while the rail drew its ink pill (ADR-144), two shapes for one job.
 The vendored tooltip now draws only the pill (design pillars, rule 28): no `variant`, no arrow,
 13px medium text on the page's ink, 12px corners, 8px off its trigger, 350ms of rest before the
 first opens and none before its neighbours. A name long enough to wrap keeps the pill's ends,

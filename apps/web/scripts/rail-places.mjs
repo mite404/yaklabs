@@ -5,7 +5,7 @@
 /**
  * The rail's places top to bottom (ADR-094, amended): each one's name, its role, the lucide
  * glyph it draws (Kay draws its own mark), whether it is outside the demo's scope, and whether
- * it opens a site elsewhere, in a new tab (ADR-143).
+ * it opens a site elsewhere, in a new tab (ADR-144).
  */
 export const RAIL_PLACES = [
   { name: "Kay", role: "link", icon: null, outOfScope: false, external: false },
@@ -53,7 +53,7 @@ export function readPlaces(header) {
   });
 }
 
-/** The desktop's rail of a Playwright page (ADR-143): the places and, at its foot, the account. */
+/** The desktop's rail of a Playwright page (ADR-144): the places and, at its foot, the account. */
 export const railOf = (page) => page.locator('[data-slot="rail"]');
 
 /** A place in the desktop's rail of a Playwright page, by its role and name. */

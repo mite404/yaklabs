@@ -153,8 +153,7 @@ extend from the collapsed rail instead, so the icons stay navigation while the t
 The rail became its own column that never moves, and the projects became a second column that
 docks beside it or slides out from behind its edge. Think of a camera gate: the rail is the gate's
 frame, bolted to the camera, and the panel is film passing behind it. The frame is never in the
-way of the picture, and the picture never slides over the frame (ADR-143, Proposed until Ethan
-answers its questions).
+way of the picture, and the picture never slides over the frame (ADR-144).
 
 ## 2. Cast & Crew
 
@@ -187,7 +186,7 @@ The first entries are ideas from before any code existed; the rest are parts of 
   tokens, so anything an agent builds comes out in the house colours (ADR-082).
 - **The rail** (`apps/web/src/shell/rail.tsx`) is the camera gate's frame. It was the corridor
   outside the theatre, then the sidebar folded to 56px; now it is its own 56px column, drawn in
-  every state and never moving (ADR-143). It keeps the rooms, a navigation landmark named Places:
+  every state and never moving (ADR-144). It keeps the rooms, a navigation landmark named Places:
   the Kay mark, drawn from the polygon meetkay.ai declares (ADR-095), the five rooms still being
   built, Documentation and Lab, each naming itself in an ink pill whatever the panel is doing.
   The cloakroom, the account with the light switch (the theme) in its menu, sits at its foot.
@@ -259,6 +258,11 @@ The first entries are ideas from before any code existed; the rest are parts of 
   script supervisor. Nobody calls it for a scene; it walks the set after every take and on a
   timer, wakes the snoozed threads that are due, files away mains idle for 14 days, and sweeps up
   deleted ones once Undo can no longer bring them back (ADR-129, ADR-130).
+- **The reading tools** (`packages/catalog/src/ReadingTools.tsx`) are the script supervisor's
+  binder, clipped to the corner of every thread: a search that flips to each page a word appears
+  on, and a tab per request the user made, labelled with its first 15 characters and its time
+  (ADR-143). The binder never moves the camera itself; it hands a turn's id to the panel, which
+  runs the same centre-and-glow jump the recap uses.
 - **The share vault** (`apps/gateway/src/shares.ts`) is a film vault that takes sealed canisters
   it cannot open. The page seals the thread and keeps the key in the link's `#`, which browsers
   never send, so the vault stores a locked box with a destruction date stamped on it (KV's TTL)
@@ -407,12 +411,12 @@ The first entries are ideas from before any code existed; the rest are parts of 
   is a `SidebarMenuAction`. Each would otherwise have been a primitive to build, style and make
   accessible by hand, and AGENTS.md already says new components come from shadcn. The project rows
   follow Conductor's: "name >" when folded, and no chevron on an open one until the pointer is on
-  it (ADR-093). ADR-143 later took the rail out of it, and the Sidebar is now `offcanvas`.
+  it (ADR-093). ADR-144 later took the rail out of it, and the Sidebar is now `offcanvas`.
 - **Our own rail beside shadcn's offcanvas Sidebar, not sidebar-09.** shadcn has a block with a
   rail and a panel nested inside one icon Sidebar. It would have needed slot overrides and an
   icon-group trick for the rail, turned `--sidebar-width` into a sum of two widths, and kept the
   pin that pops and reflows the rows. A plain column for the rail and the stock offcanvas panel
-  beside it gave each part one owner and kept the vendored primitive nearly as shipped (ADR-143).
+  beside it gave each part one owner and kept the vendored primitive nearly as shipped (ADR-144).
 - **One SidebarProvider, not two.** A second provider for the rail looks tidy until you read the
   vendored one: it hard-codes the `sidebar_state` cookie and a window-wide Cmd/Ctrl+B handler, so
   two providers would both toggle on one key press, and every `useSidebar()` would answer from
@@ -1241,6 +1245,45 @@ gantt
 The check had a blind spot on the way: opacity is not inherited, so the rows' own computed
 opacity read 1 while their parent faded. P24 now multiplies the opacity of every box from the rows
 up to the panel, the value actually drawn, and it fails on the old stylesheet.
+
+### A grid rule that leaked onto the shared page
+
+To lay the reading tools over the turns, the thread's grid started placing its rows by
+position: title bar first, compose dock last, turns just above the dock. Every chat thread
+passed. Then the before-and-after screenshots of all 62 stories showed the shared thread page
+torn in two, its title in a second column. The shared page reuses `.thread-panel` but has no
+dock, so "the row above the dock" pointed at the wrong row, and the title bar, pushed out of
+its cell, got a column of its own. Like a lighting cue written for one stage that fires in every
+theatre on the tour. The fix scopes the rule to panels that hold the tools
+(`.thread-panel:has(> .reading-tools)`), so every other panel keeps its old layout byte for byte.
+Only the screenshot comparison caught it: no test looks at the shared page's layout.
+
+### A thread you could not scroll with the keyboard
+
+The first fixture of plain text questions failed axe: "scrollable region must have keyboard
+access". The older fixtures carried cards with buttons, and a focusable thing inside a scroll
+area lets the arrow keys scroll it, so nobody had seen that a thread of plain words gave the
+keyboard nothing to hold. Chats on the main route are exactly that. The turns now take a tab
+stop as `region "Messages"` once there are any.
+
+### A bar that never heard the pointer leave
+
+The reading tools fold to one Search button and unfold while the pointer is on them. Pick a
+request from the list with the mouse, move away, and the bar stayed open. The list lives inside
+the bar, so the pointer was "in" the bar while picking; the pick then removed the list, and the
+node under the pointer went with it. A browser sends "pointer left" only as the pointer crosses an
+edge, and a node that vanishes under it crosses nothing, so the bar never heard it go. It is a
+boom mic still hot after the actor exits through a set wall that was struck mid-take: nobody
+walked past the mic, so nobody cut it. While unfolded, the bar now also listens for any pointer
+move on the page and folds on the first one outside it. The story that proves it failed on the
+old code before it passed on the new.
+
+### Three turns glowing at once
+
+Stepping quickly through search matches left a trail: each jump started its own 1.2s glow and
+nothing cleared the last one. With reduced motion, where the glow now holds still, three turns
+sat outlined at once and none of them said "you are here". A jump now clears every glow in the
+thread before it lights the new one.
 
 ## 5. Director's Commentary
 
@@ -2642,3 +2685,40 @@ in one function. The transcript, evidence, and playback controls now render thro
 components. A typed stage table keeps durations and transitions together, and the word reveal
 passes its remaining budget through blocks, list items, and inline text. The audit thresholds stay
 unchanged. Existing tests and the browser scripts check that this restructuring preserves the demo.
+
+### The binder never moves the camera
+
+The reading tools know which turn you want; they do not know how the thread scrolls, where the
+compose box sits, or how a turn should glow. So they take the thread's data in and hand one id
+out, and the panel, which owns the scroll, does the moving. Everything in between is pure.
+
+```tsx
+// packages/catalog/src/ChatThreadPanel.tsx: data in, one id out, the panel acts on it
+<ReadingTools
+  messages={messages} // → ThreadMessage[], including turns sent since the thread opened
+  onJump={(turnId) => {
+    flashTurn(scroller.current, turnId); // → centred and glowing, as the recap's jump
+  }}
+/>
+
+// packages/catalog/src/threadReading.ts: the calculations, no DOM and no React
+const matches = matchesOf(messages, "margin"); // → ["ask-1", "answer-1", "answer-4", ...]
+const next = stepMatch(matches, current, 1); // → the next id, wrapping at the end
+```
+
+```mermaid
+flowchart LR
+  M[messages state] --> R["requestsOf / matchesOf (pure)"]
+  R --> T[ReadingTools: menu + search bar]
+  T -- "onJump(turnId)" --> P[ChatThreadPanel]
+  P --> F["flashTurn: centre + glow"]
+  F --> S[.thread-scroll]
+```
+
+The draft this replaced searched the DOM during render, reading `textContent` from elements React
+had not yet updated, so a turn sent a moment ago could be missing from the count. Reading the
+same `messages` the panel renders from means the binder and the page can never disagree.
+
+Senior-engineer takeaway: a tool that points at things should not also move them. Give it the
+data, take back an intent, and let the owner of the scroll, the focus or the network carry it
+out.

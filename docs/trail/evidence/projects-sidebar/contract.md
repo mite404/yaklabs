@@ -254,13 +254,13 @@ const LIFT_PX = 6;
 - **Sidebar below 768px (ADR-121).** A drawer that pushes the whole window right, not a sheet
   over it: `dialog[data-slot="sidebar"]` named "Sidebar", 85% of the width up to 20rem. The
   pushed page is inert, and a tap on it, Escape, or an arrival anywhere closes the drawer. It is
-  one labelled column (ADR-143): the places as rows, "Out of demo scope" beside those outside the
+  one labelled column (ADR-144): the places as rows, "Out of demo scope" beside those outside the
   demo, then the project tree, then the account at its foot. There is no rail below 768px.
 - **Title bar below 768px (ADR-116, amended by ADR-123).** Two rows. The top row does not scroll:
   the sidebar toggle, the project's name (`[data-slot="project-name"]`), Collapse all, the bell,
   and button "Thread actions". The second row is the Layout group with its views named in words.
   The tab strip is hidden.
-- **Rail and projects panel (ADR-143).** Below the title bar, `[data-slot="window-body"]` holds
+- **Rail and projects panel (ADR-144).** Below the title bar, `[data-slot="window-body"]` holds
   the rail, then the stage:
   - The rail (`rail.tsx`, `[data-slot="rail"]`, 56px, `--rail-width`) is drawn in every desktop
     state and never moves. A navigation landmark named "Places" holds its eight places as 40px

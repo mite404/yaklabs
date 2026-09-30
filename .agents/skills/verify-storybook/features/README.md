@@ -56,7 +56,8 @@ with the observed state. A feature with no line is not covered.
 - [Catalog cards](./catalog-cards.md) covers the approved chart and table cards, their data-table
   toggle, and every fallback and refusal state.
 - [Chat thread](./chat-thread.md) covers the thread panel: messages, composing, attaching, the
-  recap, awaiting input, and interactive cards in context.
+  recap, awaiting input, interactive cards in context, and the reading tools (search and request
+  bookmarks).
 - [Dictation](./dictation.md) covers the listening dialog opened from the compose box.
 - [Share](./share.md) covers the share menu on a card and the public page a link opens.
 - [Foundations](./foundations.md) covers the shared primitives: button, disclosure, icon button,

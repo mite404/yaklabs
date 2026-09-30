@@ -173,7 +173,7 @@ function TreeState({ shell, onNewProject }: { shell: Shell | null; onNewProject:
 /**
  * The projects, their main threads and each main's children (ADR-092, ADR-093), newest main
  * first and each main's children newest first, both by creation (ADR-125). Rows open threads by
- * address; the URL's thread is marked. It fills the projects panel beside the rail (ADR-143).
+ * address; the URL's thread is marked. It fills the projects panel beside the rail (ADR-144).
  */
 export function ProjectTree() {
   const shell = useShell();

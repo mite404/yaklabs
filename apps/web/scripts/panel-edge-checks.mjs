@@ -1,4 +1,4 @@
-// Checks that the projects panel extends from the rail's edge (ADR-143), on a desktop window
+// Checks that the projects panel extends from the rail's edge (ADR-144), on a desktop window
 // with motion on: docked at several widths, closed, peeking and at held frames of the peek, and
 // on a window too short for every place.
 // oxlint-disable no-await-in-loop -- one pointer drives one page, so each step waits for the last
@@ -12,7 +12,7 @@ const THEMES = ["light", "dark"];
 const TAB_INSET = 4;
 const TAB_CLOSED = 137;
 const DEFAULT_PX = 256;
-// A window too short for every place (ADR-143's default: they scroll, the account stays put).
+// A window too short for every place (ADR-144's default: they scroll, the account stays put).
 const SHORT = { width: 1024, height: 480 };
 // How many heights the rail's edge is probed at, and how close the account keeps to its foot.
 const PROBES = 10;
@@ -258,7 +258,7 @@ async function pinBehindRail(browser, theme) {
 
 /** The workspace lever's checks of the panel's edge, by id; panel-checks.mjs registers them. */
 export const panelEdgeChecks = {
-  // The panel extends from the rail's edge (ADR-143): docked at 208, 256 and 400px it starts at
+  // The panel extends from the rail's edge (ADR-144): docked at 208, 256 and 400px it starts at
   // the rail's right, the workspace at its right and the first tab 4px past; closed, the
   // workspace starts at the rail and the panel is inert; peeking, it starts at the rail again
   // while nothing beneath moves; at every held frame of the peek the rail's edge is the rail's
@@ -270,7 +270,7 @@ export const panelEdgeChecks = {
   },
 
   // A pin slides the panel out from behind the rail at its own width while the workspace makes
-  // room, and an unpin mirrors it (ADR-143): on every frame the panel's right meets the
+  // room, and an unpin mirrors it (ADR-144): on every frame the panel's right meets the
   // workspace's left within half a pixel and the first tab keeps step, 4px past it or after the
   // toggle; the rows never reflow.
   async P31(browser) {

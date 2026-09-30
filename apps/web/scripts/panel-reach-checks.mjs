@@ -1,4 +1,4 @@
-// Checks what the keyboard and assistive technology reach around the projects panel (ADR-143),
+// Checks what the keyboard and assistive technology reach around the projects panel (ADR-144),
 // on a desktop window: the closed panel out of reach, and the Tab order through the rail and the
 // panel.
 // oxlint-disable no-await-in-loop -- one keyboard drives one page, so each step waits for the last
@@ -146,7 +146,7 @@ async function tabOrder(browser, theme) {
 
 /** The workspace lever's checks of what reaches the panel, by id; panel-checks.mjs registers them. */
 export const panelReachChecks = {
-  // The closed panel is out of reach (ADR-143): inert, never a stop in 60 Tabs from the toggle,
+  // The closed panel is out of reach (ADR-144): inert, never a stop in 60 Tabs from the toggle,
   // and no row or resize edge in the accessibility tree (Playwright's role queries do not treat
   // inert as hidden, so the tree is read from the browser itself); docked, all three come back.
   async P32(browser) {
@@ -155,7 +155,7 @@ export const panelReachChecks = {
     return { ok: results.every((r) => r.ok), detail: results.map((r) => r.note).join("; ") };
   },
 
-  // Tab reads the columns in order (ADR-143): after the title bar, the rail's eight places and
+  // Tab reads the columns in order (ADR-144): after the title bar, the rail's eight places and
   // then its account; docked, the panel from Demo store to its resize edge; then the workspace.
   // Closed, the workspace follows the account. The rail's stops are the same either way.
   async P33(browser) {

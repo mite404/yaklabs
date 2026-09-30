@@ -1,4 +1,4 @@
-// Checks for the rail's name pills (ADR-143), on a desktop window with motion on: every place
+// Checks for the rail's name pills (ADR-144), on a desktop window with motion on: every place
 // names itself in an ink pill with the panel closed, docked and peeking, and on keyboard focus.
 // oxlint-disable no-await-in-loop -- one pointer drives one page, so each step waits for the last
 import { shotPath } from "./lever.mjs";
@@ -177,7 +177,7 @@ export const pillChecks = {
   // The rail names every place in an ink pill, 7:1 for its text and 3:1 against the rail in either
   // theme, and a place outside the demo adds a softer "· Out of demo scope" that still clears
   // 4.5:1, and Documentation a softer arrow that says it opens elsewhere, 3:1 or more; the next
-  // place's pill opens at once. The pills show in every state (ADR-143): with the panel closed,
+  // place's pill opens at once. The pills show in every state (ADR-144): with the panel closed,
   // docked, and peeking, where they sit over the panel and keep it out; and on keyboard focus.
   async P23(browser) {
     const notes = [];

@@ -126,7 +126,7 @@ hover starts to feel sluggish.
 
 A place in the rail that this demo leaves out of scope stays in the rail, named in its pill and in
 the phone drawer's row and reached by keyboard, but it opens nothing and says "Out of demo scope"
-(Ethan; ADR-094, amended; ADR-143).
+(Ethan; ADR-094, amended; ADR-144).
 It is drawn in faint ink, never at reduced opacity: the 45% of a disabled button (rule 8) takes a
 rail glyph to 2.0:1 on paper, under rule 16's 3:1.
 It has no hover fill and no step to ink, since there is nothing to press, so the fill still means
@@ -215,13 +215,13 @@ the vendored shadcn tooltip. P23 reads the rail's pills in both themes.
 
 | Property | Value | Source |
 | --- | --- | --- |
-| Fill / text | `--ink` / `--on-ink`: 13.3:1 light, 16.1:1 dark | derived (ADR-143) |
-| Secondary words | `--on-ink` 72% over `--ink` (rule 4): 7.6:1, 6.9:1 | derived (ADR-143) |
+| Fill / text | `--ink` / `--on-ink`: 13.3:1 light, 16.1:1 dark | derived (ADR-144) |
+| Secondary words | `--on-ink` 72% over `--ink` (rule 4): 7.6:1, 6.9:1 | derived (ADR-144) |
 | Type | Inter 13px, medium, 16px line, one line unless a name must wrap (up to 320px) | derived |
 | Padding | 4px × 10px | derived |
 | Corners | 12px: half the one-line pill's 24px, a capsule on one line | derived |
-| Offset | 8px off its trigger, no arrow | derived (ADR-143) |
-| Delay | 350ms of rest, then the next opens at once | derived (ADR-143) |
+| Offset | 8px off its trigger, no arrow | derived (ADR-144) |
+| Delay | 350ms of rest, then the next opens at once | derived (ADR-144) |
 | Motion | in over 125ms, `cubic-bezier(0.23, 1, 0.32, 1)`, scale 0.97 and fade; out in 100ms | derived |
 | Reduced motion | fades only, no scale | derived |
 
@@ -356,7 +356,7 @@ value graph of Ethan's After Effects example: `cubic-bezier(0.17, 1.02, 0.58, 1)
 the rest of the time is the settle.
 The stage beside the rail clips the panel at the rail's edge (`overflow: clip`, never `hidden`,
 so no focus or scroll into view can scroll it), the way rule 22's shapes pass their gate: the
-panel never covers the rail's places, and the fade hides no motion (derived, ADR-143).
+panel never covers the rail's places, and the fade hides no motion (derived, ADR-144).
 Out, it slides at full strength from the first frame, as a pin does, its edge's hairline and
 shadow drawn at once (Ethan); a fade-in let the workspace's border show through it and drew the
 panel's edge slowly. Back, it keeps full strength and fades over the slide's last 120ms,

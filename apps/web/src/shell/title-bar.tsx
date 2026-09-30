@@ -34,7 +34,7 @@ function TrafficLights() {
 
 // The sidebar's toggle is a disclosure: it says whether the projects panel is docked (on a
 // phone, whether its drawer is open) and names the landmark it shows and hides; the rail stays
-// either way (ADR-143). A peek is a pointer's preview, so it leaves the toggle collapsed. Open,
+// either way (ADR-144). A peek is a pointer's preview, so it leaves the toggle collapsed. Open,
 // it looks as it does closed; the ghost button's expanded fill is for a menu's trigger while
 // its menu is up.
 function SidebarToggle() {
@@ -76,7 +76,7 @@ function Lead() {
  * toggle and the open threads at the left; at the right, the layout, Collapse all (ADR-134)
  * and the bell, which is the last control in the corner. The tabs start 4px past the docked
  * panel's edge, wherever it is dragged to. The account is not in the bar: it sits at the rail's
- * foot, and at the drawer's on a phone (ADR-121, ADR-143). It is green chrome, flat or painted
+ * foot, and at the drawer's on a phone (ADR-121, ADR-144). It is green chrome, flat or painted
  * (ADR-110, ADR-115). On a phone it is two rows (ADR-116): the project's name and what never
  * scrolls on top, Collapse all among them, with a "⋯" for the thread and project; below, the
  * views, Thread, Canvas and Browser.

@@ -39,7 +39,7 @@ export const SIDEBAR_ID = "sidebar";
 export type SidebarWidth = { width: number; onWidth: (px: number) => void };
 
 /**
- * The projects panel below the title bar (ADR-143): shadcn's offcanvas Sidebar beside the
+ * The projects panel below the title bar (ADR-144): shadcn's offcanvas Sidebar beside the
  * desktop's rail, one navigation landmark holding the project tree. Docked, it pushes the
  * workspace aside, and its right edge resizes it. Closed on a desktop it peeks: it slides out
  * from behind the rail's edge over the workspace (sidebar-peek.tsx), and the stage around it
