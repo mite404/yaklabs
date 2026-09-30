@@ -97,7 +97,7 @@ describe("POST /api/playground sends upstream", () => {
 
     const body = upstreamBodySchema.parse(await requests[0]?.clone().json());
     expect(body).toMatchObject({ model: "moonshotai/kimi-k2.6", max_tokens: 8192, stream: true });
-    expect(body.system).toContain("cannot fetch real data");
+    expect(body.system).toContain("you must call report_failure");
     expect(await sentMessages(requests, 0)).toEqual([
       { role: "user", content: [{ type: "text", text: "Which day?" }] },
     ]);
