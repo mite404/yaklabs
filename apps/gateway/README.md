@@ -12,12 +12,13 @@ one allowed origin in WorkOS (ADR-086).
     WorkOS AuthKit access token that verifies against WorkOS's public keys (`src/auth.ts`);
   - answers 400 `{ "error": "invalid request" }` when the body does not match the schema; any
     other field, such as `model`, is dropped;
-  - streams the reply from `claude-opus-5` (adaptive thinking, `max_tokens` 8192 as a cost cap)
-    as `application/x-ndjson`: one Messages API stream event per line, exactly as the SDK's
-    `MessageStream.toReadableStream()` writes it. The browser reads it back with
+  - streams the reply from `moonshotai/kimi-k2.6` through OpenRouter's Anthropic-compatible
+    Messages API (`src/upstream.ts`, ADR-146; `max_tokens` 8192 as a cost cap, reasoning
+    included) as `application/x-ndjson`: one Messages API stream event per line, exactly as the
+    SDK's `MessageStream.toReadableStream()` writes it. The browser reads it back with
     `MessageStream.fromReadableStream(response.body)`;
-  - answers 502 `{ "error": "upstream", "status": <number | null> }` when the Anthropic API
-    refuses the request, without the upstream body or the key.
+  - answers 502 `{ "error": "upstream", "status": <number | null> }` when OpenRouter refuses the
+    request, without the upstream body or the key.
 - Every other path is a static file from `apps/web/build/client`; a path that is not a file gets
   `index.html`, and the app's router takes it from there. The Worker runs only for `/api/*`.
 - It stores nothing and logs no conversation content.
@@ -48,10 +49,13 @@ run `pnpm --filter web build` first. The root `pnpm build` orders the two throug
 
 ## Secrets and variables
 
-| Binding             | Production                                          | Local       |
-| ------------------- | --------------------------------------------------- | ----------- |
-| `ANTHROPIC_API_KEY` | secret: `wrangler secret put`, or a dashboard Secret | `.dev.vars` |
-| `WORKOS_CLIENT_ID`  | variable: a dashboard Text variable                 | `.dev.vars` |
+| Binding              | Production                                           | Local       |
+| -------------------- | ---------------------------------------------------- | ----------- |
+| `OPENROUTER_API_KEY` | secret: `wrangler secret put`, or a dashboard Secret | `.dev.vars` |
+| `WORKOS_CLIENT_ID`   | variable: a dashboard Text variable                  | `.dev.vars` |
+
+The OpenRouter key's own credit limit is the slice's spending cap (ADR-146): OpenRouter refuses
+the key once it is spent, and the gateway answers 502 with that status.
 
 Nothing environment-specific is written in `wrangler.jsonc`: `keep_vars` is on, so a deploy keeps
 the dashboard's variables (a value named under `vars` would replace them), and secrets survive
@@ -83,7 +87,7 @@ pnpm 10.11.1, older than the `pnpm@10.33.0` this repo pins and the `allowBuilds`
 
 And two runtime values (Settings, Variables and Secrets):
 
-- `ANTHROPIC_API_KEY`, type Secret: the Anthropic API key
+- `OPENROUTER_API_KEY`, type Secret: the OpenRouter API key
 - `WORKOS_CLIENT_ID`, type Text: the WorkOS client id (public; the browser carries it too)
 
 Add the deployed address to WorkOS's redirect URIs (`https://<worker>/callback`) and CORS

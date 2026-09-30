@@ -1,13 +1,14 @@
-import { Anthropic } from "@anthropic-ai/sdk";
+import type { Anthropic } from "@anthropic-ai/sdk";
 import { MessageStream } from "@anthropic-ai/sdk/lib/MessageStream";
 import { assert, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { createApp } from "./app";
 import type { TokenVerifier } from "./auth";
 import { memoryShares, randomToken } from "./shares";
+import { openRouterClient } from "./upstream";
 
 const TOKEN = "workos-access-token";
-const API_KEY = "sk-ant-test-key";
+const API_KEY = "sk-or-test-key";
 const SYSTEM = "You are Kay, a calm assistant.";
 const turns = [{ role: "user", content: "Say hello." }];
 
@@ -25,7 +26,7 @@ const helloWorld = [
       id: "msg_01TEST",
       type: "message",
       role: "assistant",
-      model: "claude-opus-5",
+      model: "moonshotai/kimi-k2.6",
       content: [],
       container: null,
       stop_details: null,
@@ -76,7 +77,6 @@ const sseBody = helloWorld
 const upstreamBodySchema = z.strictObject({
   model: z.string(),
   max_tokens: z.number(),
-  thinking: z.object({ type: z.string() }),
   system: z.string().optional(),
   messages: z.array(z.unknown()),
   stream: z.boolean(),
@@ -84,7 +84,7 @@ const upstreamBodySchema = z.strictObject({
 
 type Fetch = (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
 
-// An app whose Anthropic client reaches a fake upstream through `fetch`, recording each request.
+// An app whose OpenRouter client reaches a fake upstream through `fetch`, recording each request.
 const appWithUpstream = (respond: () => Response) => {
   const requests: Request[] = [];
   const fetch = vi.fn<Fetch>((input, init) => {
@@ -92,9 +92,9 @@ const appWithUpstream = (respond: () => Response) => {
     return Promise.resolve(respond());
   });
   // No retries, so a refused request reaches the gateway at once.
-  const anthropic = new Anthropic({ apiKey: API_KEY, fetch, maxRetries: 0 });
+  const upstream = openRouterClient(API_KEY, { fetch, maxRetries: 0 });
   const shares = { store: memoryShares(Date.now), now: () => new Date(), newToken: randomToken };
-  return { app: createApp({ verifyToken, anthropic, shares }), requests };
+  return { app: createApp({ verifyToken, upstream, shares }), requests };
 };
 
 const streamingUpstream = (): Response =>
@@ -200,14 +200,13 @@ describe("POST /api/messages sends upstream", () => {
     expect(requests).toHaveLength(1);
     const [upstream] = requests;
     assert(upstream !== undefined, "one upstream request");
-    expect(upstream.url).toBe("https://api.anthropic.com/v1/messages");
-    expect(upstream.headers.get("x-api-key")).toBe(API_KEY);
-    expect(upstream.headers.get("Authorization")).toBeNull();
+    expect(upstream.url).toBe("https://openrouter.ai/api/v1/messages");
+    expect(upstream.headers.get("Authorization")).toBe(`Bearer ${API_KEY}`);
+    expect(upstream.headers.get("x-api-key")).toBeNull();
     const body = upstreamBodySchema.parse(await upstream.json());
     expect(body).toEqual({
-      model: "claude-opus-5",
+      model: "moonshotai/kimi-k2.6",
       max_tokens: 8192,
-      thinking: { type: "adaptive" },
       system: SYSTEM,
       messages: turns,
       stream: true,

@@ -8,11 +8,14 @@ import { gatewayRequestSchema, type GatewayRequest } from "./contract";
 import { createShare, readShare, revokeShare, type ShareAnswer, type ShareDeps } from "./shares";
 
 // What the gateway needs from outside: the Worker passes the real ones, tests pass fakes.
-type Dependencies = { verifyToken: TokenVerifier; anthropic: Anthropic; shares: ShareDeps };
+// `upstream` speaks the Anthropic Messages format, whoever serves it (`openRouterClient`).
+type Dependencies = { verifyToken: TokenVerifier; upstream: Anthropic; shares: ShareDeps };
 
 // The gateway owns the model and every request setting (ADR-085); the browser sends only turns.
-const MODEL = "claude-opus-5";
-// A cost cap for one chat reply, thinking included.
+// Kimi K2.6 through OpenRouter, for its price (ADR-146). It reasons before it answers, and the
+// browser shows only the answer's text.
+const MODEL = "moonshotai/kimi-k2.6";
+// A cost cap for one chat reply, reasoning included.
 const MAX_TOKENS = 8192;
 // `MessageStream.toReadableStream()` writes one JSON event per line, which the browser reads
 // back with `MessageStream.fromReadableStream()`.
@@ -40,19 +43,18 @@ const isAuthorized = async (
 // Starts the model's reply and waits for the upstream to accept the request, so a refusal
 // becomes a status code before a byte of the body is sent.
 const openReply = async (
-  anthropic: Anthropic,
+  upstream: Anthropic,
   { system, messages }: GatewayRequest,
 ): Promise<ReadableStream> => {
-  const reply = anthropic.messages.stream({
+  const reply = upstream.messages.stream({
     model: MODEL,
     max_tokens: MAX_TOKENS,
-    thinking: { type: "adaptive" },
     ...(system === "" ? {} : { system }), // an empty prompt is no prompt
     messages,
   }); // → MessageStream, request in flight
   // Read before the first event can arrive: the stream hands events only to readers it has.
   const body = reply.toReadableStream(); // → ReadableStream of NDJSON events
-  await reply.withResponse(); // → the upstream's 2xx response, or throws Anthropic.APIError
+  await reply.withResponse(); // → the upstream's 2xx response, or throws APIError
   return body;
 };
 
@@ -74,10 +76,10 @@ function shareResponse(c: Context, answer: ShareAnswer): Response {
  * Builds the gateway (ADR-085): the one server in the slice. It checks the caller's WorkOS
  * token, forwards the turns to the model with the key it holds, and streams the reply back;
  * it stores no turn. The one thing it keeps is a thread made public, sealed with a key it never
- * sees, until the share ends (ADR-131). The route table is the contract the browser's typed client compiles against
- * (ADR-086).
+ * sees, until the share ends (ADR-131). The route table is the contract the browser's typed
+ * client compiles against (ADR-086).
  */
-export const createApp = ({ verifyToken, anthropic, shares }: Dependencies) => {
+export const createApp = ({ verifyToken, upstream, shares }: Dependencies) => {
   const requireSession = createMiddleware(async (c, next) => {
     if (await isAuthorized(verifyToken, c.req.header("Authorization"))) return next();
     return c.json({ error: "unauthorized" }, 401, { "WWW-Authenticate": "Bearer" });
@@ -109,7 +111,7 @@ export const createApp = ({ verifyToken, anthropic, shares }: Dependencies) => {
         }),
         async (c) => {
           try {
-            const body = await openReply(anthropic, c.req.valid("json")); // → NDJSON stream
+            const body = await openReply(upstream, c.req.valid("json")); // → NDJSON stream
             return c.body(body, 200, { "Content-Type": NDJSON });
           } catch (error) {
             if (!(error instanceof APIError)) throw error;
