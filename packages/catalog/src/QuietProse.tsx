@@ -1,5 +1,13 @@
+import { useId } from "react";
 import { CatalogCard } from "./CatalogCard";
 import type { Block, Inline, Mark } from "./prose";
+
+/**
+ * What a limitation's recovery does where the thread can send: `onRecover` sends its prompt as
+ * the reader's next message, and `busy` holds the button while a reply streams. A page that can
+ * send nothing, such as a shared one, passes none and shows the prompt alone.
+ */
+export type Recover = { onRecover: (prompt: string) => void; busy: boolean };
 
 // Each mark sets its run in one semantic tag, so emphasis is `<strong>` for the reader and for
 // assistive technology alike, never a styled span (ADR-140).
@@ -50,14 +58,63 @@ function blockKey(block: Block, place: number): string {
   return block.kind === "card" && block.id !== undefined ? `card:${block.id}` : `${place}`;
 }
 
+// What the reply could not do, in its own voice, then the request it offers instead: quoted,
+// and a button that sends it where the thread can (`recover`). The button names the prompt it
+// sends as its description.
+function LimitationView({
+  block,
+  recover,
+}: {
+  block: Extract<Block, { kind: "limitation" }>;
+  recover: Recover | undefined;
+}) {
+  const promptId = useId();
+  const { recovery } = block;
+  return (
+    <div className="prose-limitation">
+      <p>{block.text}</p>
+      {recovery !== undefined && (
+        <p className="prose-limitation-prompt" id={promptId}>
+          <q>{recovery.prompt}</q>
+        </p>
+      )}
+      {recovery !== undefined && recover !== undefined && (
+        <button
+          type="button"
+          className="btn btn-sm"
+          disabled={recover.busy}
+          aria-describedby={promptId}
+          onClick={() => {
+            recover.onRecover(recovery.prompt);
+          }}
+        >
+          {recovery.label}
+        </button>
+      )}
+    </div>
+  );
+}
+
+// A catalog card between paragraphs, at the thread's measure.
+function ProseCard(props: { payload: unknown; carries: boolean; shareable: boolean }) {
+  const { payload, carries, shareable } = props;
+  return (
+    <div className="prose-card">
+      <CatalogCard payload={payload} context="thread" draggable={carries} shareable={shareable} />
+    </div>
+  );
+}
+
 function BlockView({
   block,
   carries,
   shareable,
+  recover,
 }: {
   block: Block;
   carries: boolean;
   shareable: boolean;
+  recover: Recover | undefined;
 }) {
   switch (block.kind) {
     case "paragraph":
@@ -84,16 +141,9 @@ function BlockView({
         </ul>
       );
     case "card":
-      return (
-        <div className="prose-card">
-          <CatalogCard
-            payload={block.payload}
-            context="thread"
-            draggable={carries}
-            shareable={shareable}
-          />
-        </div>
-      );
+      return <ProseCard payload={block.payload} carries={carries} shareable={shareable} />;
+    case "limitation":
+      return <LimitationView block={block} recover={recover} />;
     default: {
       const unhandled: never = block;
       return unhandled;
@@ -103,20 +153,23 @@ function BlockView({
 
 /**
  * Quiet prose (ADR-140): a reply's paragraphs, headings, lists and emphasis in the app's own
- * type, with catalog cards between them. Streaming and finished replies render through these
- * same elements, so nothing restyles as a reply completes. Text keeps a 510px measure; cards
- * take the thread's.
+ * type, with catalog cards between them and what the reply could not do said in its voice.
+ * Streaming and finished replies render through these same elements, so nothing restyles as a
+ * reply completes. Text keeps a 510px measure; cards take the thread's.
  * @param cardsCarry Whether a card's header carries it out onto the canvas (ADR-089).
  * @param shareable Whether a card offers its own share link (ADR-064).
+ * @param recover Sends a limitation's recovery; without it the prompt shows with no button.
  */
 export function Prose({
   blocks,
   cardsCarry,
   shareable = true,
+  recover,
 }: {
   blocks: Block[];
   cardsCarry?: boolean;
   shareable?: boolean;
+  recover?: Recover;
 }) {
   return (
     <div className="quiet-prose">
@@ -126,6 +179,7 @@ export function Prose({
           block={block}
           carries={cardsCarry !== false}
           shareable={shareable}
+          recover={recover}
         />
       ))}
     </div>

@@ -108,6 +108,29 @@ describe("applyChunk", () => {
     ]);
   });
 
+  it("says a limitation in the words and goes on: still streaming, a new paragraph after", () => {
+    const recovery = { label: "Show it as a bar chart", prompt: "Show it as a bar chart" };
+    const turn = fold([
+      "First responses slowed.",
+      { kind: "limitation", text: "The catalog has no pie chart.", recovery },
+      { kind: "text", text: "Thursday was slowest." },
+    ]);
+    expect(turn.blocks).toEqual([
+      { kind: "paragraph", content: [{ kind: "run", text: "First responses slowed." }] },
+      { kind: "limitation", text: "The catalog has no pie chart.", recovery },
+      { kind: "paragraph", content: [{ kind: "run", text: "Thursday was slowest." }] },
+    ]);
+    expect(turn.streaming).toBe(true);
+    expect(turn.ended).toBeUndefined();
+    expect(turn.failure).toBeUndefined();
+    expect(turn.text).toBe(
+      "First responses slowed.The catalog has no pie chart.Thursday was slowest.",
+    );
+    expect(plainText(turn.blocks ?? [])).toBe(
+      "First responses slowed.\nThe catalog has no pie chart.\nThursday was slowest.",
+    );
+  });
+
   it("appends a card whose id no earlier card carries", () => {
     const turn = fold([
       { kind: "card", payload: 1, id: "a" },

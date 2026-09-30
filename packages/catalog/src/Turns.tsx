@@ -11,7 +11,7 @@ import { CatalogCard } from "./CatalogCard";
 import { ChartGlyph } from "./ComposeBox";
 import { InteractiveCard } from "./InteractiveCard";
 import type { CardAttachment } from "./interactive";
-import { Prose } from "./QuietProse";
+import { Prose, type Recover } from "./QuietProse";
 import { blocksOf, workLabel, type Ended } from "./reply";
 import type { ThreadMessage } from "./thread";
 import type { AnsweredMessage } from "./transcript";
@@ -174,11 +174,13 @@ function Words({
   cardsCarry,
   shareable,
   quiet,
+  recover,
 }: {
   message: AgentMessage;
   cardsCarry: boolean | undefined;
   shareable: boolean;
   quiet: boolean;
+  recover: Recover | undefined;
 }) {
   const blocks = blocksOf(message); // → Block[]
   const { streaming, activity } = message;
@@ -186,7 +188,7 @@ function Words({
   if (blocks.length === 0) return narrates && <Waiting activity={activity} />;
   return (
     <>
-      <Prose blocks={blocks} cardsCarry={cardsCarry} shareable={shareable} />
+      <Prose blocks={blocks} cardsCarry={cardsCarry} shareable={shareable} recover={recover} />
       {narrates && activity !== undefined && <Activity activity={activity} />}
     </>
   );
@@ -232,6 +234,7 @@ function EndedNote({
  * @param shareable Whether a card offers its own share link; not on a page already shared
  * (ADR-064, ADR-131).
  * @param onRetry Asks for a reply that stopped short again; without it there is no Try again.
+ * @param recover Sends a limitation's recovery; without it the prompt shows with no button.
  * @param stamp How long ago this reply arrived, on the thread's latest reply alone: "just now",
  * then in 20-minute steps (turnTime.ts). Absent on every other turn.
  * @param measure The stop its interactive card shows, when the host holds the choice.
@@ -242,6 +245,7 @@ export function AgentTurn({
   cardsCarry,
   shareable = true,
   onRetry,
+  recover,
   stamp,
   measure,
   ref,
@@ -251,6 +255,7 @@ export function AgentTurn({
   cardsCarry: boolean | undefined;
   shareable?: boolean;
   onRetry?: (turnId: string) => void;
+  recover?: Recover;
   stamp?: string;
   measure?: string;
   ref?: Ref<HTMLElement>;
@@ -267,7 +272,13 @@ export function AgentTurn({
       aria-busy={message.streaming === true ? true : undefined}
     >
       {worked && <WorkDetails work={work} label={workLabel(message)} cardsCarry={cardsCarry} />}
-      <Words message={message} cardsCarry={cardsCarry} shareable={shareable} quiet={worked} />
+      <Words
+        message={message}
+        cardsCarry={cardsCarry}
+        shareable={shareable}
+        quiet={worked}
+        recover={recover}
+      />
       {message.payload !== undefined && (
         <CatalogCard
           payload={message.payload}

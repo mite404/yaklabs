@@ -30,6 +30,12 @@ const events: ReplyEvent[] = [
   { kind: "card", payload: { component: "BarChart" } },
   { kind: "card", payload: { component: "LineChart", draft: true }, id: "trend" },
   { kind: "card", payload: { component: "LineChart" }, id: "trend" },
+  { kind: "limitation", text: "No live sales here." },
+  {
+    kind: "limitation",
+    text: "The catalog has no pie chart.",
+    recovery: { label: "Show it as a bar chart", prompt: "Show it as a bar chart" },
+  },
   {
     kind: "step",
     step: {

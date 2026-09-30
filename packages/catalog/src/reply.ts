@@ -1,5 +1,14 @@
 import { z } from "zod";
-import { card, markSchema, type Block, type Inline, type Mark } from "./prose";
+import {
+  card,
+  limitation,
+  markSchema,
+  recoverySchema,
+  type Block,
+  type Inline,
+  type Mark,
+  type Recovery,
+} from "./prose";
 import type { ThreadMessage } from "./thread";
 
 /** Where one step of the agent's work stands. Words, never colour alone, tell them apart. */
@@ -50,6 +59,12 @@ export type ReplyEvent =
    * chart becomes the settled one where the reader already saw it.
    */
   | { kind: "card"; payload: unknown; id?: string }
+  /**
+   * What the reply cannot do, said in the words where it applies, and the request the reader
+   * can send in one click instead, when there is one. Not a failure: the reply goes on, and
+   * the next text starts a new paragraph.
+   */
+  | { kind: "limitation"; text: string; recovery?: Recovery }
   /** A step of the work, new or updated, by its id. */
   | { kind: "step"; step: WorkStep }
   /** One technical line, kept behind Technical details. */
@@ -105,6 +120,11 @@ export const replyEventSchema = z.discriminatedUnion("kind", [
     block: z.enum(["paragraph", "heading", "list", "item"]),
   }),
   z.object({ kind: z.literal("card"), payload: z.unknown(), id: z.string().optional() }),
+  z.object({
+    kind: z.literal("limitation"),
+    text: z.string(),
+    recovery: recoverySchema.optional(),
+  }),
   z.object({ kind: z.literal("step"), step: workStepSchema }),
   z.object({ kind: z.literal("log"), text: z.string() }),
   z.object({ kind: z.literal("summary"), text: z.string() }),
@@ -137,10 +157,10 @@ function appendRun(content: Inline[], run: Extract<Inline, { kind: "run" }>): In
 }
 
 // Appends an inline to the open block: the last item of an open list, the content of an open
-// paragraph or heading, or a new paragraph after a card or at the start.
+// paragraph or heading, or a new paragraph after a card, a limitation or at the start.
 function appendInline(blocks: Block[], inline: Inline): Block[] {
   const open = lastBlock(blocks);
-  if (open === undefined || open.kind === "card")
+  if (open === undefined || open.kind === "card" || open.kind === "limitation")
     return [...blocks, { kind: "paragraph", content: [inline] }];
   if (open.kind === "list") {
     const item = open.items.at(-1) ?? [];
@@ -214,9 +234,10 @@ function endedBy(message: AgentMessage): Ended {
 /**
  * Folds one chunk of a reply into the agent's turn: pure, so the same stream always builds the
  * same turn. Text grows the plain `text` always and the `blocks` once the reply has structure;
- * a card with an earlier card's id takes its place; narration supersedes and is kept; a failure ends the turn as interrupted or failed. A
- * `question` is kept on the turn as what it asks, so the dock can be read back from the record;
- * the host docks it as it streams.
+ * a card with an earlier card's id takes its place; a limitation is said in the words and the
+ * reply goes on; narration supersedes and is kept; a failure ends the turn as interrupted or
+ * failed. A `question` is kept on the turn as what it asks, so the dock can be read back from
+ * the record; the host docks it as it streams.
  */
 export function applyChunk(message: AgentMessage, chunk: ReplyChunk): AgentMessage {
   if (typeof chunk === "string") return appendText(message, { text: chunk });
@@ -238,6 +259,12 @@ export function applyChunk(message: AgentMessage, chunk: ReplyChunk): AgentMessa
       return { ...message, blocks: openBlock(blocksOf(message), chunk.block) };
     case "card":
       return { ...message, blocks: placeCard(blocksOf(message), card(chunk.payload, chunk.id)) };
+    case "limitation":
+      return {
+        ...message,
+        text: message.text + chunk.text,
+        blocks: [...blocksOf(message), limitation(chunk.text, chunk.recovery)],
+      };
     case "activity":
       return narrate(message, work, chunk.text);
     case "step":

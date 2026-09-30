@@ -476,6 +476,26 @@
 .quiet-prose > .prose-card {
   margin: 16px 0;
 }
+/* What a reply could not do (ADR-147, widened; pillar 29). It sits in the words, so it reads as
+   prose, set off at the left by the rule a reply that stopped short wears (.turn-ended), never
+   by a warning colour: the sentence in the body ink, the request it offers quoted in the
+   heading ink, then the compact outline button that sends it. */
+.quiet-prose > .prose-limitation {
+  display: grid;
+  justify-items: start;
+  gap: 8px; /* .turn-ended's gap */
+  max-width: 510px; /* the prose's measure */
+  margin: 0 0 16px; /* the paragraph gap */
+  padding-left: 16px; /* .turn-ended's inset */
+  border-left: 2px solid var(--hairline); /* .turn-ended's rule */
+}
+.prose-limitation p {
+  margin: 0;
+  line-height: 24px; /* the prose's line, over the page's 1.6 */
+}
+.prose-limitation-prompt {
+  color: var(--ink);
+}
 /* A block the stream has opened but not yet filled takes no room: no empty bullet or paragraph
    gap flashes before its first words arrive. */
 .quiet-prose > :is(p, h3):empty,

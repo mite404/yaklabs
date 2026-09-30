@@ -765,6 +765,41 @@ export const CardReplaced: Story = {
 };
 
 /**
+ * What a reply could not do, said in its words (ADR-147, widened): the sentence in the prose's
+ * voice, the request it offers quoted, and a button that sends it as the next message in one
+ * click. The button waits while a reply streams, and what the user was writing stays put.
+ */
+export const Limitation: Story = {
+  args: {
+    thread: threads.limited,
+    agent: scriptedAgent(["Here it is as bars. ", "Thursday stands out."], 400),
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(
+      canvas.getByText("The catalog has no pie chart, so I didn't draw one."),
+    ).toBeVisible();
+    const box = canvas.getByRole("textbox", { name: "Message" });
+    await userEvent.type(box, "Half a thought");
+    const recover = canvas.getByRole("button", { name: "Show it as a bar chart" });
+    await expect(recover).toHaveAccessibleDescription(/Show first response times as a bar chart/);
+    await userEvent.click(recover);
+    await waitFor(async () => {
+      await expect(canvas.getAllByRole("article", { name: "You" })).toHaveLength(2);
+    });
+    await expect(canvas.getAllByRole("article", { name: "You" })[1]).toHaveTextContent(
+      "Show first response times as a bar chart",
+    );
+    await expect(recover).toBeDisabled();
+    await expect(await canvas.findByText(/Thursday stands out\./)).toBeVisible();
+    await waitFor(async () => {
+      await expect(recover).toBeEnabled();
+    });
+    await expect(box).toHaveValue("Half a thought");
+  },
+};
+
+/**
  * A reply cut off partway keeps its words, says it is incomplete and why, and offers Try again.
  * Trying again asks for the same request as a new reply below; the cut-off one keeps its label.
  */

@@ -1,6 +1,17 @@
-import { scenarios } from "./fixtures";
+import { scenarios, trend } from "./fixtures";
 import type { CardAttachment, InteractiveSelection } from "./interactive";
-import { card, em, heading, list, paragraph, plainText, strong, text, type Block } from "./prose";
+import {
+  card,
+  em,
+  heading,
+  limitation,
+  list,
+  paragraph,
+  plainText,
+  strong,
+  text,
+  type Block,
+} from "./prose";
 import type { RecapItem } from "./recapRules";
 import type { Ended, Failure, Work } from "./reply";
 
@@ -238,6 +249,22 @@ const brief: Thread = {
   ],
 };
 
+// A chart asked for in a view the catalog lacks (ADR-147, widened): the refused card, what the
+// reply could not do said in its words, and the bar chart it offers to send instead.
+const limitedBlocks: Block[] = [
+  paragraph([
+    text("First responses slowed: the median was "),
+    strong("41 minutes"),
+    text(", up from 28 the week before."),
+  ]),
+  card({ ...trend, component: "PieChart" }),
+  limitation("The catalog has no pie chart, so I didn't draw one.", {
+    label: "Show it as a bar chart",
+    prompt: "Show first response times as a bar chart",
+  }),
+  paragraph([text("Thursday was the slowest day.")]),
+];
+
 // Structured prose from its plain words, as the fixtures below use it.
 const said = (words: string): Block[] => [paragraph([text(words)])];
 
@@ -305,6 +332,25 @@ export const threads: Record<string, Thread> = {
   },
   fallbacks,
   brief,
+  /** A limitation in the words: the pie the catalog lacks, and a bar chart one click away. */
+  limited: {
+    title: "First response times",
+    messages: [
+      {
+        id: "u1",
+        role: "user",
+        time: "9:40",
+        text: "Show first response times as a pie chart.",
+      },
+      {
+        id: "a1",
+        role: "agent",
+        time: "9:40",
+        text: plainText(limitedBlocks),
+        blocks: limitedBlocks,
+      },
+    ],
+  },
   /** A reply cut off partway: its words stay, marked incomplete, with a way to ask again. */
   interrupted: {
     title: "Region comparison",
