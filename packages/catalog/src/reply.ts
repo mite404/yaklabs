@@ -18,8 +18,11 @@ export type WorkStep = {
   threadId?: string;
 };
 
-/** The record behind a reply: its steps, its technical lines, and the narration it moved past. */
-export type Work = { steps: WorkStep[]; logs: string[]; narration: string[] };
+/**
+ * The record behind a reply: its steps, its technical lines, the narration it moved past, and
+ * what it amounted to in the reader's words once it settled (the disclosure's label).
+ */
+export type Work = { steps: WorkStep[]; logs: string[]; narration: string[]; summary?: string };
 
 /** Why a reply stopped short, in words for the reader. */
 export type Failure = { title: string; detail: string };
@@ -46,6 +49,8 @@ export type ReplyEvent =
   | { kind: "step"; step: WorkStep }
   /** One technical line, kept behind Technical details. */
   | { kind: "log"; text: string }
+  /** What the work amounted to, in the reader's words: the disclosure's label once settled. */
+  | { kind: "summary"; text: string }
   /** A question the agent is blocked on (ADR-039); the host validates it before it shows. */
   | { kind: "question"; question: unknown }
   /** The reply cannot go on; the turn is marked interrupted or failed, never complete. */
@@ -180,6 +185,8 @@ export function applyChunk(message: AgentMessage, chunk: ReplyChunk): AgentMessa
       return { ...message, work: { ...work, steps: upsertStep(work.steps, chunk.step) } };
     case "log":
       return { ...message, work: { ...work, logs: [...work.logs, chunk.text] } };
+    case "summary":
+      return { ...message, work: { ...work, summary: chunk.text } };
     case "failure":
       return {
         ...message,
@@ -260,20 +267,43 @@ export function failReply(message: AgentMessage): AgentMessage {
   return applyChunk(message, { kind: "failure", failure: { title, detail: BROKE_OFF } });
 }
 
-/**
- * What a turn's Work details header says at a glance: how many steps, and how many did not
- * finish; for work that is technical lines alone, how many of those.
- */
-export function workSummary(work: Work): string {
+/** What the one disclosure above a reply says: its label, a count beside it, and whether it is live. */
+export type WorkLabel = { label: string; detail?: string; live: boolean };
+
+const plural = (n: number, one: string, many: string) => `${n} ${n === 1 ? one : many}`;
+
+// How many steps, and how many need attention, as the count beside the label.
+function countOf(work: Work): string | undefined {
   const steps = work.steps.length;
-  const lines = work.logs.length;
-  if (steps === 0 && lines > 0) return `${lines} technical ${lines === 1 ? "line" : "lines"}`;
   const short = work.steps.filter(
     (step) => step.status === "failed" || step.status === "cancelled",
   ).length;
-  const running = work.steps.filter((step) => step.status === "running").length;
-  const parts = [`${steps} ${steps === 1 ? "step" : "steps"}`];
-  if (running > 0) parts.push(`${running} running`);
-  if (short > 0) parts.push(`${short} did not finish`);
+  if (steps === 0)
+    return work.logs.length === 0
+      ? undefined
+      : plural(work.logs.length, "technical line", "technical lines");
+  const parts = [plural(steps, "check", "checks")];
+  if (short > 0) parts.push(short === 1 ? "1 needs attention" : `${short} need attention`);
   return parts.join(" · ");
+}
+
+/**
+ * What the one disclosure above a reply says (ADR-139, amended): while the reply streams, what
+ * it is doing now, live, with the working glyph; once it settles, what the work amounted to in
+ * the reply's own words, or "Work finished", "Work incomplete" or "Stopped" when it gave none;
+ * beside either, how many checks, and how many need attention. Activity is not value: the
+ * label reads as an outcome, never as a list of what ran.
+ */
+export function workLabel(message: AgentMessage): WorkLabel {
+  const work = message.work ?? EMPTY_WORK;
+  const detail = countOf(work);
+  if (message.streaming === true)
+    return { label: message.activity ?? "Working", detail, live: true };
+  const fallback =
+    message.ended === "cancelled"
+      ? "Stopped"
+      : message.ended === undefined
+        ? "Work finished"
+        : "Work incomplete";
+  return { label: work.summary ?? fallback, detail, live: false };
 }

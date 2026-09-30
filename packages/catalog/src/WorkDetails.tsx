@@ -3,7 +3,7 @@ import { AgentTree } from "./AgentTree";
 import { CatalogCard } from "./CatalogCard";
 import { Disclosure } from "./Disclosure";
 import { ChildThreadIcon } from "./icons";
-import { workSummary, type StepStatus, type Work, type WorkStep } from "./reply";
+import type { StepStatus, Work, WorkLabel, WorkStep } from "./reply";
 
 // Where a step stands, as one plain word first on its row: words, never colour alone, tell a
 // finished step from one that did not finish (ADR-139).
@@ -90,20 +90,41 @@ function TechnicalDetails({ work }: { work: Work }) {
 }
 
 /**
- * The work behind a reply (ADR-139), folded under "Work details" with a count of its steps: each
- * step's state in a word, its label, its outcome in plain prose and the card that backs it. The
- * superseded narration and the technical logs sit one disclosure deeper, so a reader who only
- * wants the answer never has to read them. Both start folded; each turn keeps its own.
+ * The one disclosure above a reply (ADR-139, amended): mounted when the work starts, so it never
+ * appears over text someone is reading, its header says what the reply is doing now (live, with
+ * the working glyph) and then what the work amounted to, with a count beside it (`workLabel`).
+ * Folded under it: each step's state in a word, its label, its outcome in plain prose and the
+ * card that backs it. The superseded narration and the technical logs sit one disclosure deeper,
+ * so a reader who only wants the answer never has to read them. Both start folded; each turn
+ * keeps its own.
  * @param cardsCarry Whether an evidence card's header carries it out onto the canvas (ADR-089).
  */
-export function WorkDetails({ work, cardsCarry }: { work: Work; cardsCarry?: boolean }) {
+export function WorkDetails({
+  work,
+  label,
+  cardsCarry,
+}: {
+  work: Work;
+  label: WorkLabel;
+  cardsCarry?: boolean;
+}) {
   const [open, setOpen] = useState(false);
   const technical = work.logs.length > 0 || work.narration.length > 0;
   return (
-    <div className="work-details">
+    <div className="work-details" data-live={label.live || undefined}>
       <Disclosure
-        summary="Work details"
-        detail={workSummary(work)}
+        summary={
+          label.live ? (
+            <span className="work-live">
+              {/* The glyph's label announces the state; the words beside it are for the eye. */}
+              <AgentTree label={label.label} />
+              <span aria-hidden="true">{label.label}</span>
+            </span>
+          ) : (
+            label.label
+          )
+        }
+        detail={label.detail}
         open={open}
         onToggle={() => {
           setOpen(!open);

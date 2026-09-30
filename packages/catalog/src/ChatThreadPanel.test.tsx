@@ -174,11 +174,13 @@ it("renders a structured reply as quiet prose: strong findings, italic asides, a
   expect(html.match(/class="prose-card"/g)).toHaveLength(1);
 });
 
-it("keeps a reply's work folded under Work details until the reader asks", () => {
+it("keeps a reply's work folded under one disclosure above the words until the reader asks", () => {
   const html = renderToStaticMarkup(<ChatThreadPanel thread={threads.brief} />);
   expect(html).toMatch(
-    /aria-expanded="false"[^>]*>Work details<span class="disclosure-detail">2 steps<\/span>/,
+    /aria-expanded="false"[^>]*>Work finished<span class="disclosure-detail">2 checks<\/span>/,
   );
+  // The disclosure comes before the prose in the turn.
+  expect(html.indexOf('class="work-details"')).toBeLessThan(html.indexOf('class="quiet-prose"'));
   expect(html).not.toContain('class="work-list"');
   expect(html).not.toContain("Technical details");
 });
@@ -189,7 +191,7 @@ it("labels a cut-off reply incomplete and offers Try again, keeping its words", 
   expect(html).toContain("Interrupted · Incomplete answer");
   expect(html).toContain("The South region&#x27;s records stopped answering");
   expect(html).toContain(">Try again</button>");
-  expect(html).toContain("3 steps · 1 did not finish");
+  expect(html).toContain("3 checks · 1 needs attention");
   expect(html).not.toContain("aria-busy");
 });
 

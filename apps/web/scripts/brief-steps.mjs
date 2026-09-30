@@ -168,7 +168,14 @@ async function doneAtOneX(page, run) {
 
 async function workDetails(page, run) {
   const turn = agentTurns(page).first();
-  await turn.getByRole("button", { name: /^Work details/ }).click();
+  const header = turn.locator(".work-details .disclosure-header").first();
+  assert.match(await header.innerText(), /^Checked workload, open issues and response times/);
+  assert.equal(
+    await header.evaluate((el) => el.closest(".turn-agent")?.firstElementChild?.contains(el)),
+    true,
+    "the disclosure comes first in the turn",
+  );
+  await header.click();
   const technical = turn.getByRole("button", { name: "Technical details" });
   await technical.waitFor();
   assert.equal(await technical.getAttribute("aria-expanded"), "false");
@@ -251,7 +258,7 @@ async function recapJumpsToEvidence(page, run) {
   await recap.locator("li button").first().click();
   const turn = agentTurns(page).first();
   await until(async () => (await turn.getAttribute("data-flash")) !== null, "the turn to glow");
-  await turn.getByRole("button", { name: /^Work details/ }).click();
+  await turn.locator(".work-details .disclosure-header").first().click();
   await turn.locator(".work-step").nth(2).waitFor();
   assert.equal(await turn.locator(".work-step .card").count(), 1, "the southern card backs it");
   await run.shot("11-evidence");
@@ -300,7 +307,10 @@ export const briefSteps = [
   ["the player answers: Your answers shows Oldest first", playerAnswers],
   ["the draft arrives under its heading", draftArrives],
   ["the whole run ends Done at 1x inside the walkthrough", doneAtOneX],
-  ["Work details opens; Technical details holds the logs and the old narration", workDetails],
+  [
+    "the disclosure above the reply says what was checked; Technical details holds the logs",
+    workDetails,
+  ],
   ["Restart with 2x plays the brief in under 60% of the 1x time", restartFaster],
   ["a child's row opens its lane on the canvas, under the demo's address", childOpensLane],
 ];

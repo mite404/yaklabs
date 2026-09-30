@@ -12,7 +12,7 @@ import { ChartGlyph } from "./ComposeBox";
 import { InteractiveCard } from "./InteractiveCard";
 import type { CardAttachment } from "./interactive";
 import { Prose } from "./QuietProse";
-import { blocksOf, type Ended } from "./reply";
+import { blocksOf, workLabel, type Ended } from "./reply";
 import type { ThreadMessage } from "./thread";
 import type { AnsweredMessage } from "./transcript";
 import { WorkDetails } from "./WorkDetails";
@@ -167,23 +167,27 @@ function Activity({ activity }: { activity: string }) {
   );
 }
 
-// The reply's words, or its placeholder while it has none, and what it is doing now.
+// The reply's words, or its placeholder while it has none, and what it is doing now; a reply
+// whose disclosure carries its activity (`quiet`) shows neither placeholder nor line here.
 function Words({
   message,
   cardsCarry,
   shareable,
+  quiet,
 }: {
   message: AgentMessage;
   cardsCarry: boolean | undefined;
   shareable: boolean;
+  quiet: boolean;
 }) {
   const blocks = blocksOf(message); // → Block[]
   const { streaming, activity } = message;
-  if (blocks.length === 0) return streaming === true && <Waiting activity={activity} />;
+  const narrates = streaming === true && !quiet;
+  if (blocks.length === 0) return narrates && <Waiting activity={activity} />;
   return (
     <>
       <Prose blocks={blocks} cardsCarry={cardsCarry} shareable={shareable} />
-      {streaming === true && activity !== undefined && <Activity activity={activity} />}
+      {narrates && activity !== undefined && <Activity activity={activity} />}
     </>
   );
 }
@@ -218,10 +222,12 @@ function EndedNote({
 }
 
 /**
- * The agent's turn: Quiet prose with any cards between its paragraphs (ADR-140), what the agent
- * is doing while it streams, how it ended when it stopped short, and the work behind it folded
- * under Work details (ADR-139). A reply with no words yet is its own placeholder. While a reply
- * is still streaming in, the turn is marked busy for assistive technology.
+ * The agent's turn: one restrained disclosure above the words once there is work, mounted as
+ * the work starts and carrying what the reply is doing now and then what it amounted to
+ * (ADR-139, amended); Quiet prose with any cards between its paragraphs (ADR-140); how it ended
+ * when it stopped short. A reply with no work narrates under its words instead, and one with no
+ * words yet is its own placeholder. While a reply is still streaming in, the turn is marked busy
+ * for assistive technology.
  * @param cardsCarry Whether a card's header carries it out onto the canvas (ADR-089).
  * @param shareable Whether a card offers its own share link; not on a page already shared
  * (ADR-064, ADR-131).
@@ -260,7 +266,8 @@ export function AgentTurn({
       aria-label="Agent"
       aria-busy={message.streaming === true ? true : undefined}
     >
-      <Words message={message} cardsCarry={cardsCarry} shareable={shareable} />
+      {worked && <WorkDetails work={work} label={workLabel(message)} cardsCarry={cardsCarry} />}
+      <Words message={message} cardsCarry={cardsCarry} shareable={shareable} quiet={worked} />
       {message.payload !== undefined && (
         <CatalogCard
           payload={message.payload}
@@ -280,7 +287,6 @@ export function AgentTurn({
         />
       )}
       {ended !== undefined && <EndedNote message={message} ended={ended} onRetry={onRetry} />}
-      {worked && <WorkDetails work={work} cardsCarry={cardsCarry} />}
       {stamp !== undefined && <time className="turn-stamp">{stamp}</time>}
     </article>
   );

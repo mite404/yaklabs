@@ -1,5 +1,5 @@
 import { card, em, heading, list, paragraph, strong, text } from "@yaklabs/catalog/prose";
-import { activity, at, stream, log, type Script, type Timed } from "../script";
+import { activity, at, log, stream, summary, type Script, type Timed } from "../script";
 import {
   done,
   issuesChart,
@@ -166,6 +166,7 @@ export const brief: Script = {
         log(200, "check:response-times status=done rows=5 chart=PieChart"),
         activity(400, "Writing the brief."),
         ...briefFinding,
+        summary(0, "Checked workload, open issues and response times"),
         at(700, { kind: "question", question: orderQuestion }),
       ],
     },

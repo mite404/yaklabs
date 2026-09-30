@@ -531,6 +531,12 @@
   font-size: 13px;
   font-weight: 500;
 }
+.work-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
 /* The fold's chevron leads the label here, as a numbered list's marker would: at the header's
    far right it sat under the reading tools, which float over the newest turn's bottom-right
    corner (ADR-143), and a control hidden under a control is worse than a word covered. */

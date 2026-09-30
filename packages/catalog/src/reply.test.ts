@@ -7,7 +7,7 @@ import {
   failReply,
   isEmptyReply,
   startReply,
-  workSummary,
+  workLabel,
   type AgentMessage,
   type ReplyChunk,
 } from "./reply";
@@ -200,26 +200,58 @@ describe("isEmptyReply", () => {
   });
 });
 
-describe("workSummary", () => {
-  it("counts the steps, the ones running, and the ones that did not finish", () => {
-    expect(workSummary({ steps: [], logs: [], narration: [] })).toBe("0 steps");
-    expect(workSummary({ steps: [], logs: ["hold:south"], narration: [] })).toBe(
-      "1 technical line",
-    );
-    expect(
-      workSummary({
-        steps: [
-          { id: "a", label: "A", status: "done" },
-          { id: "b", label: "B", status: "running" },
-          { id: "c", label: "C", status: "failed" },
-          { id: "d", label: "D", status: "cancelled" },
-        ],
-        logs: [],
-        narration: [],
-      }),
-    ).toBe("4 steps · 1 running · 2 did not finish");
-    expect(
-      workSummary({ steps: [{ id: "a", label: "A", status: "done" }], logs: [], narration: [] }),
-    ).toBe("1 step");
+// A settled reply with four steps in every state, and the summary it gave, if any.
+const worked = (summary?: string): AgentMessage => ({
+  ...startReply("a1", "9:02"),
+  streaming: false,
+  work: {
+    steps: [
+      { id: "a", label: "A", status: "done" },
+      { id: "b", label: "B", status: "running" },
+      { id: "c", label: "C", status: "failed" },
+      { id: "d", label: "D", status: "cancelled" },
+    ],
+    logs: [],
+    narration: [],
+    summary,
+  },
+});
+
+describe("workLabel", () => {
+  it("says what the reply is doing while it streams, live, with the count beside it", () => {
+    const streaming = { ...worked(), streaming: true, activity: "Checking open issues" };
+    expect(workLabel(streaming)).toEqual({
+      label: "Checking open issues",
+      detail: "4 checks · 2 need attention",
+      live: true,
+    });
+    expect(workLabel({ ...streaming, activity: undefined }).label).toBe("Working");
+  });
+
+  it("says what the work amounted to once settled, in the reply's words or a plain state", () => {
+    expect(workLabel(worked("Checked workload and open issues"))).toEqual({
+      label: "Checked workload and open issues",
+      detail: "4 checks · 2 need attention",
+      live: false,
+    });
+    expect(workLabel(worked()).label).toBe("Work finished");
+    expect(workLabel({ ...worked(), ended: "interrupted" }).label).toBe("Work incomplete");
+    expect(workLabel({ ...worked(), ended: "cancelled" }).label).toBe("Stopped");
+  });
+
+  it("counts one check, one that needs attention, or technical lines alone", () => {
+    const one: AgentMessage = {
+      ...startReply("a1", "9:02"),
+      streaming: false,
+      work: { steps: [{ id: "a", label: "A", status: "failed" }], logs: [], narration: [] },
+    };
+    expect(workLabel(one).detail).toBe("1 check · 1 needs attention");
+    const lines: AgentMessage = {
+      ...startReply("a1", "9:02"),
+      streaming: false,
+      work: { steps: [], logs: ["hold:south"], narration: [] },
+    };
+    expect(workLabel(lines).detail).toBe("1 technical line");
+    expect(workLabel(startReply("a1", "9:02")).detail).toBeUndefined();
   });
 });

@@ -666,7 +666,7 @@ function scrollerIn(canvasElement: HTMLElement): HTMLElement {
 
 /**
  * A structured reply (ADR-139, ADR-140): findings in semibold, an aside in real italics, a card
- * between paragraphs, a heading and a list, and its work folded under Work details.
+ * between paragraphs, a heading and a list, and its work folded above them, labelled finished.
  */
 export const Structured: Story = {
   args: { thread: threads.brief },
@@ -674,7 +674,7 @@ export const Structured: Story = {
     const canvas = within(canvasElement);
     await expect(canvas.getByText("a peak of 62 on Saturday").tagName).toBe("STRONG");
     await expect(canvas.getByRole("heading", { name: "What needs you" })).toBeVisible();
-    await expect(canvas.getByRole("button", { name: /Work details/ })).toHaveAttribute(
+    await expect(canvas.getByRole("button", { name: /Work finished/ })).toHaveAttribute(
       "aria-expanded",
       "false",
     );
@@ -707,7 +707,9 @@ export const Streaming: Story = {
       { timeout: 10_000 },
     );
     await expect(canvas.getByText("a peak of 62 on Saturday").tagName).toBe("STRONG");
-    await expect(canvas.getByRole("button", { name: /Work details/ })).toHaveTextContent("1 step");
+    await expect(canvas.getByRole("button", { name: /Work finished/ })).toHaveTextContent(
+      "1 check",
+    );
     await expect(canvas.queryByRole("button", { name: "Stop" })).toBeNull();
   },
 };
@@ -762,7 +764,7 @@ export const WorkDetailsOpen: Story = {
   args: { thread: threads.brief },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.click(canvas.getByRole("button", { name: /Work details/ }));
+    await userEvent.click(canvas.getByRole("button", { name: /Work finished/ }));
     await expect(canvas.getByText("Weekly workload")).toBeVisible();
     await expect(canvas.getByText("Child thread:")).toBeInTheDocument();
     const technical = canvas.getByRole("button", { name: "Technical details" });

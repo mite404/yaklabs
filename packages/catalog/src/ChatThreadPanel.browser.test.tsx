@@ -173,7 +173,7 @@ it("stops every reply in flight at once, marking each stopped, even one whose so
   expect(host.querySelector('[aria-busy="true"]')).toBeNull();
   expect(button("Stop")).toBeNull();
   expect(host.textContent).toContain("Partly said.");
-  expect(host.textContent).toContain("1 step");
+  expect(host.textContent).toContain("1 check · 1 needs attention");
 
   // A chunk that arrives after Stop changes nothing.
   replies[1]?.chunk(" More words.");
