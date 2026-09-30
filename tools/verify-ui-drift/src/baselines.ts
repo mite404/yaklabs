@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
-import { mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { baselineSchema, idSchema } from "./report.ts";
 import type { Fingerprint, Image, RenderedCell } from "./report.ts";
@@ -30,6 +30,32 @@ async function readBaseline(dir: string) {
   const bytes = await readFile(path.join(dir, baseline.image.path));
   if (digest(bytes) !== baseline.image.sha256) throw new Error("Baseline image hash mismatch.");
   return { baseline, bytes };
+}
+
+/** The environments holding approved references under a baselines directory, one name per
+ * environment folder, read from its first approved.json. A missing directory holds none.
+ * @throws On an unreadable or invalid approved.json.
+ */
+export async function knownEnvironments(root: string): Promise<string[]> {
+  let files: string[];
+  try {
+    files = await readdir(root, { recursive: true }); // → relative paths under root
+  } catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "ENOENT") return [];
+    throw error;
+  }
+  const firstPerFolder = new Map<string, string>();
+  for (const file of files.filter((name) => path.basename(name) === "approved.json").toSorted()) {
+    const folder = file.split(path.sep)[0] ?? file;
+    if (!firstPerFolder.has(folder)) firstPerFolder.set(folder, file);
+  }
+  const names = await Promise.all(
+    [...firstPerFolder.values()].map(async (file) => {
+      const text = await readFile(path.join(root, file), "utf8");
+      return baselineSchema.parse(JSON.parse(text)).fingerprint.environment;
+    }),
+  );
+  return [...new Set(names)].toSorted();
 }
 
 /** Captures an image reference with its content hash. */

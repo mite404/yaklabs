@@ -143,7 +143,8 @@ export type Probe = z.infer<typeof probeSchema>;
 export type RenderedCell = Extract<Cell, { kind: "rendered" }>;
 export type Verdict = "pass" | "fail" | "incomplete" | "broken";
 
-function fullMatrix(report: Report): boolean {
+/** Whether the report holds exactly one cell for every selected story, engine and theme. */
+export function fullMatrix(report: Report): boolean {
   const expected = report.selectedStories.flatMap((story) =>
     report.engines.flatMap((engine) => report.themes.map((theme) => `${story}.${engine}.${theme}`)),
   );
@@ -176,8 +177,8 @@ export function proved(probes: Probe[], engines: Engine[]): boolean {
   );
 }
 
-// Playwright's install notes follow an error's first line, which already names the cause.
-function firstLine(message: string): string {
+/** An error's first line. Playwright's install notes follow it, and it already names the cause. */
+export function firstLine(message: string): string {
   return message.split("\n")[0] ?? message;
 }
 

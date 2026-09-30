@@ -3,7 +3,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { PNG } from "pngjs";
 import { afterEach, describe, expect, it } from "vitest";
-import { compareBaseline, imageRef, writeBaselines } from "./baselines.ts";
+import { compareBaseline, imageRef, knownEnvironments, writeBaselines } from "./baselines.ts";
 import type { RenderedCell } from "./report.ts";
 
 const dirs: string[] = [];
@@ -42,6 +42,15 @@ async function setup() {
 }
 afterEach(async () => {
   await Promise.all(dirs.splice(0).map((dir) => rm(dir, { recursive: true, force: true })));
+});
+
+describe("known environments", () => {
+  it("names none before the first approval, then the approved machine", async () => {
+    const { input, promotion } = await setup();
+    expect(await knownEnvironments(input.baselineDir)).toEqual([]);
+    await writeBaselines(promotion);
+    expect(await knownEnvironments(input.baselineDir)).toEqual(["linux-test"]);
+  });
 });
 
 describe("baseline lifecycle", () => {

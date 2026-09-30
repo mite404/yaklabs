@@ -7,11 +7,12 @@ import type { Browser } from "playwright";
 import { z } from "zod";
 import { buildApp, openApp } from "./app-capture.ts";
 import { APP_SHELL } from "./app-target.ts";
-import { compareBaseline, imageRef } from "./baselines.ts";
+import { compareBaseline, imageRef, knownEnvironments } from "./baselines.ts";
 import { accessibility, mutationProof, openStory, sampleTokens, screenshot } from "./capture.ts";
 import { inventoryCss } from "./colors.ts";
-import { brokenReasons, idSchema, reportSchema, verdict } from "./report.ts";
+import { firstLine, idSchema, proved, reportSchema, verdict } from "./report.ts";
 import type { Cell, Engine, Fingerprint, Probe, Report, Theme } from "./report.ts";
+import { summarize } from "./summary.ts";
 import {
   BASELINES,
   command,
@@ -192,8 +193,9 @@ async function runEngineMatrix(
   };
   const proof: Probe = await mutationProof(browser, server.url, engine, fingerprint, directory);
   report.probes.push(proof);
+  const judged = proved([proof], [engine]) ? "ok" : "FAILED, its comparisons cannot be trusted";
   process.stdout.write(
-    `${engine} proof: control ${proof.control.changedPixels}, color ${proof.color.changedPixels}, geometry ${proof.geometry.changedPixels}\n`,
+    `${engine} proof ${judged}: control ${proof.control.changedPixels}, color ${proof.color.changedPixels}, geometry ${proof.geometry.changedPixels}\n`,
   );
   for (const theme of options.themes) {
     if (engine === options.engines[0]) {
@@ -234,6 +236,7 @@ export async function runVerification(options: RunOptions): Promise<Report> {
     .replaceAll(/[^\da-z]/giu, "-")
     .toLowerCase()}-${randomUUID().slice(0, 8)}`;
   const directory = path.join(RUNS, id);
+  const known = await knownEnvironments(options.baselineDir ?? BASELINES); // → string[]
   const build = path.join(ROOT, ".artifacts/verify-ui-drift/builds", id);
   await mkdir(directory, { recursive: true });
   const report: Report = {
@@ -267,6 +270,10 @@ export async function runVerification(options: RunOptions): Promise<Report> {
           : await chooseStories(options, all, server.port, directory);
       if (report.selectedStories.includes(APP_SHELL.id)) app = await buildApp(id, directory);
       const environment = await environmentName();
+      if (options.mode === "comparison" && !known.includes(environment))
+        process.stdout.write(
+          `No approved references exist for this machine (${environment}), so captures are recorded but not compared. References exist for: ${known.join(", ") || "none"}.\n`,
+        );
       const names = [...new Set(report.inventory.customProperties.map((token) => token.name))];
       for (const engine of options.engines) {
         let browser: Browser;
@@ -279,6 +286,7 @@ export async function runVerification(options: RunOptions): Promise<Report> {
         } catch (error) {
           report.cells.push(...notRunCells(engine, report.selectedStories, options.themes, error));
           report.errors.push(`${engine} did not launch: ${String(error)}`);
+          process.stdout.write(`${engine} did not launch: ${firstLine(String(error))}\n`);
           continue;
         }
         try {
@@ -294,6 +302,7 @@ export async function runVerification(options: RunOptions): Promise<Report> {
           );
         } catch (error) {
           report.errors.push(`${engine}: ${String(error)}`);
+          process.stdout.write(`${engine} stopped: ${firstLine(String(error))}\n`);
         } finally {
           await browser.close();
         }
@@ -313,6 +322,6 @@ export async function runVerification(options: RunOptions): Promise<Report> {
   process.stdout.write(
     `${verdict(report).toUpperCase()} ${path.relative(ROOT, directory)}/report.json\n`,
   );
-  for (const reason of brokenReasons(report)) process.stderr.write(`  ${reason}\n`);
+  for (const line of summarize(report, known)) process.stdout.write(`  ${line}\n`);
   return report;
 }
