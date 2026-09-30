@@ -1,4 +1,5 @@
 import type { CardAttachment } from "./interactive";
+import type { ReplyChunk } from "./reply";
 
 /** A file the user attached, described for the agent (the lab sends no file contents). */
 export type SharedFile = { name: string; type: string; size: number };
@@ -19,9 +20,11 @@ export type AgentEvent =
 
 /**
  * The seam between the thread and whatever produces replies (ADR-041). A reply streams in as
- * text chunks, the way a model streams tokens; an agent may also yield nothing at all.
- * Swap the lab stand-in for a real model by passing another `Agent` to the thread panel.
+ * chunks: words, the way a model streams tokens, and the events around them (progress
+ * narration, steps of work, cards, a question, a failure; see `reply.ts`). An agent that
+ * streams words alone still fits, and one may yield nothing at all. Swap the lab stand-in for
+ * a real model by passing another `Agent` to the thread panel.
  */
 export type Agent = {
-  respond(event: AgentEvent, signal: AbortSignal): AsyncIterable<string>;
+  respond(event: AgentEvent, signal: AbortSignal): AsyncIterable<ReplyChunk>;
 };

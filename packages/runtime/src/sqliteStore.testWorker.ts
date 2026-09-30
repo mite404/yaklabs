@@ -4,9 +4,8 @@ import type { ThreadMessage } from "@yaklabs/catalog/thread";
 import { z } from "zod";
 import { threadMessageSchema } from "./protocol";
 import { migrate, migrationSteps } from "./schema";
-import { PROFIT } from "./v2Plan";
 import { openDatabase, openSqliteStore } from "./sqliteStore";
-import { ensureStarter } from "./store";
+import { ensureStarter, STARTER } from "./store";
 import { dumpDatabase, v1Legacy, writeV1 } from "./testing";
 
 // Started only by sqliteStore.browser.test.ts: OPFS's fast mode exists only inside a Worker.
@@ -40,7 +39,10 @@ const crashingSteps: typeof migrationSteps = [
 async function saveThenReopen(name: string, turn: ThreadMessage) {
   const first = await openSqliteStore({ kind: "opfs", name });
   ensureStarter(first, "2026-09-26T10:02:00.000Z");
-  first.changeTranscript(PROFIT, (now) => ({ ...now, messages: [...now.messages, turn] }));
+  first.changeTranscript(STARTER.thread.id, (now) => ({
+    ...now,
+    messages: [...now.messages, turn],
+  }));
   first.close();
   return read(name); // a new instance, same file
 }
@@ -48,7 +50,7 @@ async function saveThenReopen(name: string, turn: ThreadMessage) {
 async function read(name: string) {
   const store = await openSqliteStore({ kind: "opfs", name });
   try {
-    return store.transcript(PROFIT);
+    return store.transcript(STARTER.thread.id);
   } finally {
     store.close();
   }

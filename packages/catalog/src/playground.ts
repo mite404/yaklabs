@@ -10,18 +10,24 @@ const line = z.string().trim().min(1).max(160);
 const id = z.string().min(1).max(64);
 const workStatus = z.enum(["running", "done", "failed"]);
 
-/** Wire version of the playground stream; bump on any breaking change to the event union. */
-export const PLAYGROUND_PROTOCOL = 1;
+/**
+ * Wire version of the playground stream; bump on any breaking change to the event union. A
+ * page on one version fails the `start` event of a gateway on another.
+ */
+export const PLAYGROUND_PROTOCOL = 2;
 
 /**
  * One NDJSON line of the gateway's /api/playground stream. The gateway emits only events that
  * parse here, and the page rejects any line that does not; unknown keys are rejected.
+ *
+ * Every event means what it says when it arrives, and nothing is relabelled after emission:
+ * `text` is answer prose from its first delta, progress reaches the page only through `work`
+ * labels, and `end` carries the closing failure's sentence in `line` (for `limit` and
+ * `upstream`), so a reader never has to look one event ahead.
  */
 export const playgroundEventSchema = z.discriminatedUnion("type", [
   z.strictObject({ type: z.literal("start"), seq, v: z.literal(PLAYGROUND_PROTOCOL) }),
   z.strictObject({ type: z.literal("text"), seq, blockId: id, delta: z.string() }),
-  // An already-streamed text block turns out to be progress narration for a work item.
-  z.strictObject({ type: z.literal("narration"), seq, blockId: id, workId: slug }),
   z.strictObject({ type: z.literal("work"), seq, workId: slug, label: line, status: workStatus }),
   z.strictObject({
     type: z.literal("card"),
@@ -49,6 +55,7 @@ export const playgroundEventSchema = z.discriminatedUnion("type", [
     type: z.literal("end"),
     seq,
     reason: z.enum(["answered", "asked", "limit", "upstream"]),
+    line: line.optional(),
   }),
 ]);
 
@@ -165,7 +172,7 @@ const userTurnSchema = z.discriminatedUnion("kind", [
 export type UserInput = z.infer<typeof userTurnSchema>;
 
 const agentTurnSchema = z.strictObject({
-  text: z.string().max(20_000), // answer prose only, narration excluded
+  text: z.string().max(20_000), // the reply's prose
   cards: z.array(z.strictObject({ cardId: slug, selection: selectionSchema })).max(12),
   outcomes: z.array(z.strictObject({ workId: slug, result: line })).max(12),
   failures: z.array(z.strictObject({ limitation: line })).max(12),

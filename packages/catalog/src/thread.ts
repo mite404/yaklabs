@@ -1,8 +1,26 @@
-import { scenarios } from "./fixtures";
+import { scenarios, trend } from "./fixtures";
 import type { CardAttachment, InteractiveSelection } from "./interactive";
+import {
+  card,
+  em,
+  heading,
+  limitation,
+  list,
+  paragraph,
+  plainText,
+  strong,
+  text,
+  type Block,
+} from "./prose";
 import type { RecapItem } from "./recapRules";
+import type { Ended, Failure, Work } from "./reply";
 
-/** One turn in a thread; agent turns may carry a catalog payload the host validates. */
+/**
+ * One turn in a thread. A user turn is a request, or the answer to a question the agent was
+ * blocked on (`question`), which the thread shows as the question and its answer together. An
+ * agent turn is plain `text`, or structured `blocks` with the work behind them; the host
+ * validates every card payload.
+ */
 export type ThreadMessage =
   | {
       id: string;
@@ -13,10 +31,13 @@ export type ThreadMessage =
       attachments?: CardAttachment[];
       /** Files and screenshots sent with this message (ADR-063). */
       files?: { id: string; label: string }[];
+      /** The question this turn answers, when it answered a docked one (ADR-039). */
+      question?: string;
     }
   | {
       id: string;
       role: "agent";
+      /** The words, plain: what a search reads, and all a plain-text reply has. */
       text: string;
       time: string;
       payload?: unknown;
@@ -24,7 +45,45 @@ export type ThreadMessage =
       interactive?: unknown;
       /** Still streaming in from the agent (ADR-041). */
       streaming?: boolean;
+      /** The reply's structure (ADR-140): paragraphs, headings, lists, cards between them. */
+      blocks?: Block[];
+      /** The work behind the reply, shown behind Work details (ADR-139). */
+      work?: Work;
+      /** What the agent is doing right now, while the reply streams. */
+      activity?: string;
+      /** How the reply stopped short; absent for one that completed or is still streaming. */
+      ended?: Ended;
+      /** Why it stopped, when the agent said. */
+      failure?: Failure;
+      /** The question the reply ended on (ADR-039), kept in the record; the dock reads it. */
+      asks?: unknown;
     };
+
+/**
+ * What a host that drives the thread can do (a scripted demo, a test): fill and send the
+ * compose box, answer the docked question, step a card, stop every reply in flight, or try a
+ * stopped reply again. Every call takes the same path a person's click would.
+ */
+export type ThreadHandle = {
+  setDraft(text: string): void;
+  /** Sends the compose box's draft, as Enter would; nothing happens on an empty draft. */
+  send(): void;
+  /** Answers the docked question with a tile's label or typed text. */
+  answer(text: string): void;
+  /**
+   * Steps an interactive card to the stop named by its label, as the card's own control would,
+   * so the choice rides along with the next message (ADR-030): the card on the turn named, or
+   * the latest turn that carries one. Nothing happens for a label the card lacks.
+   */
+  choose(measure: string, turnId?: string): void;
+  /** Stops every reply still streaming; each is marked cancelled, never complete. */
+  stop(): void;
+  /**
+   * Sends the request behind a reply that stopped short again, as a new turn: the turn named,
+   * or the latest such turn.
+   */
+  retry(turnId?: string): void;
+};
 
 /** A deterministic conversation used to evaluate cards in their real context. */
 export type Thread = {
@@ -124,6 +183,96 @@ const fallbacks: Thread = {
   ],
 };
 
+// The weekly brief's answer: findings in semibold, an aside in italics, a card between
+// paragraphs, a heading and a list.
+const briefBlocks: Block[] = [
+  paragraph([
+    text("Closed cases rose from 24 on Monday to "),
+    strong("a peak of 62 on Saturday"),
+    text(", then eased on Sunday. The weekend carried the week."),
+  ]),
+  paragraph([
+    text("Support closed the most, 84 cases, ahead of Operations at 71. "),
+    em("Success ran a person short from Wednesday, which explains its 56."),
+  ]),
+  card(scenarios.trend.payload),
+  heading([text("What needs you")]),
+  list([
+    [strong("Approve weekend cover"), text(" for Success before Friday.")],
+    [text("Nothing else needs escalation this week.")],
+  ]),
+];
+
+// A weekly review answered in structure (ADR-139, ADR-140): findings in semibold, an aside in
+// italics, a card between paragraphs, a heading and a list, and the work behind it: two checks,
+// one run as a child thread with a table as its evidence.
+const brief: Thread = {
+  title: "Service desk weekly brief",
+  messages: [
+    {
+      id: "u1",
+      role: "user",
+      time: "9:02",
+      text: "Give me the weekly brief for the service desk. What changed, and what needs me?",
+    },
+    {
+      id: "a1",
+      role: "agent",
+      time: "9:03",
+      text: plainText(briefBlocks),
+      blocks: briefBlocks,
+      work: {
+        steps: [
+          {
+            id: "workload",
+            label: "Weekly workload",
+            status: "done",
+            outcome: "Closed cases by day, Sep 14–20: the peak was Saturday at 62.",
+            basis: [
+              "Counted the cases closed each day in the service desk export",
+              "Took the busiest day's count as the peak",
+            ],
+            evidence: scenarios.table.payload,
+            threadId: "workload-check",
+          },
+          {
+            id: "teams",
+            label: "Cases by team",
+            status: "done",
+            outcome: "Support closed 84, Operations 71 and Success 56.",
+            basis: ["Grouped the week's closed cases by the team that closed them"],
+          },
+        ],
+        logs: [
+          "fixture:workload rows=7 source=demo-service-desk",
+          "check:weekly-workload status=done peak=Sat:62",
+          "check:cases-by-team status=done teams=3",
+        ],
+        narration: ["Reading this week's cases.", "Checking the workload by day."],
+      },
+    },
+  ],
+};
+
+// A chart asked for in a view the catalog lacks (ADR-147, widened): the refused card, what the
+// reply could not do said in its words, and the bar chart it offers to send instead.
+const limitedBlocks: Block[] = [
+  paragraph([
+    text("First responses slowed: the median was "),
+    strong("41 minutes"),
+    text(", up from 28 the week before."),
+  ]),
+  card({ ...trend, component: "PieChart" }),
+  limitation("The catalog has no pie chart, so I didn't draw one.", {
+    label: "Show it as a bar chart",
+    prompt: "Show first response times as a bar chart",
+  }),
+  paragraph([text("Thursday was the slowest day.")]),
+];
+
+// Structured prose from its plain words, as the fixtures below use it.
+const said = (words: string): Block[] => [paragraph([text(words)])];
+
 // Synthetic conversations: every payload comes from the shared fixtures,
 // so a card in a thread and a card in a story are the exact same input.
 export const threads: Record<string, Thread> = {
@@ -187,6 +336,184 @@ export const threads: Record<string, Thread> = {
     ],
   },
   fallbacks,
+  brief,
+  /** A limitation in the words: the pie the catalog lacks, and a bar chart one click away. */
+  limited: {
+    title: "First response times",
+    messages: [
+      {
+        id: "u1",
+        role: "user",
+        time: "9:40",
+        text: "Show first response times as a pie chart.",
+      },
+      {
+        id: "a1",
+        role: "agent",
+        time: "9:40",
+        text: plainText(limitedBlocks),
+        blocks: limitedBlocks,
+      },
+    ],
+  },
+  /** A reply cut off partway: its words stay, marked incomplete, with a way to ask again. */
+  interrupted: {
+    title: "Region comparison",
+    messages: [
+      {
+        id: "u1",
+        role: "user",
+        time: "11:20",
+        text: "Compare closed cases across the three regions.",
+      },
+      {
+        id: "a1",
+        role: "agent",
+        time: "11:20",
+        text: "North closed 84 cases and Central 71.",
+        blocks: said("North closed 84 cases and Central 71."),
+        ended: "interrupted",
+        failure: {
+          title: "Reply interrupted",
+          detail: "The South region's records stopped answering before I could count them.",
+        },
+        work: {
+          steps: [
+            { id: "north", label: "North region", status: "done", outcome: "84 closed." },
+            { id: "central", label: "Central region", status: "done", outcome: "71 closed." },
+            { id: "south", label: "South region", status: "failed" },
+          ],
+          logs: ["check:south status=failed reason=timeout after=30s"],
+          narration: ["Counting each region's cases."],
+        },
+      },
+    ],
+  },
+  /** A reply that could not start and that asking again cannot help: it says why, no Try again. */
+  "no-retry": {
+    title: "Live numbers",
+    messages: [
+      {
+        id: "u1",
+        role: "user",
+        time: "11:05",
+        text: "Pull this week's numbers from the live model.",
+      },
+      {
+        id: "a1",
+        role: "agent",
+        time: "11:05",
+        text: "",
+        ended: "failed",
+        failure: {
+          title: "Sign-in needed",
+          detail: "The live model answers signed-in users only. Nothing was sent.",
+          retry: false,
+        },
+      },
+    ],
+  },
+  /** A reply the user stopped: what finished is kept, what was running says it stopped. */
+  cancelled: {
+    title: "Refund audit",
+    messages: [
+      {
+        id: "u1",
+        role: "user",
+        time: "15:04",
+        text: "Check every refund from last week against its order.",
+      },
+      {
+        id: "a1",
+        role: "agent",
+        time: "15:04",
+        text: "Monday's 41 refunds all match their orders.",
+        blocks: said("Monday's 41 refunds all match their orders."),
+        ended: "cancelled",
+        work: {
+          steps: [
+            { id: "mon", label: "Monday's refunds", status: "done", outcome: "41 of 41 match." },
+            { id: "tue", label: "Tuesday's refunds", status: "cancelled" },
+          ],
+          logs: [],
+          narration: [],
+        },
+      },
+    ],
+  },
+  /** Two questions the agent was blocked on, answered in a row: one surface, question over
+   *  answer. */
+  answered: {
+    title: "Forecast setup",
+    messages: [
+      {
+        id: "u1",
+        role: "user",
+        time: "10:40",
+        text: scenarios.unsupported.question,
+      },
+      {
+        id: "a1",
+        role: "agent",
+        time: "10:40",
+        text: "That view isn't in the catalog yet, so I haven't guessed at one.",
+        payload: scenarios.unsupported.payload,
+      },
+      {
+        id: "u2",
+        role: "user",
+        time: "10:41",
+        question: "A forecast view isn't in the catalog yet. How should I handle it?",
+        text: "Request a forecast view",
+      },
+      {
+        id: "u3",
+        role: "user",
+        time: "10:42",
+        question: "How many weeks ahead should it forecast?",
+        text: "Four weeks",
+      },
+      {
+        id: "a2",
+        role: "agent",
+        time: "10:42",
+        text: "Requested a four-week forecast view. Until it ships, I'll keep showing exact values.",
+      },
+    ],
+  },
+  /** A long pasted request: the bubble folds past eight lines behind a fade and Show more. */
+  "long-request": {
+    title: "Handover notes",
+    messages: [
+      {
+        id: "u1",
+        role: "user",
+        time: "8:30",
+        text: [
+          "Here are the handover notes from the night shift. Can you pull out what needs me?",
+          "",
+          "- Ticket 4411: billing export failed twice, retried at 02:10, succeeded.",
+          "- Ticket 4415: a customer in Leeds cannot reset their password.",
+          "- The status page showed a partial outage from 03:05 to 03:40.",
+          "- Two refunds are waiting for approval over the usual limit.",
+          "- The weekend rota still has a gap on Sunday afternoon.",
+          "- Support's macro for shipping delays links to an old page.",
+          "- A new starter needs access to the order system on Monday.",
+          "- The chat widget was slow for an hour after midnight.",
+          "- Ticket 4420: duplicate charge, customer already refunded.",
+          "- Printer on floor two is out of toner again.",
+          "",
+          "Thanks!",
+        ].join("\n"),
+      },
+      {
+        id: "a1",
+        role: "agent",
+        time: "8:31",
+        text: "Three need you: the two refunds over the limit, the Sunday rota gap, and the new starter's access.",
+      },
+    ],
+  },
   /** The fallbacks thread with the agent blocked on the user: whether to request the missing view. */
   awaiting: {
     ...fallbacks,

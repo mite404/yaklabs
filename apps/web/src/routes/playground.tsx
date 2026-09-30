@@ -1,18 +1,3 @@
-import { Playground } from "../playground/Playground";
-import { RequireSession } from "../session";
-
-export function meta() {
-  return [{ title: "Playground" }];
-}
-
-/**
- * The live playground (ADR-155), a standalone route outside `_app`'s runtime: it talks to the
- * gateway directly and keeps nothing. Sign-in guards it wherever the build has sign-in.
- */
-export default function PlaygroundRoute() {
-  return (
-    <RequireSession>
-      <Playground />
-    </RequireSession>
-  );
-}
+// The live playground's old address (ADR-155): its thread is now the device starter's, in the
+// shell, so the address redirects there before anything renders.
+export { legacyRedirect as clientLoader } from "../world/redirects";

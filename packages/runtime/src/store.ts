@@ -2,17 +2,18 @@ import { threads, type Thread, type ThreadMessage } from "@yaklabs/catalog/threa
 import type { Transcript } from "./conversation";
 import type { ThreadMark } from "./marks";
 import type { RenameTarget } from "./protocol";
-import { DEMO_PROJECT, PROFIT } from "./v2Plan";
-import type {
-  Lane,
-  Notification,
-  Place,
-  Project,
-  ShellState,
-  ThreadId,
-  ThreadShare,
-  ThreadSummary,
-  Workspace,
+import {
+  projectIdSchema,
+  threadIdSchema,
+  type Lane,
+  type Notification,
+  type Place,
+  type Project,
+  type ShellState,
+  type ThreadId,
+  type ThreadShare,
+  type ThreadSummary,
+  type Workspace,
 } from "./workspace";
 
 /** What a settling pass did: whether the workspace changed, and when the next one is due. */
@@ -109,18 +110,26 @@ export function seedThread(name: string): Thread {
 }
 
 /**
- * Gives an empty device store the Demo store project and its `profit` main thread, seeded from
- * the catalog's profit thread, as the page used to. A store with any thread is left alone, so
- * running it again changes nothing.
- * @throws When the catalog has no profit thread, or the store refuses the project or thread.
+ * What an empty device starts with: the Live Playground project and its one main thread, with
+ * no turns and the title an untitled main gets (`storeWrites.ts`), so the first visit opens on
+ * an empty thread. Their ids never change, so an address to either holds on every device.
+ */
+export const STARTER = {
+  project: { id: projectIdSchema.parse("live-playground"), name: "Live Playground" },
+  thread: { id: threadIdSchema.parse("playground"), title: "New thread" },
+} as const;
+
+/**
+ * Gives an empty device store the starter: the Live Playground project and its empty thread.
+ * A store with any thread is left alone, so running it again changes nothing.
+ * @throws When the store refuses the project or the thread.
  */
 export function ensureStarter(store: Store, at: string): void {
   const { projects, threads: existing } = store.workspace();
   if (existing.length > 0) return;
-  if (!projects.some((project) => project.id === DEMO_PROJECT.id)) {
-    store.addProject({ ...DEMO_PROJECT, createdAt: at });
-  }
-  const { title, messages } = seedThread("profit");
-  const place = { kind: "main", projectId: DEMO_PROJECT.id } as const;
-  store.addThread({ id: PROFIT, title, place, createdAt: at, updatedAt: at, draft: "", messages });
+  const { project, thread } = STARTER;
+  if (!projects.some((each) => each.id === project.id))
+    store.addProject({ ...project, createdAt: at });
+  const place = { kind: "main", projectId: project.id } as const;
+  store.addThread({ ...thread, place, createdAt: at, updatedAt: at, draft: "", messages: [] });
 }

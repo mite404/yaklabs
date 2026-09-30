@@ -16,10 +16,13 @@ export function bookmarkLabel(text: string): string {
   return chars.length > BOOKMARK_CHARS ? `${head}…` : head;
 }
 
-/** Every request the user sent in the thread, oldest first. */
+/**
+ * Every request the user sent in the thread, oldest first. An answer to a docked question is
+ * not a request: the question asked it, so it is left out.
+ */
 export function requestsOf(messages: ThreadMessage[]): Request[] {
   return messages
-    .filter((message) => message.role === "user") // → the user's turns
+    .filter((message) => message.role === "user" && message.question === undefined) // → requests
     .map(({ id, text, time }) => ({ id, label: bookmarkLabel(text), text, time }));
 }
 

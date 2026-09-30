@@ -11,10 +11,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.128.0",
     "@sqlite.org/sqlite-wasm": "^3.53.4-build1",
     "@yaklabs/catalog": "workspace:*",
-    "hono": "^4.13.9",
     "zod": "catalog:"
   },
   "devDependencies": {

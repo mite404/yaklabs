@@ -5,6 +5,17 @@ import { cn } from "@yaklabs/ui/lib/utils";
 import { ChevronRightIcon, CheckIcon } from "lucide-react";
 import * as React from "react";
 
+// How a menu comes and goes (design pillars, rule 31): it grows in from its trigger's side and
+// leaves the same way, each in half the drawer's slide on the drawer's curve (110ms, the panel
+// ease), as the ink pill does. Transitions, not keyframes, so a menu reopened while it fades
+// turns back from where it is instead of finishing its exit first; and a menu on its way out
+// takes no pointer, so the row under the cursor is the page's, never a ghost's. Base UI marks
+// a dismissal (Escape, a click outside) `data-instant`; that must not switch the transition
+// off, or the menu vanishes in one frame, which is the jank this rule exists to remove. Under
+// reduced motion it only fades.
+const LEAVES =
+  "transition-[opacity,scale] duration-110 ease-[cubic-bezier(0.17,1.02,0.58,1)] data-starting-style:scale-95 data-starting-style:opacity-0 data-ending-style:scale-95 data-ending-style:opacity-0 data-ending-style:pointer-events-none motion-reduce:data-starting-style:scale-100 motion-reduce:data-ending-style:scale-100";
+
 function DropdownMenu({ ...props }: MenuPrimitive.Root.Props) {
   return <MenuPrimitive.Root data-slot="dropdown-menu" {...props} />;
 }
@@ -38,7 +49,8 @@ function DropdownMenuContent({
         <MenuPrimitive.Popup
           data-slot="dropdown-menu-content"
           className={cn(
-            "cn-menu-target cn-menu-translucent z-50 max-h-(--available-height) w-(--anchor-width) min-w-32 origin-(--transform-origin) overflow-x-hidden overflow-y-auto rounded-xl border border-border bg-popover p-1 text-popover-foreground shadow-[0_8px_24px_var(--shadow-strong)] duration-100 outline-none data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:overflow-hidden data-closed:fade-out-0 data-closed:zoom-out-95",
+            "cn-menu-target cn-menu-translucent z-50 max-h-(--available-height) w-(--anchor-width) min-w-32 origin-(--transform-origin) overflow-x-hidden overflow-y-auto rounded-xl border border-border bg-popover p-1 text-popover-foreground shadow-[0_8px_24px_var(--shadow-strong)] outline-none",
+            LEAVES,
             className,
           )}
           {...props}
@@ -132,7 +144,8 @@ function DropdownMenuSubContent({
     <DropdownMenuContent
       data-slot="dropdown-menu-sub-content"
       className={cn(
-        "cn-menu-target cn-menu-translucent w-auto min-w-[96px] rounded-xl border border-border bg-popover p-1 text-popover-foreground shadow-[0_8px_24px_var(--shadow-strong)] duration-100 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+        "cn-menu-target cn-menu-translucent w-auto min-w-[96px] rounded-xl border border-border bg-popover p-1 text-popover-foreground shadow-[0_8px_24px_var(--shadow-strong)]",
+        LEAVES,
         className,
       )}
       align={align}

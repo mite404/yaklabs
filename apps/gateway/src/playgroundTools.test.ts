@@ -1,12 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { BAR_CARD } from "./playgroundTestKit";
-import {
-  initialTurn,
-  narrate,
-  translateToolUse,
-  type ToolCall,
-  type Translation,
-} from "./playgroundTools";
+import { initialTurn, translateToolUse, type ToolCall, type Translation } from "./playgroundTools";
 
 const call = (name: string, value: unknown, id = "t1_0"): ToolCall => ({
   id,
@@ -29,10 +23,6 @@ const reply = (translation: Translation | undefined) => {
   const text = typeof result.content === "string" ? result.content : "";
   return { isError: result.is_error === true, text };
 };
-
-// The turn after every translation in `translations`.
-const stateAfter = (translations: readonly Translation[]) =>
-  translations.at(-1)?.state ?? initialTurn;
 
 const oneValueTrend = {
   ...BAR_CARD,
@@ -116,18 +106,5 @@ describe("translateToolUse shows", () => {
         recovery: { label: "Send this", prompt: "Use these numbers." },
       },
     ]);
-  });
-
-  it("narration only for the most recent running work", () => {
-    const turn = run([
-      call("update_work", { workId: "one", label: "First", status: "running" }),
-      call("update_work", { workId: "two", label: "Second", status: "running" }),
-      call("report_outcome", { workId: "two", result: "Done.", evidence: [] }),
-    ]);
-
-    expect(narrate(stateAfter(turn), ["r1b0"])).toEqual([
-      { type: "narration", blockId: "r1b0", workId: "one" },
-    ]);
-    expect(narrate(initialTurn, ["r1b0"])).toEqual([]);
   });
 });

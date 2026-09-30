@@ -145,8 +145,9 @@ function agentFor(handle: Handle, post: Post, threadId: ThreadId, session?: Sess
       let finished = false;
       try {
         for await (const answer of untilAborted(inbox, signal)) {
+          // Passed on as it came, so the panel folds the reply as it does an in-memory agent's.
           if (answer.kind === "chunk") {
-            yield answer.text;
+            yield answer.chunk;
             continue;
           }
           finished = true;

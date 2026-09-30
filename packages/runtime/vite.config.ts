@@ -9,9 +9,6 @@ export default defineConfig({
     // sqlite-wasm loads its .wasm file from beside its own module; pre-bundling would move the
     // module away from it. Any app that starts the runtime needs this line too.
     exclude: ["@sqlite.org/sqlite-wasm"],
-    // Vite's scan does not follow `new Worker(new URL(...))`, so it would find the worker's
-    // dependencies only once the worker starts, and reload the page mid-test.
-    include: ["@anthropic-ai/sdk/lib/MessageStream", "hono/client"],
   },
   // The runtime's worker is an ES module (ADR-083).
   worker: { format: "es" },

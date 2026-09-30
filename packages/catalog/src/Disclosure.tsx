@@ -7,14 +7,17 @@ import { ChevronIcon } from "./icons";
  * under the header marks it as the fold control; folded, there is no body to separate.
  * State lives with the caller, so the same section can start folded or open.
  * @param summary What the header shows; it stays visible when the section is folded.
+ * @param detail A quiet note beside the summary, such as a count.
  */
 export function Disclosure({
   summary,
+  detail,
   open,
   onToggle,
   children,
 }: {
   summary: ReactNode;
+  detail?: ReactNode;
   open: boolean;
   onToggle: () => void;
   children: ReactNode;
@@ -29,6 +32,7 @@ export function Disclosure({
         onClick={onToggle}
       >
         {summary}
+        {detail !== undefined && <span className="disclosure-detail">{detail}</span>}
         <span className="disclosure-chevron">
           <ChevronIcon open={open} />
         </span>

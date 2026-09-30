@@ -13,9 +13,12 @@
     "./interactive": "./src/interactive.ts",
     "./labAgent": "./src/labAgent.ts",
     "./playground": "./src/playground.ts",
+    "./prose": "./src/prose.ts",
+    "./reply": "./src/reply.ts",
     "./share": "./src/share.ts",
     "./thread": "./src/thread.ts",
     "./threadShare": "./src/threadShare.ts",
+    "./transcript": "./src/transcript.ts",
     "./tokens.css": "./src/tokens.css"
   },
   "scripts": {

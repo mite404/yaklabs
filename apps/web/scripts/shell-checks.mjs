@@ -172,6 +172,7 @@ export const shellChecks = {
     const child = side.locator('[data-thread="child"]').first();
     await child.waitFor({ timeout: 10_000 });
     const childText = await child.innerText();
+    const branch = await child.locator('[data-slot="child-icon"] svg').count();
     await child.click();
     await page.waitForURL((url) => url.pathname !== home, { timeout: 10_000 });
     const childPath = pathOf(page);
@@ -187,13 +188,13 @@ export const shellChecks = {
     await page.screenshot({ path: shotPath("P4-sidebar") });
     return {
       ok:
-        childText.includes("↳") &&
+        branch === 1 &&
         childText.includes("New thread") &&
         mainTitle === "Last week's sales" &&
         laneShown &&
         laneStill &&
         mains >= 2,
-      detail: `child row ${JSON.stringify(childText)} opens ${childPath} with main "${mainTitle}" and its lane ${laneShown}; main row keeps the lane ${laneStill}; mains in the project ${mains}`,
+      detail: `child row ${JSON.stringify(childText)} with ${branch} branch icon opens ${childPath} with main "${mainTitle}" and its lane ${laneShown}; main row keeps the lane ${laneStill}; mains in the project ${mains}`,
     };
   },
 

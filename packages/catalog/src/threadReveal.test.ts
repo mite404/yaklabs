@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { centerScrollTop, nudgeScrollTop, restedAtEnd, type Viewport } from "./threadReveal";
+import {
+  centerScrollTop,
+  nudgeScrollTop,
+  restedAtEnd,
+  runwayFor,
+  type Viewport,
+} from "./threadReveal";
 
 // A 600px thread scrolled to 400, with the thread's 20px padding at both ends.
 const view: Viewport = {
@@ -50,6 +56,39 @@ describe("centerScrollTop", () => {
 
   it("never scrolls above the start of the thread", () => {
     expect(centerScrollTop({ top: 40, bottom: 140 }, view)).toBe(0);
+  });
+});
+
+describe("runwayFor", () => {
+  it("adds nothing when the centered scroll is within reach", () => {
+    expect(runwayFor({ top: 1000, bottom: 1200 }, view)).toBe(0);
+  });
+
+  it("adds the room a turn near the end needs to land centered", () => {
+    // Centering the turn at 1000 takes a scroll of 800; the thread reaches only 620.
+    expect(runwayFor({ top: 1000, bottom: 1200 }, { ...view, maxScrollTop: 620 })).toBe(180);
+  });
+
+  it("rounds up to a whole pixel, so the clamp never lands a fraction short", () => {
+    // A 201px turn centers at a scroll of 800.5: 180.5px short, so 181px of room.
+    expect(runwayFor({ top: 1000, bottom: 1201 }, { ...view, maxScrollTop: 620 })).toBe(181);
+  });
+
+  it("adds nothing for a turn taller than the band, which starts at the top instead", () => {
+    expect(runwayFor({ top: 1000, bottom: 1700 }, { ...view, maxScrollTop: 620 })).toBe(0);
+  });
+
+  it("adds nothing to a thread that fits its view: the glow marks the turn", () => {
+    expect(runwayFor({ top: 300, bottom: 400 }, { ...view, scrollTop: 0, maxScrollTop: 0 })).toBe(
+      0,
+    );
+  });
+
+  it("reads the band from the dock, so a docked card still leaves the turn centered", () => {
+    // A 360px band: centering the turn at 1000 takes 1000 - 20 - 80 = 900.
+    expect(
+      runwayFor({ top: 1000, bottom: 1200 }, { ...view, insetBottom: 220, maxScrollTop: 620 }),
+    ).toBe(280);
   });
 });
 

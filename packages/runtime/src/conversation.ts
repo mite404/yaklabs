@@ -1,5 +1,8 @@
 import type { AgentEvent } from "@yaklabs/catalog/agent";
+import { resolveAwaiting } from "@yaklabs/catalog/awaiting";
+import { cancelReply, completeReply, type AgentMessage } from "@yaklabs/catalog/reply";
 import type { ThreadMessage } from "@yaklabs/catalog/thread";
+import { awaitingOf } from "@yaklabs/catalog/transcript";
 
 /** A thread's turns and the opening draft a dropped highlight left: what a reply rewrites. */
 export type Transcript = { messages: ThreadMessage[]; draft: string; updatedAt: string };
@@ -18,8 +21,21 @@ function nextId(messages: ThreadMessage[], prefix: "u" | "a"): string {
   return `${prefix}${Math.max(0, ...used) + 1}`;
 }
 
-// The user's side of an event, or nothing: a rejected question never reached the user.
-function userTurn(event: AgentEvent, id: string, time: string): ThreadMessage | undefined {
+// The wording of the question the thread waits on, as the reader saw it docked: only one that
+// passes the catalog's check is ever docked (ADR-040), so any other was never asked of them.
+function dockedWording(messages: ThreadMessage[]): string | undefined {
+  const checked = resolveAwaiting(awaitingOf(messages)); // → AwaitingResult
+  return checked.kind === "approved" ? checked.question.question : undefined;
+}
+
+// The user's side of an event, or nothing: a rejected question never reached the user. An
+// answer carries the question it answered, so the thread shows the two together.
+function userTurn(
+  event: AgentEvent,
+  messages: ThreadMessage[],
+  id: string,
+  time: string,
+): ThreadMessage | undefined {
   switch (event.kind) {
     case "message": {
       const { text, attachments, files = [] } = event;
@@ -33,8 +49,16 @@ function userTurn(event: AgentEvent, id: string, time: string): ThreadMessage | 
         ...(labels.length > 0 ? { files: labels } : {}),
       };
     }
-    case "answer":
-      return { id, role: "user", text: event.text, time };
+    case "answer": {
+      const question = dockedWording(messages); // → string | undefined
+      return {
+        id,
+        role: "user",
+        text: event.text,
+        time,
+        ...(question === undefined ? {} : { question }),
+      };
+    }
     case "question-rejected":
       return undefined;
     default: {
@@ -49,18 +73,27 @@ function userTurn(event: AgentEvent, id: string, time: string): ThreadMessage | 
  * the event has no user side.
  */
 export function withUserTurn(transcript: Transcript, event: AgentEvent, stamp: Stamp): Transcript {
-  const turn = userTurn(event, nextId(transcript.messages, "u"), stamp.time);
+  const { messages } = transcript;
+  const turn = userTurn(event, messages, nextId(messages, "u"), stamp.time);
   if (turn === undefined) return transcript;
-  return { messages: [...transcript.messages, turn], draft: "", updatedAt: stamp.at };
+  return { messages: [...messages, turn], draft: "", updatedAt: stamp.at };
 }
 
-/** The transcript with the agent's finished reply added. */
-export function withAgentReply(transcript: Transcript, text: string, stamp: Stamp): Transcript {
-  const turn: ThreadMessage = {
-    id: nextId(transcript.messages, "a"),
-    role: "agent",
-    text,
-    time: stamp.time,
-  };
-  return { ...transcript, messages: [...transcript.messages, turn], updatedAt: stamp.at };
+/**
+ * A streamed turn settled as its stream ended: a turn a failure already ended stays as it is,
+ * one the user stopped is cancelled with its running steps, and any other is complete.
+ */
+export function settleReply(turn: AgentMessage, stopped: boolean): AgentMessage {
+  if (turn.ended !== undefined) return turn;
+  return stopped ? cancelReply(turn) : completeReply(turn);
+}
+
+/**
+ * The transcript with the agent's settled turn added at `at`, as the reply folded it, under the
+ * next free `a<n>` id: minted here, not when the reply began, since another reply on the thread
+ * may have been saved meanwhile.
+ */
+export function withAgentTurn(transcript: Transcript, turn: AgentMessage, at: string): Transcript {
+  const saved: AgentMessage = { ...turn, id: nextId(transcript.messages, "a") };
+  return { ...transcript, messages: [...transcript.messages, saved], updatedAt: at };
 }

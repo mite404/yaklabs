@@ -18,7 +18,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { matchPath, useLocation, useNavigate, useNavigation, type Location } from "react-router";
+import { useLocation, useNavigate, useNavigation, type Location } from "react-router";
 import { env } from "../env";
 import { inBackground, usePaths, useRuntimeState, useStartedRuntime } from "../runtime";
 import { useSession } from "../session";
@@ -211,7 +211,8 @@ export function ShellProvider({ children }: { children: ReactNode }) {
   const state = useRuntimeState();
   const runtime = useStartedRuntime();
   const shown = useShownLocation();
-  const named = matchPath("/t/:threadId", shown.pathname)?.params.threadId;
+  const { threadIdOf } = usePaths();
+  const named = threadIdOf(shown.pathname); // → the address's thread id, or undefined
   const go = useGo();
   const ws = state.kind === "ready" ? state.workspace : null;
   const saved = useMemo(() => (ws === null ? null : parseShell(ws.shell, ws)), [ws]);

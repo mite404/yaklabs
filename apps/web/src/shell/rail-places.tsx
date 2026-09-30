@@ -19,8 +19,6 @@ import { Link, useLocation } from "react-router";
 import { usePaths } from "../runtime";
 
 // The mark as meetkay.ai declares it (ADR-095): one polygon, drawn in the text colour.
-const KAY_MARK_POINTS =
-  "52.4 39.26 78.59 78.54 26.16 78.54 52.34 39.32 26.25 39.26 .03 78.45 0 .02 26.19 .02 26.25 39.08 52.39 0 78.55 .06 52.4 39.26";
 
 // Kay's documentation, a Kay plugin's natural home (ADR-078).
 const DOCS_URL = "https://docs.meetkay.ai";
@@ -65,11 +63,18 @@ type RailPlace =
 // A place that opens something.
 type LivePlace = Exclude<RailPlace, { kind: "outOfScope" }>;
 
-/** Kay's mark, one polygon in the text colour; decorative, so its host carries the name. */
-export function KayMark({ className }: { className?: string }) {
+/**
+ * Kay's mark: the bonsai, the three pills of the working glyph (AgentTree, motion.css) held
+ * still, in the text colour, drawn on the glyph's own 12-unit grid so it scales to whatever box
+ * its host gives it (the rail's 20px, where the K stood). Decorative, so its host carries the
+ * name.
+ */
+export function BonsaiMark({ className }: { className?: string }) {
   return (
-    <svg viewBox="0 0 78.59 78.54" aria-hidden="true" focusable="false" className={className}>
-      <polygon fill="currentColor" points={KAY_MARK_POINTS} />
+    <svg viewBox="0 0 12 12" aria-hidden="true" focusable="false" className={className}>
+      <rect x="2" y="1" width="7" height="3" rx="1.5" fill="currentColor" />
+      <rect x="5" y="5" width="7" height="3" rx="1.5" fill="currentColor" />
+      <rect x="0" y="9" width="12" height="3" rx="1.5" fill="currentColor" />
     </svg>
   );
 }
@@ -78,7 +83,7 @@ export function KayMark({ className }: { className?: string }) {
 // has and this demo leaves out of scope, each keeping its name and glyph (Ethan, after Kay's
 // own rail), then the documentation link, and the Lab last.
 const PLACES = [
-  { kind: "home", label: "Kay", Glyph: KayMark, to: "/" },
+  { kind: "home", label: "Kay", Glyph: BonsaiMark, to: "/" },
   { kind: "outOfScope", label: "Memory", Glyph: Brain },
   { kind: "outOfScope", label: "Skills", Glyph: Unplug },
   { kind: "outOfScope", label: "App store", Glyph: Store },

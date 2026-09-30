@@ -3,10 +3,10 @@ import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { threadMessageSchema } from "./protocol";
 import { openSqliteStore, StorageUnavailableError } from "./sqliteStore";
-import { netProfitChoice, profitThread } from "./testing";
+import { netProfitChoice } from "./testing";
 import { inFreshWorker } from "./testWorkerClient";
 
-// The user's next turn on the starter's profit thread, with the card choice riding along.
+// The user's first turn on the starter's empty thread, with a card choice riding along.
 const turn: ThreadMessage = {
   id: "u2",
   role: "user",
@@ -14,7 +14,7 @@ const turn: ThreadMessage = {
   time: "10:03",
   attachments: [netProfitChoice],
 };
-const kept = [...profitThread.messages, turn];
+const kept = [turn];
 
 const readSchema = z.object({
   ok: z.literal(true),

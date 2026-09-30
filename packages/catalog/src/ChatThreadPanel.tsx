@@ -1,11 +1,13 @@
 import {
   useEffect,
   useEffectEvent,
+  useImperativeHandle,
   type ReactNode,
   useLayoutEffect,
   useRef,
   useState,
   type Dispatch,
+  type Ref,
   type RefObject,
   type SetStateAction,
 } from "react";
@@ -17,14 +19,43 @@ import { ComposeBox } from "./ComposeBox";
 import { appendDictation } from "./dictation";
 import { markGrabbableHighlight } from "./grabbable";
 import { DictationModal, type DictationSource } from "./DictationModal";
+import { IconButton } from "./IconButton";
+import { StepIcon } from "./icons";
 import { labAgent } from "./labAgent";
-import { resolveInteractive, type CardAttachment } from "./interactive";
+import { attachmentLabel, resolveInteractive, type CardAttachment } from "./interactive";
+import type { Recover } from "./QuietProse";
 import { ReadingTools } from "./ReadingTools";
 import { Recap } from "./Recap";
-import { shouldShowRecap, type RecapItem } from "./recapRules";
-import type { Thread, ThreadMessage } from "./thread";
-import { centerInScroller, keepExpansionsInView } from "./threadReveal";
-import { AgentTurn, UserTurn } from "./Turns";
+import { shouldShowRecap, type RecapItem, type ThreadActivity } from "./recapRules";
+import {
+  applyChunk,
+  cancelReply,
+  completeReply,
+  failReply,
+  isEmptyReply,
+  startReply,
+  type AgentMessage,
+  type ReplyChunk,
+} from "./reply";
+import type { Thread, ThreadHandle, ThreadMessage } from "./thread";
+import {
+  centerInScroller,
+  keepExpansionsInView,
+  releaseRunway,
+  scrollToEnd,
+  watchEndDistance,
+} from "./threadReveal";
+import {
+  activityOf,
+  awaitingOf,
+  groupAnswers,
+  latestEnded,
+  recapOf,
+  requestBefore,
+  runningActivity,
+} from "./transcript";
+import { stampOf } from "./turnTime";
+import { AgentTurn, AnsweredTurns, UserTurn } from "./Turns";
 import "./thread.css";
 
 /**
@@ -39,7 +70,7 @@ export type HostAsk = {
 };
 
 /** Whether the thread is still running, and when the user last sent something. */
-export type ThreadActivity = { active: boolean; lastUserInputAt: number };
+export type { ThreadActivity };
 
 /**
  * How the thread takes dictation: which audio it hears, simulated unless told otherwise, and
@@ -56,13 +87,19 @@ function dictationSetup(dictation: Dictation | undefined): Required<Dictation> {
 const CLOCK_TICK_MS = 30_000;
 // How long a jumped-to turn stays highlighted so the eye can find it.
 const FLASH_MS = 1200;
+// How far above its end a reader must be before the running status shows by the compose box:
+// two lines of prose, so the last words still in view never raise it.
+const STATUS_AWAY_PX = 48;
 
 // A turn arriving brings its thread to the end, where the turn is: the thread opens at its
-// latest turn and lands on each new one. A reply growing as it streams stays in view through
-// the thread's own pinning instead, so a reader who scrolled up is not pulled back.
+// latest turn and lands on each new one, and any room a jump left below the end goes. A reply
+// growing as it streams stays in view through the thread's own pinning instead, so a reader who
+// scrolled up is not pulled back.
 function landOn(turn: HTMLElement | null) {
   const thread = turn?.parentElement; // → the scrolling thread, or undefined as a turn leaves
-  if (thread) thread.scrollTop = thread.scrollHeight;
+  if (!thread) return;
+  releaseRunway(thread);
+  thread.scrollTop = thread.scrollHeight;
 }
 
 // The dock card overlays the conversation, so its height is reserved below the last turn for
@@ -186,25 +223,74 @@ function initialReported(messages: ThreadMessage[]): Record<string, string> {
   return seen;
 }
 
-// What the thread says when a reply never arrives, so the user is not left waiting on a bubble.
-const REPLY_FAILED = "I couldn't finish that reply. Try again in a moment.";
+/** What the panel can do with the replies it asked for. */
+type Replies = {
+  /**
+   * Sends an event to the agent and streams its reply into a new turn. Returns the withdrawal:
+   * the reply stops and its turn goes, as if it had never been asked for (an effect's cleanup).
+   */
+  tell: (event: AgentEvent) => () => void;
+  /** Stops every reply still streaming; each turn is marked cancelled. */
+  stop: () => void;
+  /** Asks again for what the reply `turnId` answered, as a new turn below it. */
+  retry: (turnId: string, messages: ThreadMessage[]) => void;
+};
 
-/** One reply still waiting on its first chunk, keyed by its own id. */
-type Pending = { id: string };
+// `messages` with the agent turn `id` changed by `change`, or dropped when `change` leaves it
+// holding nothing a reader could see.
+function settleTurn(
+  messages: ThreadMessage[],
+  id: string,
+  change: (turn: AgentMessage) => AgentMessage,
+): ThreadMessage[] {
+  return messages.flatMap((message) => {
+    if (message.id !== id || message.role !== "agent") return [message];
+    const turn = change(message);
+    return isEmptyReply(turn) && turn.streaming !== true ? [] : [turn];
+  });
+}
+
+// Where a reply's stream goes as it is read: each chunk into its turn, a question to the dock,
+// and the end of a stream that ran its course.
+type ReplySink = {
+  fold: (chunk: ReplyChunk) => void;
+  ask: (payload: unknown) => void;
+  complete: () => void;
+};
+
+// Reads a reply's stream into `sink` until it ends, reports a failure (nothing it says after
+// that belongs in the turn), or is stopped through `signal`. Throws what the stream throws.
+async function readReply(
+  stream: AsyncIterable<ReplyChunk>,
+  signal: AbortSignal,
+  sink: ReplySink,
+): Promise<void> {
+  for await (const chunk of stream) {
+    if (signal.aborted) return;
+    const event = typeof chunk === "string" ? undefined : chunk; // → ReplyEvent | undefined
+    if (event?.kind === "question") sink.ask(event.question);
+    sink.fold(chunk);
+    if (event?.kind === "failure") return;
+  }
+  if (!signal.aborted) sink.complete();
+}
 
 /**
- * Sends events to the agent and streams each reply into the thread as its own turn (ADR-041).
- * Replies stop when the panel unmounts. Returns the function that sends an event, and every
- * reply still waiting on its first chunk - tracked per id in a set, not one shared flag, since
- * more than one reply can be in flight at once.
+ * Sends events to the agent and folds each reply's stream into its own turn (ADR-041): words,
+ * narration, steps, cards, a failure (reply.ts). The turn appears as the reply is asked for,
+ * so it is its own placeholder while nothing has arrived, and it goes if the reply ends having
+ * said nothing. A question in the stream goes to `onQuestion`, which the dock keeps current. Replies are kept
+ * per id, since several can stream at once; each remembers what it answered, for a retry.
+ * Replies stop when the panel unmounts.
  */
 function useAgent(
   agent: Agent,
   setMessages: Dispatch<SetStateAction<ThreadMessage[]>>,
-): { tell: (event: AgentEvent) => () => void; pending: Pending[] } {
+  onQuestion: RefObject<(payload: unknown) => void>,
+): Replies {
   const replies = useRef(0);
-  const live = useRef(new Set<AbortController>());
-  const [pendingIds, setPendingIds] = useState<ReadonlySet<string>>(new Set());
+  const live = useRef(new Map<string, AbortController>());
+  const asked = useRef(new Map<string, AgentEvent>());
 
   useEffect(() => {
     const controllers = live.current;
@@ -215,77 +301,71 @@ function useAgent(
     };
   }, []);
 
-  const stopPending = (id: string) => {
-    setPendingIds((current) => {
-      if (!current.has(id)) return current;
-      const next = new Set(current);
-      next.delete(id);
-      return next;
-    });
+  // Pure updaters, since React may run them twice.
+  const update = (id: string, change: (turn: AgentMessage) => AgentMessage) => {
+    setMessages((current) => settleTurn(current, id, change));
   };
 
   const tell = (event: AgentEvent) => {
     const controller = new AbortController();
     const id = `reply-${++replies.current}`;
-    live.current.add(controller);
-    setPendingIds((current) => new Set(current).add(id));
-    // Pure updaters (React may run them twice): append on the first chunk, then extend.
-    const write = (text: string, streaming: boolean) => {
-      setMessages((current) =>
-        current.some((message) => message.id === id)
-          ? current.map((message) =>
-              message.id === id && message.role === "agent"
-                ? { ...message, text: message.text + text, streaming }
-                : message,
-            )
-          : [...current, { id, role: "agent", time: "now", text, streaming }],
-      );
-    };
+    live.current.set(id, controller);
+    asked.current.set(id, event);
+    setMessages((current) => [...current, startReply(id, new Date().toISOString())]);
     void (async () => {
-      let started = false;
       try {
-        for await (const chunk of agent.respond(event, controller.signal)) {
-          if (controller.signal.aborted) break;
-          // Real text to show is what ends the wait, right there - not the reply's end, and
-          // not an empty chunk, which carries nothing a reader would call content.
-          if (chunk !== "") stopPending(id);
-          write(chunk, true);
-          started = true;
-        }
-        if (started && !controller.signal.aborted) write("", false);
+        await readReply(agent.respond(event, controller.signal), controller.signal, {
+          fold: (chunk) => {
+            update(id, (turn) => applyChunk(turn, chunk));
+          },
+          ask: (payload) => {
+            onQuestion.current(payload);
+          },
+          complete: () => {
+            update(id, completeReply);
+          },
+        });
       } catch (error: unknown) {
         // A reply that breaks off (the gateway refused, the network dropped) ends the turn in
-        // plain words rather than leaving a bubble streaming forever; the cause stays in the
-        // console, never in the thread (ADR-040).
+        // plain words rather than leaving it streaming forever; the cause stays in the console,
+        // never in the thread (ADR-040).
         // oxlint-disable-next-line no-console -- the one place the thread reports a failed reply
         console.warn("[thread] reply failed:", error);
-        if (!controller.signal.aborted) write(started ? "" : REPLY_FAILED, false);
+        if (!controller.signal.aborted) update(id, failReply);
       } finally {
-        live.current.delete(controller);
-        // Completion, failure or abort all end the wait; a chunk already cleared it, so this is
-        // a no-op then, and the only path for a reply that never sent one.
-        stopPending(id);
+        live.current.delete(id);
       }
     })();
     return () => {
       controller.abort();
+      live.current.delete(id);
+      setMessages((current) => current.filter((message) => message.id !== id));
     };
   };
 
-  return { tell, pending: [...pendingIds].map((pendingId) => ({ id: pendingId })) };
-}
+  // Marks each turn cancelled here rather than when its stream notices the abort: a stream
+  // waiting on a slow source may not wake for a while, and Stop has to show at once.
+  const stop = () => {
+    const stopped = new Set(live.current.keys());
+    live.current.forEach((controller) => {
+      controller.abort();
+    });
+    live.current.clear();
+    setMessages((current) =>
+      current.map((message) =>
+        message.role === "agent" && stopped.has(message.id) ? cancelReply(message) : message,
+      ),
+    );
+  };
 
-// The quiet placeholder for a reply whose iterator is running but has said nothing yet: the
-// same working glyph the sidebar shows, and a plain, factual line - never a guessed tool name,
-// since the real runtime has no tool events to report (ADR-041). The glyph's own label carries
-// the announcement, so the visible line stays out of a screen reader's way.
-function PendingTurn({ ref }: { ref?: (element: HTMLElement | null) => void }) {
-  return (
-    <div ref={ref} className="turn turn-agent turn-pending">
-      <AgentTree label="Thinking" />
-      <span aria-hidden="true">Thinking…</span>
-    </div>
-  );
+  // A reply the panel asked for itself is asked again exactly; one the thread opened with is
+  // read back from the user turn before it.
+  const retry = (turnId: string, messages: ThreadMessage[]) => {
+    const event = asked.current.get(turnId) ?? requestBefore(messages, turnId);
+    if (event !== undefined) tell(event);
+  };
+
+  return { tell, stop, retry };
 }
 
 // A live clock, or a fixed one when the host passes `now` (stories and tests).
@@ -310,17 +390,41 @@ function useClock(now?: number): number {
 function Turn({
   message,
   onChoose,
+  onRetry,
+  recover,
   cardsCarry,
+  stamp,
+  measure,
 }: {
   message: ThreadMessage;
   onChoose: (attachment: CardAttachment) => void;
+  onRetry: (turnId: string) => void;
+  recover: Recover;
   cardsCarry: boolean | undefined;
+  stamp: string | undefined;
+  measure: string | undefined;
 }) {
   return message.role === "user" ? (
     <UserTurn ref={landOn} message={message} />
   ) : (
-    <AgentTurn ref={landOn} message={message} onChoose={onChoose} cardsCarry={cardsCarry} />
+    <AgentTurn
+      ref={landOn}
+      message={message}
+      onChoose={onChoose}
+      onRetry={onRetry}
+      recover={recover}
+      cardsCarry={cardsCarry}
+      stamp={stamp}
+      measure={measure}
+    />
   );
+}
+
+// The thread's latest reply once it has settled: the one turn that carries a stamp, so a reader
+// glancing back knows how fresh the answer is. A reply still streaming carries none yet.
+function latestReply(messages: ThreadMessage[]): ThreadMessage | undefined {
+  const last = messages.at(-1);
+  return last?.role === "agent" && last.streaming !== true ? last : undefined;
 }
 
 // What rides along with the next message: card choices, latest per card (ADR-031), and files
@@ -332,6 +436,8 @@ type Outbox = {
   /** The compose box's chips, cards first. */
   attachments: { id: string; label: string; kind: "card" | "file" }[];
   choose: (attachment: CardAttachment) => void;
+  /** The stop a card shows: the choice pending for it, else what the agent last saw. */
+  measureOf: (turnId: string) => string | undefined;
   remove: (id: string) => void;
   attach: (picked: File[]) => void;
   /** Empties the outbox for a send and remembers what the agent now knows of each card. */
@@ -352,6 +458,7 @@ function useOutbox(initial: ThreadMessage[]): Outbox {
       return next;
     });
   };
+  const measureOf = (turnId: string) => pending[turnId]?.state.measure ?? reported[turnId];
   const remove = (id: string) => {
     setFiles((current) => current.filter((item) => item.id !== id));
     setPending((current) => {
@@ -389,34 +496,73 @@ function useOutbox(initial: ThreadMessage[]): Outbox {
       ...files.map((item) => ({ id: item.id, label: item.file.name, kind: "file" as const })),
     ],
     choose,
+    measureOf,
     remove,
     attach,
     take,
   };
 }
 
+// The latest turn that carries an interactive card, searched from the end.
+function latestInteractive(messages: ThreadMessage[]): ThreadMessage | undefined {
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const message = messages[i];
+    if (message.role === "agent" && message.interactive !== undefined) return message;
+  }
+  return undefined;
+}
+
+// The card choice a host asks for by label: on the turn named, else the latest turn with an
+// interactive card; undefined when no such card or stop exists.
+function choiceOf(
+  messages: ThreadMessage[],
+  measure: string,
+  turnId: string | undefined,
+): CardAttachment | undefined {
+  const turn =
+    turnId === undefined
+      ? latestInteractive(messages)
+      : messages.find((message) => message.id === turnId);
+  if (turn?.role !== "agent") return undefined;
+  const result = resolveInteractive(turn.interactive);
+  if (result.kind !== "approved") return undefined;
+  const { control, period } = result.selection.props;
+  const stop = control.stops.find((each) => each.label === measure);
+  if (stop === undefined) return undefined;
+  return { turnId: turn.id, label: attachmentLabel(stop, period), state: { measure: stop.label } };
+}
+
 // Only a valid question becomes a card; a malformed one goes back to the agent, which asks
-// again in an ordinary streamed reply, and the user never sees the error (ADR-040). `checked`
-// is settled on the first render, so the report runs once per question; the Effect Event
-// reads the latest `tell`, recreated each render, without making that a reason to ask again.
+// again in an ordinary streamed reply, and the user never sees the error (ADR-040). The
+// thread's own question is checked on the first render, so the report runs once per question;
+// the Effect Event reads the latest `tell`, recreated each render, without making that a reason
+// to ask again. A question that streams in with a reply (`ask`) takes the same two paths.
 function useAwaiting(
   thread: Thread,
   tell: (event: AgentEvent) => () => void,
-): [AwaitingInput | undefined, Dispatch<SetStateAction<AwaitingInput | undefined>>] {
-  const [checked] = useState(() =>
-    thread.awaiting === undefined ? undefined : resolveAwaiting(thread.awaiting),
-  );
+): {
+  awaiting: AwaitingInput | undefined;
+  setAwaiting: Dispatch<SetStateAction<AwaitingInput | undefined>>;
+  ask: (payload: unknown) => void;
+} {
+  const asked = thread.awaiting ?? awaitingOf(thread.messages); // → the question to dock, if any
+  const [checked] = useState(() => (asked === undefined ? undefined : resolveAwaiting(asked)));
   const [awaiting, setAwaiting] = useState<AwaitingInput | undefined>(() =>
     checked?.kind === "approved" ? checked.question : undefined,
   );
   const reportMalformed = useEffectEvent((reason: string) =>
-    tell({ kind: "question-rejected", reason, question: thread.awaiting }),
+    tell({ kind: "question-rejected", reason, question: asked }),
   );
   useEffect(
     () => (checked?.kind === "malformed" ? reportMalformed(checked.reason) : undefined),
     [checked],
   );
-  return [awaiting, setAwaiting];
+  const ask = (payload: unknown) => {
+    const result = resolveAwaiting(payload);
+    if (result.kind === "approved") setAwaiting(result.question);
+    else tell({ kind: "question-rejected", reason: result.reason, question: payload });
+  };
+  return { awaiting, setAwaiting, ask };
 }
 
 // What the scrolling thread does on its own: every card that grows inside it stays clear of
@@ -485,17 +631,18 @@ type RecapState = {
 
 function useRecap(input: {
   thread: Thread;
+  messages: ThreadMessage[];
   activity: ThreadActivity | undefined;
-  now: number | undefined;
+  clock: number;
   awaiting: AwaitingInput | undefined;
   draft: string;
 }): RecapState {
-  const { thread, activity, now, awaiting, draft } = input;
-  const clock = useClock(now);
+  const { thread, messages, clock, awaiting, draft } = input;
+  const activity = input.activity ?? activityOf(messages); // → the host's word, else the turns'
   const [lastInputAt, setLastInputAt] = useState(activity?.lastUserInputAt);
   const [dismissedAt, setDismissedAt] = useState<number>();
   const [peeking, setPeeking] = useState(false);
-  const items = thread.recap ?? []; // → RecapItem[]
+  const items = thread.recap ?? recapOf(messages); // → RecapItem[]
   return {
     visible: recapIsVisible({
       awaiting,
@@ -560,6 +707,92 @@ function focusComposeIn(scroller: HTMLElement | null): void {
   );
 }
 
+/** Where the pointer is over the thread: off it, over its turns and tools, or over the compose box. */
+type PointerZone = "away" | "thread" | "compose";
+
+// Tracks the pointer's zone from the panel's and the compose row's own pointer events rather
+// than CSS :hover, so a story's synthetic hover can prove what follows it (the reading tools).
+// Leaving the compose row for the turns reads as the thread; leaving the panel reads as away,
+// which fires after the row's leave when the pointer goes straight out.
+function usePointerZone(): {
+  zone: PointerZone;
+  panel: { onPointerEnter: () => void; onPointerLeave: () => void };
+  compose: { onPointerEnter: () => void; onPointerLeave: () => void };
+} {
+  const [zone, setZone] = useState<PointerZone>("away");
+  return {
+    zone,
+    panel: {
+      onPointerEnter: () => {
+        setZone("thread");
+      },
+      onPointerLeave: () => {
+        setZone("away");
+      },
+    },
+    compose: {
+      onPointerEnter: () => {
+        setZone("compose");
+      },
+      onPointerLeave: () => {
+        setZone("thread");
+      },
+    },
+  };
+}
+
+// The compose box's draft, with a read that is current between renders too, so a host can set
+// the draft and send it in one go (ThreadHandle).
+function useDraft(initial: string): {
+  draft: string;
+  setDraft: (value: string) => void;
+  latest: () => string;
+} {
+  const [draft, setState] = useState(initial);
+  const latest = useRef(initial);
+  return {
+    draft,
+    setDraft: (value) => {
+      latest.current = value;
+      setState(value);
+    },
+    latest: () => latest.current,
+  };
+}
+
+// Whether the reader is more than STATUS_AWAY_PX above the end of the turns, kept current as
+// they scroll and as the turns grow.
+function useAwayFromEnd(scroller: RefObject<HTMLElement | null>): boolean {
+  const [away, setAway] = useState(false);
+  useEffect(() => {
+    const el = scroller.current;
+    return el
+      ? watchEndDistance(el, (distance) => {
+          setAway(distance > STATUS_AWAY_PX);
+        })
+      : undefined;
+  }, [scroller]);
+  return away;
+}
+
+// The running status by the compose box (ADR-142), for a reader who scrolled up while a reply
+// streams: what the agent is doing, and a way back to it. It stands at the left of the reading
+// tools' row, so the two share one line and can never overlap. The glyph's label announces the
+// narration; the words beside it are for the eye.
+function StatusStrip({ activity, onJump }: { activity: string; onJump: () => void }) {
+  return (
+    <div className="thread-status">
+      <AgentTree label={activity} />
+      <span className="thread-status-text" aria-hidden="true">
+        {activity}
+      </span>
+      <IconButton label="Jump to latest" onClick={onJump}>
+        <StepIcon down />
+      </IconButton>
+    </div>
+  );
+}
+
 /**
  * A vertical chat thread column: header, scrolling turns, and a compose box that never moves.
  * Text is capped at `--thread-measure` (80ch) inside a `--thread-gutter` (20px) on each side,
@@ -571,7 +804,8 @@ function focusComposeIn(scroller: HTMLElement | null): void {
  * a recap of recorded outcomes (ADR-018). Anything that grows inside the thread is kept
  * clear of both (ADR-038).
  * @param width Panel width in px; omit to use the measure plus gutters.
- * @param activity Thread state that drives the recap; omit and no recap is shown.
+ * @param activity Thread state that drives the recap; omit and it is read from the turns, so a
+ * thread whose turns carry instants shows its recap once the user has been away.
  * A thread's awaiting question shows regardless: being blocked is not an idle state.
  * @param now Fixed clock for deterministic stories and tests; omit for live time.
  * @param dictation Audio for dictation, simulated by default, and whether recording is
@@ -593,8 +827,16 @@ function focusComposeIn(scroller: HTMLElement | null): void {
  * bar of its own: a main thread's, whose tab carries its name, its rename and its menu (ADR-138),
  * so `onRename`, `leading` and `headerActions` have nowhere to show. Lanes on the canvas keep
  * the frame.
+ * Replies stream in as structured turns (ADR-139, ADR-140). The user can keep talking while they
+ * stream, stop them all from the compose box, and try one that stopped short again; a reader
+ * scrolled up while a reply runs sees its status by the compose box (ADR-142). A limitation's
+ * recovery sends its prompt as the user's next message in one click, held while a reply streams.
+ * @param ref What a host that drives the thread can do (ThreadHandle): fill and send the
+ * compose box, answer the docked question, stop, or try again.
+ * @param footnote A quiet line under the compose box, such as who controls the thread (ADR-141).
  */
-// fallow scores each prop as cognitive load: the ninth host knob tips 15 to 16 with no branch.
+// fallow scores each prop as cognitive load: the host's knobs alone tip it past 15, with no
+// branch among them.
 // fallow-ignore-next-line complexity
 export function ChatThreadPanel({
   thread,
@@ -611,6 +853,8 @@ export function ChatThreadPanel({
   leading,
   empty,
   bare = false,
+  footnote,
+  ref,
 }: {
   thread: Thread;
   width?: number;
@@ -627,49 +871,91 @@ export function ChatThreadPanel({
   /** What the scroll area shows while the thread has no turns, such as a welcome. */
   empty?: ReactNode;
   bare?: boolean;
+  footnote?: ReactNode;
+  ref?: Ref<ThreadHandle>;
 }) {
   const { source, open } = dictationSetup(dictation);
   const [messages, setMessages] = useState(thread.messages);
-  const { tell, pending } = useAgent(agent, setMessages);
-  const [draft, setDraft] = useState(initialDraft);
+  // A question in a reply's stream goes to the dock, which needs the agent to report a malformed
+  // one back: the dock's `ask` reaches the replies through this ref, kept current below.
+  const questions = useRef<(payload: unknown) => void>(() => {});
+  const replies = useAgent(agent, setMessages, questions);
+  const { draft, setDraft, latest } = useDraft(initialDraft);
   const [dictating, setDictating] = useState(open);
   const outbox = useOutbox(thread.messages);
-  const [awaiting, setAwaiting] = useAwaiting(thread, tell);
-  const recap = useRecap({ thread, activity, now, awaiting, draft });
+  const { awaiting, setAwaiting, ask } = useAwaiting(thread, replies.tell);
+  useLayoutEffect(() => {
+    questions.current = ask;
+  });
+  const clock = useClock(now); // → the time, ticking, for the recap and the latest reply's stamp
+  const recap = useRecap({ thread, messages, activity, clock, awaiting, draft });
+  const stamped = latestReply(messages); // → the reply that carries the thread's one stamp
   const { scroller, setDockSlot } = useScroller();
+  const away = useAwayFromEnd(scroller);
+  const pointer = usePointerZone(); // → where the pointer is, for the reading tools (thread.css)
+  const running = runningActivity(messages); // → the latest streaming reply's narration
   const showEmpty = messages.length === 0 && empty !== undefined;
 
-  function send() {
-    const { attachments, files } = outbox.take();
-    const sent: ThreadMessage = {
-      id: `local-${messages.length}`,
-      role: "user",
-      text: draft.trim(),
-      time: "now",
-      attachments,
-      files: files.map((item) => ({ id: item.id, label: item.file.name })),
-    };
-    setMessages((current) => [...current, sent]);
-    setDraft("");
+  // The user's message as their next turn, told to the agent with what rides along.
+  function post(text: string, attachments: CardAttachment[], files: { id: string; file: File }[]) {
+    setMessages((current) => [
+      ...current,
+      {
+        id: `local-${current.length}`,
+        role: "user",
+        text,
+        time: new Date().toISOString(),
+        attachments,
+        files: files.map((item) => ({ id: item.id, label: item.file.name })),
+      },
+    ]);
     recap.fold();
     recap.noteInput();
-    tell({
+    replies.tell({
       kind: "message",
-      text: sent.text,
+      text,
       attachments,
       files: files.map(({ file }) => ({ name: file.name, type: file.type, size: file.size })),
     });
   }
 
-  // An answer to the agent's question is the user's next turn; the agent then carries on.
+  // The compose box's draft and the outbox, sent; the box empties.
+  function send() {
+    const { attachments, files } = outbox.take();
+    const text = latest().trim();
+    setDraft("");
+    post(text, attachments, files);
+  }
+
+  // A limitation's recovery, sent as the user's next message in one click. The draft and the
+  // outbox stay as they are, so a click never takes what the user was writing with it.
+  function sendText(prompt: string) {
+    post(prompt, [], []);
+  }
+
+  // An answer to the agent's question is the user's next turn, shown with the question it
+  // answered; the agent then carries on.
   function answer(text: string) {
+    const question = awaiting?.question;
     setAwaiting(undefined);
     recap.noteInput();
     setMessages((current) => [
       ...current,
-      { id: `local-${current.length}`, role: "user", text, time: "now" },
+      {
+        id: `local-${current.length}`,
+        role: "user",
+        text,
+        question,
+        time: new Date().toISOString(),
+      },
     ]);
-    tell({ kind: "answer", text });
+    replies.tell({ kind: "answer", text });
+  }
+
+  // The turn named, or the latest that stopped short.
+  function retry(turnId?: string) {
+    const target = turnId ?? latestEnded(messages);
+    if (target !== undefined) replies.retry(target, messages);
   }
 
   // Editing the draft folds the recap back down once the text is gone.
@@ -680,10 +966,26 @@ export function ChatThreadPanel({
 
   // Closing dictation returns focus to the text it fed, so the user can keep editing.
   function endDictation(transcript?: string) {
-    if (transcript !== undefined) setDraft((current) => appendDictation(current, transcript));
+    if (transcript !== undefined) setDraft(appendDictation(latest(), transcript));
     setDictating(false);
     focusComposeIn(scroller.current);
   }
+
+  useImperativeHandle(ref, () => ({
+    setDraft: editDraft,
+    send: () => {
+      if (latest().trim() !== "" || outbox.attachments.length > 0) send();
+    },
+    answer: (text) => {
+      if (awaiting !== undefined) answer(text);
+    },
+    choose: (measure, turnId) => {
+      const choice = choiceOf(messages, measure, turnId); // → the attachment, or none
+      if (choice !== undefined) outbox.choose(choice);
+    },
+    stop: replies.stop,
+    retry,
+  }));
 
   return (
     <section
@@ -692,6 +994,8 @@ export function ChatThreadPanel({
       aria-label={thread.title}
       data-bare={bare ? "" : undefined}
       data-empty={showEmpty ? "" : undefined}
+      data-pointer={pointer.zone}
+      {...pointer.panel}
     >
       {!bare && (
         <ThreadHeader
@@ -702,29 +1006,47 @@ export function ChatThreadPanel({
         />
       )}
       {/* The turns take a tab stop, so a keyboard can scroll a thread that holds nothing else
-          to focus, such as one of plain words. */}
+          to focus, such as one of plain words. The region carries the thread's name, so two
+          threads side by side (lanes on the canvas) are two landmarks, not one twice. */}
       <div
         className="thread-scroll"
         ref={scroller}
         data-empty={showEmpty ? "" : undefined}
-        {...(messages.length > 0 && { role: "region", "aria-label": "Messages", tabIndex: 0 })}
+        {...(messages.length > 0 && {
+          role: "region",
+          "aria-label": `Messages in ${thread.title}`,
+          tabIndex: 0,
+        })}
       >
         {messages.length === 0 && empty}
-        {messages.map((message) => (
-          <Turn
-            key={message.id}
-            message={message}
-            onChoose={outbox.choose}
-            cardsCarry={cardsCarry}
-          />
-        ))}
-        {pending.map((reply) => (
-          <PendingTurn key={reply.id} ref={landOn} />
-        ))}
+        {groupAnswers(messages).map((item) =>
+          item.kind === "answers" ? (
+            <AnsweredTurns key={item.id} ref={landOn} messages={item.messages} />
+          ) : (
+            <Turn
+              key={item.message.id}
+              message={item.message}
+              onChoose={outbox.choose}
+              onRetry={retry}
+              recover={{ onRecover: sendText, busy: running !== undefined }}
+              cardsCarry={cardsCarry}
+              stamp={item.message === stamped ? stampOf(item.message.time, clock) : undefined}
+              measure={outbox.measureOf(item.message.id)}
+            />
+          ),
+        )}
       </div>
       <div className="thread-dock">
         {messages.length > 0 && (
           <div className="reading-dock">
+            {running !== undefined && away && (
+              <StatusStrip
+                activity={running}
+                onJump={() => {
+                  if (scroller.current) scrollToEnd(scroller.current);
+                }}
+              />
+            )}
             <ReadingTools
               messages={messages}
               onJump={(turnId) => {
@@ -772,7 +1094,11 @@ export function ChatThreadPanel({
             />
           </div>
         )}
-        <div className="thread-compose">
+        <div
+          className="thread-compose"
+          data-footnote={footnote === undefined ? undefined : ""}
+          {...pointer.compose}
+        >
           <ComposeBox
             draft={draft}
             onDraftChange={editDraft}
@@ -784,8 +1110,11 @@ export function ChatThreadPanel({
             attachments={outbox.attachments}
             onRemoveAttachment={outbox.remove}
             onAttachFiles={outbox.attach}
+            busy={running !== undefined}
+            onStop={replies.stop}
           />
         </div>
+        {footnote !== undefined && <div className="thread-footnote">{footnote}</div>}
       </div>
       {dictating && (
         <DictationModal

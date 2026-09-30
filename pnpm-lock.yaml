@@ -301,18 +301,12 @@ importers:
 
   packages/runtime:
     dependencies:
-      '@anthropic-ai/sdk':
-        specifier: ^0.128.0
-        version: 0.128.0(zod@4.6.5)
       '@sqlite.org/sqlite-wasm':
         specifier: ^3.53.4-build1
         version: 3.53.4-build1
       '@yaklabs/catalog':
         specifier: workspace:*
         version: link:../catalog
-      hono:
-        specifier: ^4.13.9
-        version: 4.13.9
       zod:
         specifier: 'catalog:'
         version: 4.6.5

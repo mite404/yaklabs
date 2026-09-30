@@ -125,6 +125,19 @@
   display: inline-flex;
   color: var(--soft-ink);
 }
+/* A quiet note beside the summary (a count, a state), in the menu's detail type. It stays by the
+   words rather than at the far edge, where a thread's reading tools float over the newest turn
+   (ADR-143) and would cover it. */
+.disclosure-detail {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--soft-ink);
+  font-size: 12px;
+  font-weight: 400;
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
 /* Modal: covers its nearest positioned ancestor with a scrim, and rises into view. */
 .modal-backdrop {

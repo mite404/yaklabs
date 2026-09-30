@@ -81,17 +81,13 @@ export function viewOf(state: ShellState, main: ThreadId): View {
 
 /**
  * The first document on a device or in a scenario with none saved: the main with the newest
- * activity, open beside its canvas, as the thread page always opened.
+ * activity, open on the thread pane with the canvas hidden, so a first visit to an empty
+ * thread shows its welcome.
  */
 export function firstRun(ws: Workspace): ShellState {
   const main = latestMain(ws);
   if (main === undefined) return { version: 1, tabs: [], views: {}, read: [] };
-  return {
-    version: 1,
-    tabs: [main],
-    views: { [main]: { ...DEFAULT_VIEW, pane: "canvas" } },
-    read: [],
-  };
+  return { version: 1, tabs: [main], views: { [main]: DEFAULT_VIEW }, read: [] };
 }
 
 /**
@@ -258,6 +254,16 @@ export function resume(
   if (lastShown !== null && state.tabs.includes(lastShown)) return lastShown;
   const open = { ...ws, threads: ws.threads.filter((each) => state.tabs.includes(mainOf(each))) };
   return latestMain(open) ?? null;
+}
+
+/**
+ * The main a project opens on: its main with the newest activity in it or its children, as
+ * `latestMain` ranks them; undefined for a project with no main.
+ */
+export function entryOf(ws: Workspace, projectId: string): ThreadId | undefined {
+  const inProject = (thread: ThreadSummary) =>
+    thread.place.kind === "child" || thread.place.projectId === projectId;
+  return latestMain({ ...ws, threads: ws.threads.filter(inProject) });
 }
 
 /** The thread the address names and its project's name, as the phone's bar shows them. */

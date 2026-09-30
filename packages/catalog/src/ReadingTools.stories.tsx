@@ -22,22 +22,38 @@ const morning: Thread = {
   ]),
 };
 
-// The thread's scrolling turns and its reading tools, found from the story's canvas.
-function parts(canvasElement: HTMLElement) {
+// The thread's scrolling turns and its reading tools, found from the story's canvas, once the
+// pointer is over the thread: the tools follow the pointer, so the story moves it onto the turns
+// first, as a reader would.
+async function parts(canvasElement: HTMLElement) {
   const scroller = canvasElement.querySelector<HTMLElement>(".thread-scroll");
-  const tools = canvasElement.querySelector<HTMLElement>(".reading-tools");
-  if (!scroller || !tools) throw new Error("the thread or its reading tools did not render");
-  return { scroller, tools: within(tools) };
+  const bar = canvasElement.querySelector<HTMLElement>(".reading-tools");
+  if (!scroller || !bar) throw new Error("the thread or its reading tools did not render");
+  await userEvent.hover(scroller);
+  return { scroller, bar, tools: within(bar) };
 }
 
-// The bookmark, once the pointer on Search has unfolded the bar to show it.
-async function unfold(tools: ReturnType<typeof parts>["tools"]) {
-  await userEvent.hover(tools.getByRole("button", { name: "Search this thread" }));
-  return tools.findByRole("button", { name: "Your requests" });
+// Search, once the pointer on the bookmark has unfolded the bar to show it.
+async function unfold(tools: Awaited<ReturnType<typeof parts>>["tools"]) {
+  await userEvent.hover(tools.getByRole("button", { name: "Your requests" }));
+  return tools.findByRole("button", { name: "Search this thread" });
+}
+
+// A bar's computed opacity: 0 while it is clear, 1 once it has faded up.
+const opacity = (bar: HTMLElement) => Number(getComputedStyle(bar).opacity);
+
+// A computed colour's alpha: 1 for an opaque one. Chromium serialises a color-mix as
+// `color(srgb r g b / a)` and a plain colour as `rgb(...)` or `rgba(...)`.
+function alphaOf(color: string): number {
+  const slash = /\/\s*([\d.]+)\s*\)$/u.exec(color);
+  if (slash) return Number(slash[1]);
+  const rgba = /^rgba\((?:[^,]+,){3}\s*([\d.]+)\)$/u.exec(color);
+  return rgba ? Number(rgba[1]) : 1;
 }
 
 // Whether the turn with this id glows and sits in the middle of the visible thread, or, when
-// the thread cannot scroll that far (a turn near either end), in full view at that end.
+// the thread cannot scroll up that far (a turn near its start), in full view at the top. A turn
+// near the end still centers: the jump adds room below the end (threadReveal.ts).
 async function expectLandedOn(scroller: HTMLElement, turnId: string) {
   const turn = scroller.querySelector<HTMLElement>(`[data-turn-id="${turnId}"]`);
   if (!turn) throw new Error(`no turn ${turnId}`);
@@ -45,9 +61,7 @@ async function expectLandedOn(scroller: HTMLElement, turnId: string) {
   await waitFor(async () => {
     const view = scroller.getBoundingClientRect();
     const box = turn.getBoundingClientRect();
-    const reach = scroller.scrollHeight - scroller.clientHeight;
-    const atAnEnd = scroller.scrollTop < 1 || reach - scroller.scrollTop < 1;
-    if (atAnEnd) {
+    if (scroller.scrollTop < 1) {
       await expect(box.top).toBeGreaterThanOrEqual(view.top);
       await expect(box.bottom).toBeLessThanOrEqual(view.bottom);
     } else {
@@ -71,29 +85,97 @@ export default meta;
 type Story = StoryObj<typeof meta>;
 
 /**
- * The reading tools float at the right just above the compose box. At rest they are one Search
- * button; the pointer on it unfolds the bar leftward to show the bookmark too.
+ * The reading tools float at the right just above the compose box, and follow the pointer: up
+ * while it is over the thread's turns. At rest they are one bookmark on a translucent wash; the
+ * pointer on it unfolds the bar leftward to show Search too.
  */
-export const Overview: Story = {};
+export const Overview: Story = {
+  play: async ({ canvasElement }) => {
+    await parts(canvasElement);
+  },
+};
 
 /**
- * The bar rests as Search alone and unfolds while the pointer is on it, then folds again. Search
- * never moves: the bookmark opens to its left.
+ * The bar rests as the bookmark alone and unfolds while the pointer is on it, then folds again.
+ * The bookmark never moves: Search opens to its left.
  */
-export const FoldsToSearch: Story = {
+export const FoldsToTheBookmark: Story = {
   play: async ({ canvasElement }) => {
-    const { tools } = parts(canvasElement);
-    const search = tools.getByRole("button", { name: "Search this thread" });
-    await expect(tools.queryByRole("button", { name: "Your requests" })).toBeNull();
-    const before = search.getBoundingClientRect().left;
+    const { tools } = await parts(canvasElement);
+    const bookmark = tools.getByRole("button", { name: "Your requests" });
+    await expect(tools.queryByRole("button", { name: "Search this thread" })).toBeNull();
+    const before = bookmark.getBoundingClientRect().left;
 
     await unfold(tools);
-    await expect(search.getBoundingClientRect().left).toBe(before);
+    await expect(bookmark.getBoundingClientRect().left).toBe(before);
 
-    await userEvent.unhover(search);
+    await userEvent.unhover(bookmark);
     await userEvent.hover(canvasElement.ownerDocument.body);
     await waitFor(async () => {
-      await expect(tools.queryByRole("button", { name: "Your requests" })).toBeNull();
+      await expect(tools.queryByRole("button", { name: "Search this thread" })).toBeNull();
+    });
+  },
+};
+
+/**
+ * Translucent until it is opened: the bar's wash lets the turn under it read through, only its
+ * glyph opaque; the list of requests is the same wash. Opening either tool fills the bar solid.
+ */
+export const OpensSolid: Story = {
+  play: async ({ canvasElement }) => {
+    const { bar, tools } = await parts(canvasElement);
+    await expect(alphaOf(getComputedStyle(bar).backgroundColor)).toBeLessThan(1);
+    await userEvent.click(tools.getByRole("button", { name: "Your requests" }));
+    const list = within(document.body).getByRole("menu", { name: "Your requests" });
+    await expect(alphaOf(getComputedStyle(list).backgroundColor)).toBeLessThan(1);
+    await waitFor(async () => {
+      await expect(alphaOf(getComputedStyle(bar).backgroundColor)).toBe(1);
+    });
+    await userEvent.keyboard("{Escape}");
+    await waitFor(async () => {
+      await expect(alphaOf(getComputedStyle(bar).backgroundColor)).toBeLessThan(1);
+    });
+  },
+};
+
+/**
+ * One thread's tools at a time: across two threads, only the one the pointer is over shows its
+ * bar, fading up over 300ms as the pointer arrives and back as it leaves; over the compose box
+ * it stays clear, so it never sits over what the reader is typing.
+ */
+export const FollowsThePointer: Story = {
+  render: (args) => (
+    <div style={{ display: "flex", gap: 24 }}>
+      <ChatThreadPanel {...args} width={420} />
+      <ChatThreadPanel
+        {...args}
+        thread={{ ...args.thread, title: "Tuesday numbers" }}
+        width={420}
+      />
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const panels = [...canvasElement.querySelectorAll<HTMLElement>(".thread-panel")];
+    const scrollers = panels.map((panel) => panel.querySelector<HTMLElement>(".thread-scroll"));
+    const bars = panels.map((panel) => panel.querySelector<HTMLElement>(".reading-tools"));
+    const [firstScroller, secondScroller] = scrollers;
+    const [firstBar, secondBar] = bars;
+    const secondBox = panels[1]?.querySelector<HTMLElement>(".compose-box textarea");
+    if (!firstScroller || !secondScroller || !firstBar || !secondBar || !secondBox)
+      throw new Error("two threads did not render");
+    await userEvent.hover(secondScroller);
+    await waitFor(async () => {
+      await expect(opacity(secondBar)).toBe(1);
+      await expect(opacity(firstBar)).toBe(0);
+    });
+    await userEvent.hover(secondBox);
+    await waitFor(async () => {
+      await expect(opacity(secondBar)).toBe(0);
+    });
+    await userEvent.hover(firstScroller);
+    await waitFor(async () => {
+      await expect(opacity(firstBar)).toBe(1);
+      await expect(opacity(secondBar)).toBe(0);
     });
   },
 };
@@ -101,12 +183,13 @@ export const FoldsToSearch: Story = {
 /**
  * The bookmark lists every request the user sent by its first 15 characters and its time; the
  * full request shows on hover. Picking one centers that turn and makes it glow, and the bar folds
- * back to Search once the pointer moves on.
+ * back to the bookmark once the pointer moves on.
  */
 export const JumpToARequest: Story = {
   play: async ({ canvasElement }) => {
-    const { scroller, tools } = parts(canvasElement);
-    await userEvent.click(await unfold(tools));
+    const { scroller, tools } = await parts(canvasElement);
+    await unfold(tools);
+    await userEvent.click(tools.getByRole("button", { name: "Your requests" }));
     const list = within(document.body).getByRole("menu", { name: "Your requests" });
     const items = within(list).getAllByRole("menuitem");
     await expect(items).toHaveLength(ASKED.length);
@@ -117,7 +200,7 @@ export const JumpToARequest: Story = {
     // The list closed under the pointer, so no leave reached the bar; moving on still folds it.
     await userEvent.hover(scroller);
     await waitFor(async () => {
-      await expect(tools.queryByRole("button", { name: "Your requests" })).toBeNull();
+      await expect(tools.queryByRole("button", { name: "Search this thread" })).toBeNull();
     });
   },
 };
@@ -125,12 +208,12 @@ export const JumpToARequest: Story = {
 /** An Alt-click (Option on a Mac) on the bookmark skips the list: straight to the latest. */
 export const AltClickForTheLatest: Story = {
   play: async ({ canvasElement }) => {
-    const { scroller, tools } = parts(canvasElement);
+    const { scroller, tools } = await parts(canvasElement);
     scroller.scrollTop = 0;
     // One session, so the held Alt is still down when the click lands.
     const user = userEvent.setup();
     await user.keyboard("{Alt>}");
-    await user.click(await unfold(tools));
+    await user.click(tools.getByRole("button", { name: "Your requests" }));
     await user.keyboard("{/Alt}");
     await expect(within(document.body).queryByRole("menu")).toBeNull();
     await expectLandedOn(scroller, `ask-${ASKED.length - 1}`);
@@ -143,8 +226,8 @@ export const AltClickForTheLatest: Story = {
  */
 export const SearchTheThread: Story = {
   play: async ({ canvasElement }) => {
-    const { scroller, tools } = parts(canvasElement);
-    await userEvent.click(tools.getByRole("button", { name: "Search this thread" }));
+    const { scroller, tools } = await parts(canvasElement);
+    await userEvent.click(await unfold(tools));
     const field = tools.getByRole("searchbox", { name: "Search this thread" });
     await expect(field).toHaveFocus();
 
@@ -167,8 +250,8 @@ export const SearchTheThread: Story = {
 /** No turn holds the words: the count says so and the steps stay off. */
 export const NoMatches: Story = {
   play: async ({ canvasElement }) => {
-    const { tools } = parts(canvasElement);
-    await userEvent.click(tools.getByRole("button", { name: "Search this thread" }));
+    const { tools } = await parts(canvasElement);
+    await userEvent.click(await unfold(tools));
     await userEvent.type(tools.getByRole("searchbox"), "invoices");
     await expect(tools.getByRole("status")).toHaveTextContent("No matches");
     await expect(tools.getByRole("button", { name: "Next match" })).toBeDisabled();
@@ -183,6 +266,9 @@ export const NoMatches: Story = {
 export const OnAMainPane: Story = {
   args: { bare: true, width: undefined },
   parameters: { layout: "fullscreen" },
+  play: async ({ canvasElement }) => {
+    await parts(canvasElement);
+  },
   decorators: [
     (Story) => (
       <div style={{ height: "100vh" }}>

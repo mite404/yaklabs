@@ -14,6 +14,10 @@ export type Viewport = {
 
 // How long after a click or key press a turn's growth still counts as that interaction's result.
 const INTERACTION_WINDOW_MS = 1000;
+// The scroller's custom property that holds the jump runway (thread.css adds it to the thread's
+// bottom padding), and each scroller's runway in px, kept as a number beside it.
+const RUNWAY = "--jump-runway";
+const runways = new WeakMap<HTMLElement, number>();
 
 // The user's latest click or key press inside the thread, and when it happened.
 type Interaction = { target: HTMLElement; at: number };
@@ -32,16 +36,35 @@ function contentSpan(scroller: HTMLElement, elements: HTMLElement[]): Span {
   };
 }
 
+// The room a jump added below the thread's end, in px; 0 when there is none.
+function runwayOf(scroller: HTMLElement): number {
+  return runways.get(scroller) ?? 0;
+}
+
+// Sets the runway, or takes it away at 0.
+function setRunway(scroller: HTMLElement, px: number): void {
+  if (px > 0) {
+    runways.set(scroller, px);
+    scroller.style.setProperty(RUNWAY, `${px}px`);
+  } else {
+    runways.delete(scroller);
+    scroller.style.removeProperty(RUNWAY);
+  }
+}
+
 // The scroller's padding is the single source of the resting gap, so a nudged card lands
-// exactly where the last card of the thread rests: 20px above the compose box or dock.
+// exactly where the last card of the thread rests: 20px above the compose box or dock. A jump's
+// runway is padding too, but not a gap: it is left out, so the band and the reach are the
+// thread's own.
 function viewport(scroller: HTMLElement): Viewport {
   const style = getComputedStyle(scroller);
+  const runway = runwayOf(scroller);
   return {
     scrollTop: scroller.scrollTop,
     height: scroller.clientHeight,
     insetTop: parseFloat(style.paddingTop) || 0,
-    insetBottom: parseFloat(style.paddingBottom) || 0,
-    maxScrollTop: scroller.scrollHeight - scroller.clientHeight,
+    insetBottom: (parseFloat(style.paddingBottom) || 0) - runway,
+    maxScrollTop: scroller.scrollHeight - scroller.clientHeight - runway,
   };
 }
 
@@ -88,6 +111,101 @@ export function centerScrollTop(target: Span, view: Viewport): number {
   return clamp(top, view.maxScrollTop);
 }
 
+/**
+ * The room to add below the thread's end so `target` can land centered (ADR-022, ADR-143): a
+ * turn near the end would otherwise stop short, low in the band, where the thread runs out.
+ * 0 when the centered scroll is within reach, when the target is taller than the band (it
+ * starts at the top instead), or when the thread fits its view and has nothing to scroll.
+ */
+export function runwayFor(target: Span, view: Viewport): number {
+  const band = view.height - view.insetTop - view.insetBottom;
+  const height = target.bottom - target.top;
+  if (view.maxScrollTop <= 0 || height > band) return 0;
+  const centered = target.top - view.insetTop - (band - height) / 2;
+  return Math.max(Math.ceil(centered - view.maxScrollTop), 0);
+}
+
+// How far `scroller` stands from the end of its turns, in px, the jump runway left out: negative
+// while a jump holds it inside the runway.
+function distanceFromEnd(scroller: HTMLElement): number {
+  return scroller.scrollHeight - runwayOf(scroller) - scroller.clientHeight - scroller.scrollTop;
+}
+
+/**
+ * Calls `onChange` with `distanceFromEnd` whenever it may have changed: on every scroll, and as
+ * turns come and grow (a streaming reply moves the end away from a reader who stays put). It
+ * fires once as it starts, when the observer first measures.
+ * @returns A cleanup function that stops watching.
+ */
+export function watchEndDistance(
+  scroller: HTMLElement,
+  onChange: (distance: number) => void,
+): () => void {
+  const measure = () => {
+    onChange(distanceFromEnd(scroller));
+  };
+  const resized = new ResizeObserver(measure);
+  const watchTurns = () => {
+    for (const turn of scroller.children) resized.observe(turn);
+  };
+  const added = new MutationObserver(watchTurns);
+  resized.observe(scroller);
+  watchTurns();
+  added.observe(scroller, { childList: true });
+  scroller.addEventListener("scroll", measure, { passive: true });
+  return () => {
+    resized.disconnect();
+    added.disconnect();
+    scroller.removeEventListener("scroll", measure);
+  };
+}
+
+// Each scroller's watch for the moment its runway can go, so a second jump replaces the first's.
+const runwayWatches = new WeakMap<HTMLElement, () => void>();
+
+/** Takes back the room a jump added below the thread's end, and stops watching for it. */
+export function releaseRunway(scroller: HTMLElement): void {
+  runwayWatches.get(scroller)?.();
+  runwayWatches.delete(scroller);
+  setRunway(scroller, 0);
+}
+
+// Releases the runway once the reader scrolls it out of view, when taking it back moves nothing.
+// The jump's own scroll is waited out first: by arrival at `target`, or by the scroll turning
+// away from it, which only the reader can do. Not by `scrollend`: on a slow machine the scroll
+// before this one may end a frame late, and its `scrollend` would hand the runway back while the
+// new scroll is still on its way into it.
+function watchRunway(scroller: HTMLElement, target: number): void {
+  runwayWatches.get(scroller)?.();
+  let previous = scroller.scrollTop;
+  let settled = Math.abs(previous - target) <= 1;
+  const release = () => {
+    const now = scroller.scrollTop;
+    if (!settled) {
+      // A smooth scroll's first event can report no movement yet; only real movement away from
+      // the target means the reader took over.
+      const away = Math.abs(now - target) > Math.abs(previous - target);
+      previous = now;
+      settled = Math.abs(now - target) <= 1 || away;
+      if (!settled) return;
+    }
+    if (distanceFromEnd(scroller) >= 0) releaseRunway(scroller);
+  };
+  scroller.addEventListener("scroll", release, { passive: true });
+  runwayWatches.set(scroller, () => {
+    scroller.removeEventListener("scroll", release);
+  });
+}
+
+/** Scrolls `scroller` to the end of its turns, taking back any runway a jump left there. */
+export function scrollToEnd(scroller: HTMLElement): void {
+  releaseRunway(scroller);
+  scroller.scrollTo({
+    top: scroller.scrollHeight,
+    behavior: prefersReducedMotion() ? "auto" : "smooth",
+  });
+}
+
 /** Scrolls `scroller` by the smallest amount that keeps `elements` clear of the compose box. */
 export function nudgeInScroller(scroller: HTMLElement, elements: HTMLElement[]): void {
   if (elements.length === 0) return;
@@ -97,9 +215,20 @@ export function nudgeInScroller(scroller: HTMLElement, elements: HTMLElement[]):
     scroller.scrollTo({ top, behavior: prefersReducedMotion() ? "auto" : "smooth" });
 }
 
-/** Scrolls `scroller` so `element` lands centered in the visible band. */
+/**
+ * Scrolls `scroller` so `element` lands centered in the visible band, adding a runway below the
+ * thread's end when the element is too near it to center otherwise. The runway stays until the
+ * reader scrolls it out of view or a new turn lands (`releaseRunway`).
+ */
 export function centerInScroller(scroller: HTMLElement, element: HTMLElement): void {
-  const top = centerScrollTop(contentSpan(scroller, [element]), viewport(scroller));
+  const target = contentSpan(scroller, [element]);
+  const view = viewport(scroller);
+  const runway = runwayFor(target, view); // → px
+  setRunway(scroller, runway);
+  const reach = scroller.scrollHeight - scroller.clientHeight; // re-measured: the runway grew it
+  const top = centerScrollTop(target, { ...view, maxScrollTop: reach });
+  if (runway === 0) releaseRunway(scroller);
+  else watchRunway(scroller, top);
   scroller.scrollTo({ top, behavior: prefersReducedMotion() ? "auto" : "smooth" });
 }
 

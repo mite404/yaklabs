@@ -22,13 +22,9 @@ const work = (status: "running" | "done") => ({
 });
 const done = round("end_turn", text(0, "Friday was busiest."));
 const working = round("tool_use", tool(0, "update_work", work("running")));
-const cutShort = {
-  type: "failure",
-  workId: null,
-  limitation: "I stopped before finishing this reply.",
-  recovery: null,
-};
-const noResponse = { ...cutShort, limitation: "The model stopped responding." };
+// The closing events of a turn that stopped short: the reason and its line, in `end` alone.
+const cutShort = { type: "end", reason: "limit", line: "I stopped before finishing this reply." };
+const noResponse = { type: "end", reason: "upstream", line: "The model stopped responding." };
 describe("the tool loop shows", () => {
   it("a valid card and tells the model it was shown", async () => {
     const card = { cardId: "week", card: BAR_CARD };
@@ -83,22 +79,6 @@ describe("the tool loop turns", () => {
     expect(results).toMatchObject({ content: [{ is_error: true }] });
   });
 
-  it("text streamed before a tool call into narration for the running work", async () => {
-    const first = round(
-      "tool_use",
-      text(0, "Adding Monday to Friday."),
-      tool(1, "update_work", work("running")),
-    );
-
-    const { events } = await eventsFor("Chart it.", first, done);
-
-    expect(events.slice(0, 3)).toEqual([
-      { type: "text", blockId: "r1b0", delta: "Adding Monday to Friday." },
-      { type: "work", ...work("running") },
-      { type: "narration", blockId: "r1b0", workId: "sum" },
-    ]);
-  });
-
   it("broken tool JSON into an error beside an empty input", async () => {
     const broken = round("tool_use", toolJson(0, "update_work", '{"workId":'));
 
@@ -112,24 +92,27 @@ describe("the tool loop turns", () => {
   });
 });
 
-describe("the tool loop stops", () => {
-  it("narrating onto work once a failure names it", async () => {
-    const fails = round(
+describe("the tool loop keeps text as prose", () => {
+  it("when it streams before the round's first tool call, and never relabels it", async () => {
+    const first = round(
       "tool_use",
-      tool(0, "update_work", work("running")),
-      tool(1, "report_failure", { workId: "sum", limitation: "I cannot fetch the week." }),
+      text(0, "Adding Monday to Friday."),
+      tool(1, "update_work", work("running")),
+      tool(2, "show_card", { cardId: "week", card: BAR_CARD }),
     );
-    const card = { cardId: "week", card: BAR_CARD };
-    const next = round("tool_use", text(0, "Here is the week."), tool(1, "show_card", card));
 
-    const { events } = await eventsFor("Chart it.", fails, next, done);
+    const { events } = await eventsFor("Chart it.", first, done);
 
-    expect(events.filter(({ type }) => type === "narration")).toEqual([]);
+    expect(events).toEqual([
+      { type: "text", blockId: "r1b0", delta: "Adding Monday to Friday." },
+      { type: "work", ...work("running") },
+      { type: "card", cardId: "week", selection: BAR_CARD },
+      { type: "text", blockId: "r2b0", delta: "Friday was busiest." },
+      { type: "end", reason: "answered" },
+    ]);
   });
-});
 
-describe("the tool loop keeps", () => {
-  it("text written after a tool call in the same round as answer prose", async () => {
+  it("when it streams after a tool call in the same round", async () => {
     const first = round(
       "tool_use",
       text(0, "Checking"),
@@ -142,36 +125,14 @@ describe("the tool loop keeps", () => {
     expect(events).toEqual([
       { type: "text", blockId: "r1b0", delta: "Checking" },
       { type: "work", ...work("running") },
-      { type: "narration", blockId: "r1b0", workId: "sum" },
       { type: "text", blockId: "r1b2", delta: "Friday is busiest." },
       { type: "end", reason: "answered" },
     ]);
   });
 });
 
-describe("the tool loop narrates", () => {
-  it("as soon as the round's first tool call is shown, and each block once", async () => {
-    const first = round(
-      "tool_use",
-      text(0, "Adding Monday to Friday."),
-      tool(1, "update_work", work("running")),
-      tool(2, "show_card", { cardId: "week", card: BAR_CARD }),
-    );
-
-    const { events } = await eventsFor("Chart it.", first, done);
-
-    expect(events.slice(0, 4).map(({ type }) => type)).toEqual([
-      "text",
-      "work",
-      "narration",
-      "card",
-    ]);
-    expect(events.filter(({ type }) => type === "narration")).toEqual([
-      { type: "narration", blockId: "r1b0", workId: "sum" },
-    ]);
-  });
-
-  it("the text before a question once, before the turn ends", async () => {
+describe("the tool loop keeps text as prose before a question", () => {
+  it("and the question still ends the turn", async () => {
     const asks = round(
       "tool_use",
       text(0, "Sizing the plan."),
@@ -181,34 +142,7 @@ describe("the tool loop narrates", () => {
 
     const { events } = await eventsFor("Plan next week.", asks);
 
-    expect(events.map(({ type }) => type)).toEqual([
-      "text",
-      "work",
-      "narration",
-      "question",
-      "end",
-    ]);
-  });
-});
-
-describe("the tool loop narrates across rounds", () => {
-  it("the text before a question ahead of the question, when the work ran in an earlier round", async () => {
-    const starts = round("tool_use", tool(0, "update_work", work("running")));
-    const asks = round(
-      "tool_use",
-      text(0, "Checking what matters."),
-      tool(1, "ask_question", { question: QUESTION }),
-    );
-
-    const { events } = await eventsFor("Plan next week.", starts, asks);
-
-    expect(events.map(({ type }) => type)).toEqual([
-      "work",
-      "text",
-      "narration",
-      "question",
-      "end",
-    ]);
+    expect(events.map(({ type }) => type)).toEqual(["text", "work", "question", "end"]);
   });
 });
 
@@ -231,31 +165,28 @@ describe("the tool loop ends", () => {
     const { events, requests } = await eventsFor("Keep going.", ...rounds);
 
     expect(requests).toHaveLength(8);
-    expect(events.slice(-2)).toEqual([cutShort, { type: "end", reason: "limit" }]);
+    expect(events.slice(-2)).toEqual([{ type: "work", ...work("running") }, cutShort]);
+    expect(events.filter(({ type }) => type === "failure")).toEqual([]);
   });
 
-  it("when a round runs out of tokens", async () => {
+  it("when a round runs out of tokens, with its line in the end event", async () => {
     const { events } = await eventsFor("Which day?", round("max_tokens", text(0, "Friday was")));
 
-    expect(events.slice(-2)).toEqual([cutShort, { type: "end", reason: "limit" }]);
+    expect(events).toEqual([{ type: "text", blockId: "r1b0", delta: "Friday was" }, cutShort]);
   });
 });
 
 describe("the tool loop reports", () => {
-  it("an upstream that refuses a later round", async () => {
+  it("an upstream that refuses a later round, with its line in the end event", async () => {
     const { events } = await eventsFor("Chart it.", working, overloaded);
 
-    expect(events).toEqual([
-      { type: "work", ...work("running") },
-      noResponse,
-      { type: "end", reason: "upstream" },
-    ]);
+    expect(events).toEqual([{ type: "work", ...work("running") }, noResponse]);
   });
 
   it("a round's stream that ends before it says why", async () => {
     const { events } = await eventsFor("Which day?", round(null, text(0, "Friday")));
 
-    expect(events.slice(-2)).toEqual([noResponse, { type: "end", reason: "upstream" }]);
+    expect(events).toEqual([{ type: "text", blockId: "r1b0", delta: "Friday" }, noResponse]);
   });
 });
 

@@ -5,18 +5,20 @@ import { createAgentLoop, type LoopHost } from "./agentLoop";
 import { fixedMint, type Mint } from "./mint";
 import type { Command, Notice } from "./protocol";
 import { openSqliteStore } from "./sqliteStore";
-import { ensureStarter } from "./store";
+import { seedThread, type Store } from "./store";
 import { netProfitChoice } from "./testing";
-import { threadIdSchema, type Workspace } from "./workspace";
+import { projectIdSchema, threadIdSchema, type Workspace } from "./workspace";
 
-// What the agent loop's tests share: a loop on the device's starter, the commands they send,
-// and ways to read the notices it posted.
+// What the agent loop's tests share: a loop on a store holding the profit thread, the commands
+// they send, and ways to read the notices it posted.
 
 // 10:03 UTC, the minute the user asks; the fixed mint writes turn times in UTC.
 const asked = new Date("2026-09-26T10:03:00.000Z");
 
-/** The starter's main thread. */
+/** The fixture's main thread, seeded from the catalog's profit thread. */
 export const profit = threadIdSchema.parse("profit");
+// The project the fixture's profit thread sits in.
+const DEMO_STORE = { id: projectIdSchema.parse("demo-store"), name: "Demo store" };
 // The user's question about the profit card, with the card choice and a file riding along.
 const ask: AgentEvent = {
   kind: "message",
@@ -36,6 +38,14 @@ export const child = (requestId: string, draft = ""): Command => ({
   item: { kind: "child", parentId: profit, at: 0, title: "Saturday", draft },
 });
 
+// The loop tests' fixture: the Demo store project and its profit thread, at `at`.
+function seedProfit(store: Store, at: string): void {
+  store.addProject({ ...DEMO_STORE, createdAt: at });
+  const { title, messages } = seedThread("profit");
+  const place = { kind: "main", projectId: DEMO_STORE.id } as const;
+  store.addThread({ id: profit, title, place, createdAt: at, updatedAt: at, draft: "", messages });
+}
+
 // The lab stand-in with no pauses, so a reply streams at once.
 const quickLab = () => createLabAgent({ replyDelayMs: 0, wordMs: 0 });
 
@@ -49,7 +59,7 @@ export function movableMint(start: Date = asked): { mint: Mint; clock: { at: Dat
 }
 
 /**
- * A loop on a fresh memory store holding the starter's profit thread, with every notice it
+ * A loop on a fresh memory store holding the profit thread, with every notice it
  * posts collected in order; the store closes when the test ends. Its settling timer never runs
  * on its own: `timer` holds the delay last asked for, and firing it runs the pass.
  */
@@ -62,7 +72,7 @@ export async function startLoop(
   onTestFinished(() => {
     store.close();
   });
-  ensureStarter(store, asked.toISOString());
+  seedProfit(store, asked.toISOString());
   let pending: (() => void) | null = null;
   const timer: HandTimer = {
     delay: null,

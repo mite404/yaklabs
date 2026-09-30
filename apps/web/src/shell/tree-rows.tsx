@@ -1,5 +1,6 @@
 import type { ThreadId, ThreadSummary } from "@yaklabs/runtime";
 import { AgentTree } from "@yaklabs/catalog";
+import { ChildThreadIcon } from "@yaklabs/catalog/icons";
 import { SidebarMenuButton } from "@yaklabs/ui/components/sidebar";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@yaklabs/ui/components/tooltip";
 import {
@@ -22,8 +23,8 @@ import { isWorking } from "./working";
 const ROW = "h-8 rounded-[var(--radius)] text-sm";
 
 // A project's threads sit one step in under its name, so the name reads as the label of the
-// group below it. The fill still spans the row; only the words move in. A child's "↳" stands
-// where its main's title starts, and its own title one step further in. The right keeps the
+// group below it. The fill still spans the row; only the words move in. A child's branch icon
+// stands where its main's title starts, and its own title one step further in. The right keeps the
 // 8px every row has, so a long title or a fold arrow stops short of the fill's edge. `relative`
 // is what the row's marks hang from.
 const THREAD_ROW = `${ROW} relative pl-6 pr-2`;
@@ -41,8 +42,9 @@ const MARK_ICONS: Record<Mark, LucideIcon> = {
 };
 
 // The marks hang in the row's left gutter, out of the flow, so a title starts at the same x
-// marked or not, and a child's mark stands left of its "↳". The gutter is `pl-6`, 24px: a mark
-// is 14px, 4px in from the fill's edge (clear of its 4px corners) and 6px short of the title.
+// marked or not, and a child's mark stands left of its branch icon. The gutter is `pl-6`, 24px:
+// a mark is 14px, 4px in from the fill's edge (clear of its 4px corners) and 6px short of the
+// title.
 // Two do not fit side by side, so they stack, a step smaller, and a thread carries at most two
 // since archiving clears a pin and a snooze (ADR-129).
 const MARKS = "absolute inset-y-0 left-1 flex w-3.5 flex-col items-center justify-center";
@@ -122,14 +124,23 @@ function FoldChevron({ open }: { open: boolean }): ReactElement {
   );
 }
 
+// A child's branch, where its main's title starts; the row's title names it.
+function ChildIcon(): ReactElement {
+  return (
+    <span data-slot="child-icon" aria-hidden="true" className="flex shrink-0 text-soft-ink">
+      <ChildThreadIcon />
+    </span>
+  );
+}
+
 // Whether a thread's row shows the working glyph, read from the runtime's own live state.
 function useWorking(threadId: ThreadId): boolean {
   return isWorking(useRuntimeState(), threadId);
 }
 
-// A row's words after any "↳": its marks (which hang in the gutter, out of the flow), the
-// working glyph while its reply is in flight, its title, and the marks as a screen reader
-// hears them.
+// A row's words after a child's branch icon: its marks (which hang in the gutter, out of the
+// flow), the working glyph while its reply is in flight, its title, and the marks as a screen
+// reader hears them.
 function RowWords({ thread, look }: { thread: ThreadSummary; look: RowLook }): ReactElement {
   const working = useWorking(thread.id);
   return (
@@ -262,9 +273,10 @@ function FoldableMainRow({
 /**
  * A thread row: a link named by its title, indented under its project. A main with sub-threads
  * takes `fold`, with how many it holds, and becomes a {@link FoldableMainRow} instead; a child
- * reads "↳ title", one step further in than its main. A pin, a clock or a closed filebox hangs
- * in the left gutter of a pinned, snoozed or archived thread's row, so its title starts where
- * every other does, and an archived one is dimmed until it is the one open (ADR-127 to ADR-129).
+ * shows a branch icon before its title, one step further in than its main. A pin, a clock or a
+ * closed filebox hangs in the left gutter of a pinned, snoozed or archived thread's row, so its
+ * title starts where every other does, and an archived one is dimmed until it is the one open
+ * (ADR-127 to ADR-129).
  */
 export function ThreadRow({
   thread,
@@ -303,11 +315,7 @@ export function ThreadRow({
             data-thread={kind}
             className={`${THREAD_ROW} ${NO_ACTION} ${look.ink} data-active:text-ink`}
           >
-            {kind === "child" && (
-              <span aria-hidden="true" className="shrink-0">
-                ↳
-              </span>
-            )}
+            {kind === "child" && <ChildIcon />}
             <RowWords thread={thread} look={look} />
           </SidebarMenuButton>
         }

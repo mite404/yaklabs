@@ -1,4 +1,5 @@
 import type { Database } from "@sqlite.org/sqlite-wasm";
+import type { ThreadMessage } from "@yaklabs/catalog/thread";
 import { describe, expect, it, onTestFinished, vi } from "vitest";
 import { openDatabase, openSqliteStore } from "./sqliteStore";
 import {
@@ -17,8 +18,50 @@ import {
   turns,
 } from "./sqliteStore.harness";
 import { ensureStarter } from "./store";
-import { profitThread } from "./testing";
 import { lanesOf, threadLane } from "./workspace";
+
+// A reply that showed its work and broke off on a question, and the answer to it.
+const structured: ThreadMessage[] = [
+  {
+    id: "a2",
+    role: "agent",
+    text: "Saturday leads the week. See the orders",
+    time: "10:03",
+    streaming: false,
+    blocks: [
+      { kind: "heading", content: [{ kind: "run", text: "Saturday", mark: "strong" }] },
+      {
+        kind: "paragraph",
+        content: [
+          { kind: "run", text: " leads the week. " },
+          { kind: "link", text: "See the orders", href: "https://kay.example/orders" },
+        ],
+      },
+      { kind: "list", items: [[{ kind: "run", text: "Gross", mark: "em" }], []] },
+      { kind: "card", payload: { component: "BarChart", props: { title: "Profit" } } },
+    ],
+    work: {
+      steps: [
+        {
+          id: "orders",
+          label: "Pull the orders",
+          status: "done",
+          outcome: "412 orders",
+          evidence: { rows: 412 },
+          threadId: "t-001",
+        },
+        { id: "costs", label: "Subtract costs", status: "cancelled" },
+      ],
+      logs: ["GET /orders 200"],
+      narration: ["Pulling the orders."],
+      summary: "Checked the orders",
+    },
+    ended: "interrupted",
+    failure: { title: "Reply interrupted", detail: "The sales system stopped answering." },
+    asks: { question: "Which week?", options: [{ label: "The week before" }] },
+  },
+  { id: "u3", role: "user", text: "The week before", time: "10:04", question: "Which week?" },
+];
 
 describe("the store keeps threads", () => {
   it("starts empty", async () => {
@@ -60,6 +103,14 @@ describe("the store keeps threads", () => {
     expect(() => {
       store.changeTranscript(t("missing"), (now) => now);
     }).toThrow("No thread missing");
+  });
+});
+
+describe("the store keeps a structured turn (ADR-147)", () => {
+  it("reads back a reply's structure, work, ending and question, and the answer to it", async () => {
+    const store = await openStore();
+    store.changeTranscript(main, (now) => ({ ...now, messages: [...now.messages, ...structured] }));
+    expect(store.transcript(main)?.messages).toEqual([...turns, ...structured]);
   });
 });
 
@@ -191,17 +242,24 @@ describe("the store searches", () => {
 });
 
 describe("ensureStarter", () => {
-  it("gives an empty device the Demo store and its profit thread, once", async () => {
+  it("gives an empty device the Live Playground and its one empty thread, once", async () => {
     const store = await openEmpty();
     ensureStarter(store, at(0));
     const once = store.workspace();
     ensureStarter(store, at(5));
     expect(store.workspace()).toEqual(once);
-    expect(once.projects).toEqual([{ id: "demo-store", name: "Demo store", createdAt: at(0) }]);
-    expect(once.threads.map((each) => [each.id, each.title])).toEqual([
-      ["profit", profitThread.title],
+    expect(once.projects).toEqual([
+      { id: "live-playground", name: "Live Playground", createdAt: at(0) },
     ]);
-    expect(store.transcript(t("profit"))?.messages).toEqual(profitThread.messages);
+    expect(once.threads).toEqual([
+      expect.objectContaining({
+        id: "playground",
+        title: "New thread",
+        place: { kind: "main", projectId: "live-playground" },
+        turnCount: 0,
+      }),
+    ]);
+    expect(store.transcript(t("playground"))?.messages).toEqual([]);
   });
 
   it("leaves a store that holds any thread alone", async () => {

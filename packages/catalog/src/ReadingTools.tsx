@@ -12,6 +12,7 @@ import { BookmarkIcon, CloseIcon, SearchIcon, StepIcon } from "./icons";
 import { Menu, type MenuItem, type TriggerProps } from "./Menu";
 import { matchStatus, matchesOf, requestsOf, stepMatch, type Request } from "./threadReading";
 import type { ThreadMessage } from "./thread";
+import { timeLabel } from "./turnTime";
 
 // What the bookmark button says, read aloud and on hover.
 const BOOKMARKS = "Your requests";
@@ -23,7 +24,7 @@ function bookmarkItems(requests: Request[], onJump: (turnId: string) => void): M
   return requests.map((request) => ({
     id: request.id,
     label: request.label,
-    detail: request.time,
+    detail: timeLabel(request.time),
     hint: request.text,
     onSelect: () => {
       onJump(request.id);
@@ -171,9 +172,12 @@ function usePointerIn(bar: RefObject<HTMLElement | null>) {
 }
 
 /**
- * A thread's reading tools, floating above its compose box. At rest the bar is one Search button;
- * with the pointer on it, a keyboard in it, or either tool open, it unfolds leftward to show every
- * tool. Search the thread's words and step through the turns that hold them, or jump back to any
+ * A thread's reading tools, floating above its compose box. The bar follows the pointer
+ * (thread.css): clear until the pointer is over the thread's turns, fading up as it leaves the
+ * compose box and back as it leaves the thread, so across a canvas of lanes one bar shows at a
+ * time. At rest it is one bookmark on a translucent fill; with the pointer on it, a keyboard in
+ * it, or either tool open, it unfolds leftward to show Search too, and open it fills solid and
+ * stays. Search the thread's words and step through the turns that hold them, or jump back to any
  * request the user sent, listed by its first 15 characters and its time. An Alt-click on the
  * bookmark goes straight to the latest request. Where a jump lands, and how it shows, is the
  * host's.
@@ -208,31 +212,33 @@ export function ReadingTools({
       data-unfolded={pointerIn ? "" : undefined}
       {...pointerHandlers}
     >
-      {searching && (
-        <SearchBar id={searchId} messages={messages} onJump={onJump} onClose={closeSearch} />
-      )}
-      {/* Folded away until the bar is in use (thread.css); left of Search, so the bar grows
+      {/* Folded away until the bar is in use (thread.css); left of the bookmark, so the bar grows
           leftward and the button under the pointer stays put. */}
       <span className="reading-more">
-        <Menu
-          label={BOOKMARKS}
-          placement="above-end"
-          items={bookmarkItems(requests, onJump)}
-          trigger={bookmarkTrigger(requests.at(-1)?.id, onJump)}
-        />
+        <span className="reading-fold">
+          {searching && (
+            <SearchBar id={searchId} messages={messages} onJump={onJump} onClose={closeSearch} />
+          )}
+          <IconButton
+            ref={searchButton}
+            label="Search this thread"
+            aria-expanded={searching}
+            aria-controls={searching ? searchId : undefined}
+            onClick={() => {
+              if (searching) closeSearch();
+              else setSearching(true);
+            }}
+          >
+            <SearchIcon />
+          </IconButton>
+        </span>
       </span>
-      <IconButton
-        ref={searchButton}
-        label="Search this thread"
-        aria-expanded={searching}
-        aria-controls={searching ? searchId : undefined}
-        onClick={() => {
-          if (searching) closeSearch();
-          else setSearching(true);
-        }}
-      >
-        <SearchIcon />
-      </IconButton>
+      <Menu
+        label={BOOKMARKS}
+        placement="above-end"
+        items={bookmarkItems(requests, onJump)}
+        trigger={bookmarkTrigger(requests.at(-1)?.id, onJump)}
+      />
     </fieldset>
   );
 }

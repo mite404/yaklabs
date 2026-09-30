@@ -1102,6 +1102,11 @@ each says "Out of demo scope", in its pill, beside its name in the phone drawer'
 screen reader, one phrase in all three. The phone drawer is 85% of the width up to 20rem
 (ADR-121), 320px on the checks' 390px phone, which leaves "Automations" 64px clear of the whole
 phrase, so the short "Soon" goes. P23 and P25 read the new words.
+Amended 2026-09-30 (Ethan: "the K logo in the navbar needs to be replaced w/ the bonsai
+component from AgentTree"). Kay's mark is now the bonsai: the working glyph's three pills held
+still (`BonsaiMark`, `rail-places.tsx`), drawn on the glyph's own 12-unit grid in the text
+colour, at the 20px box the K filled, in the rail's home place and on the welcome. The animated
+glyph stays the working indicator; the mark is its resting form.
 
 ## ADR-095 - The Kay mark is the vector Kay's site declares
 
@@ -1613,6 +1618,13 @@ the canvas is off screen or empty, so the bar never shifts. A mock with the cont
 row's leading edge was set aside for it.
 Proof: P13 (the phone's top row), P14 (the toggle in the title bar and the strip) and P18
 (Collapse all, kept across a reload) in `apps/web/scripts/workspace-check.mjs`.
+Amended 2026-09-30 (Ethan: "the expand collapse btn needs to be scaled down by 20%. the first
+character of the titlebar of a child thread needs to be vertically aligned with the left side
+of the chat compose input"). The toggle is a 20px fill with a 13px glyph, a fifth under the
+bar's other controls, in the bar and in the strip alike. In a thread's bar it sits in the gutter,
+flush with the lane's edge and closing the row's gap, so the title's first character starts on
+the text column, where the compose box's edge is: the marker in the margin, the title on the
+line, as a list sets them.
 
 ## ADR-135 - The empty canvas has three looks behind a debug switch, and Kay leaves it
 
@@ -1689,6 +1701,12 @@ loop, the flame graph and `MessagePort` agent, and the Cloudflare share deploy. 
 that stays is ADR-086's: visual regression and accessibility checks in CI, with the contrast
 guard.
 If a cut item looks needed, ask Ethan; do not decide it.
+Amended 2026-09-30 (ADR-156): the interview build now runs the production runtime with sign-in,
+`VITE_AGENT=gateway` and `VITE_AUTH=workos`, since the Live Playground thread is answered by the
+model through the gateway and the gateway verifies a WorkOS token on every request. The
+`VITE_AUTH=none` and `VITE_AGENT=lab` line above still describes the sandbox and the levers,
+where the lab stand-in answers the live thread and no one signs in. The rest of this record's
+cuts stand as ADR-146 left them.
 
 ## ADR-138 - A main thread stands on the pane, and a window's controls live in its title bar
 
@@ -1773,6 +1791,22 @@ level where the user needs to act, rather than disappearing into technical detai
 The demo retains superseded narration under Technical details. An interrupted answer stays visible
 with an incomplete label and a retry action; retry keeps the earlier partial answer for reference.
 This is session-local UI behavior, not persisted history or a change to the real-model runtime.
+Amended 2026-09-30 (Ethan's pillar, "activity is not value": "Keep one restrained disclosure
+above the response. Mount it when work starts so it does not suddenly appear above text someone
+is reading. Its label changes with the actual scripted state"; Bonsai's own thread, with its
+"Did work · 25s" fold over a wall of "Read file /Users/…" rows, as the example of what not to
+do). The work behind a reply now sits above its words as one disclosure, mounted as the first
+step or technical line arrives, so it is there before any text is. Its header is the reply's
+state: while the reply streams, what it is doing now, live, beside the working glyph
+("Checking open issues"; a narration's full stop dropped, since it is a label); once it settles,
+what the work amounted to in the reply's own words, from a new `summary` event on the seam
+(ADR-147), or "Work finished", "Work incomplete" or "Stopped" when it gave none; beside either,
+how many checks and how many need attention ("3 checks · 1 needs attention"). Never a duration,
+never a list of what ran. Each parallel task keeps its own row beneath; the narration the reply
+moved past and its technical lines sit one disclosure deeper, as before. A reply with no work
+narrates under its words, as it did; a reply with work no longer repeats its activity there.
+Failures, stops and questions stay where they were: in the ended note and the dock, visible
+until resolved, never folded away as routine.
 
 ## ADR-140 - Own the Quiet prose response styling, independent of the Markdown renderer
 
@@ -1865,6 +1899,30 @@ inside the panel's clip, so a keyboard can scroll a thread of plain words; axe h
 the first text-only fixture. The Menu primitive gained an item `id` (two requests can share a
 label), a quiet `detail` at the right, and a height capped at the viewport, past which it
 scrolls. The unmounted draft in `apps/web/src/demo/` is gone.
+
+Amended 2026-09-30 (Ethan: "swap the placement of the magnifying glass with the bookmark. when
+collapsed only the bookmark should show", then "hidden unless the cursor is hovering over the
+streaming thread window ... as soon as the mouse goes outside of the chat compose component, the
+ReadingTools should fade up from transparent. lets try a 300ms fade anim", and a translucent bar
+and popover that fill solid once opened, after a screenshot of Claude's own). The bar rests as
+the bookmark alone, at the right, and Search unfolds to its left. It follows the pointer: clear
+until the pointer is over the thread, it fades up over 300ms on the strong ease-out as the pointer
+leaves the compose box for the turns, and fades back as it leaves the thread, so across a canvas
+of lanes the reader sees one binder, in the thread under their hand, and the box they are typing
+in stays bare. The panel reports the pointer's zone from its own pointer events (`data-pointer`),
+not CSS `:hover`, so a story can prove it. A tool that is open, or a keyboard in the bar, holds it
+up; clear is not hidden, so a keyboard can still reach it, and reaching it shows it. A touch
+screen, with no pointer to follow, keeps the bar. A first cut showed it in the thread that held
+the focus instead; it left the bar up over the box while the reader typed, which is what the
+pointer rule removes.
+At rest and under the pointer the bar is a wash of the paper (`--scrim`, the paper at 72%) with
+only its glyph opaque; open, with search or the list of requests up, it fills solid over 150ms.
+The list of requests is the same wash with an 8px blur behind it, so its rows stay legible over
+the turns. The turns' region is now named "Messages in <thread>", so two threads side by side are
+two landmarks, not one twice (axe caught it in the two-thread story).
+Amended 2026-09-30 (Ethan: "the storytool needs to have the same speed slide out as the
+drawer. right now its too instant"). Search unfolds from the bookmark over 220ms on the panel
+ease, the projects drawer's own slide (pillar 26), rather than 150ms on the strong ease-out.
 
 ## ADR-144 - The rail stays on the desktop, and the projects panel extends from its edge
 
@@ -1987,6 +2045,14 @@ since 12px is half a one-line pill's height. The rail's own provider and its del
 since the app's provider now carries the same values. A new label cannot come out in another
 shape without editing `packages/ui/src/components/tooltip.tsx`. P23 and P28 read the pills, and
 the web checks read a cut row's name on hover and focus and a name that wraps.
+Amended 2026-09-30 (Ethan: "our popover animations need to be 1/2 the length of the drawer
+slide and with the same animation curve as the drawer slide"; Bonsai's own hover cards, which
+linger and catch the pointer while they fade, as the example of what not to do). The pill and
+the menus come and go in 110ms each way, half the drawer's 220ms, on the panel ease (pillar
+31). The menus moved from keyframe exits to transitions, so a menu reopened while it fades turns
+back from where it is; a popover on its way out takes no pointer; and Base UI's "instant" mark
+on a dismissal (Escape, a click outside) no longer switches the transition off, which made a
+menu vanish in one frame.
 
 ## ADR-146 - The gateway streams Kimi K2.6 through OpenRouter's Anthropic-format endpoint
 
@@ -2014,8 +2080,202 @@ gateway's own app and came back as text through the browser's decoder. That roun
 about 23 seconds, which is slow for a demo and not yet broken down between reasoning and the
 answer. The WorkOS half was stubbed, since a real token needs a person's sign-in, and the
 `/demo/weekly-brief` route is untouched, as it never reaches the gateway.
+Amended 2026-09-30 (Ethan: "a 'start a new thread' only route that's just the splashscreen and
+no other test child threads"): `/new` opens the whole shell on the runtime's empty scenario, in
+memory, and starts one thread on arrival, so the first thing on screen is that thread's welcome
+and a compose box, with no starter project, seeded thread or fixture child beside it. A reload of
+`/new` starts over; the device's own threads stay under `/` and `/t/:threadId`. Since ADR-155,
+`/playground` is the route for the live model; `/new` is for the shell around a fresh thread.
+Amended again 2026-09-30 (ADR-156): `/new` is deleted. The device starter's empty Live
+Playground thread is the fresh thread now, at `/t/playground`, persisted in the worker like any
+other thread; the shell around it is the same one every thread opens in.
 
-## ADR-147 - AuthKit runs in dev mode on the deployed site
+## ADR-147 - The reply seam carries events, not only words
+
+2026-09-30 - Accepted (Ethan's goals for the legibility demo: an interleaved conversation, honest
+failures, work details behind a disclosure). Widens ADR-041; builds on ADR-139 and ADR-140.
+A reply streams as chunks: words, as a model streams tokens, and the events around them: progress
+narration, a block boundary (paragraph, heading, list item), a card, a step of the work with its
+status and outcome, a technical line, a question the agent is blocked on, and a failure. A plain
+word stream is still a valid reply, so the lab stand-in and the gateway runtime are untouched;
+the worker's loop forwards the words and passes over the events until its protocol can carry them.
+One pure fold (`applyChunk`, `packages/catalog/src/reply.ts`) builds an agent turn from the
+stream: words grow the plain text always and the structured blocks once the reply has any
+structure, runs of one mark join into one `<strong>`, narration supersedes and is kept, and a
+failure ends the turn as interrupted (words shown) or failed (none), never as complete. The panel
+owns the lifecycle around it: the turn appears as the reply is asked for and is its own
+"Thinking…" placeholder; a question docks the Needs attention card; Stop marks every reply in
+flight and its unfinished steps cancelled at once; Try again sends the same request again as a new
+turn and keeps the old one with its label; a reply that ends having shown nothing leaves no turn.
+Every agent turn now renders through the catalog's own Quiet prose (`QuietProse.tsx`): a plain
+reply is one paragraph, so `/t/profit` and the demo read the same. The turn model
+(`ThreadMessage`) gains `blocks`, `work`, `activity`, `ended` and `failure`; a user turn records
+the `question` it answered. The runtime's protocol schema still parses the old fields only, so
+structured turns are not persisted yet: that is the seam the worker learns next, not a change made
+here (ADR-137).
+Alternatives weighed: a controlled panel whose host owns the messages (the eventual shape once the
+runtime is the source of truth for turns; every host would change today), and a worker scenario
+with a structured protocol (the backend project the goals defer).
+Amended 2026-09-30: the stream may carry a `summary` event, what the work amounted to in the
+reader's words, kept on the turn's `work` for the disclosure's label once the reply settles
+(ADR-139, amended).
+Amended 2026-09-30 (ADR-156): the worker now carries the seam. The `chunk` notice is a
+`ReplyChunk`, the reply loop folds each chunk with `applyChunk` and saves the folded turn, and a
+stored agent turn keeps `blocks`, `work`, `activity`, `ended`, `failure` and `asks`, a user turn
+its `question`. The seam's zod schemas live in the catalog, held equal to their types by tests.
+No database migration: the message row already spreads a turn's extra fields into JSON beside
+its text, so only the protocol schema had to accept them. The seam also gained four members,
+each with an `applyChunk` rule, a render and a test, and each used by the brief scenario so the
+demo proves it: a card `id`, so a later card replaces the earlier one in place; a non-terminal
+`limitation` block, said in the reply's words, whose `recovery` the reader sends in one click;
+`WorkStep.basis`, the evidence as short lines under a step's outcome; and `Failure.retry: false`,
+which hides Try again when asking again cannot help.
+
+## ADR-148 - The scripted demo plays on the real shell from an in-memory runtime
+
+2026-09-30 - Accepted (Ethan: "/demo/weekly-brief should render the whole app shell and the main
+chat thread component"). Supersedes the standalone demo page of ADR-139 and ADR-140.
+`/demo/weekly-brief` is a route layout that composes the same shell as `/t/:threadId` (the
+window, its title bar and tabs, the rail, the projects panel, the deck of panes) over a runtime
+built in the page, no worker: an in-memory workspace seeded from a scenario script, whose agent
+for the main thread streams the script's reply events through the widened seam (ADR-147). A step
+that names a child thread creates that child in the workspace and its lane on the canvas, marks
+it replying while it runs, and writes its outcome into it when it finishes, so the sidebar's
+working glyphs, the canvas and the bell show real threads. Every other thread is answered by the
+lab stand-in, and the workspace's other verbs work in memory.
+The Door (`runtime.tsx`) owns the page's paths (`Paths`: a thread's, home's, the Lab's, and the
+thread a pathname names), so the shell's links stay under the demo's address; `ProvidedRuntime`
+puts a started runtime in the Door, and `Window` takes a `banner` for the demo's controls, drawn
+between the title bar and the body.
+A player performs the scenario's user beats through the thread's own controls (`ThreadHandle`:
+fill and send the compose box, answer the docked question, stop, try again), so the demo
+exercises the path a person's click takes. A beat after a reply waits for that reply to settle;
+one marked to overlap counts from the beat before it, so a second request goes out while the
+first reply streams. A presenter who answers the question first is not answered for again. One
+clock carries the rate (1x or 2x) and the pause, so Pause holds the streaming too. Restart
+remounts the shell on a fresh workspace; the 2x setting outlives it. Under reduced motion the
+words of one block arrive together. A thread pane whose thread was worked on elsewhere (a child a
+parent finished) reads its turns again once that work settles, so a lane opened mid-run does not
+keep saying "Working on it".
+The demo says it is scripted and that nothing is sent, in its own bar. Three scenarios, each
+under a minute at 1x (`scripts.test.ts` guards it): the weekly brief (narration, two children in
+parallel, a finding with a card between paragraphs, one decision, a draft), an interrupted reply
+with its retry and a check that fails, and work in the background with a question asked meanwhile
+and a stop. Words stream at 70ms, about fourteen a second: quick enough to read as live, slow
+enough to follow the emphasis as it lands.
+Known gap: Share still publishes through the gateway from the demo; "Nothing is sent" is not yet
+true for that one action.
+Amended 2026-09-30 (after a review of the demo against the posting: lead with the constrained
+design system, show an invalid payload failing visibly and a changed card state becoming context,
+show one unattended run summarised by outcomes, and say what is implemented and what is
+proposed). The weekly brief gained a third child whose evidence is a pie chart outside catalog
+v1: the catalog refuses it whole, in the reply where the chart would sit and again behind Work
+details, with nothing drawn, while the child's number stands in its own words and the valid
+cards land around it. Working in the background gave way to Came back to it: a scenario may now
+open on the record of a run (`Opening`: the main's turns, timed from how long ago the user spoke;
+every child a step names is made with its request and outcome as a live run would leave them),
+and this one opens 25 minutes after the request on a recap of three outcomes, each a jump to the
+turn whose Work details hold the evidence (ADR-153), on an interactive card of the invoices at
+three depths; the player steps the card to Difference, the request after it carries that choice
+as a chip (ADR-030), the reply speaks to the view, then the one decision docks and its answer is
+recorded. A `choose` beat steps the card through the thread handle's new `choose`, so the demo
+takes the path a person's slider does. Each script carries a standing line under the demo's name
+in the bar (what is shipped, what is scripted or proposed), so a watcher never takes one for the
+other. The Stop path lost its scenario; the panel's browser tests and the cancelled fixture keep
+it proven.
+Amended 2026-09-30 (ADR-156): the route and its `?script=` are retired. The three scenarios
+play as the Demo project's three threads (`/t/demo-brief`, `/t/demo-interrupted`,
+`/t/demo-returned`) inside the one shell, beside the device's own threads, over a page-side
+overlay composed with the worker. `/demo/weekly-brief[?script=]` and its `/t/:id` threads
+redirect there. The scenario picker is gone, since the sidebar's Demo project lists the shows,
+and Restart resets one show instead of remounting the shell.
+
+## ADR-149 - A jump lays runway so any turn can centre
+
+2026-09-30 - Accepted (Ethan: a jumped-to request and a search hit "should be vertically centered
+within the chat main thread component"; measured, they were not near the end). Amends ADR-022 and
+ADR-143.
+Measured in the long scenario: a jump to the tenth request lands its middle 2px off the
+scroller's middle, a search hit likewise, and a jump to the latest request 217px low. The centring
+was right; the scroller had no room below its last turn, so the scroll clamped at its end.
+A jump now lays runway: extra bottom padding (`--jump-runway`) equal to the shortfall, so the turn
+can sit centred, then scrolls. The runway is released when a new turn lands, or when the reader
+scrolls with the natural end in view, where releasing moves nothing; the jump's own smooth scroll
+is waited out first, by its arrival at the target rather than by `scrollend`, which the scroll
+before it can fire at once on a slow machine and hand the runway back mid-flight (CI caught it). A
+thread that fits its view
+has nothing to scroll and keeps only the glow. The reading tools story now requires the target to
+be centred, the latest request and the last search hit included.
+
+## ADR-150 - An answer reads with its question; a long request folds
+
+2026-09-30 - Accepted (Ethan's screenshots: the answered-question surface "we can just straight up
+copy", and the folded long message with Show more).
+Answering the Needs attention card no longer echoes the choice as a user bubble. The turn records
+the question it answered and the thread shows question and answer together on one paper surface
+with a hairline, the question in soft ink over the answer in ink; consecutive answers share the
+surface, each pair keeping its own turn id so a jump or a search still lands on it. The list of
+requests skips answers, since an answer is not a request.
+A user bubble taller than eight lines (192px at its 24px line) folds to that height under a fade
+over its last two lines, with Show more inside the bubble; Show less folds it back. Line breaks
+the user typed or pasted stay where they were. Nothing else about the bubble changes (ADR-025,
+ADR-047).
+
+## ADR-151 - Child threads carry one glyph
+
+2026-09-30 - Accepted (Ethan: "some icon for child threads since those will either be spawned by
+an agent or will be a new thread a user has spun off from a main thread").
+A branch leaving a trunk (`ChildThreadIcon`) marks a child thread wherever it is named: the
+sidebar row, where "↳" stood, and a step of work that ran in a child. The same glyph serves an
+agent-spawned child and one the user spun off; the working glyph beside it says which is busy.
+Below a child's compose box: "Controlled by parent thread", with a Running pill in the user
+bubble's fill while its work is in flight by the runtime's own state (ADR-141, ADR-142).
+
+## ADR-152 - The latest reply carries the thread's one stamp
+
+2026-09-30 - Accepted (Ethan: "showing a timestamp for user messages should be axed. lets only
+put a timestamp on the most recent message from the LLM. it'll start with just now and then
+update every 20min"). Amends ADR-025.
+A user's turn shows no time. The thread's one stamp sits under its latest settled reply, in the
+prose's 11px soft ink, and says how long ago it arrived: "just now" for the first twenty minutes,
+then "20m ago", "40m ago", "1h ago", "1h 20m ago", moving on the panel's minute clock (the recap's,
+ADR-027) so it never waits on a render. A reader glancing back learns how fresh the answer is
+without reading a clock; the request above it needs no time of its own, since the reply dates the
+exchange. While a reply streams, nothing is stamped: the running status by the compose box says
+what is happening (ADR-142).
+Turns the panel and the demo make now carry an instant (ISO 8601) rather than a clock reading, so
+the stamp can be computed; a turn stored with a reading ("9:02", the fixtures and the runtime's
+seeded threads) shows the reading as its stamp, and the list of requests (ADR-143) formats either
+as a local clock time. The demo's children mint their turns from the wall clock too, so a child's
+answer reads "just now" beside its parent's.
+
+## ADR-153 - The recap, the dock and the idle time are read from the turns
+
+2026-09-30 - Accepted (the review's ask for "an unattended multi-agent run summarised by
+outcomes, with evidence one layer down and pending actions clearly separated"). Builds on
+ADR-005, ADR-027 and ADR-039; amends ADR-041's host duties.
+The web app never passed the panel a recap, an activity or a docked question: the recap lived in
+Storybook fixtures alone, and a question survived only in the panel that saw it stream. Now the
+record carries what they need. A reply keeps the question it ended on (`asks`) as part of its
+turn, and a reply that only asks is a turn, never dropped as empty. From the turns the panel
+reads, when its host passes none: the recap, one item per finished or failed step's outcome and
+one for a reply that broke off, each pointing at its turn (a view over recorded events, ADR-005,
+nothing written after the fact); the idle time, from the last user turn's instant (a turn timed
+as a clock reading yields none, since "9:02" cannot be measured from); whether the agent has
+worked since (a reply settled after that turn); and the question to dock, the one the latest
+reply ended with while no turn has followed it. A host that passes its own still wins.
+So a thread opened cold on a finished run shows its recap once the user has been away ten
+minutes (ADR-027), and its evidence sits one Disclosure down; while a question is open it takes
+the recap's place, as ADR-039 rules. That rule is the open design question the demo now poses:
+on return from six agents, should what needs you and what happened share one surface, or keep
+taking turns? The demo says which parts are shipped and which are proposed rather than deciding
+it here.
+Alongside, an interactive card's shown stop is held by the panel (the choice pending for it, else
+what the agent last saw) and the thread handle can `choose` a stop by its label, so a host that
+drives the thread steps a card by the same path a person's slider takes (ADR-029, ADR-030); a
+card on its own keeps its own state.
+
+## ADR-154 - AuthKit runs in dev mode on the deployed site
 
 2026-09-30 - Accepted (Ethan: "okay option 1", then "go ahead"); settles the refresh check
 ADR-084 left open.
@@ -2050,3 +2310,61 @@ lived in the client. Here the limits sit where the key and the cost are: 8 round
 and 6 cards per turn. Live runs shaped the prompt: Kimi explained limits in prose until
 `report_failure` was made mandatory, and a turn told to end with no text made OpenRouter insert
 its own placeholder, so a failure turn closes with one short sentence.
+Amended 2026-09-30 (ADR-156): protocol 2. Text is always prose, from its first delta. The
+`narration` event is deleted, and progress reaches the page through `work` labels alone. `end`
+carries the closing line, so no consumer looks one event ahead. `PLAYGROUND_PROTOCOL` is 2, so a
+page and a gateway on different versions fail at `start` and say so. The reason: the gateway
+relabelled a round's lead text as narration after the fact, which forced every consumer to hold
+text back until it knew what the text was. Two of the three adapter designs and the cross-judge
+named that retroactive relabelling the root cause, and removing it deleted the holding gate each
+consumer would otherwise need. The cost is that a model which writes prose before a tool call
+shows that line as prose, which the prompt already forbids. The model agent now runs inside the
+worker (`packages/runtime/src/playgroundAgent.ts`) and answers the Live Playground thread through
+`ChatThreadPanel`; the standalone page and all of `apps/web/src/playground` are deleted, and
+`/playground` redirects to `/t/playground`. So the thread, its store and the worker protocol did
+change after all, which is what ADR-156 decided.
+
+## ADR-156 - One shell hosts the Demo and the live model
+
+2026-09-30 - Accepted (Ethan: "the head of product goes to the main page route... 2 active
+projects... it should behave like a real in production app"). Retires ADR-148's route and the
+`/new` of ADR-146's amendment; amends ADR-137, ADR-147 and ADR-155.
+On a fresh device `/` lands on the splash, which lists two projects, Demo and Live Playground. A
+project row opens its latest thread (`entryOf`, the main with the newest activity) at `/t/:id`
+in the same shell. The Live Playground thread is an ordinary device thread: the store seeds it
+as the device starter (project `live-playground`, thread `playground`, no turns) in place of
+Demo store and its profit thread, so it lives in the worker and survives a reload. For
+`VITE_AGENT=gateway` the production agent is now the model with tools behind `/api/playground`
+(`packages/runtime/src/playgroundAgent.ts`, ADR-155). It runs inside the worker, keeps nothing
+between replies, and projects each request from the store's turns, so the stored transcript is
+the only record of the conversation. The scripted Demo is a page-side overlay composed with the
+worker behind one `Runtime` (`composeRuntime`, `apps/web/src/world/compose.ts`): reads merge by
+concatenation, every verb routes to the side that owns the id it names, the shell document is
+the worker's alone, and no record has two writers. `VITE_DEMO` (on by default) gates the overlay,
+and only over the device source, so a `?scenario=` fixture opens as it always has.
+The Demo is a World of three Shows (`demo-brief`, `demo-interrupted`, `demo-returned`), each
+played as a Take on one Stage (`apps/web/src/world/stage.ts`). The Stage has no turn writer of
+its own: every writer holds a Lease, and a Restart revokes the leases on a show's threads in the
+same commit that resets its slice. So Restart scopes to one show, its main and the children it
+spawned, and a reply still unwinding when Restart lands writes nothing. The pane learns of it by
+one generic rule: a turn count that drops means reread. The show bar (`ShowBar`) takes the
+window's banner slot on a show's thread and draws nothing off a show. `firstRun` opens the
+starter thread on the thread pane, so the canvas stays hidden until the layout switch, and a
+first visit paints the abstract splash. `/new` is deleted. `/playground`,
+`/demo/weekly-brief[?script=]` and `/demo/weekly-brief/t/:id` redirect to `/t/:id` through one
+table (`apps/web/src/world/redirects.ts`) that carries only `?splash=`.
+Alternatives weighed (Door 1 in `docs/decisions/one-shell-plan.md`, and the trail in
+`docs/decisions/one-shell.tsv`): one in-memory world hosting both projects behind a
+`VITE_WORLD` switch, the first recommendation, rejected once Ethan asked for the live thread to
+behave as production, since a reload would throw its turns away; seeding the Demo into the
+worker, which then stored text-only turns and would have reloaded the shows as plain text, when a
+demo that runs on its own clock, Pause and player should start clean on a reload anyway; and
+Restart by remounting the whole world, which would tear the worker down with it.
+Known gaps: the live model is unverified from the sandbox, since the gateway needs a WorkOS
+token. An in-process test runs the gateway's test-kit rounds through the real route, the agent,
+the worker loop and `open()`, and a browser check drove the splash, the rows, the redirects and a
+live-thread reply that survives a reload, with the lab stand-in answering. The debug splash
+picker showed on a first visit once first run opened the thread pane where it was always drawn;
+it now renders in development builds only. The device levers `apps/web/scripts/web-check.mjs`
+and `workspace-check.mjs` drive `?scenario=` fixtures, where the overlay is off and the profit
+thread still exists, so they run unchanged.

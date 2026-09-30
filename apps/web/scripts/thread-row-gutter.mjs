@@ -8,7 +8,8 @@
  */
 
 /**
- * Every thread row in the sidebar: its title's first character, a child's "↳" and its marks.
+ * Every thread row in the sidebar: its title's first character, a child's branch icon and its
+ * marks.
  * @returns {Promise<RowGutter[]>}
  */
 export function rowGutters(page) {
@@ -19,13 +20,13 @@ export function rowGutters(page) {
       const first = document.createRange();
       first.setStart(label.firstChild, 0);
       first.setEnd(label.firstChild, 1);
-      const arrow = [...row.querySelectorAll("span")].find((span) => span.textContent === "↳");
+      const arrow = row.querySelector('[data-slot="child-icon"]');
       return {
         title: label.textContent,
         kind: row.dataset.thread,
         height: fill.height,
         titleX: first.getBoundingClientRect().left - fill.left,
-        arrowX: arrow === undefined ? null : arrow.getBoundingClientRect().left - fill.left,
+        arrowX: arrow === null ? null : arrow.getBoundingClientRect().left - fill.left,
         marks: [...row.querySelectorAll("[data-mark]")].map((icon) => {
           const box = icon.getBoundingClientRect();
           return {
@@ -41,8 +42,9 @@ export function rowGutters(page) {
   );
 }
 
-// Whether a mark hangs left of what starts the row's words (a child's "↳", else its title), 4px
-// clear of it, and inside the fill: 3px in from its left edge, between its top and bottom.
+// Whether a mark hangs left of what starts the row's words (a child's branch icon, else its
+// title), 4px clear of it, and inside the fill: 3px in from its left edge, between its top and
+// bottom.
 const hangsInGutter = (row, box) =>
   box.right <= (row.arrowX ?? row.titleX) - 4 &&
   box.left >= 3 &&

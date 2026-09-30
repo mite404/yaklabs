@@ -1,10 +1,12 @@
+import { createRef } from "react";
 import { flushSync } from "react-dom";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { userEvent } from "vitest/browser";
 import type { Agent, AgentEvent } from "./agent";
 import { ChatThreadPanel } from "./ChatThreadPanel";
-import { threads } from "./thread";
+import type { ReplyChunk } from "./reply";
+import { threads, type ThreadHandle } from "./thread";
 
 let host: HTMLElement;
 let root: Root;
@@ -20,11 +22,13 @@ afterEach(() => {
   host.remove();
 });
 
-// One reply, driven by hand: `chunk` delivers text, `fail` breaks it off, `finish` ends it with
-// nothing more to say. Each call to `respond` pushes a fresh one, so a test can hold several
-// replies open at once and drive each on its own.
+// One reply, driven by hand: `chunk` delivers words or an event, `fail` breaks it off, `finish`
+// ends it with nothing more to say. Each call to `respond` pushes a fresh one, so a test can hold
+// several replies open at once and drive each on its own. It never listens for Stop, as a slow
+// source would not, so Stop has to show without it.
 type ControlledReply = {
-  chunk: (text: string) => void;
+  event: AgentEvent;
+  chunk: (chunk: ReplyChunk) => void;
   fail: (error: unknown) => void;
   finish: () => void;
 };
@@ -32,16 +36,17 @@ type ControlledReply = {
 function controlledAgent(): { agent: Agent; replies: ControlledReply[] } {
   const replies: ControlledReply[] = [];
   const agent: Agent = {
-    respond(_event: AgentEvent) {
-      let deliver: ((result: IteratorResult<string>) => void) | undefined;
+    respond(event: AgentEvent) {
+      let deliver: ((result: IteratorResult<ReplyChunk>) => void) | undefined;
       let raise: ((error: unknown) => void) | undefined;
       const next = () =>
-        new Promise<IteratorResult<string>>((resolve, reject) => {
+        new Promise<IteratorResult<ReplyChunk>>((resolve, reject) => {
           deliver = resolve;
           raise = reject;
         });
       replies.push({
-        chunk: (text) => deliver?.({ value: text, done: false }),
+        event,
+        chunk: (value) => deliver?.({ value, done: false }),
         fail: (error) => raise?.(error),
         finish: () => deliver?.({ value: "", done: true }),
       });
@@ -97,7 +102,9 @@ it("clears the indicator on a reply that fails before any content, leaving no st
   await vi.waitFor(() => {
     expect(pendingRows()).toHaveLength(0);
   });
-  expect(host.textContent).toContain("I couldn't finish that reply. Try again in a moment.");
+  expect(host.textContent).toContain("Could not start");
+  expect(host.textContent).toContain("Your request is still here; try again when you're ready.");
+  expect(host.querySelector('[aria-busy="true"]')).toBeNull();
 });
 
 it("tracks each pending reply on its own, not one shared flag", async () => {
@@ -130,4 +137,215 @@ it("tracks each pending reply on its own, not one shared flag", async () => {
   expect(host.textContent).toContain("First answer.");
   replies[0]?.finish();
   replies[1]?.finish();
+});
+
+function agentTurns(): HTMLElement[] {
+  return [...host.querySelectorAll<HTMLElement>(".turn-agent")];
+}
+
+function button(name: string): HTMLButtonElement | null {
+  return host.querySelector<HTMLButtonElement>(`button[aria-label="${name}"]`);
+}
+
+it("stops every reply in flight at once, marking each stopped, even one whose source is slow", async () => {
+  const { agent, replies } = controlledAgent();
+  flushSync(() => {
+    root.render(<ChatThreadPanel thread={threads.trend} agent={agent} />);
+  });
+
+  await userEvent.type(field(), "First?{Enter}");
+  await userEvent.type(field(), "Second?{Enter}");
+  await vi.waitFor(() => {
+    expect(replies).toHaveLength(2);
+  });
+  replies[0]?.chunk({ kind: "step", step: { id: "a", label: "North", status: "running" } });
+  replies[1]?.chunk("Partly said.");
+  await vi.waitFor(() => {
+    expect(host.textContent).toContain("Partly said.");
+  });
+
+  const stop = button("Stop");
+  if (!stop) throw new Error("no Stop while replies stream");
+  await userEvent.click(stop);
+  await vi.waitFor(() => {
+    expect(host.textContent?.match(/Stopped by you/g)).toHaveLength(2);
+  });
+  expect(host.querySelector('[aria-busy="true"]')).toBeNull();
+  expect(button("Stop")).toBeNull();
+  expect(host.textContent).toContain("Partly said.");
+  expect(host.textContent).toContain("1 check · 1 needs attention");
+
+  // A chunk that arrives after Stop changes nothing.
+  replies[1]?.chunk(" More words.");
+  await new Promise((resolve) => setTimeout(resolve, 20));
+  expect(host.textContent).not.toContain("More words.");
+});
+
+it("tries a cut-off reply again as a new turn, with the same request and no second bubble", async () => {
+  const { agent, replies } = controlledAgent();
+  flushSync(() => {
+    root.render(<ChatThreadPanel thread={threads.trend} agent={agent} />);
+  });
+
+  await userEvent.type(field(), "And next week?{Enter}");
+  await vi.waitFor(() => {
+    expect(replies).toHaveLength(1);
+  });
+  replies[0]?.chunk("Monday looks");
+  // Each reply takes its next chunk only once it has folded the last one.
+  await vi.waitFor(() => {
+    expect(host.textContent).toContain("Monday looks");
+  });
+  replies[0]?.fail(new Error("the line dropped"));
+  await vi.waitFor(() => {
+    expect(host.textContent).toContain("Interrupted · Incomplete answer");
+  });
+
+  const users = host.querySelectorAll(".turn-user").length;
+  const retry = [...host.querySelectorAll("button")].find(
+    (each) => each.textContent === "Try again",
+  );
+  if (!retry) throw new Error("no Try again");
+  await userEvent.click(retry);
+  await vi.waitFor(() => {
+    expect(replies).toHaveLength(2);
+  });
+  expect(replies[1]?.event).toEqual(replies[0]?.event);
+  replies[1]?.chunk("Monday looks quiet.");
+  await vi.waitFor(() => {
+    expect(host.textContent).toContain("Monday looks quiet.");
+  });
+  expect(host.querySelectorAll(".turn-user")).toHaveLength(users);
+  expect(host.textContent).toContain("Interrupted · Incomplete answer");
+  replies[1]?.finish();
+});
+
+it("docks a question from the stream, and shows the answer with the question it answered", async () => {
+  const { agent, replies } = controlledAgent();
+  const handle = createRef<ThreadHandle>();
+  flushSync(() => {
+    root.render(<ChatThreadPanel thread={threads.trend} agent={agent} ref={handle} />);
+  });
+
+  await userEvent.type(field(), "Plan the forecast{Enter}");
+  await vi.waitFor(() => {
+    expect(replies).toHaveLength(1);
+  });
+  replies[0]?.chunk({
+    kind: "question",
+    question: {
+      question: "How many weeks ahead should it forecast?",
+      options: [{ label: "Four weeks" }],
+      answer: { placeholder: "Or type a number of weeks" },
+    },
+  });
+  await vi.waitFor(() => {
+    expect(host.querySelector('[aria-label="Needs attention"]')).not.toBeNull();
+  });
+  replies[0]?.finish();
+
+  handle.current?.answer("Four weeks");
+  await vi.waitFor(() => {
+    expect(host.querySelector('[aria-label="Your answers"]')?.textContent).toBe(
+      "How many weeks ahead should it forecast?Four weeks",
+    );
+  });
+  expect(host.querySelector('[aria-label="Needs attention"]')).toBeNull();
+  expect(replies[1]?.event).toEqual({ kind: "answer", text: "Four weeks" });
+  replies[1]?.finish();
+});
+
+it("sends a malformed question from the stream back to the agent, never to the dock", async () => {
+  const { agent, replies } = controlledAgent();
+  flushSync(() => {
+    root.render(<ChatThreadPanel thread={threads.trend} agent={agent} />);
+  });
+
+  await userEvent.type(field(), "Plan the forecast{Enter}");
+  await vi.waitFor(() => {
+    expect(replies).toHaveLength(1);
+  });
+  replies[0]?.chunk({ kind: "question", question: { question: "" } });
+  await vi.waitFor(() => {
+    expect(replies).toHaveLength(2);
+  });
+  expect(replies[1]?.event.kind).toBe("question-rejected");
+  expect(host.querySelector('[aria-label="Needs attention"]')).toBeNull();
+  replies[0]?.finish();
+  replies[1]?.finish();
+});
+
+it("lets a host set the draft and send it in one go", async () => {
+  const { agent, replies } = controlledAgent();
+  const handle = createRef<ThreadHandle>();
+  flushSync(() => {
+    root.render(<ChatThreadPanel thread={threads.trend} agent={agent} ref={handle} />);
+  });
+
+  handle.current?.setDraft("Scripted request");
+  handle.current?.send();
+  await vi.waitFor(() => {
+    expect(replies).toHaveLength(1);
+  });
+  expect(replies[0]?.event).toMatchObject({ kind: "message", text: "Scripted request" });
+  await vi.waitFor(() => {
+    expect(host.textContent).toContain("Scripted request");
+  });
+  expect(field().value).toBe("");
+  replies[0]?.finish();
+});
+
+it("lets a host step a card by its stop's label, and the choice rides with the next message", async () => {
+  const { agent, replies } = controlledAgent();
+  const handle = createRef<ThreadHandle>();
+  flushSync(() => {
+    root.render(<ChatThreadPanel thread={threads.profit} agent={agent} ref={handle} />);
+  });
+  const slider = host.querySelector<HTMLInputElement>('input[type="range"]');
+  expect(slider?.getAttribute("aria-valuetext")).toBe("Gross profit");
+
+  flushSync(() => {
+    handle.current?.choose("Net profit");
+  });
+  expect(slider?.getAttribute("aria-valuetext")).toBe("Net profit");
+  expect(host.textContent).toContain("Net profit · Sep 14–20");
+
+  flushSync(() => {
+    handle.current?.choose("No such measure");
+  });
+  expect(slider?.getAttribute("aria-valuetext")).toBe("Net profit");
+
+  handle.current?.setDraft("What about the drop?");
+  handle.current?.send();
+  await vi.waitFor(() => {
+    expect(replies).toHaveLength(1);
+  });
+  expect(replies[0]?.event).toMatchObject({
+    kind: "message",
+    attachments: [{ state: { measure: "Net profit" } }],
+  });
+  // Sent, the card keeps the view the agent now knows.
+  expect(slider?.getAttribute("aria-valuetext")).toBe("Net profit");
+  replies[0]?.finish();
+});
+
+it("leaves no turn behind for a reply that ends having said nothing", async () => {
+  const { agent, replies } = controlledAgent();
+  flushSync(() => {
+    root.render(<ChatThreadPanel thread={threads.trend} agent={agent} />);
+  });
+  const before = agentTurns().length;
+
+  await userEvent.type(field(), "Anything?{Enter}");
+  await vi.waitFor(() => {
+    expect(agentTurns()).toHaveLength(before + 1);
+  });
+  replies[0]?.chunk({ kind: "activity", text: "Thinking it over." });
+  await vi.waitFor(() => {
+    expect(host.textContent).toContain("Thinking it over.");
+  });
+  replies[0]?.finish();
+  await vi.waitFor(() => {
+    expect(agentTurns()).toHaveLength(before);
+  });
 });

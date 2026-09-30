@@ -255,7 +255,7 @@ export const threadActionChecks = {
 
   // The marks hang in the row's left gutter, so a title starts at the same x marked or not: a
   // pinned and snoozed main (two marks, stacked), a pinned and a snoozed sub-thread (left of
-  // its "↳"), an archived main.
+  // its branch icon), an archived main.
   async A9(browser) {
     const page = await openDemo(browser);
     const plain = await rowGutters(page);

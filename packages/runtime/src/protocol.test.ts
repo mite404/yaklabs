@@ -1,5 +1,7 @@
-import { describe, expect, it } from "vitest";
-import { commandSchema, noticeSchema } from "./protocol";
+import type { ThreadMessage } from "@yaklabs/catalog/thread";
+import { describe, expect, expectTypeOf, it } from "vitest";
+import type { z } from "zod";
+import { commandSchema, noticeSchema, type threadMessageSchema } from "./protocol";
 
 const attachment = {
   turnId: "a1",
@@ -17,6 +19,9 @@ const send = {
 const child = { kind: "child", parentId: "profit", at: 1, title: "Saturday", draft: "> Sat\n\n" };
 const accepts = (command: unknown) => commandSchema.safeParse(command).success;
 const saveShell = (shell: unknown) => ({ kind: "saveShell", requestId: "r1", shell });
+// Whether a chunk notice carrying `value` parses.
+const carries = (value: unknown) =>
+  noticeSchema.safeParse({ kind: "chunk", requestId: "r1", chunk: value }).success;
 
 describe("commandSchema checks what crosses into the worker", () => {
   it("accepts a send whose card choice rides along", () => {
@@ -126,6 +131,22 @@ describe("commandSchema checks the thread menu's writes (ADR-126)", () => {
 });
 
 describe("noticeSchema", () => {
+  it("carries a reply's words and its events in a chunk (ADR-147)", () => {
+    expect(carries("Saturday leads")).toBe(true);
+    expect(carries({ kind: "card", payload: { component: "BarChart" } })).toBe(true);
+    expect(carries({ kind: "step", step: { id: "s1", label: "Count", status: "done" } })).toBe(
+      true,
+    );
+    expect(carries({ kind: "step", step: { id: "s1", label: "Count", status: "stuck" } })).toBe(
+      false,
+    );
+    expect(carries({ kind: "shout", text: "Hi" })).toBe(false);
+  });
+
+  it("parses exactly a stored turn, so a field the catalog adds to one fails to compile", () => {
+    expectTypeOf<z.infer<typeof threadMessageSchema>>().toEqualTypeOf<ThreadMessage>();
+  });
+
   it("rejects a stored turn with an unknown role", () => {
     const messages = [{ id: "s1", role: "system", text: "Hi", time: "9:00" }];
     expect(noticeSchema.safeParse({ kind: "opened", requestId: "r1", messages }).success).toBe(

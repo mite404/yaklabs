@@ -1,5 +1,5 @@
 import { useRef, type FormEvent, type KeyboardEvent } from "react";
-import { FilesIcon, ScreenIcon } from "./icons";
+import { FilesIcon, ScreenIcon, StopIcon } from "./icons";
 import { Menu, type TriggerProps } from "./Menu";
 import { captureScreenshot } from "./screenshot";
 
@@ -115,6 +115,9 @@ function FileGlyph() {
  * @param disabled Pauses typing, e.g. while dictation is recording.
  * @param attachments Card choices that will be sent with the next message (ADR-030); they
  * take the hint's place in the bar, so the box never changes height (ADR-003).
+ * @param busy A reply is streaming: a Stop button joins the bar, between Dictate and Send, and
+ * sending stays open, so the user can keep talking while the agent works (ADR-142).
+ * @param onStop Stops every reply in flight.
  */
 export function ComposeBox({
   draft,
@@ -126,6 +129,8 @@ export function ComposeBox({
   attachments = [],
   onRemoveAttachment,
   onAttachFiles,
+  busy = false,
+  onStop,
 }: {
   draft: string;
   onDraftChange: (value: string) => void;
@@ -136,6 +141,8 @@ export function ComposeBox({
   attachments?: ComposeAttachment[];
   onRemoveAttachment?: (id: string) => void;
   onAttachFiles?: (files: File[]) => void;
+  busy?: boolean;
+  onStop?: () => void;
 }) {
   const files = useRef<HTMLInputElement>(null);
 
@@ -238,6 +245,17 @@ export function ComposeBox({
         >
           <MicIcon />
         </button>
+        {busy && (
+          <button
+            type="button"
+            className="compose-icon"
+            aria-label="Stop"
+            title="Stop replying"
+            onClick={onStop}
+          >
+            <StopIcon />
+          </button>
+        )}
         <button
           type="submit"
           className="compose-send"

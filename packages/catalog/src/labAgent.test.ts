@@ -8,7 +8,8 @@ const agent = createLabAgent({ replyDelayMs: 0, wordMs: 0 });
 // Everything the agent streams for one event, joined as the thread would show it.
 async function reply(event: AgentEvent, signal = new AbortController().signal): Promise<string> {
   let text = "";
-  for await (const chunk of agent.respond(event, signal)) text += chunk;
+  for await (const chunk of agent.respond(event, signal))
+    if (typeof chunk === "string") text += chunk;
   return text;
 }
 
@@ -18,7 +19,7 @@ it("streams a reply in chunks that join into whole sentences", async () => {
     { kind: "answer", text: "4 weeks" },
     new AbortController().signal,
   ))
-    chunks.push(chunk);
+    if (typeof chunk === "string") chunks.push(chunk);
   expect(chunks.length).toBeGreaterThan(1);
   expect(chunks.join("")).toBe('Got it: "4 weeks". Carrying on from there.');
 });

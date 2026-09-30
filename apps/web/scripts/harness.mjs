@@ -13,6 +13,15 @@ const playwright = await import(
 /** Playwright's Chromium. */
 export const { chromium } = playwright.default ?? playwright;
 
+/**
+ * Launches Playwright's Chromium, or the build at `PLAYWRIGHT_CHROMIUM` where the pinned one is
+ * not downloaded.
+ */
+export const launch = (options = {}) => {
+  const executablePath = process.env.PLAYWRIGHT_CHROMIUM;
+  return chromium.launch(executablePath === undefined ? options : { ...options, executablePath });
+};
+
 const argv = process.argv.slice(2);
 
 /** The value after `name` on the command line, or `fallback` when it is not there. */

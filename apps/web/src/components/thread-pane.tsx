@@ -1,20 +1,15 @@
 import { ChatThreadPanel } from "@yaklabs/catalog";
 import type { Runtime, ThreadSummary } from "@yaklabs/runtime";
 import { useSidebar } from "@yaklabs/ui/components/sidebar";
-import {
-  useEffect,
-  useRef,
-  useState,
-  type FocusEvent,
-  type ReactNode,
-  type RefObject,
-} from "react";
-import { inBackground, reasonOf, useRuntime } from "../runtime";
+import { useEffect, useRef, type FocusEvent, type ReactNode, type RefObject } from "react";
+import { inBackground, useRuntime } from "../runtime";
 import { useSession } from "../session";
 import { useSnoozeCard } from "../shell/snooze-card";
 import { ThreadHeaderActions } from "../shell/thread-actions-menu";
+import { ChildFootnote } from "./child-footnote";
+import { noting, useOutsideWork, usePanelRef, useTurns } from "./pane-turns";
 import { QuietButton } from "./quiet-button";
-import { LOADING, turnsBefore, type Turns } from "./turns";
+import type { Turns } from "./turns";
 
 // Where the focus rests in a thread, by what it shows: the frame while its turns come, Try
 // again when they cannot (the frame's body, not its title bar's actions), the compose box once
@@ -27,37 +22,6 @@ const REST: Record<Turns["kind"], string> = {
 
 // What a thread's host listens with to know whether the focus is in it.
 type FocusHandlers = { onFocus: () => void; onBlur: (event: FocusEvent) => void };
-
-// The thread's turns: none at once for a thread the snapshot says holds none, else asked of the
-// worker while they are loading, which a retry goes back to. What a thread starts with is read
-// once, as its pane mounts, so the turns it gains while on screen never send it back to the
-// frame; the pane is keyed by the thread's id, so it never changes threads.
-function useTurns(thread: ThreadSummary): [Turns, () => void] {
-  const runtime = useRuntime();
-  const { id } = thread;
-  const [turns, setTurns] = useState(() => turnsBefore(thread)); // → Turns
-  const asking = turns.kind === "loading";
-  useEffect(() => {
-    let live = true;
-    const load = async () => {
-      let next: Turns;
-      try {
-        next = { kind: "open", messages: await runtime.open(id) };
-      } catch (error: unknown) {
-        next = { kind: "failed", reason: reasonOf(error) };
-      }
-      if (live) setTurns(next);
-    };
-    if (asking) void load();
-    return () => {
-      live = false;
-    };
-  }, [runtime, id, asking]);
-  const retry = () => {
-    setTurns(LOADING);
-  };
-  return [turns, retry];
-}
 
 // Whether the focus waits in `pane` for somewhere to rest: dropped to the page as the part that
 // held it went, or on the frame, which only holds it while the turns come.
@@ -217,7 +181,10 @@ function barActions(thread: ThreadSummary, trailing: ReactNode, bare: boolean): 
  * is long enough to notice) or the reason and Try again inside. Focus in the thread stays in it
  * as it changes: from Try again to the frame, and on to Try again again or to the compose box.
  * The title and the opening draft come from the snapshot, so a rename shows everywhere at once.
- * Key it by the thread's id: it reads what it starts with once, as it mounts.
+ * Key it by the thread's id: it reads what it starts with once, as it mounts, and again once
+ * work done on the thread elsewhere settles. A child says below its compose box that its parent
+ * controls it (ADR-141). Under a panel registry, the panel's handle is registered by the
+ * thread's id for as long as it is mounted.
  * @param leading A control before the title in the title bar, such as a lane's collapse
  * (ADR-134); in the frame too while the turns come.
  * @param trailing A control at the title bar's far end, after the thread's own actions, such as
@@ -244,7 +211,9 @@ export function ThreadPane({
   const runtime = useRuntime();
   const session = useSession();
   const { isMobile } = useSidebar();
-  const [turns, retry] = useTurns(thread);
+  const { turns, retry, reread, revision } = useTurns(thread);
+  const note = useOutsideWork(thread, reread);
+  const panelRef = usePanelRef(thread.id);
   const host = useRef<HTMLDivElement>(null);
   const follow = useFocusFollows(host, turns);
   const snooze = useSnoozeCard(thread);
@@ -254,8 +223,10 @@ export function ThreadPane({
     <div ref={host} className="contents" data-thread-pane="" {...follow}>
       {turns.kind === "open" ? (
         <ChatThreadPanel
+          key={revision}
+          ref={panelRef}
           thread={{ title: thread.title, messages: turns.messages }}
-          agent={runtime.agent(thread.id, session)}
+          agent={noting(runtime.agent(thread.id, session), note)}
           initialDraft={thread.draft}
           onRename={renamer(runtime, thread, bare)}
           cardsCarry={!isMobile}
@@ -264,6 +235,7 @@ export function ThreadPane({
           leading={leading}
           empty={welcome}
           bare={bare}
+          footnote={thread.place.kind === "child" ? <ChildFootnote thread={thread} /> : undefined}
         />
       ) : (
         <PendingFrame thread={thread} leading={leading} actions={actions} bare={bare}>

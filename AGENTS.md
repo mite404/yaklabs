@@ -84,9 +84,16 @@ line will not fit in 50 characters, that is usually the commit doing two things 
 
 ## Interview scope
 
-- The interview build runs with sign-in off (`VITE_AUTH=none`, `VITE_AGENT=lab`).
-- Do not build WorkOS sign-in wiring, telemetry, or the extras cut in ADR-137
-  (`docs/adr/adr.md`). If one looks needed, ask Ethan.
+- The interview build is the deployed site, running the production runtime with sign-in:
+  `VITE_AUTH=workos` and `VITE_AGENT=gateway` (ADR-154 and ADR-156 in `docs/adr/adr.md`).
+  An interviewer signs in through AuthKit and lands on a splash with two projects. Demo plays
+  the scripted scenarios on its own clock. Live Playground is a real thread, persisted in the
+  worker and answered by the model with tools through the gateway, so they can play with it.
+- The sandbox and the levers still run sign-in off, `VITE_AUTH=none` and `VITE_AGENT=lab`,
+  the defaults in `apps/web/.env.example`; there the lab stand-in answers the live thread.
+- Sign-in is wired as ADR-084, ADR-088 and ADR-154 describe. Do not extend it (a custom auth
+  domain, new redirect URIs), and do not build telemetry or the other extras ADR-137 still cuts.
+  If one looks needed, ask Ethan.
 
 ---
 

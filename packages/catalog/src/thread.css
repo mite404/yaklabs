@@ -60,8 +60,7 @@
    out as the compose row is (the same gutter, the same reserved scrollbar) puts the bar's right
    edge on the compose box's. It stands 8px clear of the box, its own 4px and the compose row's
    4px inset, and with a card docked (--dock-space, set by the panel) 8px clear of the card
-   instead. Its paper hides the turn under it; its corners and gaps are the menu's (8px) and the
-   title bar's actions' (2px). */
+   instead. Its corners and gaps are the menu's (8px) and the title bar's actions' (2px). */
 .reading-dock {
   position: absolute;
   left: 0;
@@ -70,21 +69,53 @@
   z-index: 1;
   display: flex;
   justify-content: flex-end;
+  gap: 8px;
   overflow: hidden;
   scrollbar-gutter: stable;
   padding: 4px var(--thread-gutter);
   pointer-events: none;
 }
+/* At rest and under the pointer the bar is a translucent wash of the paper (--scrim, the paper at
+   72%) so the turn under it still reads through; only its glyph is opaque. Open, with search or
+   the list of requests up, it fills solid over 150ms on the strong ease-out, as a lane's menu
+   fades in (Ethan). */
 .reading-tools {
   display: flex;
   align-items: center;
   min-inline-size: 0; /* a fieldset's default is its content's width */
   margin: 0;
   padding: 2px;
-  background: var(--paper);
+  background: var(--scrim);
   border: 1px solid var(--hairline);
   border-radius: 8px;
   pointer-events: auto;
+  transition:
+    background-color 150ms cubic-bezier(0.23, 1, 0.32, 1),
+    opacity 300ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+.reading-tools:is([data-open], :has([aria-expanded="true"])) {
+  background: var(--paper);
+}
+/* The bar follows the pointer (Ethan): it is clear until the pointer is over the thread, fades
+   up over 300ms on the strong ease-out as the pointer leaves the compose box for the turns, and
+   fades back as it leaves the thread. The panel reports the pointer's zone (data-pointer, from
+   its own pointer events, so a story's synthetic hover can prove it). A tool that is open, or a
+   keyboard in the bar, holds it up; a touch screen, with no pointer to follow, keeps it. Clear,
+   not hidden: a keyboard can still reach it, and reaching it shows it. */
+@media (hover: hover) and (pointer: fine) {
+  .reading-tools {
+    opacity: 0;
+  }
+  .thread-panel[data-pointer="thread"] .reading-tools,
+  .reading-tools:is([data-open], :has([aria-expanded="true"]), :has(:focus-visible)) {
+    opacity: 1;
+  }
+}
+/* The list of requests is the same wash, blurred behind so its 13px rows stay legible over the
+   turns it opens above; the bar's own solid fill anchors it. */
+.reading-tools .menu {
+  background: var(--scrim);
+  backdrop-filter: blur(8px);
 }
 .reading-search {
   display: flex;
@@ -116,58 +147,90 @@
   min-width: 0;
   padding: 0;
 }
-/* The tools beside Search, open by default: a touch screen has no hover to unfold them by. The
-   2px before Search lives inside the track, so it folds away with them. */
+/* Search and its bar, left of the bookmark, open by default: a touch screen has no hover to
+   unfold them by. The 2px before the bookmark lives inside the track, so it folds away with them. */
 .reading-more {
   display: grid;
   grid-template-columns: 1fr;
 }
-.reading-more > .menu-anchor {
+.reading-fold {
+  display: flex;
+  align-items: center;
   min-width: 0;
   overflow: hidden;
 }
-.reading-more .icon-btn {
+.reading-fold > .icon-btn {
   margin-inline-end: 2px; /* a margin, not padding: padding could not fold below 2px */
 }
 /* The fold clips anything past the tools' edges, the focus ring included, so the bar's rings sit
-   inside their buttons, as an awaiting tile's does; Search matches so the two read alike. */
+   inside their buttons, as an awaiting tile's does; the bookmark matches so the two read alike. */
 .reading-tools .icon-btn:focus-visible {
   outline-offset: -2px;
 }
-/* With a fine pointer the bar rests as Search alone and unfolds leftward while the pointer is on
-   it (data-unfolded, set from its pointer events so a story's synthetic hover can prove it), a
-   keyboard is in it, or search or the list of requests is open. Focus counts only when the last
-   input was not a pointer (ADR-053): a menu hands focus back to its trigger after a click, which
-   the browser calls focus-visible, and the bar would stay unfolded after the pointer left. The track clips from 0fr to 1fr
-   rather than scaling (pillar 22), over 150ms on the strong ease-out, as a lane's menu fades.
-   Folded, the tools are hidden, so a keyboard skips them until it reaches the bar; visibility
-   waits out the fold so the clip finishes first. */
+/* With a fine pointer the bar rests as the bookmark alone and unfolds leftward while the pointer
+   is on it (data-unfolded, set from its pointer events so a story's synthetic hover can prove
+   it), a keyboard is in it, or search or the list of requests is open. Focus counts only when the
+   last input was not a pointer (ADR-053): a menu hands focus back to its trigger after a click,
+   which the browser calls focus-visible, and the bar would stay unfolded after the pointer left.
+   The track clips from 0fr to 1fr rather than scaling (pillar 22), over 150ms on the strong
+   ease-out, as a lane's menu fades. Folded, Search is hidden, so a keyboard skips it until it
+   reaches the bar; visibility waits out the fold so the clip finishes first. The fold itself
+   slides as the projects drawer does: 220ms on the panel ease (pillar 26), so Search comes out
+   at the drawer's pace rather than snapping (Ethan). */
 @media (hover: hover) and (pointer: fine) {
   .reading-more {
     grid-template-columns: 0fr;
     visibility: hidden;
     transition:
-      grid-template-columns 150ms cubic-bezier(0.23, 1, 0.32, 1),
-      visibility 0s linear 150ms;
+      grid-template-columns 220ms cubic-bezier(0.17, 1.02, 0.58, 1),
+      visibility 0s linear 220ms;
   }
   .reading-tools:is([data-unfolded], [data-open], :has([aria-expanded="true"])) .reading-more,
   :root:not([data-input="pointer"]) .reading-tools:has(:focus-visible) .reading-more {
     grid-template-columns: 1fr;
     visibility: visible;
-    transition: grid-template-columns 150ms cubic-bezier(0.23, 1, 0.32, 1);
+    transition: grid-template-columns 220ms cubic-bezier(0.17, 1.02, 0.58, 1);
   }
 }
 @media (prefers-reduced-motion: reduce) {
   .reading-more,
-  .reading-tools .reading-more {
+  .reading-tools .reading-more,
+  .reading-tools {
     transition: none;
   }
+}
+
+/* The running status (ADR-142), for a reader scrolled up while a reply streams: at the left of
+   the reading tools' row, their mirror in paper, hairline and the menu's 8px corners, and as tall
+   (2px around a 28px button). Sharing the row, it gives way as the tools unfold, cutting its
+   narration short rather than running under them. */
+.thread-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  margin-inline-end: auto;
+  padding: 2px 2px 2px 10px; /* 10px: the field's inset, so the glyph sits as a field's text */
+  background: var(--paper);
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  color: var(--soft-ink);
+  font-size: 13px;
+  line-height: 20px;
+  pointer-events: auto;
+}
+.thread-status-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* Header and compose reserve the same scrollbar gutter as the scroll area,
    so all three share one text column on every platform. */
 .thread-header,
-.thread-compose {
+.thread-compose,
+.thread-footnote {
   overflow: hidden;
   scrollbar-gutter: stable;
 }
@@ -179,11 +242,13 @@
   border-bottom: 1px solid var(--hairline);
 }
 /* A host's control before the title (ADR-134), such as a lane's collapse: first in the bar's
-   row, its glyph pulled back onto the text column's edge. */
+   row, in the gutter, flush with the lane's edge and closing the row's gap, so the title's first
+   character starts on the text column, where the compose box's edge is (Ethan). The control is
+   20px, the gutter's width, so it fits the margin as a list's marker does. */
 .thread-header > .header-leading {
   display: flex;
   flex-shrink: 0;
-  margin: -4px 0 -4px -7px;
+  margin: 0 -8px 0 calc(-1 * var(--thread-gutter));
 }
 /* The thread title is a display moment: brand serif (Newsreader). It keeps its own width, so a
    lane's bar stays free around it to lift the lane by (ADR-089), and shrinks when crowded. */
@@ -258,9 +323,11 @@
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
   /* The bottom padding lands the last card --rest-gap above the compose box or the dock
-     card: --dock-space is the dock card's height over the compose box (ADR-038). */
+     card: --dock-space is the dock card's height over the compose box (ADR-038). A jump to a
+     turn near the end adds --jump-runway below it, so the turn can land centered (ADR-022;
+     threadReveal.ts sets and releases it). */
   padding: 20px var(--thread-gutter)
-    calc(var(--rest-gap) - var(--compose-inset) + var(--dock-space, 0px));
+    calc(var(--rest-gap) - var(--compose-inset) + var(--dock-space, 0px) + var(--jump-runway, 0px));
   display: flex;
   flex-direction: column;
   gap: 20px;
@@ -284,7 +351,8 @@
 }
 
 /* The user's turn is a tinted surface resting on the thread background: recognisable
-   as "you" by shape and position (right-aligned bubble), not by heavy contrast (ADR-025). */
+   as "you" by shape and position (right-aligned bubble), not by heavy contrast (ADR-025).
+   Line breaks the user typed (Shift+Enter) or pasted stay where they were. */
 .turn-user {
   align-self: flex-end;
   max-width: 85%;
@@ -292,23 +360,337 @@
   justify-items: end;
   gap: 4px;
 }
-.turn-user p {
+.user-bubble {
+  min-width: 0;
   background: linear-gradient(135deg, var(--bubble-tint), var(--bubble-tint-strong));
   border: 1px solid var(--bubble-line);
   border-radius: 12px;
   padding: 10px 14px;
+}
+.user-bubble p {
+  color: var(--ink);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+/* A long request folds to eight lines (--bubble-clamp, from Turns.tsx) and fades out over its
+   last two, so it reads as more to come rather than cut off. The mask takes only alpha, so any
+   opaque token draws it. */
+.user-bubble p[data-clamped] {
+  max-height: var(--bubble-clamp);
+  overflow: hidden;
+  mask-image: linear-gradient(to bottom, var(--ink) calc(100% - 48px), transparent);
+}
+/* Show more / Show less: a text button inside the bubble, the soft ink that darkens on hover
+   over the button's 150ms ease (pillar 8). */
+.bubble-more {
+  display: block;
+  margin: 4px 0 0;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--soft-ink);
+  font-size: 13px;
+  line-height: 20px;
+  transition: color 150ms ease;
+}
+.bubble-more:hover {
+  background: transparent;
   color: var(--ink);
 }
-.turn-user time {
+/* The thread's one stamp, under its latest reply: how long ago it arrived, in 20-minute steps
+   (turnTime.ts). A user's turn carries no time; the reply dates the exchange. */
+.turn-stamp {
   font-size: 11px;
+  line-height: 16px;
   color: var(--soft-ink);
   font-variant-numeric: tabular-nums;
-  padding-right: 4px;
 }
 
+/* 16px between a turn's parts, the prose's own paragraph gap, so a card or a note after the
+   prose sits as a paragraph would (ADR-140). */
 .turn-agent {
   display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+/* Quiet prose (ADR-140; QuietProse.tsx): 15px Inter on a 24px line in the body ink, 16px between
+   paragraphs, headings at body size in 600 with 32px above, emphasis at 600 in the heading ink,
+   real italics, and a 510px measure for text. Cards between paragraphs take the thread's measure
+   and 16px above and below. The same rules hold while a reply streams and after it completes. */
+.quiet-prose {
+  min-width: 0;
+  font-size: 15px;
+  line-height: 24px;
+  color: var(--soft-ink);
+  overflow-wrap: anywhere;
+  font-synthesis: none;
+}
+.quiet-prose > :is(p, h3, ul) {
+  max-width: 510px;
+}
+.quiet-prose > p {
+  margin: 0 0 16px;
+  line-height: 24px;
+}
+.quiet-prose > h3 {
+  margin: 32px 0 4px;
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 24px;
+}
+.quiet-prose strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+.quiet-prose em {
+  font-style: italic;
+}
+.quiet-prose a {
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.quiet-prose a:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
+}
+.quiet-prose code {
+  padding: 2px 4px;
+  border-radius: 3px;
+  background: var(--paper-deep);
+  font:
+    13px/20px ui-monospace,
+    monospace;
+}
+.quiet-prose > ul {
+  margin: 0 0 16px;
+  padding-left: 22px;
+  list-style: disc;
+}
+.quiet-prose li {
+  margin: 0 0 6px;
+}
+.quiet-prose > .prose-card {
+  margin: 16px 0;
+}
+/* What a reply could not do (ADR-147, widened; pillar 29). It sits in the words, so it reads as
+   prose, set off at the left by the rule a reply that stopped short wears (.turn-ended), never
+   by a warning colour: the sentence in the body ink, the request it offers quoted in the
+   heading ink, then the compact outline button that sends it. */
+.quiet-prose > .prose-limitation {
+  display: grid;
+  justify-items: start;
+  gap: 8px; /* .turn-ended's gap */
+  max-width: 510px; /* the prose's measure */
+  margin: 0 0 16px; /* the paragraph gap */
+  padding-left: 16px; /* .turn-ended's inset */
+  border-left: 2px solid var(--hairline); /* .turn-ended's rule */
+}
+.prose-limitation p {
+  margin: 0;
+  line-height: 24px; /* the prose's line, over the page's 1.6 */
+}
+.prose-limitation-prompt {
+  color: var(--ink);
+}
+/* A block the stream has opened but not yet filled takes no room: no empty bullet or paragraph
+   gap flashes before its first words arrive. */
+.quiet-prose > :is(p, h3):empty,
+.quiet-prose > ul:not(:has(> li:not(:empty))),
+.quiet-prose li:empty {
+  display: none;
+}
+.quiet-prose > :first-child {
+  margin-top: 0;
+}
+.quiet-prose > :last-child {
+  margin-bottom: 0;
+}
+
+/* What a streaming reply is doing now, under its words: quiet, one step smaller (ADR-139). */
+.turn-activity {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--soft-ink);
+  font-size: 13px;
+  line-height: 20px;
+}
+
+/* A reply that stopped short says so after its words, set off by a rule at the left as a quote
+   is, never by an alarm colour: how it ended, why, and Try again (ADR-139). */
+.turn-ended {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+  padding-left: 16px;
+  border-left: 2px solid var(--hairline);
+  color: var(--soft-ink);
+  font-size: 13px;
+  line-height: 20px;
+}
+.turn-ended p {
+  margin: 0;
+  line-height: 20px;
+}
+.turn-ended-label {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* The one disclosure above a reply (ADR-139, amended; WorkDetails.tsx): its header pulled back
+   onto the text column, so its label starts where the prose does and its hover fill reaches 8px
+   into the gutter, as a card's rows reach into its padding. Live, the label sits beside the
+   working glyph, as the sidebar's rows do. The nested Technical details match. */
+.work-details .disclosure-header {
+  width: calc(100% + 16px);
+  margin: 0 -8px;
+  font-size: 13px;
+  font-weight: 500;
+}
+.work-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+/* The fold's chevron leads the label here, as a numbered list's marker would: at the header's
+   far right it sat under the reading tools, which float over the newest turn's bottom-right
+   corner (ADR-143), and a control hidden under a control is worse than a word covered. */
+.work-details .disclosure-header > .disclosure-chevron {
+  order: -1;
+  margin: 0;
+}
+.work-details .disclosure-body {
+  padding-top: 12px;
+}
+.work-list {
+  display: grid;
+  gap: 16px;
+  margin: 0 0 12px;
+  padding: 0;
+  list-style: none;
+}
+.work-step {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.work-step p {
+  margin: 0;
+}
+.work-step-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--soft-ink);
+  font-size: 12px;
+  line-height: 16px;
+}
+.work-step-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 24px;
+}
+.work-step-thread {
+  display: inline-flex;
+  color: var(--soft-ink);
+}
+/* The branch's words, for a screen reader: the glyph alone says nothing to one. */
+.work-step-thread-name {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.work-step-outcome {
+  max-width: 510px; /* the prose's measure */
+  font-size: 15px;
+  line-height: 24px;
+}
+/* How the outcome was reached (pillar 30): a few lines under it, set as the narration one fold
+   down is, a step smaller in the body ink, so the finding stays the loudest line of the row. */
+.work-step-basis {
+  max-width: 510px; /* the prose's measure */
+  margin: 0;
+  padding-left: 22px; /* .work-narration's indent */
+  list-style: disc; /* said, as the narration's: nested in the steps it would be circles */
+  color: var(--soft-ink);
+  font-size: 13px;
+  line-height: 20px;
+}
+.work-step > .card {
+  margin-top: 10px; /* with the row's 2px, the 12px a card keeps from the text above it */
+}
+.work-technical {
+  display: grid;
   gap: 12px;
+}
+.work-technical p,
+.work-narration {
+  margin: 0;
+  font-size: 13px;
+  line-height: 20px;
+}
+.work-technical-title {
+  color: var(--ink);
+  font-weight: 600;
+}
+.work-narration {
+  padding-left: 22px;
+  list-style: disc; /* said, since a host's reset (the app's Tailwind) takes the bullets away */
+  color: var(--soft-ink);
+}
+.work-logs {
+  margin: 0;
+  padding: 14px;
+  overflow: auto;
+  background: var(--paper-deep);
+}
+.work-logs code {
+  color: var(--ink);
+  font:
+    12px/20px ui-monospace,
+    monospace;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* The user's answers to the agent's questions (ADR-039): one quiet paper surface across the
+   column, each question over its answer, consecutive answers together. Not the sage bubble: an
+   answer picks from what was asked, and the question it answered stays beside it. */
+.turn-answered {
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+  background: var(--paper);
+  padding: 12px 16px;
+}
+.turn-answered dl {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+}
+.answered-pair dt {
+  color: var(--soft-ink);
+  font-size: 13px;
+  line-height: 20px;
+}
+.answered-pair dd {
+  margin: 2px 0 0;
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 24px;
+  overflow-wrap: anywhere;
 }
 
 /* A reply's iterator running with nothing to show yet: the working glyph and a quiet line,
@@ -331,6 +713,16 @@
 /* No divider: the compose box floats directly under the conversation. */
 .thread-compose {
   padding: var(--compose-inset) var(--thread-gutter) 16px;
+}
+/* A footnote under the box (who controls the thread, ADR-141) takes half the box's bottom room. */
+.thread-compose[data-footnote] {
+  padding-bottom: 8px;
+}
+.thread-footnote {
+  padding: 6px var(--thread-gutter) 12px; /* 12px: a lane's 14px corner arc clears the words */
+  color: var(--soft-ink);
+  font-size: 12px;
+  line-height: 16px;
 }
 .compose-box {
   border: 1px solid var(--hairline);
@@ -812,8 +1204,9 @@
   }
 }
 
-/* A jumped-to turn glows briefly so the eye finds it (ADR-022). */
-.turn[data-flash] {
+/* A jumped-to turn glows briefly so the eye finds it (ADR-022); an answer glows alone on its
+   surface. */
+:is(.turn, .answered-pair)[data-flash] {
   border-radius: 12px;
   animation: turn-flash 1.2s ease-out;
 }
@@ -830,14 +1223,17 @@
   .recap,
   .recap-chip,
   .awaiting,
-  .turn[data-flash] {
+  :is(.turn, .answered-pair)[data-flash] {
     animation: none;
+  }
+  .bubble-more {
+    transition: none;
   }
 }
 /* Without the glow's fade, a jumped-to turn holds the glow's first frame until it clears, so the
    eye still finds it. */
 @media (prefers-reduced-motion: reduce) {
-  .turn[data-flash] {
+  :is(.turn, .answered-pair)[data-flash] {
     box-shadow: 0 0 0 4px color-mix(in srgb, var(--focus) 25%, transparent);
   }
 }

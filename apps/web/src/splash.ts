@@ -16,7 +16,7 @@ export const SPLASH_LOOKS: readonly SplashLook[] = [
 
 const KEY = "kay.splash";
 const PARAM = "splash";
-const FALLBACK: SplashStyle = "landscape";
+const FALLBACK: SplashStyle = "abstract";
 
 // The choice for this visit, held above any remount, for when storage is refused. Null until the
 // first read decides it.
@@ -59,7 +59,7 @@ function fromAddress(): SplashStyle | null {
   }
 }
 
-// The address first, then the stored choice, then the landscape: a stale or unknown value of
+// The address first, then the stored choice, then the abstract painting: a stale or unknown value of
 // either falls through to the next.
 function decide(): SplashStyle {
   const asked = fromAddress();

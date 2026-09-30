@@ -113,3 +113,21 @@ export function CloseIcon() {
     </svg>
   );
 }
+
+/** A branch leaving a trunk: a child thread, spawned by the agent or spun off by the user. */
+export function ChildThreadIcon() {
+  return (
+    <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">
+      <path d="M4.5 2.5v6a2 2 0 0 0 2 2h6M10 8l2.5 2.5L10 13" {...STROKE} />
+    </svg>
+  );
+}
+
+/** A square, for stopping a reply in flight. */
+export function StopIcon() {
+  return (
+    <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true">
+      <rect x="4" y="4" width="8" height="8" rx="1.5" fill="currentColor" stroke="none" />
+    </svg>
+  );
+}

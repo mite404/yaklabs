@@ -12,6 +12,7 @@ import {
   summarize,
   type CardAttachment,
   type InteractiveSelection,
+  type Stop,
 } from "./interactive";
 import "./interactive.css";
 
@@ -22,6 +23,12 @@ function prefersReducedMotion(): boolean {
   // Runs during render, so it must survive environments without a window (server rendering, tests).
   if (typeof window === "undefined") return false;
   return window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+}
+
+// The stop to show: the host's, by label, when it holds one the card has; else the card's own.
+function shownIndex(stops: Stop[], measure: string | undefined, own: number): number {
+  const held = measure === undefined ? -1 : stops.findIndex((each) => each.label === measure);
+  return held === -1 ? own : held;
 }
 
 // One axis for every stop: rescaling per stop would make net look as tall as gross.
@@ -35,6 +42,8 @@ function sharedMax(selection: InteractiveSelection): number {
  * An interactive catalog card (ADR-029): a stepped slider switches the measure, and the
  * chart and the agent's sentence update instantly without calling the model. Each choice
  * is reported through `onChoose` so it can ride along with the next message (ADR-030).
+ * @param measure The stop to show, by its label, for a host that holds the choice itself (the
+ * thread panel keeps it with what rides along to the agent); omitted, the card keeps its own.
  * @param shareable Show the share button (ADR-064); off on the public page itself.
  * @param leading A host's control before the title, such as a lane's collapse (ADR-134).
  * @param trailing A host's control at the title bar's far end, after the share button, such as
@@ -44,6 +53,7 @@ export function InteractiveCard({
   payload,
   turnId,
   onChoose,
+  measure,
   shareable = true,
   draggable = false,
   leading,
@@ -52,6 +62,7 @@ export function InteractiveCard({
   payload: unknown;
   turnId: string;
   onChoose: (attachment: CardAttachment) => void;
+  measure?: string;
   shareable?: boolean;
   /** Let the header carry the card out, as onto the compose canvas (ADR-089). */
   draggable?: boolean;
@@ -65,7 +76,7 @@ export function InteractiveCard({
           (stop) => stop.id === result.selection.props.control.initial,
         )
       : 0;
-  const [index, setIndex] = useState(initial);
+  const [own, setIndex] = useState(initial);
   // Always starts collapsed: the answer earns trust on its own, the steps are there on demand (ADR-036).
   const [showWork, setShowWork] = useState(false);
   // An invalid payload gets the same honest catalog-limit card as any other rejection.
@@ -74,6 +85,7 @@ export function InteractiveCard({
 
   const { props } = result.selection;
   const stops = props.control.stops;
+  const index = shownIndex(stops, measure, own);
   const stop = stops[index];
   const sentence = fillSentence(props.sentence, summarize(stop, props.period));
   const animate = !prefersReducedMotion();

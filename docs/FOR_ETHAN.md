@@ -156,6 +156,62 @@ docks beside it or slides out from behind its edge. Think of a camera gate: the 
 frame, bolted to the camera, and the panel is film passing behind it. The frame is never in the
 way of the picture, and the picture never slides over the frame (ADR-144).
 
+Then the interview demo moved into the house it was built for. The weekly brief had lived on a page
+of its own, with a cardboard sidebar and a stage machine of its own, while the real shell sat next
+door. Ethan asked for the real thing: `/demo/weekly-brief` now draws the whole app, title bar and
+tabs, rail, projects panel, the bare main thread, over a runtime built in the page from a script,
+and a player that types into the real compose box, answers the real Needs attention card, presses
+the real Stop. To get there the reply seam learned to carry more than words (ADR-147): progress
+narration, blocks of prose, cards, steps of work, a question, a failure, folded into a turn by one
+pure function. Every reply in the app now reads as Quiet prose, a reply that stops short says so
+and offers Try again, an answer shows with the question it answered, a long request folds behind
+Show more, and a jump to your latest request finally lands centred (ADR-148 to ADR-151). Three
+scenarios play in under a minute each at 1x, with a 2x for the impatient.
+
+A review of the demo against the job posting sent it back for a second draft. The strongest
+thing in the codebase, a design system that lets an agent draw only what the catalog will vouch
+for, was invisible in the demo, and every scenario had the user watching the whole time when the
+posting asks about the run they did not watch. So the weekly brief now has a child that asks for
+a pie chart and gets the catalog's limit instead, drawn where the chart would be; Working in the
+background became Came back to it, which opens 25 minutes late on a recap of outcomes, lets the
+user step a card to the view they want and carries that view into their next request, then docks
+the one decision; and the bar under the demo's name says, per scenario, what is shipped and what
+is proposed. To open a thread on a finished run the panel had to learn to read the recap, the
+idle time and the docked question from the turns themselves, which the real app had never given
+it (ADR-153). A `/new` route opens the real shell on nothing but a fresh thread, without a
+fixture in sight; the live model itself has since moved to `/playground` (ADR-155).
+
+Then two recordings of Bonsai itself arrived as the brief for the opposite: hover cards that
+linger and stay live while they fade, and a "Did work · 25s" fold over a wall of "Read file
+/Users/…" rows with raw JSON under each. Our popovers now come and go in half the drawer's slide
+on the drawer's curve, by transitions that turn back mid-fade and take no pointer on the way out.
+And the one disclosure above a reply became what the pillar asks for: mounted as the work
+starts, labelled by state, "Checking open issues" beside the working glyph and then "Checked
+workload, open issues and response times · 3 checks", never a duration or a list of what ran
+(ADR-139, amended). The K in the rail gave way to the bonsai, the lane's collapse moved into the
+gutter so a child's title sits on the compose box's edge, and Search unfolds at the drawer's own
+pace.
+
+Then three front doors became one. Until today the app had three: `/` for the device's own threads,
+`/demo/weekly-brief` for the scripted demo, and `/playground`, a page of its own for the live model.
+Ethan's brief was the head of product's first minute: open the main page, find two active projects,
+and have it "behave like a real in production app". Now `/` lands on a splash that lists exactly two
+projects, Demo and Live Playground, and either row opens a thread at `/t/:id` in the same shell
+(ADR-156). The first design put both projects in an in-memory world built in the page, the way the
+demo already ran. Ethan turned it down while the designs were still on paper: the live thread had to
+be production, persisted and signed in, and a world that forgets everything on reload is not
+production. So the rework pivoted into the worker instead.
+
+Two images carried the split. The Demo is a puppet theatre: it plays on the real stage, but it
+brings its own props, its own clock and its own puppeteer, and when the house lights come up (a
+reload) the show starts again from the top, which is exactly what a show should do. The worker is
+the mail room: every real thread's letters pass through it and get filed. Until today it only
+carried plain letters, words; a card, a step of work or a question was set aside at the door. This
+phase taught the mail room to carry parcels (ADR-147, amended), moved the live model's agent into it
+(ADR-155, amended), and set the puppet theatre on the same stage without ever letting it touch the
+mail (`composeRuntime`). `/new` and the playground page are gone, the old addresses redirect into
+the shell, and a first visit opens on the abstract painting with the canvas out of sight.
+
 ## 2. Cast & Crew
 
 The first entries are ideas from before any code existed; the rest are parts of the running app.
@@ -268,6 +324,49 @@ The first entries are ideas from before any code existed; the rest are parts of 
   it cannot open. The page seals the thread and keeps the key in the link's `#`, which browsers
   never send, so the vault stores a locked box with a destruction date stamped on it (KV's TTL)
   and a hash of the receipt that lets its owner pull it early (ADR-131).
+- **The reply fold** (`packages/catalog/src/reply.ts`) is the editor at the Steenbeck: the
+  stream arrives as words and events, and one function, `applyChunk`, cuts each chunk into the
+  turn's structure: prose blocks, the work record, the narration line, how it ended. The panel
+  never reads a chunk itself; it hands every one to the fold and shows what comes back
+  (ADR-147).
+- **Quiet prose** (`packages/catalog/src/QuietProse.tsx`) is the house typesetter. It takes the
+  fold's blocks and sets them in one treatment, 15px on 24px, emphasis at 600, real italics, a
+  card between paragraphs at the thread's width, the same before and after a reply finishes
+  (ADR-140).
+- **Work details** (`packages/catalog/src/WorkDetails.tsx`) is the production binder clipped
+  under a reply: each step with its state in a word, what it found and the card that backs it,
+  and one disclosure deeper the narration the agent moved past and its technical lines
+  (ADR-139).
+- **The demo runtime** (`apps/web/src/demo/runtime.ts`, with `store.ts`, `edits.ts`,
+  `replies.ts` and `verbs.ts`) is a soundstage built to the plans of the real one: the same
+  `Runtime` doors, an in-memory workspace, a scripted agent for the main thread that spawns,
+  runs and settles child threads as its steps name them, and the lab stand-in for every other
+  thread (ADR-148).
+- **The player** (`apps/web/src/demo/player.ts`) is the actor who plays the user: it types each
+  request into the compose box, answers the docked question, presses Stop and Try again, all
+  through the panel's own handle, and waits on the runtime for each reply to settle. One clock
+  (`clock.ts`) paces it and the agent alike, so Pause holds everything and 2x speeds everything.
+- **The Door's paths** (`apps/web/src/runtime.tsx`) are the call sheet's addresses: the Door now
+  says where a thread lives, where home is and which thread a pathname names, so the same shell
+  runs under `/t/:threadId` and under the demo's route without a single link knowing the
+  difference.
+- **`composeRuntime`** (`apps/web/src/world/compose.ts`) is two booths behind one wall. The shell
+  talks to one `Runtime`, and behind it the worker's booth and the Demo's booth each answer only for
+  the ids they hold. A read comes back as one list, the worker's records first and the Demo's after
+  them; a verb goes through the hatch of whichever booth owns the id it names; the shell's own
+  tabs-and-layout document goes to the worker's booth and nowhere else (ADR-156).
+- **The Stage** (`apps/web/src/world/stage.ts`) is the Demo's one prop store, and it hands out no
+  pens. Anyone who wants to change a thread's turns takes a **Lease**, a stage pass for those
+  threads, and every write goes through the pass. A **World** holds the **Shows**, one per scripted
+  thread (`demo-brief`, `demo-interrupted`, `demo-returned`), and each playthrough of a show is a
+  **Take**. Restart does not chase the writers down: it moves the show's threads on to a new epoch,
+  and every pass issued before stops opening doors. It replaces the demo runtime above, whose
+  `runtime.ts`, `store.ts`, `edits.ts` and `verbs.ts` are deleted.
+- **The live agent** (`packages/runtime/src/playgroundAgent.ts`) is the correspondent who now works
+  inside the mail room. For each reply it reads the thread's filed letters, writes the request from
+  them, posts it to `/api/playground` with the user's WorkOS token, and turns the stream of typed
+  events into the seam's chunks. A streaming Markdown emitter (`markdownEmitter.ts`) sends only
+  words nothing later can take back. Between replies it keeps no notebook at all.
 
 ## 3. Behind the Scenes
 
@@ -482,6 +581,73 @@ The first entries are ideas from before any code existed; the rest are parts of 
 - **A dim ink chosen by calculation.** "Dimmed" is easy to overdo until the title fails
   contrast. `--faint-ink` was computed to sit visibly under soft ink yet still clear 4.5:1 on both
   papers in both themes (ADR-129).
+- **Events on the seam, not a controlled panel.** Two whole shapes were on the table: widen
+  `Agent.respond` to yield events beside words, or turn the panel into a view whose host owns
+  the messages. The seam won: existing agents keep working unchanged (a word stream is a subtype),
+  the demo exercises the path a real backend would take, and the diff stays in the catalog and
+  the demo. The controlled panel is the eventual shape once the runtime persists structured
+  turns, and is recorded as such (ADR-147).
+- **The turn is its own placeholder.** A reply's turn appears the moment it is asked for, so
+  "Thinking…" shows at once even for an agent that goes quiet before speaking, and a reply that
+  ends having shown nothing leaves no turn. One list of turns, no separate list of pending ones.
+- **Stop marks turns cancelled at once.** It does not wait for each stream to notice the abort:
+  a stream waiting on a slow source may not wake for a while, and Stop has to show at once. Chunks
+  that arrive after are ignored, and a browser test proves it.
+- **The runway, not a taller thread.** A jump to a turn near the end could not centre because the
+  scroller had no room below its last turn. The fix adds exactly the missing room as padding and
+  takes it back when the reader scrolls it out of view or a new turn lands, rather than padding
+  every thread with half a screen of nothing (ADR-149).
+- **Work details leads with its chevron.** At the header's far right the chevron sat under the
+  reading tools, which float over the newest turn's bottom-right corner by design (ADR-143). A
+  control hidden under a control is worse than a word covered, so the chevron moved first.
+- **Beats wait on replies, except when they overlap.** A user beat after a reply waits for that
+  reply to settle; one marked to overlap counts from the beat before it. Without the exception,
+  the background scenario's Stop would wait for the very job it is meant to stop (ADR-148).
+- **One binder, under your hand.** The reading tools follow the pointer: clear until it is over
+  the thread's turns, up over a 300ms fade as it leaves the compose box, gone as it leaves the
+  thread. A first cut tied them to focus instead, and the bar sat over the box the whole time the
+  reader typed. The bookmark rests alone on a wash of the paper, Search unfolds to its left, and
+  the bar fills solid only once a tool is open. The panel reports the pointer's zone through a
+  data attribute from its own pointer events, because a story's synthetic hover cannot set CSS
+  `:hover`. Axe caught the side effect of testing two threads side by side: their "Messages"
+  regions were one landmark twice, so the region now carries the thread's name (ADR-143, amended).
+- **One stamp, on the newest answer.** Every turn used to carry a clock time under it; now only
+  the latest settled reply does, and it says how long ago rather than when: "just now", then
+  "20m ago", moving on the panel's minute clock. It is the slate at the end of the take: one
+  mark that dates the whole exchange, so the request above needs none (ADR-152).
+- **One clock for the script and the agent.** The player's keystrokes and the agent's word pauses
+  wait on the same clock, so Pause is one flag and 2x one number, and the two can never drift.
+- **The recap is a view, not a note.** The panel could show a recap, but only Storybook ever
+  handed it one; the app had nothing to hand. Rather than store a summary somebody writes after
+  the fact, the recap is read from the record: each finished step's outcome, each reply that
+  broke off, pointing at its turn. Same for the docked question (kept on the reply that asked it)
+  and the idle time (the last user turn's instant). The rushes are the source; the recap is the
+  edit (ADR-153).
+- **Let the boundary speak.** When a child asks for a pie chart, the scripted agent does not
+  narrate "my chart was refused"; it would not know. The catalog card says so itself, in the
+  reply and again behind Work details, and the child's number stands in its own sentence. The
+  refusal is the system's line, not the agent's, which is the point of the story.
+- **A choice is state the panel holds.** To step a card from a script, the card's slider had to
+  answer to something outside itself. Its shown stop now comes from the panel's outbox, the
+  choice pending for it or what the agent last saw, so a scripted choice moves the slider, a
+  sent choice stays put, and the "Card view" chip and the slider can never disagree (ADR-153).
+- **Say which parts are real.** Each scenario carries one line in the bar: shipped, scripted,
+  proposed. A demo that lets a watcher mistake a prototype for the product is a demo that costs
+  trust on the day it matters.
+- **A label, not a log.** Bonsai's "Did work · 25s" tells you how long the machine ran, which
+  is the one thing a reader cannot use. The disclosure's header now says what the reply is doing
+  or what the work amounted to, with how many checks and how many need attention: the slate,
+  not the timecode. The words come from the reply itself, a summary event on the seam, and the
+  state supplies "Work finished", "Work incomplete" or "Stopped" when it gave none.
+- **Popovers answer the drawer at double speed.** One family of motion: the drawer slides in
+  220ms on its curve, its popovers in 110ms on the same curve. Transitions rather than keyframes,
+  so a menu reopened mid-fade turns back from where it is, and `pointer-events: none` while it
+  leaves, so a ghost never takes the click. The drawer is the establishing shot; the popovers
+  are its cutaways.
+- **Say what was done, nothing fancy.** "Explored 1 skill" over "Read skill bro" is the whole
+  grammar: a verb, its object, a count when there are several. The scripts' narration was tidied
+  to it ("Reading the support records", not "Selecting"), a child's placeholder is plain
+  "Working", and the rule is written down as pillar 32 so the next line is held to it too.
 - **Kimi through OpenRouter, in Anthropic's dialect.** OpenRouter is best known for its
   OpenAI-style API, but it also answers in Anthropic's Messages format. Speaking that one kept
   the browser's stream decoder untouched, so swapping Claude for Kimi K2.6 changed three lines of
@@ -492,6 +658,31 @@ The first entries are ideas from before any code existed; the rest are parts of 
   worker protocol for every thread, with a round limit the client could ignore. In the gateway
   the limits sit next to the key that pays for them, and the page only ever reads typed events
   (ADR-155).
+- **Production for the live thread, a stage for the demo.** The first recommendation was an
+  in-memory world for both projects: it already ran the whole shell and needed no change to the
+  worker. Then Ethan asked for the live playground to behave like production for real users, and an
+  in-memory world throws a real user's conversation away on reload. So the live thread became an
+  ordinary device thread, seeded as the device starter in place of Demo store and profit, and the
+  worker learned structured turns, the exact change ADR-147 had deferred (ADR-156).
+- **Text is always prose.** The gateway used to decide after the fact that a round's first line of
+  text had been narration, and relabel it. Every consumer then had to hold text back until a later
+  event said what it was: a holding gate in each one. Two of the three adapter designs and the
+  cross-judge pointed at the relabelling as the root cause. Fixing it once, in the gateway, deleted
+  the gate instead of building it three times: protocol 2 has no `narration` event, progress travels
+  as `work` labels, the closing line rides on `end`, and the answer streams word by word. The cost
+  is that a model which writes prose before a tool call shows that line as prose, which its prompt
+  already forbids (ADR-155, amended).
+- **The adapter keeps no diary.** The worker creates an agent for each message, so any ledger inside
+  the agent is born and dies with one reply. The thread's stored turns are already the record, so
+  the next request is a pure projection of them: ids from position, a question paired with its
+  answer by position, a later message after an open question, which the gateway reads as a skip. One
+  record means no second copy to drift out of step, and the cross-judge moved the base design to
+  this one for exactly that reason.
+- **The demo stays page-side.** Seeding the shows into the worker would persist the one thing that
+  should not persist. A demo runs on its own clock, Pause and player, and a reload should start it
+  clean. At the time the worker also stored words only, so a reloaded show would have come back as
+  plain text. The overlay keeps the shows in the page and hands the shell one runtime; since every
+  id lives on exactly one side, no record ever has two writers.
 
 ## 4. Bloopers
 
@@ -1297,6 +1488,40 @@ nothing cleared the last one. With reduced motion, where the glow now holds stil
 sat outlined at once and none of them said "you are here". A jump now clears every glow in the
 thread before it lights the new one.
 
+### The maths was right and the room was wrong
+
+Ethan reported that a jump to a previous request did not centre it. The centring function was
+measured first, in the long scenario: a jump to the tenth request landed 2px off centre, a search
+hit likewise. Then a jump to the latest request landed 217px low. Nothing was wrong with the sum;
+the scroller had reached its maximum scroll and had no room below the last turn to scroll into.
+Every fix that touched the centring math would have failed. The fix adds the missing room, exactly
+the shortfall, as padding a jump lays down and takes back (ADR-149). Reproduce before you fix: the
+bug was where the eye said it was, not where the code said it was.
+
+### The server that would not die
+
+The demo's browser check kept reading `<strong>` at weight 700 where the stylesheet said 600, after
+the stylesheet had been rewritten and the dev server "restarted". The served module was the old
+file, comments and all. The restart had killed nothing: the kill pattern matched the shell that ran
+it, which died first, and the fresh server, finding 5173 taken, quietly took 5174. The check ran
+against the survivor for half an hour. Check the listener before trusting the restart: `ps` and the
+port, not the log line that says "started".
+
+### An array method the library did not have
+
+`steps.with(at, step)` is the tidiest way to replace one element, and TypeScript refused it: the
+catalog's `lib` predates it. A map with an index check does the same in one line. The lesson is
+smaller than the fix: run the package's own typecheck before the repo's, because the repo-wide run
+stops at the first package and hides the rest.
+
+### A word stream that no longer typed
+
+Widening the seam to carry events broke the worker in a place no test named: its reply loop
+concatenated every chunk with `+=`, and the lint step, not the typecheck, was what went red in CI.
+The loop now forwards words and passes over events until the protocol can carry them (ADR-147).
+When a type widens, grep for every consumer that assumed the narrow one; the compiler only finds
+the ones that break loudly.
+
 ### The other axe on the stage
 
 Two of three drift runs died at random, each time on a different capture, with "Axe is already
@@ -1312,6 +1537,32 @@ the tool's own axe check is untouched: every cell still reports its axe results.
 two crews shoot the same scene with one camera, decide who rolls; a URL global is the quietest
 call sheet.
 
+### Work details, 0 steps
+
+The last reply of Came back to it does one thing: it holds two invoices and logs a line about it.
+No steps, one technical line. Its Work details header read "0 steps", which is true and useless,
+like a slate that says "Scene: none". The count now describes what is there: "1 technical line"
+when the work is lines alone, and the step count otherwise. A header that counts the wrong thing
+is worse than no header, because it teaches the reader that the number means nothing.
+
+### The menu that vanished in one frame
+
+Switching the menus from keyframes to transitions made the exit measurably nothing: gone at
+0ms after Escape. The ink pill, on the same classes, faded fine. The difference was one
+utility copied from the pill, `data-instant:transition-none`, which for a tooltip means "a
+neighbour's pill was up, open at once" and for a menu means "this was a dismissal": Base UI
+marks Escape and a click outside `data-instant`, so the menu's exit had no transition at all.
+A class borrowed from a sibling carries the sibling's meaning. The measurement caught it in one
+run; the eye had called it "fast".
+
+### A patch that landed eleven lines late
+
+Splitting one working tree into two commits by feeding `git apply` a zero-context patch put a
+whole function inside another function's return statement, eleven lines below where the diff
+said. The pre-commit lint caught it before the commit did. GNU `patch` reversed onto the working
+copy did the split correctly, and the lesson is older than either tool: a diff without context is
+a cut without a slate, and the editor cannot tell you where it went.
+
 ### The pass that expired at the stage door
 
 On the live site the first reply streamed, and every one after it said "I couldn't finish that
@@ -1323,8 +1574,62 @@ refresh token in a cookie on `api.workos.com`, a third-party cookie the browser 
 the short-lived access token ran out there was nothing to renew it with and AuthKit threw
 `LoginRequiredError`. Child threads looked worse only because you open them a few minutes after
 signing in. Fix: `devMode` on everywhere, which keeps the refresh token in `localStorage`
-(ADR-147); a custom auth domain is the grown-up version. Lesson: when a request never shows up
+(ADR-154); a custom auth domain is the grown-up version. Lesson: when a request never shows up
 in the server log, stop looking at the server and read what the client does before it sends.
+
+### Three crews shooting from last week's script
+
+U1, U2 and U3 touch disjoint packages, so they went out to delegates in parallel worktrees. The
+first report back said its work sat "on top of 13ed91c". That is `main`'s head, the `/playground`
+merge (#38), not this branch's: the harness cuts a delegate's worktree from `origin/main`, not from
+the branch the session is on, and this branch was a long way ahead of `main`. U1 and U3 edit files
+the branch had changed heavily, so their diffs would have been written against code that no longer
+existed here. Both were told to rebase onto the branch and read those files again before finishing.
+U4 later merged the branch in instead (`dba1a49`), since the permission check refuses `git rebase`
+as destructive, and a merge carries the same content without rewriting history. Lesson: read the
+base commit in a report before you read its diff. A crew that shot from last week's script can
+deliver perfect footage of the wrong scene.
+
+### The same kill, twice
+
+A dev server restart ran `pkill -f vite`, and the shell running it died on the spot. `-f` matches a
+pattern against every process's full command line, and the shell's own command line contained the
+word `vite`, because the command was in it. So `pkill` matched the shell that ran it too. This log
+already has the story ("The server that would not die"); knowing it did not stop it happening again.
+The restart that worked matched `[v]ite` instead: the bracket makes a pattern that matches the
+word in every other command line and not in its own, since its own line holds the brackets.
+Lesson: a lesson written in prose is a note on the call sheet; a lesson written into a script is
+a lock on the door.
+
+### The painting picker on the front door
+
+After U5, a fresh visit showed the debug switch that picks the splash painting (ADR-136), on the
+product's first screen. Nothing about the switch changed. The welcome draws it only in the Thread
+layout, never beside the canvas, and the old first run opened Demo store's profit thread beside its
+canvas, where the switch stays hidden. The new `firstRun` opens the empty Live Playground thread on
+the thread pane, which is exactly where the switch was always drawn. Moving the front door moved a
+developer's tool into the lobby. The fix keeps the tool and moves the lobby: the picker renders
+in development builds only (`import.meta.env.DEV`), so Ethan keeps it on his machine and the
+deployed first screen carries no debug control. The `?splash=` address still picks a painting for
+a screenshot run.
+
+### The bar that had not left yet
+
+The first run of the shell check failed its Live Playground step: it asserted that the Demo's Play
+bar was gone the instant the URL changed to `/t/playground`. The bar leaves within 500ms, so the
+check was reading a frame too early. The product was right and the check was wrong. It now waits for
+the toolbar to detach, up to five seconds, and the rerun passed 8 of 8. Lesson: a check on a moving
+picture has to wait for the cut, not the clapper.
+
+### Stale film in the loader
+
+The same run counted console errors that were not the product's. U4 dropped the Anthropic SDK and
+Hono from the runtime, which changed the lockfile, and a dev server restarted over that lockfile
+still held pre-bundled dependencies built for the old one. Vite answers a request for one of those
+with a 504 "Outdated Optimize Dep", and the browser logs it as an error. One warm-up load let Vite
+rebuild them, and the rerun was clean. `web-check.mjs` already guards for it; its comment says the
+first load has to be clean, not the second. Lesson: after a lockfile change, give the dev server one
+throwaway take before you judge the footage.
 
 ## 5. Director's Commentary
 
@@ -2856,6 +3161,85 @@ Senior-engineer takeaway: a tool that points at things should not also move them
 data, take back an intent, and let the owner of the scroll, the focus or the network carry it
 out.
 
+### One fold builds the turn: the transcript is a view over events
+
+The panel used to append text to a bubble. Now a reply is a stream of chunks, words and events
+alike, and one pure function turns them into the turn the reader sees. The panel does not know
+what a "step" or a "failure" is; it knows how to hand a chunk to the fold and draw the result.
+
+```ts
+// packages/catalog/src/reply.ts: the whole reply, one chunk at a time
+let turn = startReply("reply-1", "now");                       // → { text: "", streaming: true }
+turn = applyChunk(turn, { kind: "activity", text: "Thinking." }); // → activity set
+turn = applyChunk(turn, { kind: "step", step: running });         // → work.steps: [running]
+turn = applyChunk(turn, { kind: "text", text: "46", mark: "strong" }); // → blocks: [paragraph]
+turn = applyChunk(turn, { kind: "failure", failure });            // → ended: "interrupted"
+```
+
+```mermaid
+sequenceDiagram
+  participant A as Agent.respond()
+  participant P as ChatThreadPanel
+  participant F as applyChunk (pure)
+  participant D as Dock
+  A->>P: "Thinking." (activity)
+  P->>F: fold
+  F-->>P: turn with activity
+  A->>P: step, words, card
+  P->>F: fold each
+  F-->>P: turn with blocks and work
+  A->>P: question
+  P->>D: dock Needs attention
+  A-->>P: stream ends
+  P->>F: completeReply
+```
+
+Why it matters: the same fold serves the lab stand-in, the scripted demo and, later, a gateway
+that streams structured chunks. Testing the reading experience is testing a function with an
+array in and a turn out; no browser needed until the pixels are the question.
+
+The film version: rushes arrive out of the camera as a stream; the editor's cut is what the
+audience sees. Nobody shows rushes. The fold is the editor.
+
+Senior-engineer takeaway: when a stream grows a second kind of item, do not add a second
+consumer. Widen the type, keep one fold, and let the compiler's `never` check tell you where a new
+kind of chunk has no cut yet.
+
+### Lay runway, then land
+
+Centring a turn is one line of arithmetic. Landing it is a question of room: the scroller can only
+scroll as far as its content lets it. When the target is near the end, the right answer lies past
+the last pixel, and the browser clamps.
+
+```ts
+// packages/catalog/src/threadReveal.ts: the room a jump needs, in px; 0 when the reach is enough
+export function runwayFor(target: Span, view: Viewport): number {
+  const band = view.height - view.insetTop - view.insetBottom;
+  const centered = target.top - view.insetTop - (band - (target.bottom - target.top)) / 2;
+  return Math.max(Math.ceil(centered - view.maxScrollTop), 0); // → the shortfall past the end
+}
+```
+
+```mermaid
+flowchart LR
+  J[jump to turn] --> R{runwayFor > 0?}
+  R -- no --> C[centre and glow]
+  R -- yes --> L["set --jump-runway (padding)"] --> C
+  C --> W[wait out the jump's own scroll]
+  W --> E{reader scrolls with the end in view, or a turn lands}
+  E -- yes --> X[release the runway: nothing moves]
+```
+
+The runway is padding, so it costs nothing to lay and nothing to remove when removing it moves
+nothing. The reader never sees it as a thing; they see the turn where they expected it.
+
+The film version: a dolly move that ends at the edge of the set needs track laid past the edge.
+You lay it, take the shot, and strike it before the next setup.
+
+Senior-engineer takeaway: when a correct calculation lands wrong, look for the constraint that
+clamped it before you touch the calculation. Then relax the constraint for exactly as long as the
+move needs.
+
 ### The label says what's in the case; the truck says who it's for
 
 Two tools checked components under nearly the same name: the `verify-storybook` skill and the
@@ -2971,3 +3355,99 @@ Senior-engineer takeaway: when a model has to produce UI, make its vocabulary a 
 calls validated at one boundary, not text you parse later. The live runs proved why: whatever
 the prompt left vague (when to use `report_failure`, what prose is for), the model filled with
 its own guesses, and only the prompt and the validator stood between those guesses and the page.
+
+### One Runtime, two sides: route by who owns the id
+
+The shell has always talked to one `Runtime`: open a thread, rename it, mark it, hand me its agent.
+The Demo and the worker are two runtimes. The tempting fix is to teach the shell which is which, and
+every component would grow an `if`. Instead `composeRuntime` builds a third `Runtime` that asks one
+question before every verb: whose id is this?
+
+```ts
+// apps/web/src/world/compose.ts: the side that answers for an id, asked before every verb
+const sideOf = (id: string | null): Runtime =>
+  id !== null && overlay.owns(id) ? overlay : worker; // → the Demo for its ids, else the worker
+
+// ...and in the Runtime it returns, each verb asks first:
+open: (id) => sideOf(id).open(id), // → ThreadMessage[] from the side that holds the thread
+create: (item) => sideOf(ownerOf(item)).create(item), // → a new main joins its project's side
+saveShell: (shell) => worker.saveShell(shell), // → the tabs and layout: the worker's alone
+agent: (id, session) => sideOf(id).agent(id, session), // → a show's script, or the worker's agent
+```
+
+```mermaid
+flowchart LR
+  V["Shell calls a verb<br/>open, mark, delete, agent"] --> Q{"overlay.owns(id)?"}
+  Q -- "yes: demo-brief, demo-new-t1" --> O["Overlay<br/>the Demo's Stage, in the page"]
+  Q -- "no: playground, a device thread,<br/>a new project (no id)" --> W["Worker<br/>device store"]
+  D["saveShell (tabs and layout)"] --> W
+  O --> M["state(): worker's records,<br/>then the overlay's"]
+  W --> M
+  M --> V
+```
+
+Reads merge by concatenation, the worker's projects and threads first and the Demo's after them, so
+the sidebar lists Live Playground and Demo without knowing there are two sources. Writes never
+merge: each id lives on one side, and the Demo mints every id it makes with a `demo` prefix
+(`apps/web/src/world/ids.ts`), so it can never claim one the worker made. The one record both sides
+could want, the shell document, is written through the worker alone. No record has two writers, so
+no record needs a rule for who wins.
+
+The film version: two booths behind one wall, the dubbing stage and the foley stage. The director
+talks to one window. Whoever holds the reel answers, and the mix the director hears is both booths
+on one track. Nobody walks into the other booth's room.
+
+Senior-engineer takeaway: when two systems must look like one, compose them behind the interface the
+caller already uses, and route by ownership, not by a flag the caller has to carry. The `never`
+check in `ownerOf` means a new kind of item fails the build until somebody decides which side owns
+it.
+
+### A lease is a promise a reset can revoke
+
+Restart on a Demo show has a race built into it. The scripted reply is still streaming words when
+the presenter presses Restart. The reset puts the opening back, and then the reply's next word
+arrives and writes itself into the fresh take. Cancelling every timer in flight is one answer, and
+it is a hunt: miss one and the ghost writes. The Stage takes the other answer. It hands out no
+writer at all, only leases, and a lease remembers the epoch of each thread it covers.
+
+```ts
+// apps/web/src/world/stage.ts: a lease notes each thread's epoch as it joins
+const seen = new Map(taken.map((id) => [id, epochOf(held, id)] as const)); // → id → epoch
+const revoked = () =>
+  held.state.kind !== "ready" || [...seen].some(([id, epoch]) => epochOf(held, id) !== epoch);
+
+// ...and a reset moves the epoch on, in the same commit that puts the slice back
+held.epochs.set(id, epochOf(held, id) + 1); // → every lease on it is revoked from here on
+```
+
+```mermaid
+sequenceDiagram
+  participant R as Scripted reply (holds a Lease)
+  participant S as Stage
+  participant U as Presenter
+  participant P as Thread pane
+  R->>S: lease(["demo-brief"]), epoch 0 noted
+  R->>S: keep("demo-brief", the reply so far)
+  S-->>P: new turns shown
+  U->>S: Restart, reset(slice)
+  S->>S: epoch 0 to 1, turns dropped, opening put back (one commit)
+  S-->>P: turn count dropped
+  P->>S: reread, the opening turns
+  R->>S: hold("demo-brief", a late word)
+  S->>S: revoked() is true (1 is not 0), nothing written
+```
+
+Nobody has to find the late writer. The epoch moves in the same commit as the reset, so there is no
+moment when the new take is on screen and an old lease still works. The reset is also idempotent:
+two Restarts with the same slice leave the same workspace. And it scopes to one show, its main and
+the children it spawned, so the Live Playground thread next door never notices. The pane's side is
+one generic rule in `apps/web/src/components/pane-turns.ts`: a thread's turns only grow, so a turn
+count that drops means someone rewrote them, and the pane reads them again.
+
+The film version: a day pass stamped with the shoot date. When the director calls "from the top",
+the date on the board at the stage door changes. Yesterday's passes still exist in people's pockets,
+but the door checks the date, so nobody from the old take walks onto the new set.
+
+Senior-engineer takeaway: when work in flight can outlive the state it was started for, do not chase
+the work to cancel it. Give it a token that names the state, and make the reset invalidate every
+token in the same step. The stale write then fails by itself, however late it arrives.

@@ -1,8 +1,9 @@
 import type { Agent } from "@yaklabs/catalog/agent";
 import { createLabAgent } from "@yaklabs/catalog/labAgent";
+import { applyChunk, isEmptyReply, startReply } from "@yaklabs/catalog/reply";
 import { z } from "zod";
-import { withAgentReply, withUserTurn, type Stamp } from "./conversation";
-import { createGatewayAgent } from "./gatewayAgent";
+import { settleReply, withAgentTurn, withUserTurn, type Stamp } from "./conversation";
+import { createPlaygroundAgent } from "./playgroundAgent";
 import {
   commandSchema,
   type AgentSpec,
@@ -33,7 +34,7 @@ export type LoopHost = {
   post: (notice: Notice) => void;
   /** Opens what `init` asked for; the device should fall back rather than fail. */
   open: (data: RuntimeData) => Promise<Opened>;
-  /** Builds the agent for one message; defaults to the lab stand-in or the gateway agent. */
+  /** Builds the agent for one message; defaults to the lab stand-in or the live model. */
   createAgent?: (spec: AgentSpec, context: AgentContext) => Agent;
   /** How the settling timer waits (`Schedule`); defaults to `setTimeout`. */
   schedule?: Schedule;
@@ -59,7 +60,7 @@ const requestIdSchema = z.object({ requestId: z.string().min(1) });
 function defaultAgent(spec: AgentSpec, context: AgentContext): Agent {
   return spec.kind === "lab"
     ? createLabAgent()
-    : createGatewayAgent({ baseUrl: spec.baseUrl, ...context });
+    : createPlaygroundAgent({ baseUrl: spec.baseUrl, ...context });
 }
 
 function reasonOf(error: unknown): string {
@@ -122,8 +123,10 @@ async function open(loop: Loop, { requestId, threadId }: CommandOf<"open">): Pro
   loop.host.post({ kind: "opened", requestId, messages: transcript.messages });
 }
 
-// The user's turn is saved before the agent runs, so it survives a failed reply; the reply is
-// saved once it ends, or when it is stopped, with what streamed so far.
+// The user's turn is saved before the agent runs, so it survives a failed reply. Each chunk the
+// agent yields is folded into the agent's turn and forwarded as it came (ADR-147); a failure
+// ends the turn, and nothing after it belongs there. The turn is saved settled once the stream
+// ends or is stopped, unless it showed nothing; a stream that throws saves none.
 async function reply(
   loop: Loop,
   session: Session,
@@ -132,20 +135,22 @@ async function reply(
 ): Promise<void> {
   const { requestId, threadId, event, accessToken } = command;
   const { store, mint, agent: spec } = session;
-  store.changeTranscript(threadId, (transcript) => withUserTurn(transcript, event, stampOf(mint)));
+  const asked = stampOf(mint);
+  store.changeTranscript(threadId, (transcript) => withUserTurn(transcript, event, asked));
   pushState(loop, session);
   const agent = loop.host.createAgent(spec, { store, threadId, accessToken });
-  let text = "";
-  for await (const piece of agent.respond(event, signal)) {
+  let turn = startReply(requestId, asked.time); // → AgentMessage; its id is minted as it is saved
+  for await (const chunk of agent.respond(event, signal)) {
     if (signal.aborted) break;
-    text += piece;
-    loop.host.post({ kind: "chunk", requestId, text: piece });
+    turn = applyChunk(turn, chunk);
+    loop.host.post({ kind: "chunk", requestId, chunk });
+    if (typeof chunk !== "string" && chunk.kind === "failure") break;
   }
-  if (text.trim() !== "") {
-    store.changeTranscript(threadId, (transcript) =>
-      withAgentReply(transcript, text, stampOf(mint)),
-    );
-  }
+  if (isEmptyReply(turn)) return;
+  const done = settleReply(turn, signal.aborted);
+  store.changeTranscript(threadId, (transcript) =>
+    withAgentTurn(transcript, done, stampOf(mint).at),
+  );
 }
 
 async function send(loop: Loop, command: CommandOf<"send">): Promise<void> {
