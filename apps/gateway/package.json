@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.128.0",
+    "@yaklabs/catalog": "workspace:*",
     "hono": "^4.13.9",
     "jose": "^6.2.12",
     "zod": "catalog:"

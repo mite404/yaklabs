@@ -487,6 +487,11 @@ The first entries are ideas from before any code existed; the rest are parts of 
   the browser's stream decoder untouched, so swapping Claude for Kimi K2.6 changed three lines of
   gateway config, not both ends of the pipe. The key's $25 credit limit doubles as the spending
   cap (ADR-146).
+- **The playground's loop lives in the gateway, not the browser.** Running Kimi's tool rounds in
+  the browser would have meant widening the thread's agent seam, its stored messages and the
+  worker protocol for every thread, with a round limit the client could ignore. In the gateway
+  the limits sit next to the key that pays for them, and the page only ever reads typed events
+  (ADR-155).
 
 ## 4. Bloopers
 
@@ -2924,3 +2929,45 @@ different maker's glass fit without touching the rig.
 Senior-engineer takeaway: keep the choice of vendor behind one small door, and make sure the
 contract on the far side of it is one you already speak. The unit test that pins the upstream
 URL, the Bearer header and a body with no stray fields is what lets a swap like this be boring.
+
+### The prop list is the contract: tools as the agent's vocabulary
+
+Telling a model "you can show cards" only matters if something turns what it says into a card.
+In the playground each visible thing the agent can do is a tool, and each tool call becomes one
+typed event the page knows how to draw.
+
+```ts
+// apps/gateway/src/playgroundTools.ts: one registry, one validator per tool
+const HANDLERS: ReadonlyMap<string, Handler> = new Map([
+  ["update_work", updateWork], // → { type: "work" }: the status line and Work details
+  ["show_card", showCard], // → resolve(card) → { type: "card" }, or an error back to the model
+  ["ask_question", askQuestion], // → resolveAwaiting → { type: "question" }, then the turn ends
+  ["report_outcome", reportOutcome], // → { type: "outcome" }: settles one work item
+  ["report_failure", reportFailure], // → { type: "failure" }: stays visible with its recovery
+]);
+```
+
+```mermaid
+sequenceDiagram
+  participant P as /playground page
+  participant G as Gateway loop
+  participant K as Kimi (OpenRouter)
+  P->>G: POST /api/playground (history)
+  G->>K: round 1 (prompt + tools)
+  K-->>G: tool_use show_card
+  G->>G: resolve(card)
+  G-->>P: {"type":"card",...}
+  G->>K: round 2 (tool_result "shown")
+  K-->>G: answer text, end_turn
+  G-->>P: {"type":"text",...} then {"type":"end"}
+  P->>P: reducePlayground folds each line
+```
+
+The film version: the prop department checks every prop at the stage door. The actor (Kimi) asks
+for a chart by name, the props master (the gateway) checks it against the catalog before it goes
+on set, and a prop that fails the check goes back with a note instead of reaching the audience.
+
+Senior-engineer takeaway: when a model has to produce UI, make its vocabulary a set of typed
+calls validated at one boundary, not text you parse later. The live runs proved why: whatever
+the prompt left vague (when to use `report_failure`, what prose is for), the model filled with
+its own guesses, and only the prompt and the validator stood between those guesses and the page.

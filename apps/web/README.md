@@ -12,6 +12,7 @@ The agent loop and the conversation store run in a Web Worker from `@yaklabs/run
 | `/`            | The last thread shown, else the latest main, else "Nothing open"     | required |
 | `/t/:threadId` | That thread's tab: a main beside its canvas, or a child's lane in it | required |
 | `/lab`         | The evaluation workbench: fixtures through the same validation       | required |
+| `/playground` | A live model showing its work as typed events (ADR-155)              | required |
 | `/share.html`  | One shared card from the link's fragment (ADR-064)                   | public   |
 | `/callback`    | Where WorkOS sends visitors back; the provider finishes sign-in      | public   |
 

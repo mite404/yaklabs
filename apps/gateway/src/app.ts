@@ -4,7 +4,9 @@ import type { Context } from "hono";
 import { createMiddleware } from "hono/factory";
 import { validator } from "hono/validator";
 import type { TokenVerifier } from "./auth";
+import { playgroundRequestSchema } from "@yaklabs/catalog/playground";
 import { gatewayRequestSchema, type GatewayRequest } from "./contract";
+import { openPlayground } from "./playground";
 import { createShare, readShare, revokeShare, type ShareAnswer, type ShareDeps } from "./shares";
 
 // What the gateway needs from outside: the Worker passes the real ones, tests pass fakes.
@@ -58,6 +60,34 @@ const openReply = async (
   return body;
 };
 
+// An upstream refusal as a 502 carrying the status alone: the upstream's body could echo the
+// request, and the key stays here. A network failure has no status. Anything else is a bug and
+// is thrown on.
+function upstreamFailure(c: Context, error: unknown): Response {
+  if (!(error instanceof APIError)) throw error;
+  const status = typeof error.status === "number" ? error.status : null; // → number | null
+  return c.json({ error: "upstream", status }, 502);
+}
+
+// The reply `open` starts, streamed as NDJSON, or the upstream's refusal as a 502.
+async function ndjsonReply(c: Context, open: () => Promise<ReadableStream>): Promise<Response> {
+  try {
+    return c.body(await open(), 200, { "Content-Type": NDJSON });
+  } catch (error) {
+    return upstreamFailure(c, error);
+  }
+}
+
+// Request bodies, checked before the model sees them; anything else is a 400.
+const messagesBody = validator("json", (value, c) => {
+  const parsed = gatewayRequestSchema.safeParse(value); // → { success, data | error }
+  return parsed.success ? parsed.data : c.json({ error: "invalid request" }, 400);
+});
+const playgroundBody = validator("json", (value, c) => {
+  const parsed = playgroundRequestSchema.safeParse(value); // → { success, data | error }
+  return parsed.success ? parsed.data : c.json({ error: "invalid request" }, 400);
+});
+
 // A share route's answer as a response. The sealed bytes are never cached anywhere, so a share
 // taken down or ended is gone from every copy at once (ADR-131).
 function shareResponse(c: Context, answer: ShareAnswer): Response {
@@ -102,25 +132,20 @@ export const createApp = ({ verifyToken, upstream, shares }: Dependencies) => {
           await revokeShare(shares, c.req.param("id"), c.req.header("X-Revoke-Token")),
         ),
       )
-      .post(
-        "/api/messages",
-        requireSession,
-        validator("json", (value, c) => {
-          const parsed = gatewayRequestSchema.safeParse(value); // → { success, data | error }
-          return parsed.success ? parsed.data : c.json({ error: "invalid request" }, 400);
-        }),
-        async (c) => {
-          try {
-            const body = await openReply(upstream, c.req.valid("json")); // → NDJSON stream
-            return c.body(body, 200, { "Content-Type": NDJSON });
-          } catch (error) {
-            if (!(error instanceof APIError)) throw error;
-            // The status alone: the upstream's body could echo the request, and the key stays
-            // here. A network failure has no status.
-            const status = typeof error.status === "number" ? error.status : null; // → number|null
-            return c.json({ error: "upstream", status }, 502);
-          }
-        },
+      .post("/api/messages", requireSession, messagesBody, (c) =>
+        ndjsonReply(c, () => openReply(upstream, c.req.valid("json"))),
+      )
+      // The playground (ADR-155): the gateway owns the prompt, the tools and the tool loop, and
+      // streams typed events. Signed in only, since every round costs money. A closed browser
+      // aborts the request's signal, which stops the rounds' token spend.
+      .post("/api/playground", requireSession, playgroundBody, (c) =>
+        ndjsonReply(c, () =>
+          openPlayground(
+            { client: upstream, model: MODEL, maxTokens: MAX_TOKENS },
+            c.req.valid("json"),
+            c.req.raw.signal,
+          ),
+        ),
       )
   );
 };

@@ -2030,3 +2030,23 @@ WorkOS documents dev mode as the setting to use without a custom authentication 
 cost is that a script injected into the page could read the refresh token; the proper
 production setup is a custom auth domain (`apiHostname`), a paid WorkOS feature that needs a
 domain we own, which this demo does not have.
+
+## ADR-155 - /playground streams live events from a gateway-owned tool loop
+
+2026-09-30 - Accepted (Ethan: "go ahead and build it"). Reopens ADR-137's live-model cut for this
+one route only; the thread, its store and `/api/messages` are unchanged.
+`/playground` is a standalone page where Kimi (ADR-146) shows its work through the event-to-UI
+mapping: answer text, catalog cards updated by id, tool activity with Work details, a question
+to answer or skip, outcomes with evidence, and failures with a recovery prompt. The model emits
+all but text as tool calls (`update_work`, `show_card`, `ask_question`, `report_outcome`,
+`report_failure`), defined once in `@yaklabs/catalog/playground` from the catalog's own schemas.
+`POST /api/playground` owns the prompt, the tools and the multi-round loop: it checks every call
+with `resolve` and `resolveAwaiting`, sends a bad one back to the model as an error so the user
+never sees it (ADR-040), and streams one NDJSON line per typed event. The page parses each line
+with the same union and folds it with a pure reducer; nothing is saved.
+The rejected shape ran the loop in the browser inside the existing thread: it widened the
+`Agent` seam, `ThreadMessage` and the worker protocol for every thread, and its round limit
+lived in the client. Here the limits sit where the key and the cost are: 8 rounds, 16 tool calls
+and 6 cards per turn. Live runs shaped the prompt: Kimi explained limits in prose until
+`report_failure` was made mandatory, and a turn told to end with no text made OpenRouter insert
+its own placeholder, so a failure turn closes with one short sentence.
