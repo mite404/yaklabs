@@ -15,19 +15,39 @@ import {
   useSyncExternalStore,
   type ReactNode,
 } from "react";
-import { useLocation } from "react-router";
+import { matchPath, useLocation } from "react-router";
 import { toast } from "sonner";
 import { env } from "./env";
 import { keepScenario, legacyFrom, unknownScenario, wantedFrom, type Wanted } from "./source";
 
-// The runtime the page started, what the address asked it to open, and how to start it again.
-type Door = { runtime: Runtime | null; wanted: Wanted; restart: (() => void) | null };
+/**
+ * The page's addresses: a thread's, home's and the Lab's, and the thread a pathname names. The
+ * Door owns them, so the same shell runs under `/t/:threadId` or under a demo's own route.
+ */
+export type Paths = {
+  pathTo: (id: ThreadId) => string;
+  hrefTo: (path: "/" | "/lab") => string;
+  /** The thread id a pathname names, or undefined. */
+  threadIdOf: (pathname: string) => string | undefined;
+};
+
+// The runtime the page started, the state it shows before that runtime answers, how to start
+// it again, and the page's addresses.
+type Door = {
+  runtime: Runtime | null;
+  before: RuntimeState;
+  restart: (() => void) | null;
+  paths: Paths;
+};
 // What a runtime can open: the device, or a scenario that exists.
 type Openable = Exclude<Wanted, { kind: "unknown" }>;
 
 // The v1 canvas's two keys (ADR-089), which the worker's 1 → 2 migration reads once.
 const LEGACY_HIDDEN = "kay.canvas.hidden";
 const LEGACY_ORDER = "kay.canvas.order";
+
+// What a provided runtime shows before its host has it: starting, from nowhere yet.
+const STARTING: RuntimeState = { kind: "starting", source: null };
 
 const DoorContext = createContext<Door | null>(null);
 
@@ -95,6 +115,16 @@ function stateBefore(wanted: Wanted): RuntimeState {
   }
 }
 
+// The device's or a scenario's addresses, each keeping `?scenario=`, so a mock visit never
+// drifts onto the device's data.
+function scenarioPaths(wanted: Wanted): Paths {
+  return {
+    pathTo: (id) => keepScenario(`/t/${encodeURIComponent(id)}`, wanted),
+    hrefTo: (path) => keepScenario(path, wanted),
+    threadIdOf: (pathname) => matchPath("/t/:threadId", pathname)?.params.threadId,
+  };
+}
+
 // The data an address asks for as one string, so two addresses that differ only in another
 // query parameter compare equal.
 function dataOf(wanted: Wanted): string {
@@ -113,7 +143,8 @@ function useWanted(): Wanted {
 
 function useDoor(): Door {
   const door = useContext(DoorContext);
-  if (door === null) throw new Error("The runtime hooks need <RuntimeProvider> above them");
+  if (door === null)
+    throw new Error("The runtime hooks need <RuntimeProvider> or <ProvidedRuntime> above them");
   return door;
 }
 
@@ -122,10 +153,14 @@ function useDoor(): Door {
 function RuntimeHost({
   wanted,
   restart,
+  before,
+  paths,
   children,
 }: {
   wanted: Openable;
   restart: () => void;
+  before: RuntimeState;
+  paths: Paths;
   children: ReactNode;
 }) {
   const [runtime, setRuntime] = useState<Runtime | null>(null);
@@ -145,7 +180,10 @@ function RuntimeHost({
     };
   }, [wanted]);
 
-  const door = useMemo<Door>(() => ({ runtime, wanted, restart }), [runtime, wanted, restart]);
+  const door = useMemo<Door>(
+    () => ({ runtime, before, restart, paths }),
+    [runtime, before, restart, paths],
+  );
   return <DoorContext value={door}>{children}</DoorContext>;
 }
 
@@ -160,20 +198,44 @@ export function RuntimeProvider({ children }: { children: ReactNode }) {
   const restart = useCallback(() => {
     setAttempt((n) => n + 1);
   }, []);
+  const before = useMemo(() => stateBefore(wanted), [wanted]);
+  const paths = useMemo(() => scenarioPaths(wanted), [wanted]);
   // An unknown scenario opens nothing, and trying again cannot change that.
-  const refused = useMemo<Door>(() => ({ runtime: null, wanted, restart: null }), [wanted]);
+  const refused = useMemo<Door>(
+    () => ({ runtime: null, before, restart: null, paths }),
+    [before, paths],
+  );
   if (wanted.kind === "unknown") return <DoorContext value={refused}>{children}</DoorContext>;
   return (
-    <RuntimeHost key={attempt} wanted={wanted} restart={restart}>
+    <RuntimeHost key={attempt} wanted={wanted} restart={restart} before={before} paths={paths}>
       {children}
     </RuntimeHost>
   );
 }
 
+/**
+ * Puts a runtime its host already runs in the Door, at the host's own addresses: a scripted
+ * demo's, say. Nothing here starts or restarts it; null reads as starting until the host has it.
+ */
+export function ProvidedRuntime({
+  runtime,
+  paths,
+  children,
+}: {
+  runtime: Runtime | null;
+  paths: Paths;
+  children: ReactNode;
+}) {
+  const door = useMemo<Door>(
+    () => ({ runtime, before: STARTING, restart: null, paths }),
+    [runtime, paths],
+  );
+  return <DoorContext value={door}>{children}</DoorContext>;
+}
+
 /** The runtime's state, re-rendering on every change: starting until the worker has started. */
 export function useRuntimeState(): RuntimeState {
-  const { runtime, wanted } = useDoor();
-  const before = useMemo(() => stateBefore(wanted), [wanted]);
+  const { runtime, before } = useDoor();
   const subscribe = useCallback(
     (listener: () => void) => runtime?.subscribe(listener) ?? (() => {}),
     [runtime],
@@ -205,20 +267,7 @@ export function useRestart(): (() => void) | null {
   return useDoor().restart;
 }
 
-/**
- * The page's addresses, each keeping `?scenario=`, so a mock visit never drifts onto the
- * device's data: `pathTo` a thread, `hrefTo` home or the lab.
- */
-export function usePaths(): {
-  pathTo: (id: ThreadId) => string;
-  hrefTo: (path: "/" | "/lab") => string;
-} {
-  const { wanted } = useDoor();
-  return useMemo(
-    () => ({
-      pathTo: (id) => keepScenario(`/t/${encodeURIComponent(id)}`, wanted),
-      hrefTo: (path) => keepScenario(path, wanted),
-    }),
-    [wanted],
-  );
+/** The page's addresses, as the Door's host set them: a thread's, home's and the Lab's. */
+export function usePaths(): Paths {
+  return useDoor().paths;
 }
