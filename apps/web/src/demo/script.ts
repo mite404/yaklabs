@@ -113,7 +113,7 @@ export const activity = (after: number, text: string): Timed =>
 export const log = (after: number, text: string): Timed => at(after, { kind: "log", text });
 
 /** What the work amounted to, for the disclosure's label once the reply settles. */
-export const summary = (after: number, text: string): Timed => at(after, { kind: "summary", text });
+export const sumUp = (after: number, text: string): Timed => at(after, { kind: "summary", text });
 
 /** How long a reply's events take at 1x, for a check that a scenario fits the walkthrough. */
 export function durationOf(events: Timed[]): number {

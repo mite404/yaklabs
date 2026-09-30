@@ -1,6 +1,6 @@
 import { list, paragraph, plainText, strong, text, type Block } from "@yaklabs/catalog/prose";
 import type { ThreadMessage } from "@yaklabs/catalog/thread";
-import { activity, at, log, stream, summary, type Script } from "../script";
+import { activity, at, log, stream, sumUp, type Script } from "../script";
 import { done, holdQuestion, invoicesCard, sitesChart } from "./fixtures";
 
 // Scenario 3: a run the user did not watch. The thread opens on its record, 25 minutes after
@@ -125,7 +125,7 @@ export const returned: Script = {
       events: [
         activity(500, "Marking both for review."),
         log(300, "hold:south S-1187 S-1203 status=review"),
-        summary(0, "Held both invoices for review"),
+        sumUp(0, "Held both invoices for review"),
         ...stream(
           [
             paragraph([

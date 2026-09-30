@@ -1,5 +1,5 @@
 import { em, list, paragraph, strong, text } from "@yaklabs/catalog/prose";
-import { activity, at, log, stream, type Script, summary } from "../script";
+import { activity, at, log, stream, type Script, sumUp } from "../script";
 import { done, running, step } from "./fixtures";
 
 // Scenario 2: a reply that breaks off halfway, kept as interrupted, and a retry that reads as a
@@ -70,7 +70,7 @@ export const interrupted: Script = {
         step(400, running("orders", "Order lookups")),
         step(2200, done("orders", "Order lookups", "All 41 lookups answered on the second try.")),
         log(100, "lookup:orders 41/41 answered"),
-        summary(0, "Looked up every order on the second try"),
+        sumUp(0, "Looked up every order on the second try"),
         activity(400, "Writing the result."),
         ...stream(
           [
