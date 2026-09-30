@@ -226,6 +226,9 @@ describe("workLabel", () => {
       live: true,
     });
     expect(workLabel({ ...streaming, activity: undefined }).label).toBe("Working");
+    expect(workLabel({ ...streaming, activity: "Writing the brief." }).label).toBe(
+      "Writing the brief",
+    );
   });
 
   it("says what the work amounted to once settled, in the reply's words or a plain state", () => {

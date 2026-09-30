@@ -292,13 +292,14 @@ function countOf(work: Work): string | undefined {
  * it is doing now, live, with the working glyph; once it settles, what the work amounted to in
  * the reply's own words, or "Work finished", "Work incomplete" or "Stopped" when it gave none;
  * beside either, how many checks, and how many need attention. Activity is not value: the
- * label reads as an outcome, never as a list of what ran.
+ * label reads as an outcome, never as a list of what ran; and it is a label, so a narration's
+ * full stop is dropped from it.
  */
 export function workLabel(message: AgentMessage): WorkLabel {
   const work = message.work ?? EMPTY_WORK;
   const detail = countOf(work);
   if (message.streaming === true)
-    return { label: message.activity ?? "Working", detail, live: true };
+    return { label: (message.activity ?? "Working").replace(/\.$/u, ""), detail, live: true };
   const fallback =
     message.ended === "cancelled"
       ? "Stopped"
