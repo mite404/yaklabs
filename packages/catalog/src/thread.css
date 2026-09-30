@@ -258,9 +258,11 @@
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
   /* The bottom padding lands the last card --rest-gap above the compose box or the dock
-     card: --dock-space is the dock card's height over the compose box (ADR-038). */
+     card: --dock-space is the dock card's height over the compose box (ADR-038). A jump to a
+     turn near the end adds --jump-runway below it, so the turn can land centered (ADR-022;
+     threadReveal.ts sets and releases it). */
   padding: 20px var(--thread-gutter)
-    calc(var(--rest-gap) - var(--compose-inset) + var(--dock-space, 0px));
+    calc(var(--rest-gap) - var(--compose-inset) + var(--dock-space, 0px) + var(--jump-runway, 0px));
   display: flex;
   flex-direction: column;
   gap: 20px;

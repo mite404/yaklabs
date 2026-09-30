@@ -37,7 +37,8 @@ async function unfold(tools: ReturnType<typeof parts>["tools"]) {
 }
 
 // Whether the turn with this id glows and sits in the middle of the visible thread, or, when
-// the thread cannot scroll that far (a turn near either end), in full view at that end.
+// the thread cannot scroll up that far (a turn near its start), in full view at the top. A turn
+// near the end still centers: the jump adds room below the end (threadReveal.ts).
 async function expectLandedOn(scroller: HTMLElement, turnId: string) {
   const turn = scroller.querySelector<HTMLElement>(`[data-turn-id="${turnId}"]`);
   if (!turn) throw new Error(`no turn ${turnId}`);
@@ -45,9 +46,7 @@ async function expectLandedOn(scroller: HTMLElement, turnId: string) {
   await waitFor(async () => {
     const view = scroller.getBoundingClientRect();
     const box = turn.getBoundingClientRect();
-    const reach = scroller.scrollHeight - scroller.clientHeight;
-    const atAnEnd = scroller.scrollTop < 1 || reach - scroller.scrollTop < 1;
-    if (atAnEnd) {
+    if (scroller.scrollTop < 1) {
       await expect(box.top).toBeGreaterThanOrEqual(view.top);
       await expect(box.bottom).toBeLessThanOrEqual(view.bottom);
     } else {
