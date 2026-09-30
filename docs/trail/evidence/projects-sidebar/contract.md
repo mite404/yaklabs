@@ -248,20 +248,31 @@ const LIFT_PX = 6;
 - **Frame.** The app is a window inside the viewport: a rounded 12px frame on a desk of its own
   (`--desk`) with a 16px margin, full-bleed below 768px (ADR-111, amending the 8px first built).
 - **Title bar, left to right.** Decorative traffic lights, then the sidebar toggle, then
-  `TabStrip`. At the right end: the layout switch, the bell, and the account avatar in the
-  corner (ADR-123 dropped the data marker that once sat first in this group).
+  `TabStrip`. At the right end: the layout switch, Collapse all, and the bell in the corner
+  (ADR-123 dropped the data marker that once sat first in this group; ADR-138 moved the account
+  to the sidebar's foot, which is now the rail's).
 - **Sidebar below 768px (ADR-121).** A drawer that pushes the whole window right, not a sheet
   over it: `dialog[data-slot="sidebar"]` named "Sidebar", 85% of the width up to 20rem. The
-  pushed page is inert, and a tap on it, Escape, or an arrival anywhere closes the drawer.
+  pushed page is inert, and a tap on it, Escape, or an arrival anywhere closes the drawer. It is
+  one labelled column (ADR-144): the places as rows, "Out of demo scope" beside those outside the
+  demo, then the project tree, then the account at its foot. There is no rail below 768px.
 - **Title bar below 768px (ADR-116, amended by ADR-123).** Two rows. The top row does not scroll:
-  the sidebar toggle, the project's name (`[data-slot="project-name"]`), the bell, the account,
-  and button "Thread and project actions". The second row is the Layout group with its views
-  named in words. The tab strip is hidden.
-- **Rail and sidebar.** shadcn `Sidebar collapsible="icon"` below the title bar (the
-  `sidebar-16` pattern):
-  - The header holds `KayMark` (the site's polygon), then Documentation and Lab.
-  - The content holds the project tree.
-  - The account menu carries the theme, so the rail keeps only places.
+  the sidebar toggle, the project's name (`[data-slot="project-name"]`), Collapse all, the bell,
+  and button "Thread actions". The second row is the Layout group with its views named in words.
+  The tab strip is hidden.
+- **Rail and projects panel (ADR-144).** Below the title bar, `[data-slot="window-body"]` holds
+  the rail, then the stage:
+  - The rail (`rail.tsx`, `[data-slot="rail"]`, 56px, `--rail-width`) is drawn in every desktop
+    state and never moves. A navigation landmark named "Places" holds its eight places as 40px
+    squares, each naming itself in an ink pill: `KayMark` (the site's polygon), Memory, Skills,
+    App store, Analytics and Automations (out of demo scope), Documentation, and Lab. The account
+    sits at its foot, outside the landmark; its menu carries the theme.
+  - The stage (`[data-slot="stage"]`) clips at the rail's edge (`overflow: clip` from 768px)
+    and holds the panel and the workspace.
+  - The projects panel is shadcn's `Sidebar collapsible="offcanvas"` (the `sidebar-16`
+    pattern), a navigation landmark named "Sidebar" holding the project tree. Docked, it pushes
+    the workspace and resizes from its right edge; closed, it is inert and peeks from behind the
+    rail's edge over the workspace (phase `away` at rest).
 - **Deck.** Every visited tab stays mounted, hidden with `inert` and
   `content-visibility: hidden`. Only closing a tab unmounts it.
 - **Routes.**
@@ -273,13 +284,17 @@ const LIFT_PX = 6;
 - **Accessible names the levers rely on.**
   - Title bar: `header[data-slot="title-bar"]`, button "Toggle sidebar", tablist "Open threads"
     (tab names are thread titles), button "Close <title>", button "New thread", group "Layout"
-    with "Thread", "Browser" and "Canvas" (`aria-pressed`), button "Notifications", button
-    "Account". Below 768px the tablist is hidden and the group is the bar's second row.
+    with "Thread", "Canvas" and "Browser" (`aria-pressed`), button "Notifications". Below 768px
+    the tablist is hidden and the group is the bar's second row.
   - Sidebar: group label "Projects". Project rows are buttons named by the project, with
     `aria-expanded`. Each has a "+" named "New thread in <project>". Thread rows are links named
     by the title. Main rows carry `data-thread="main"`; child rows carry `data-thread="child"`
     and show "↳".
-  - Rail links: "Kay", "Documentation", "Lab".
+  - Rail: navigation "Places" with links "Kay", "Documentation" and "Lab" and buttons "Memory",
+    "Skills", "App store", "Analytics" and "Automations" (`aria-disabled`, described as "Coming
+    soon"); button "Account" at the rail's foot, and at the drawer's below 768px.
+  - Panel: navigation "Sidebar", `[data-slot="sidebar-container"]`, and its edge, separator
+    "Resize the sidebar".
   - Window: `[data-slot="window"]` wraps the whole app; `[data-slot="traffic-lights"]` holds
     the three decorative dots (`aria-hidden`).
   - Project row chevron: `[data-slot="project-chevron"]` inside the row button, `opacity: 0` at
@@ -290,7 +305,9 @@ const LIFT_PX = 6;
   - Canvas: region "Compose canvas", drop marker `[data-drop-marker]`.
   - States: a failed start or a failed thread shows a button "Try again"; loading rows are
     shadcn's `[data-sidebar="menu-skeleton"]` with fixed widths.
-- **Defaults.** The sidebar opens expanded on a window at least 1280px wide and remembers the
-  visitor's choice in localStorage `kay.sidebar`. Every link the app builds keeps `?scenario=`,
+- **Defaults.** The projects panel opens docked on a window at least 1280px wide and remembers
+  the visitor's choice in localStorage `kay.sidebar` ("open" is docked, "closed" leaves the rail
+  alone); its width is `kay.sidebar-width`, 208 to 480px, 256 by default, never past 40% of the
+  window, and the rail's 56px is added to it. Every link the app builds keeps `?scenario=`,
   so a mock visit never drifts onto device data. A new main thread opens on `thread`; the starter
   and migrated `profit` open on `canvas`, as today.

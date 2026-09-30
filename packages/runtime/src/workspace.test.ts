@@ -39,6 +39,7 @@ function thread(id: string, place: Place, created: string, updated = created): T
     createdAt: at(created),
     updatedAt: at(updated),
     preview: "",
+    turnCount: 0,
     draft: "",
     pinnedAt: null,
     snoozedUntil: null,

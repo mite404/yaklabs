@@ -44,7 +44,7 @@ export function CollapseAll({ shell }: { shell: Shell | null }) {
             data-slot="collapse-all"
             aria-label={label}
             disabled={offer === null}
-            className="shrink-0 rounded-[var(--radius)] text-soft-ink hover:text-ink"
+            className="shrink-0 text-soft-ink hover:text-ink"
             onClick={() => {
               if (offer !== null) foldAll(offer);
             }}

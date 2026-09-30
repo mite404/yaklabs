@@ -153,7 +153,7 @@ export function ThreadShareButton({ shell, thread }: ShareProps) {
             size="icon-sm"
             aria-label={statusName("Share thread", status)}
             data-public={share === undefined ? undefined : ""}
-            className="rounded-[var(--radius)] text-soft-ink hover:text-ink data-public:text-ink"
+            className="text-soft-ink hover:text-ink data-public:text-ink"
           />
         }
       >

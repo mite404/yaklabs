@@ -231,7 +231,9 @@ function fillLong(write: Writer): void {
   }
 }
 
-// Each scenario by name (ADR-096): its fixtures, and the faults it meets.
+// Each scenario by name (ADR-096): its fixtures, and the faults it meets. Thread-fails fails
+// every open the page asks for, and the page never asks for a thread the snapshot counts no
+// turns in, so a thread started there shows its welcome and fails on its first send instead.
 const SCENARIOS: Record<ScenarioName, Scenario> = {
   demo: { faults: {}, fill: fillDemo },
   empty: { faults: {} },

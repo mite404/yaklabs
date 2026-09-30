@@ -1,7 +1,7 @@
 import type { ThreadId } from "@yaklabs/runtime";
 import { ToggleGroup, ToggleGroupItem } from "@yaklabs/ui/components/toggle-group";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@yaklabs/ui/components/tooltip";
-import { LAYOUTS, PANES } from "./layouts";
+import { LAYOUTS, PANES, paneAfterPress } from "./layouts";
 import type { Shell } from "./model";
 import { viewOf, type PaneKind } from "./state";
 
@@ -13,7 +13,8 @@ function shownPane(shell: Shell): { main: ThreadId; pane: PaneKind } | null {
 }
 
 /**
- * Thread, Canvas or Browser beside the active tab's thread; nothing to switch with no tab. On a
+ * Thread, Canvas or Browser beside the active tab's thread; pressing the open Canvas or Browser
+ * again closes it back to the thread. Nothing to switch with no tab. On a
  * phone it is the bar's second row, each view named in words, and it scrolls when they overflow
  * (ADR-116).
  */
@@ -26,8 +27,8 @@ export function LayoutSwitch({ shell }: { shell: Shell | null }) {
       value={shown === null ? [] : [shown.pane]}
       disabled={shown === null}
       onValueChange={(values: unknown[]) => {
-        const next = PANES.find((each) => values.includes(each));
-        if (shown !== null && next !== undefined) shell?.setPane(shown.main, next);
+        const next = paneAfterPress(values); // → PaneKind
+        if (shown !== null && next !== shown.pane) shell?.setPane(shown.main, next);
       }}
       className="rounded-[var(--radius)] border border-hairline p-0.5 max-md:no-scrollbar max-md:col-span-full max-md:row-start-2 max-md:w-full max-md:justify-start max-md:gap-1 max-md:overflow-x-auto max-md:border-0 max-md:p-0"
     >

@@ -118,7 +118,7 @@ function ThreadMenuButton({ shell, thread }: { shell: Shell; thread: ThreadSumma
             size="icon-sm"
             aria-label={THREAD_ACTIONS}
             data-thread-menu=""
-            className="rounded-[var(--radius)] text-soft-ink hover:text-ink"
+            className="text-soft-ink hover:text-ink"
           />
         }
       >

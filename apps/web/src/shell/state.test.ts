@@ -49,6 +49,7 @@ function thread(threadId: ThreadId, place: Place, updatedAt: string): ThreadSumm
     createdAt,
     updatedAt,
     preview: "",
+    turnCount: 0,
     draft: "",
     ...marks,
   };

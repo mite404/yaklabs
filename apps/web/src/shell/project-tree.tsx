@@ -172,8 +172,8 @@ function TreeState({ shell, onNewProject }: { shell: Shell | null; onNewProject:
 
 /**
  * The projects, their main threads and each main's children (ADR-092, ADR-093), newest main
- * first and each main's children newest first, both by creation (ADR-125). Rows open threads by address; the URL's thread is marked.
- * Hidden in the collapsed rail, where only places show.
+ * first and each main's children newest first, both by creation (ADR-125). Rows open threads by
+ * address; the URL's thread is marked. It fills the projects panel beside the rail (ADR-144).
  */
 export function ProjectTree() {
   const shell = useShell();
@@ -182,7 +182,7 @@ export function ProjectTree() {
   const handOff = useHandOff(group, shell);
   const tree = shell === null ? [] : sidebarTree(shell.workspace);
   return (
-    <SidebarGroup ref={group} className="group-data-[collapsible=icon]:hidden">
+    <SidebarGroup ref={group}>
       <SidebarGroupLabel className="text-soft-ink">Projects</SidebarGroupLabel>
       {shell === null || tree.length === 0 ? (
         <TreeState shell={shell} onNewProject={handOff} />

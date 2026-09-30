@@ -3,6 +3,7 @@
 import { writeFileSync } from "node:fs";
 import { canvasOf, carry, laneTitles, mainPanel, makeLane } from "./canvas-checks.mjs";
 import { BASE, openApp, shotPath, sidebarDrawn } from "./lever.mjs";
+import { railOf, RAIL_PLACES, readPlaces } from "./rail-places.mjs";
 
 // The polygon meetkay.ai declares for its mark (ADR-095), as the rail must draw it.
 const KAY_POINTS =
@@ -131,7 +132,12 @@ function selectedTab(page) {
 
 async function scenarioLook(browser, name) {
   const { page } = await openApp(browser, `${BASE}/?scenario=${name}`, { ready: null });
-  await sidebarDrawn(page);
+  await sidebarDrawn(page).catch(async (error) => {
+    // Which scenario never drew its sidebar, and what the page held instead, so a timeout under
+    // load says where it stalled.
+    const held = await page.evaluate(() => document.body.innerText.slice(0, 160));
+    throw new Error(`${name}: sidebar not drawn (${String(error).split("\n")[0]}); page: ${held}`);
+  });
   await page.waitForTimeout(1500);
   const png = await page.screenshot();
   const look = {
@@ -356,6 +362,56 @@ export const shellChecks = {
     };
   },
 
+  // The layout switch closes a side pane pressed again: Canvas or Browser, by the pointer or by
+  // Space, goes back to the thread alone, filling its tab; the thread pressed again stays.
+  async P9b(browser) {
+    const { page } = await onThreadPage(browser);
+    const pressed = () =>
+      page
+        .getByRole("group", { name: "Layout" })
+        .locator('button[aria-pressed="true"]')
+        .getAttribute("aria-label");
+    const threadShare = () =>
+      page.locator('[role="tabpanel"]:not([inert])').evaluate((tab) => {
+        const thread = tab.querySelector('[data-slot="resizable-panel"]');
+        return Math.round(
+          (thread.getBoundingClientRect().width / tab.getBoundingClientRect().width) * 100,
+        );
+      });
+    // The demo's thread opens beside its canvas; start from the thread alone.
+    await layoutButton(page, "Thread").click();
+    const steps = [];
+    const step = async (label, act) => {
+      await act();
+      await page.waitForTimeout(300);
+      steps.push({ label, pressed: await pressed(), share: await threadShare() });
+    };
+    await step("Canvas", () => layoutButton(page, "Canvas").click());
+    await step("Canvas again", () => layoutButton(page, "Canvas").click());
+    await step("Browser", () => layoutButton(page, "Browser").click());
+    await step("Browser again", () => layoutButton(page, "Browser").click());
+    await step("Thread again", () => layoutButton(page, "Thread").click());
+    await layoutButton(page, "Canvas").focus();
+    await step("Space on Canvas", () => page.keyboard.press("Space"));
+    await step("Space on Canvas again", () => page.keyboard.press("Space"));
+    const want = [
+      ["Canvas", false],
+      ["Thread", true],
+      ["Browser", false],
+      ["Thread", true],
+      ["Thread", true],
+      ["Canvas", false],
+      ["Thread", true],
+    ];
+    const ok = steps.every(
+      (each, i) => each.pressed === want[i][0] && (each.share === 100) === want[i][1],
+    );
+    return {
+      ok,
+      detail: steps.map((each) => `${each.label}: ${each.pressed} (${each.share}%)`).join("; "),
+    };
+  },
+
   async P10(browser) {
     const { page } = await onThreadPage(browser);
     await layoutButton(page, "Browser").click();
@@ -433,26 +489,23 @@ export const shellChecks = {
     };
   },
 
+  // The rail's places, top to bottom, by name, role and glyph (ADR-094, amended): Kay's mark
+  // as its site declares it (ADR-095), the places not built yet, the documentation link, and
+  // the Lab last, each one below the one before.
   async P12(browser) {
     const { page } = await onThreadPage(browser);
     const kay = page.getByRole("link", { name: "Kay", exact: true });
     const points = await kay.locator("svg polygon").getAttribute("points");
-    const docs = page.getByRole("link", { name: "Documentation" });
-    const kb = await kay.boundingBox();
-    const db = await docs.boundingBox();
-    const order = await page
-      .locator('[data-slot="sidebar"] a')
-      .evaluateAll((els) =>
-        els.map((el) => el.getAttribute("aria-label") ?? el.textContent.trim()),
-      );
-    const docsNext = order.indexOf("Documentation") === order.indexOf("Kay") + 1;
+    const places = await railOf(page).locator('[data-sidebar="header"]').evaluate(readPlaces);
+    const exact = points?.replaceAll(/\s+/g, " ").trim() === KAY_POINTS;
+    const want = RAIL_PLACES.map(({ name, role, icon }) => [name, role, icon]);
+    const got = places.map(({ name, role, icon }) => [name, role, icon]);
+    const inOrder = JSON.stringify(got) === JSON.stringify(want);
+    const stacked = places.every((place, i) => i === 0 || place.glyph[1] > places[i - 1].glyph[1]);
     await page.locator('[data-slot="sidebar-header"]').screenshot({ path: shotPath("P12-rail") });
     return {
-      ok:
-        points?.replaceAll(/\s+/g, " ").trim() === KAY_POINTS &&
-        db.y >= kb.y + kb.height - 1 &&
-        docsNext,
-      detail: `mark polygon ${points === null ? "missing" : "present"}${points?.replaceAll(/\s+/g, " ").trim() === KAY_POINTS ? " and exact" : ""}; docs below the mark ${db.y >= kb.y + kb.height - 1}; next link after the mark ${docsNext}`,
+      ok: exact && inOrder && stacked,
+      detail: `mark polygon ${points === null ? "missing" : "present"}${exact ? " and exact" : ""}; places ${inOrder ? "in order" : JSON.stringify(got)}; each below the last ${stacked}`,
     };
   },
 

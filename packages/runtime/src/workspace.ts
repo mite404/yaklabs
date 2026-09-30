@@ -46,6 +46,8 @@ const threadSummarySchema = z.object({
   createdAt: instantSchema,
   updatedAt: instantSchema,
   preview: z.string(),
+  // how many turns it holds: 0 tells the page it opens empty, with nothing to ask the worker
+  turnCount: z.number().int().nonnegative(),
   draft: z.string(),
   pinnedAt: instantSchema.nullable(), // pinned threads lead their list
   snoozedUntil: instantSchema.nullable(), // when a snoozed thread wakes, in the future

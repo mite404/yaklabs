@@ -27,6 +27,7 @@ function thread(threadId: ThreadId, place: Place): ThreadSummary {
     createdAt: at,
     updatedAt: at,
     preview: "",
+    turnCount: 0,
     draft: "",
     pinnedAt: null,
     snoozedUntil: null,

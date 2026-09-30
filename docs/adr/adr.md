@@ -1081,6 +1081,27 @@ which takes the corner because the signed-in account matters more.
 Each tab restores one of three layouts, a thread alone, a thread beside a simulated browser, or a
 thread beside the compose canvas, and the rail keeps the Kay mark with a documentation link beneath
 it.
+Amended 2026-09-29 (Ethan): the rail follows Kay's own. Under the mark come Memory, Skills, App
+store, Analytics and Automations, drawn with lucide's Brain, Unplug, Store, ChartColumnIncreasing
+and Clock; lucide has no brain with a pencil, and no column chart on a baseline without a left
+axis, which is what a crop of Kay's rail shows, so those two are the nearest. The documentation
+link moves down after them, and the Lab stays last. The web build has none of the five yet, so
+each is a button that keeps its name, in its pill collapsed and beside its glyph open, is reached
+by keyboard, opens nothing, and says so: "Coming soon" in the pill and to a screen reader, "Soon"
+in the open row, where a 208px sidebar has room for no more. It is drawn in faint ink with no
+hover fill, not at half opacity (design pillars, rule 27). P12, P23 and P25 hold the order, the
+pills and the unavailable state.
+Amended the same day (Ethan): the traffic lights are 14px, 2px up from 12, each grown about its
+own centre over the 12px slot it had: still 20px apart, the first 22px in from the bar's edge and
+all 22px down its 44px, with the toggle and the tabs after them where they were. A light centred
+on a whole pixel with whole-pixel edges has an even width, so 14 and 16 were the sizes on offer;
+14 leaves 6px between lights, where 16 would leave 4px and crowd them. P26 holds the lights'
+boxes and the toggle's place.
+Amended 2026-09-29 (Ethan): the five are outside this demo's scope rather than on their way, so
+each says "Out of demo scope", in its pill, beside its name in the phone drawer's row and to a
+screen reader, one phrase in all three. The phone drawer is 85% of the width up to 20rem
+(ADR-121), 320px on the checks' 390px phone, which leaves "Automations" 64px clear of the whole
+phrase, so the short "Soon" goes. P23 and P25 read the new words.
 
 ## ADR-095 - The Kay mark is the vector Kay's site declares
 
@@ -1732,6 +1753,12 @@ instant. Its edge takes the canvas divider's handle (drag, arrows, Home and End,
 reset, the width kept as `kay.sidebar-width`), and the first tab starts 4px past that edge from the
 same width variable, as in the ChatGPT desktop app, so it follows a drag on every frame. Rail
 icons name themselves in an ink pill (13:1 against the shell).
+Amended 2026-09-29: the peek slides back as it slides out, 220ms on the drawer curve both ways
+(Ethan). The window's frame clips it, so it keeps full strength on the way back and fades only
+over the slide's last 120ms (derived; design pillars, rule 26).
+Amended 2026-09-29: pressing the open Canvas in the layout switch closes it back to the thread
+(Ethan), and so does pressing the open Browser, so the switch reads one way for both side panes
+(derived). The thread pressed again stays.
 
 ## ADR-139 - Separate progress narration, finished responses, and work details
 
@@ -1838,3 +1865,125 @@ inside the panel's clip, so a keyboard can scroll a thread of plain words; axe h
 the first text-only fixture. The Menu primitive gained an item `id` (two requests can share a
 label), a quiet `detail` at the right, and a height capped at the viewport, past which it
 scrolls. The unmounted draft in `apps/web/src/demo/` is gone.
+
+## ADR-144 - The rail stays on the desktop, and the projects panel extends from its edge
+
+2026-09-29 - Accepted (Ethan: "the projects and their threads need to extend from the collapsed
+sidenav bar. that way the icons are still accessible as navigation while still being able to look
+at projects and thread histories", and "as it stands now the thread panel covers the navigation
+icons"). Amends ADR-093, ADR-094, ADR-121 and ADR-138.
+On a desktop (768px and wider) the icon rail is the app's navigation and is drawn in every state,
+never moving, collapsing or blinking: Kay, the five places out of the demo's scope, Documentation
+and the
+Lab as 40px squares, each naming itself in an ink pill whatever the panel is doing, with the
+Account at its foot. It is its own column (`rail.tsx`, `data-slot="rail"`), no longer the
+sidebar's collapsed state.
+The projects and their threads are a second column, shadcn's offcanvas `Sidebar`, extending from
+the rail's right edge. Docked (`kay.sidebar` is "open"), it pushes the workspace and resizes from
+its right edge, with the first tab 4px past that edge. Closed, only the rail shows, and the panel
+slides out from behind the rail's edge on the peek's triggers and timing (ADR-138) and back the
+same way. A stage around the panel and the workspace clips it at the rail's edge (`overflow:
+clip`, the gate of design pillars rule 22), so the panel never covers a rail glyph, and the rail's
+echo that the old peek slid over is gone.
+One `SidebarProvider` still owns docked or closed, and `kay.sidebar-width` with its 208, 256 and
+480px now names the panel alone. The rail's places are a navigation landmark named "Places" and
+the panel's tree one named "Sidebar"; neither holds the other, and the Account sits outside both.
+Closing the panel with focus inside it hands focus to Toggle sidebar first, however it closes (Ctrl
+or Cmd+B, Escape, a thread opened from a peeking row, or the slide back); focus on a rail place
+never holds a peek, while a menu open in the rail or the panel does; the closed panel is inert,
+out of the tab order and the accessibility tree. The phone keeps ADR-121's drawer as one labelled
+column: the place rows with "Out of demo scope", then the tree, then the Account.
+Ethan answered the defaults it was built with, the same day:
+
+- The landmarks and the toggle keep their names, the rail "Places", the panel "Sidebar", the
+  toggle "Toggle sidebar" ("names yes that's fine").
+- Docked by the toggle, a hint of a line parts the rail from the panel, the workspace's hairline
+  at the rail's right edge, as in Kay's own app; a peek draws none ("ONLY SHOW the dividing line
+  on toggle, don't show it on peek"). It is the rail's, so a click on the toggle draws it on the
+  pin's first frame and the panel slides out from behind it ("the separator ... needs to be drawn
+  right away right at the first keyframe of the slide out anim"); on the panel's own left edge,
+  as first built, it stayed behind the rail's clip until the last frame and crept in like a
+  fade. An unpin holds it through the slide until the panel is home, the pin played backwards;
+  a key's change and reduced motion, with no slide, switch it at once. P35 holds all of it.
+- A phone is out of scope ("skip the mobile app. this is a desktop app"): no rail below 768px,
+  and the drawer stays as built, not extended.
+- A pin and an unpin move over 250ms, the panel, the workspace and the tabs in lockstep, on
+  Ethan's curve, and the peek keeps its 220ms on the same curve ("set the click to 250ms ... use
+  similar curve for both the peek and the toggle. DO NOT change the length of the animation or
+  the keyframes, only the curve"). The first reading, off a still sketch, was
+  `cubic-bezier(0.34, 1, 1, 1)`, which left the gate too gently ("niether curve is what i asked
+  for"). Ethan then showed the value graph of an After Effects move, "fast acceleration to a
+  slower and smooth settle", and the curve is fitted to that graph: `cubic-bezier(0.17, 1.02,
+  0.58, 1)`, within 0.2% of it at every sampled point, half the travel done by 13% of the time
+  and 90% by 43%. Its first handle sits a touch above the target, as in his graph, which carries
+  the panel a hundredth of a pixel past its mark. It is `--panel-ease` beside `--panel-peek`
+  (220ms) and `--panel-pin` (250ms) in `index.css`; P19, P24 and P31 read them.
+- Under reduced motion nothing slides: a pin and an unpin are instant, and the peek comes and
+  goes with no slide and no fade, whatever closes it ("add reduced motion to opening/closing the
+  panel"; rule 24). P20 holds both.
+- Documentation's pill keeps its ArrowUpRight, and the places' pills their hints ("the pill hints
+  for places. keep it it looks great").
+- A window too short for every place scrolls the places with no scrollbar, the Account at the
+  rail's foot ("icon scroll that's fine").
+- The rail's order and places stay as they are ("current rail icon placement is good"), Memory
+  keeps lucide's Brain ("keep lucide's brain icon for memory"), and pressing the open Browser
+  closes it as Canvas does ("browser toggle is great, keep it").
+
+Found while building it, the same day. Docked, the old sidebar drew every glyph on the page with
+coloured subpixel smoothing, and collapsed with greyscale: its one avatar sat inside the
+container's stacking context, so no blend reached the window's layer (ADR-110), while collapsed
+the rail's echo carried a second avatar outside it. The rail keeps its avatar in plain flow, so
+the text is greyscale in every state. For the same reason the collapsed rail is not bit for bit
+the old one: about 140 antialiased pixels in it differ by up to 23 levels, every glyph and the
+avatar on the same pixels, and a stacking context to match them would switch the page's text
+back to subpixel. With keyboard focus on a rail place its pill is up, and Escape closes the pill
+first, then the peek, as a menu takes Escape before the peek does. shadcn's `no-scrollbar`
+utility, which its `SidebarContent` names, is defined nowhere in the app, so the rail sets
+`scrollbar-width: none` itself.
+
+Amended the same day (Ethan, from a recording of the peek: "right as it gets to the last frame of
+slide back into the navbar text is still rendered outside of the component"). The panel and the
+rail are the same paper, so in the last 20px of the way home the rows' ends ("18", an ellipsis, a
+"+", a sliver of the open row's fill) stood beside the rail's glyphs for four frames with nothing
+around them. Back, the panel's rows now fade from the slide's first frame, on the fade-in's own
+120ms and curve (0.4 after 20ms, gone by the time the edge is 22px out), while the paper, its
+hairline and its shadow slide home solid. P24 seeks the rows with the slide and holds them under
+2% over the last 10% of the way back; it fails on the old stylesheet with the rows at full
+strength to the end.
+
+Amended again the same day (Ethan, from a recording: "on peek i want the drawer to slide out
+from under the navbar spine just like how it does w/ the toggle btn", the lines' draws "slow
+enough to feel glitchy", and "the fade of the thread list as the drawer is almost all the way
+close just needs to be at 0 opacity at that point"). Three changes:
+
+- The peek slides out at full strength from its first frame, as a pin does. Its 120ms fade-in
+  let the workspace's left border and rounded corner show through the panel, and drew the
+  panel's own edge over those frames.
+- A pin while the panel peeks moves only the workspace, under the panel. The peek's edge, its
+  hairline and shadow, now holds through the pin's 250ms by a delayed 0s transition, where it had
+  gone at the click and left a plain edge while the workspace's rounded border crept out from
+  under the panel as the curve settled.
+- On the peek's way back and on an unpin alike, the rows fade in 60ms on the strong ease-out
+  (`--rows-leave`), at 0 once the panel has covered three quarters of its way home; the toggle's
+  close had no fade at all, and the peek's 120ms left them faint for two or three frames.
+
+P24 holds the peek solid on the way out and the rows at 0 over the last quarter of the way back;
+P36 holds the rows full through a pin and at 0 over an unpin's last quarter; P37 holds the edge
+on every frame of a pin from a peek. All three fail on the old stylesheet.
+
+## ADR-145 - Every hover label is the rail's ink pill
+
+2026-09-29 - Accepted (Ethan: "also "unpin thread" hover needs to match our design language. do
+we have a specific hover popover defined in storybook? i don't think so", after keeping the
+rail's pills: "keep it it looks great").
+Storybook defines no hover label: it holds the catalog's hand-made primitives, and the
+app's labels came from the vendored shadcn tooltip, whose default was base-lyra's square box
+with an arrow, 12px text in the page's ink. Unpin, the Layout switch, Collapse all and a sidebar
+row's cut name drew that box while the rail drew its ink pill (ADR-144), two shapes for one job.
+The vendored tooltip now draws only the pill (design pillars, rule 28): no `variant`, no arrow,
+13px medium text on the page's ink, 12px corners, 8px off its trigger, 350ms of rest before the
+first opens and none before its neighbours. A name long enough to wrap keeps the pill's ends,
+since 12px is half a one-line pill's height. The rail's own provider and its delay props go,
+since the app's provider now carries the same values. A new label cannot come out in another
+shape without editing `packages/ui/src/components/tooltip.tsx`. P23 and P28 read the pills, and
+the web checks read a cut row's name on hover and focus and a name that wraps.

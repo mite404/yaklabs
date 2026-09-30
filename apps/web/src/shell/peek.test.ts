@@ -4,6 +4,7 @@ import {
   PEEK_CLOSE_MS,
   PEEK_OPEN_MS,
   peekIntent,
+  putsAway,
   RESTING,
   type PeekAction,
   type PeekPhase,
@@ -26,19 +27,19 @@ describe("nextPeek", () => {
   it("slides back when hidden, and becomes the rail at once when it ends", () => {
     const leaving = nextPeek(at("open"), { type: "hide", instant: false });
     expect(leaving).toEqual(at("leaving"));
-    expect(nextPeek(leaving, { type: "left" })).toEqual(at("rail", true));
+    expect(nextPeek(leaving, { type: "left" })).toEqual(at("away", true));
   });
 
   it("goes straight to the rail, with no motion, when a key hides it", () => {
-    expect(nextPeek(at("open"), { type: "hide", instant: true })).toEqual(at("rail", true));
-    expect(nextPeek(at("leaving"), { type: "hide", instant: true })).toEqual(at("rail", true));
+    expect(nextPeek(at("open"), { type: "hide", instant: true })).toEqual(at("away", true));
+    expect(nextPeek(at("leaving"), { type: "hide", instant: true })).toEqual(at("away", true));
   });
 
   it("settles a step with no motion once it is drawn", () => {
-    expect(nextPeek(at("rail", true), { type: "settled" })).toEqual(RESTING);
+    expect(nextPeek(at("away", true), { type: "settled" })).toEqual(RESTING);
   });
 
-  it("rests as the rail when the sidebar is pinned open, from any phase", () => {
+  it("rests away when the panel is docked, from any phase", () => {
     for (const phase of ["entering", "open", "leaving"] as const) {
       expect(nextPeek(at(phase), { type: "rest" })).toEqual(RESTING);
     }
@@ -59,6 +60,35 @@ describe("nextPeek", () => {
   });
 });
 
+describe("putsAway", () => {
+  it("is a key's close from any phase that shows the panel", () => {
+    for (const phase of ["entering", "open", "leaving"] as const) {
+      expect(putsAway(at(phase), { type: "hide", instant: true })).toBe(true);
+    }
+  });
+
+  it("is the end of the slide back", () => {
+    expect(putsAway(at("leaving"), { type: "left" })).toBe(true);
+  });
+
+  it("is not a slide back's start, a show, or a step drawn while away", () => {
+    const cases: [PeekState, PeekAction][] = [
+      [at("open"), { type: "hide", instant: false }],
+      [at("leaving"), { type: "show" }],
+      [at("entering"), { type: "entered" }],
+      [RESTING, { type: "hide", instant: true }],
+      [at("away", true), { type: "settled" }],
+    ];
+    for (const [state, action] of cases) expect(putsAway(state, action)).toBe(false);
+  });
+
+  it("is not a rest, which leaves a docked panel in view", () => {
+    for (const phase of ["entering", "open", "leaving"] as const) {
+      expect(putsAway(at(phase), { type: "rest" })).toBe(false);
+    }
+  });
+});
+
 // The timing under test, with the phase, the hold and every action it dispatched in view.
 let phase: PeekPhase;
 let held: boolean;
@@ -72,14 +102,44 @@ const intent = () =>
     },
   });
 
+// The same timing with motion reduced.
+const stillIntent = () =>
+  peekIntent({
+    phase: () => phase,
+    held: () => held,
+    dispatch: (action) => {
+      actions.push(action);
+    },
+    still: () => true,
+  });
+
 beforeEach(() => {
   vi.useFakeTimers();
-  phase = "rail";
+  phase = "away";
   held = false;
   actions = [];
 });
 afterEach(() => {
   vi.useRealTimers();
+});
+
+describe("peekIntent, under reduced motion", () => {
+  it("closes with no motion once the pointer has been away", () => {
+    const peek = stillIntent();
+    phase = "open";
+    peek.point(true);
+    peek.point(false);
+    vi.advanceTimersByTime(PEEK_CLOSE_MS);
+    expect(actions).toEqual([{ type: "hide", instant: true }]);
+  });
+
+  it("closes with no motion on a visit made by the pointer", () => {
+    const peek = stillIntent();
+    phase = "open";
+    peek.input(false);
+    peek.arrive();
+    expect(actions).toEqual([{ type: "hide", instant: true }]);
+  });
 });
 
 describe("peekIntent, opening", () => {
@@ -160,7 +220,7 @@ describe("peekIntent, closing on a key or a visit", () => {
     peek.point(true);
     peek.close(true);
     expect(actions).toEqual([{ type: "hide", instant: true }]);
-    phase = "rail";
+    phase = "away";
     peek.point(false);
     peek.point(true);
     vi.advanceTimersByTime(PEEK_OPEN_MS);
@@ -180,7 +240,7 @@ describe("peekIntent, closing on a key or a visit", () => {
     ]);
   });
 
-  it("does nothing on arrival while resting as the rail", () => {
+  it("does nothing on arrival while away", () => {
     const peek = intent();
     peek.arrive();
     expect(actions).toEqual([]);

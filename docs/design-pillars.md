@@ -122,6 +122,26 @@ delay makes a control feel unresponsive.
 Around 100ms reads as instant, around 150 to 200ms reads as a soft arrival, and past about 300ms a
 hover starts to feel sluggish.
 
+### 27. A place outside the demo keeps its name, and says so
+
+A place in the rail that this demo leaves out of scope stays in the rail, named in its pill and in
+the phone drawer's row and reached by keyboard, but it opens nothing and says "Out of demo scope"
+(Ethan; ADR-094, amended; ADR-144).
+It is drawn in faint ink, never at reduced opacity: the 45% of a disabled button (rule 8) takes a
+rail glyph to 2.0:1 on paper, under rule 16's 3:1.
+It has no hover fill and no step to ink, since there is nothing to press, so the fill still means
+"this opens something".
+The rail checks' P23 and P25 measure all of this in both themes.
+
+| Property | Value | Source |
+| --- | --- | --- |
+| Glyph and name | `--faint-ink`, an archived row's: 5.17:1 on paper, 5.46:1 dark | derived |
+| Hover | none: no fill, no step to ink, the arrow cursor | derived |
+| Words | "Out of demo scope", the same in the pill, the drawer row and to a screen reader | Ethan |
+| Pill | name, then "· Out of demo scope", `--on-ink` 72% over `--ink` (rule 4): 7.6:1, 6.9:1 | derived |
+| Drawer row | the words after the name, 12px, as the thread count sits | derived |
+| Screen reader | a button, `aria-disabled`, described by the words | derived |
+
 ## Data visualisation
 
 ### 10. Bars are flat
@@ -178,6 +198,33 @@ label is a caution orange pill (ADR-067, ADR-068).
 | Tiles (dark) | 18% night on the surface, paper 6.6:1 | derived |
 | Hover (dark) | 50% night on the surface (`#3a3b37`), paper 9.8:1 | derived |
 
+### 28. A hover label is an ink pill
+
+Anything that names itself on hover or focus (a rail place, Unpin, a layout, Collapse all, a
+sidebar row's cut name) does it in one look: the rail's ink pill, which Ethan kept ("it looks
+great"), not shadcn's square box with an arrow.
+There is one tooltip in `packages/ui` and it draws only this, so a new label cannot come out in
+another shape.
+The page's ink, turned over, stands out from the paper shell in either theme without a shadow.
+Its corners are half a one-line pill's height, so one line is a capsule, and a name long enough to
+wrap keeps the same ends instead of turning into a lozenge.
+It waits for the pointer to rest, so passing over a row of icons does not flash a label at each,
+and once one is up its neighbours open at once.
+Storybook has no story for it: Storybook holds the catalog's hand-made primitives, and this is
+the vendored shadcn tooltip. P23 reads the rail's pills in both themes.
+
+| Property | Value | Source |
+| --- | --- | --- |
+| Fill / text | `--ink` / `--on-ink`: 13.3:1 light, 16.1:1 dark | derived (ADR-144) |
+| Secondary words | `--on-ink` 72% over `--ink` (rule 4): 7.6:1, 6.9:1 | derived (ADR-144) |
+| Type | Inter 13px, medium, 16px line, one line unless a name must wrap (up to 320px) | derived |
+| Padding | 4px × 10px | derived |
+| Corners | 12px: half the one-line pill's 24px, a capsule on one line | derived |
+| Offset | 8px off its trigger, no arrow | derived (ADR-144) |
+| Delay | 350ms of rest, then the next opens at once | derived (ADR-144) |
+| Motion | in over 125ms, `cubic-bezier(0.23, 1, 0.32, 1)`, scale 0.97 and fade; out in 100ms | derived |
+| Reduced motion | fades only, no scale | derived |
+
 ## Inputs
 
 ### 14. A place to type is outlined, and its prompt is greyer
@@ -216,8 +263,20 @@ behind each rule below is told in `docs/FOR_ETHAN.md`.
 | Button fill and text on hover (rule 8) | 150ms | `ease` | css |
 | Menu opening | 120ms | `ease-out` | derived |
 | Modal fade, then rise | 160ms, 200ms | `ease-out` | derived |
+| A loading thread's "Opening ..." line | shown after 100ms | none, steps in | derived (rule 9) |
+| The empty canvas's splash, arriving | 150ms fade in | `ease-out` | derived (ADR-113) |
+| A new thread's welcome picture | none, arrives with its words | none | derived (the paintings) |
 | Agent working glyph (wave, orbit) | 2000ms loop | `linear` fades | Ethan |
 | Agent tree glyph | 2000ms loop | `linear` fades, `cubic-bezier(0.4, 0, 0.6, 1)` scroll | Ethan |
+| Sidebar peek slide, out and back (rule 26) | 220ms | `cubic-bezier(0.17, 1.02, 0.58, 1)` (`--panel-ease`) | Ethan |
+| Sidebar peek out, the panel's strength | none: full strength from the first frame, as a pin | none | Ethan |
+| Sidebar peek fade back, to the slide's end | 120ms | `cubic-bezier(0.68, 0, 0.77, 0)` | derived |
+| Sidebar rows, leaving on a peek's way back or an unpin | 60ms (`--rows-leave`), at 0 by the curve's 75% mark | `cubic-bezier(0.23, 1, 0.32, 1)` | derived (Ethan) |
+| Sidebar rows, a pointer turning a peek back mid-way | 120ms | `cubic-bezier(0.23, 1, 0.32, 1)` | derived |
+| The peek's edge through a pin from a peek | held, then off at the pin's last frame (a 0s step after `--panel-pin`) | none, steps | Ethan |
+| The rail's divider through a pin and an unpin | on at the pin's first frame; off at the unpin's last (a 0s step after `--panel-pin`) | none, steps | Ethan |
+| Sidebar pin and unpin (the panel behind the rail, workspace and tabs in step) | 250ms (`--panel-pin`); none under reduced motion (rule 24) | `cubic-bezier(0.17, 1.02, 0.58, 1)` (`--panel-ease`) | Ethan |
+| Sidebar peek under reduced motion (rule 24) | none: no slide and no fade | none | Ethan |
 
 ### 18. A working indicator reads as steady work, never an alert
 
@@ -286,6 +345,41 @@ checked on a contact sheet: the loop paused at even steps.
 Timing claims ("half clipped as the branch is half faded", "no two squares share a shade") get a
 browser test that seeks the animation and measures it; a screenshot of one good frame proves
 little, since each frame of a broken loop can look fine on its own.
+
+### 26. A panel slides back the way it slid out, and the rail's edge clips it
+
+The projects panel's peek slides out from behind the rail's edge and back behind it on one curve
+and one duration, 220ms both ways, and a pin or an unpin by the toggle moves on the same curve
+over 250ms (Ethan). The curve is a fast acceleration into a long, smooth settle, fitted to the
+value graph of Ethan's After Effects example: `cubic-bezier(0.17, 1.02, 0.58, 1)`,
+`--panel-ease` in `index.css`. It covers half its travel by 13% of the time and 90% by 43%, and
+the rest of the time is the settle.
+The stage beside the rail clips the panel at the rail's edge (`overflow: clip`, never `hidden`,
+so no focus or scroll into view can scroll it), the way rule 22's shapes pass their gate: the
+panel never covers the rail's places, and the fade hides no motion (derived, ADR-144).
+Out, it slides at full strength from the first frame, as a pin does, its edge's hairline and
+shadow drawn at once (Ethan); a fade-in let the workspace's border show through it and drew the
+panel's edge slowly. Back, it keeps full strength and fades over the slide's last 120ms,
+starting 100ms in, on the strong ease-out played backwards (derived): still 0.97 when its edge
+is 2px from home.
+Its rows go first, as a title's type goes before its bar, on a peek's way back and on an unpin
+alike: they fade from the first frame on the strong ease-out and are at 0 once the panel has
+covered three quarters of its way home (60ms, the curve's 75% mark at 27% of the peek's 220ms),
+so no row is left as the panel lands (Ethan). The paper and its edge stay solid, so the slide
+still reads. Opening, the rows are there from the first frame.
+A pin while the panel peeks moves only the workspace, sliding under the panel: the peek's edge
+holds through it until the workspace's rounded border is under it (Ethan).
+Docked by the toggle, the line that parts the rail from the panel is the rail's own right edge,
+not the panel's left: it is there on the pin's first frame, the panel sliding out from behind
+it, and it stays through an unpin until the panel is home (Ethan). A line on the panel's edge
+would sit behind the clip until the last frame and creep in as the curve settles, like a fade.
+That tail fade takes away only the soft shadow and the hairline across the workspace's corner,
+which would otherwise vanish in one frame as the panel lands: 2.5% of the 40px strip past the
+rail's edge in either theme, the landing frame at full strength against rest (derived).
+The first way back faded on the slide's own front-loaded curve over 160ms: at 0.32 after 33ms,
+with its edge still 83px out, it read as no motion at all.
+The sidebar checks' P24 seeks both directions to the same instants, holds them to this and
+measures that share; P29 and P30 hold the rail still, and its edge its own, at every such frame.
 
 ## Verification workbench exceptions
 

@@ -7,6 +7,7 @@
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { arg, chromium, ROOT } from "./harness.mjs";
+import { railOf, RAIL_PLACES } from "./rail-places.mjs";
 
 const BASE = arg("--base", "http://127.0.0.1:5173");
 // The gap between lanes: one step of the canvas's dot grid (index.css --canvas-grid).
@@ -117,6 +118,33 @@ async function openScenario(address, ready, within = '[role="tabpanel"]:not([ine
   await view.goto(`${BASE}${address}`, { waitUntil: "load" });
   await view.locator(`${within} ${ready}`).first().waitFor({ timeout: 15_000 });
   return view;
+}
+
+// Puts `view` in the layout named `name`: pressed only when it is not already, since pressing
+// the open side pane again closes it back to the thread (ADR-138), then held until it shows.
+// It waits for the tab's own layout first; read before the tab loads, nothing is pressed yet, and
+// a press that lands once the tab is already on `name` would close it.
+async function chooseLayout(view, name) {
+  const group = view.getByRole("group", { name: "Layout" });
+  await group.locator('button[aria-pressed="true"]').waitFor({ timeout: 15_000 });
+  const button = group.getByRole("button", { name });
+  if ((await button.getAttribute("aria-pressed")) !== "true") await button.click();
+  await group.locator(`button[aria-label="${name}"][aria-pressed="true"]`).waitFor();
+}
+
+// The title bar's control furthest right, named, so a failure says what stood past the bell.
+function furthestRight(view) {
+  return view
+    .locator('header[data-slot="title-bar"]')
+    .getByRole("button")
+    .evaluateAll((els) =>
+      els
+        .map((el) => ({
+          name: el.getAttribute("aria-label") ?? el.textContent.trim(),
+          right: el.getBoundingClientRect().right,
+        }))
+        .reduce((far, each) => (each.right > far.right ? each : far)),
+    ); // → { name, right }
 }
 
 // A step on a page of its own at `address`, a mock scenario, so no device data is touched. A
@@ -277,12 +305,15 @@ try {
   await chooseTheme("Light");
   await page.waitForFunction(() => document.documentElement.dataset.theme === "light");
 
-  const rail = page.locator('[data-slot="sidebar"]');
+  const rail = railOf(page);
+  const placesShown = [];
+  for (const { role, name } of RAIL_PLACES) {
+    if (await rail.getByRole(role, { name, exact: true }).isVisible()) placesShown.push(name);
+  }
   record(
-    "the sidebar shows Kay, Documentation and Lab",
-    (await rail.getByRole("link", { name: "Kay", exact: true }).isVisible()) &&
-      (await rail.getByRole("link", { name: "Documentation" }).isVisible()) &&
-      (await rail.getByRole("link", { name: "Lab" }).isVisible()),
+    "the rail shows its places, Kay to Lab",
+    placesShown.length === RAIL_PLACES.length,
+    placesShown.join(", "),
   );
 
   const canvas = page
@@ -787,14 +818,12 @@ try {
   // address no thread has. Each way out starts on a fresh page, so its route is not loaded yet.
   const leaving = {
     "the Lab link": (on) =>
-      on
-        .locator('[data-slot="sidebar"]')
+      railOf(on)
         .getByRole("link", { name: "Lab", exact: true })
         .click()
         .then(() => on.getByText("Useful answers.").waitFor({ timeout: 10_000 })),
     "the Kay link": (on) =>
-      on
-        .locator('[data-slot="sidebar"]')
+      railOf(on)
         .getByRole("link", { name: "Kay", exact: true })
         .click()
         .then(() => shownPanel(on).locator(".thread-panel").first().waitFor({ timeout: 10_000 })),
@@ -1272,18 +1301,33 @@ try {
   );
 
   await onOwnPage(
-    "the sidebar is a navigation landmark holding the rail and the projects",
+    "the rail's places and the projects are two navigation landmarks, Places and Sidebar",
     "/t/t-005?scenario=demo",
     {},
     async (own) => {
       await tabsOf(own).first().waitFor({ timeout: 15_000 });
-      const nav = own.getByRole("navigation", { name: "Sidebar" });
-      const held = {
-        kay: await nav.getByRole("link", { name: "Kay", exact: true }).count(),
-        lab: await nav.getByRole("link", { name: "Lab", exact: true }).count(),
-        project: await nav.getByRole("button", { name: "Demo store", exact: true }).count(),
-      };
-      return { ok: Object.values(held).every((n) => n === 1), detail: JSON.stringify(held) };
+      const places = own.getByRole("navigation", { name: "Places" });
+      const sidebar = own.getByRole("navigation", { name: "Sidebar" });
+      const counts = await Promise.all(
+        RAIL_PLACES.map(({ role, name }) => places.getByRole(role, { name, exact: true }).count()),
+      );
+      const held = Object.fromEntries(RAIL_PLACES.map(({ name }, i) => [name, counts[i]]));
+      held["Demo store in Sidebar"] = await sidebar
+        .getByRole("button", { name: "Demo store", exact: true })
+        .count();
+      held["Demo store in Places"] = await places
+        .getByRole("button", { name: "Demo store", exact: true })
+        .count();
+      const apart = await own.evaluate(() => {
+        const [a, b] = ["Places", "Sidebar"].map((name) =>
+          document.querySelector(`[role="navigation"][aria-label="${name}"]`),
+        );
+        return a !== null && b !== null && !a.contains(b) && !b.contains(a);
+      });
+      const once = Object.entries(held).every(([key, n]) =>
+        key === "Demo store in Places" ? n === 0 : n === 1,
+      );
+      return { ok: once && apart, detail: `${JSON.stringify(held)}; apart ${apart}` };
     },
   );
 
@@ -1406,35 +1450,81 @@ try {
     },
   );
 
+  // A phone has no rail (ADR-144): its drawer is one labelled column, the places as rows with
+  // the Lab's name in view, then the projects, then the one account at its foot.
+  const drawerIsOneColumn = (width) =>
+    onOwnPage(
+      `a ${width}px phone has no rail: its drawer lists the places, then the projects, then the account`,
+      "/t/t-005?scenario=demo",
+      { viewport: { width, height: 844 } },
+      async (own) => {
+        await own.locator('[data-slot="project-name"]').filter({ hasText: /\S/ }).waitFor({
+          timeout: 15_000,
+        });
+        await own.getByRole("button", { name: "Toggle sidebar" }).click();
+        await own.locator('dialog[data-slot="sidebar"][data-state="open"]').waitFor();
+        await own.waitForTimeout(400);
+        const look = await own.evaluate(() => {
+          const drawer = document.querySelector('dialog[data-slot="sidebar"]');
+          const lab = drawer.querySelector('a[aria-label="Lab"] span');
+          const project = [...drawer.querySelectorAll("button")].find(
+            (button) => button.textContent.trim() === "Demo store",
+          );
+          const account = drawer.querySelector('[aria-label="Account"]');
+          const [d, l, p, a] = [drawer, lab, project, account].map(
+            (el) => el?.getBoundingClientRect() ?? null,
+          );
+          const all = l !== null && p !== null && a !== null;
+          return {
+            rail: document.querySelector('[data-slot="rail"]') !== null,
+            accounts: document.querySelectorAll('[aria-label="Account"]').length,
+            labShown: l !== null && l.width > 0 && l.left >= d.left && l.right <= d.right,
+            inOrder: all && l.bottom <= p.top && p.bottom <= a.top,
+            foot: a === null ? null : Math.round(d.bottom - a.bottom),
+          };
+        });
+        await own.screenshot({ path: path.join(OUT, `drawer-${width}.png`) });
+        return {
+          ok:
+            look.rail === false &&
+            look.accounts === 1 &&
+            look.labShown === true &&
+            look.inOrder === true &&
+            look.foot !== null &&
+            look.foot <= 16,
+          detail: JSON.stringify(look),
+        };
+      },
+    );
+  await drawerIsOneColumn(390);
+  await drawerIsOneColumn(767);
+
   await onOwnPage(
-    "on desktop the one Account button is at the sidebar's foot, and the bell is the bar's last control",
+    "on desktop the one Account button is at the rail's foot, and the bell is the bar's last control",
     "/t/t-005?scenario=demo",
     {},
     async (own) => {
-      await own.locator('[data-slot="sidebar"]').first().waitFor({ timeout: 15_000 });
+      await railOf(own).waitFor({ timeout: 15_000 });
       const all = await own.getByRole("button", { name: "Account" }).count();
-      const account = own.locator('[data-slot="sidebar"]').getByRole("button", { name: "Account" });
-      const inSidebar = await account.count();
+      const account = railOf(own).getByRole("button", { name: "Account" });
+      const inRail = await account.count();
       const inTitleBar = await own
         .locator('header[data-slot="title-bar"]')
         .getByRole("button", { name: "Account" })
         .count();
       const inNav = await own
-        .locator('[role="navigation"][aria-label="Sidebar"]')
+        .locator('[role="navigation"]')
         .getByRole("button", { name: "Account" })
         .count();
       const face = await account.boundingBox();
-      const sidebarBox = await own.locator('[data-slot="sidebar-container"]').boundingBox();
-      const foot = face.y + face.height >= sidebarBox.y + sidebarBox.height - 16;
+      const railBox = await railOf(own).boundingBox();
+      const foot = face.y + face.height >= railBox.y + railBox.height - 16;
       const bell = await own
         .locator('header[data-slot="title-bar"]')
         .getByRole("button", { name: /^Notifications/ })
         .boundingBox();
-      const rightmost = await own
-        .locator('header[data-slot="title-bar"]')
-        .getByRole("button")
-        .evaluateAll((els) => Math.max(...els.map((el) => el.getBoundingClientRect().right)));
-      const bellLast = Math.abs(bell.x + bell.width - rightmost) < 1;
+      const rightmost = await furthestRight(own);
+      const bellLast = Math.abs(bell.x + bell.width - rightmost.right) < 1;
       await account.click();
       const opened = await own.getByRole("menu").boundingBox();
       const view = own.viewportSize();
@@ -1444,43 +1534,59 @@ try {
         opened.y >= 0 &&
         opened.x + opened.width <= view.width &&
         opened.y + opened.height <= view.height;
+      const upward = opened !== null && opened.y + opened.height <= face.y;
       await own.keyboard.press("Escape");
       return {
         ok:
           all === 1 &&
-          inSidebar === 1 &&
+          inRail === 1 &&
           inTitleBar === 0 &&
           inNav === 0 &&
           foot &&
           bellLast &&
-          onScreen,
-        detail: `${all} Account button(s) on the page; ${inSidebar} in the sidebar, ${inTitleBar} in the bar, ${inNav} inside the navigation landmark; at the foot ${foot}; bell is the bar's last control ${bellLast}; menu on screen ${onScreen}`,
+          onScreen &&
+          upward,
+        detail: `${all} Account button(s) on the page; ${inRail} in the rail, ${inTitleBar} in the bar, ${inNav} inside a navigation landmark; at the rail's foot ${foot}; bell is the bar's last control ${bellLast} (furthest right: ${rightmost.name}); menu on screen ${onScreen}, opening upward ${upward}`,
       };
     },
   );
 
   await onOwnPage(
-    "the collapsed rail's icons sit centred in their squares",
+    "the rail's icons sit centred in their squares, which hold still with the panel docked",
     "/t/t-005?scenario=demo",
     { viewport: { width: 1024, height: 768 } },
     async (own) => {
       await tabsOf(own).first().waitFor({ timeout: 15_000 });
-      const offsets = await own.locator('[data-slot="sidebar"]').evaluate((side) =>
-        ["Kay", "Documentation", "Lab"].map((name) => {
-          const link = [...side.querySelectorAll("a")].find(
-            (a) => (a.getAttribute("aria-label") ?? a.textContent.trim()) === name,
+      // Each place's square, and its glyph's centre minus the square's, x then y.
+      const squares = () =>
+        railOf(own)
+          .locator('[data-sidebar="header"]')
+          .evaluate((header) =>
+            [...header.querySelectorAll('[data-sidebar="menu-button"]')].map((place) => {
+              const square = place.getBoundingClientRect();
+              const glyph = place.querySelector("svg").getBoundingClientRect();
+              return {
+                square: [square.x, square.y, square.width, square.height],
+                offset: [
+                  glyph.left + glyph.width / 2 - (square.left + square.width / 2),
+                  glyph.top + glyph.height / 2 - (square.top + square.height / 2),
+                ],
+              };
+            }),
           );
-          const square = link.getBoundingClientRect();
-          const glyph = link.querySelector("svg").getBoundingClientRect();
-          return [
-            glyph.left + glyph.width / 2 - (square.left + square.width / 2),
-            glyph.top + glyph.height / 2 - (square.top + square.height / 2),
-          ];
-        }),
-      );
+      const collapsed = await squares();
+      await own.getByRole("button", { name: "Toggle sidebar" }).press("Enter");
+      await own.locator('[data-slot="sidebar"][data-state="expanded"]').waitFor();
+      const docked = await squares();
+      const centred = [...collapsed, ...docked]
+        .flatMap(({ offset }) => offset)
+        .every((each) => Math.abs(each) < 0.5);
+      const still =
+        JSON.stringify(collapsed.map((place) => place.square)) ===
+        JSON.stringify(docked.map((place) => place.square));
       return {
-        ok: offsets.flat().every((offset) => Math.abs(offset) < 0.5),
-        detail: `icon centre minus square centre (x, y): ${offsets.map((pair) => pair.join(", ")).join("; ")}`,
+        ok: collapsed.length === RAIL_PLACES.length && centred && still,
+        detail: `icon centre minus square centre (x, y): ${collapsed.map((place) => place.offset.join(", ")).join("; ")}; squares the same docked ${still}`,
       };
     },
   );
@@ -2132,8 +2238,7 @@ try {
     "/t/t-001?scenario=demo",
     { viewport: { width: 390, height: 844 } },
     async (own) => {
-      const layout = own.getByRole("group", { name: "Layout" });
-      await layout.getByRole("button", { name: "Canvas" }).click();
+      await chooseLayout(own, "Canvas");
       const region = own
         .locator('[role="tabpanel"]:not([inert])')
         .getByRole("region", { name: "Compose canvas" });
@@ -2225,10 +2330,9 @@ try {
             canvas: share(onTab.querySelector('[aria-label="Compose canvas"]')),
           };
         });
-      const layout = own.getByRole("group", { name: "Layout" });
       const seen = {};
       for (const pane of ["Canvas", "Thread", "Browser"]) {
-        await layout.getByRole("button", { name: pane }).click();
+        await chooseLayout(own, pane);
         await own.waitForTimeout(400);
         seen[pane] = await shares();
       }

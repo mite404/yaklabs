@@ -27,7 +27,7 @@ function MoreTrigger({ disabled }: { disabled: boolean }) {
           variant="ghost"
           size="icon"
           aria-label={THREAD_ACTIONS}
-          className="rounded-[var(--radius)] text-soft-ink hover:text-ink md:hidden"
+          className="text-soft-ink hover:text-ink md:hidden"
         />
       }
     >

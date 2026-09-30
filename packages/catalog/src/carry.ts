@@ -1,4 +1,5 @@
 import { useLayoutEffect, useRef, type RefObject } from "react";
+import { ghostOf } from "./carryGhost";
 import type { SharedCard } from "./share";
 
 /** What a carry holds: a card lifted out of a thread, or the text of a highlight. */
@@ -209,18 +210,6 @@ function targetAt(at: CarryPoint): CarryTarget | null {
   return null;
 }
 
-// The name and content width of the size container nearest `element`, so a clone laid out
-// away from home still matches the container queries it matched at home.
-function containerOf(element: Element): { name: string; width: number } | null {
-  for (let node = element.parentElement; node; node = node.parentElement) {
-    const style = getComputedStyle(node);
-    if (style.containerType === "normal") continue;
-    const padding = parseFloat(style.paddingLeft) + parseFloat(style.paddingRight);
-    return { name: style.containerName, width: node.clientWidth - padding };
-  }
-  return null;
-}
-
 // How far the picture's corner sits from the pointer, measured at the press: a picture of its
 // own hangs off the pointer, and a clone of the lifted element keeps the point it was taken at,
 // however far the element moves before the lift, as a thread pinned to its end scrolls.
@@ -228,53 +217,6 @@ function offsetOf({ lift, picture }: CarrySource, from: CarryPoint): CarryPoint 
   if (picture || !lift) return { x: PICTURE_OFFSET_PX, y: PICTURE_OFFSET_PX };
   const box = lift.getBoundingClientRect();
   return { x: box.left - from.x, y: box.top - from.y };
-}
-
-// An empty copy of each of `lift`'s ancestors below the body, around its clone. Laid out as if
-// absent (`display: contents`), they still match the selectors and hand down the inherited
-// styles that shaped `lift` at home, such as the thread's type size and line height, so the
-// clone looks like the element it pictures.
-function atHome(lift: HTMLElement, clone: HTMLElement): HTMLElement {
-  let wrapped = clone;
-  for (let home = lift.parentElement; home && home !== document.body; home = home.parentElement) {
-    const shell = document.createElement(home.localName);
-    for (const { name, value } of home.attributes)
-      if (name !== "id") shell.setAttribute(name, value);
-    shell.style.display = "contents";
-    shell.append(wrapped);
-    wrapped = shell;
-  }
-  return wrapped;
-}
-
-// What rides the pointer: the picture, marked for the stylesheet, and whatever surrounds it.
-function frame(picture: HTMLElement, around: HTMLElement = picture): HTMLElement {
-  picture.dataset.carryPicture = "";
-  const element = document.createElement("div");
-  element.className = "carry-ghost";
-  element.setAttribute("aria-hidden", "true");
-  element.inert = true;
-  element.append(around);
-  return element;
-}
-
-// The picture that rides the pointer: a picture of its own, or a clone of the lifted element
-// at its size, drawn as it is at home.
-function ghostOf({ lift, picture }: CarrySource): HTMLElement | null {
-  if (picture) return frame(picture());
-  if (!lift) return null;
-  const clone = lift.cloneNode(true);
-  if (!(clone instanceof HTMLElement)) return null;
-  const ghost = frame(clone, atHome(lift, clone));
-  const { style } = ghost;
-  style.setProperty("--carry-width", `${lift.getBoundingClientRect().width}px`);
-  const container = containerOf(lift);
-  if (container) {
-    style.containerType = "inline-size";
-    style.containerName = container.name;
-    style.width = `${container.width}px`;
-  }
-  return ghost;
 }
 
 // A lifted press ends without a click, as a native drag does, so nothing under the release

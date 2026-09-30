@@ -16,6 +16,7 @@ function thread(id: string, parent?: string): ThreadSummary {
     createdAt: at(0),
     updatedAt: at(0),
     preview: "",
+    turnCount: 0,
     draft: "",
     pinnedAt: null,
     snoozedUntil: null,

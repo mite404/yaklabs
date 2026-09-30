@@ -138,6 +138,23 @@ empty canvas became his composed surface, a raised sheet with the dots, Atlas an
 lines, and the coloured trim around the window turned out to be a Figma selection outline caught
 in a screenshot, so it went (ADR-136).
 
+Then Ethan went through the new welcome with a screen recorder, and four things gave it away:
+the "+" beside Projects had square corners, pressing it flashed the pane white for a frame, the
+sidebar's peek slid out beautifully and vanished on the way back, and a card dragged out of a
+narrow thread changed shape in mid-air. Each was pulled apart frame by frame from his recordings
+before any code changed, fixed at its root, and then handed to a second agent whose only job was
+to prove the fix wrong. One of those skeptics caught a flash the first fix had missed, on the
+Vitruvian look, and the merge caught a check that had quietly replaced another.
+
+Then Ethan used the peek and saw what it cost him: "as it stands now the thread panel covers the
+navigation icons". The rail was the sidebar folded up, so opening the projects meant sliding the
+whole sidebar, rail and all, over the workspace. He asked for the projects and their threads to
+extend from the collapsed rail instead, so the icons stay navigation while the threads are open.
+The rail became its own column that never moves, and the projects became a second column that
+docks beside it or slides out from behind its edge. Think of a camera gate: the rail is the gate's
+frame, bolted to the camera, and the panel is film passing behind it. The frame is never in the
+way of the picture, and the picture never slides over the frame (ADR-144).
+
 ## 2. Cast & Crew
 
 The first entries are ideas from before any code existed; the rest are parts of the running app.
@@ -167,11 +184,21 @@ The first entries are ideas from before any code existed; the rest are parts of 
   alone, under the same lights, before it goes on stage.
 - **The ui package** (`packages/ui`) is the paint shop: shadcn primitives mixed only from Kay's
   tokens, so anything an agent builds comes out in the house colours (ADR-082).
-- **The rail** was the corridor outside the theatre: the mark on the door, one icon per room, and
-  at the far end the light switch and the cloakroom. It is now the sidebar folded to 56px, and it
-  keeps only the rooms: the Kay mark, drawn from the polygon meetkay.ai declares (ADR-095),
-  Documentation and Lab. The light switch and the cloakroom moved into the account menu at the
-  title bar's far right.
+- **The rail** (`apps/web/src/shell/rail.tsx`) is the camera gate's frame. It was the corridor
+  outside the theatre, then the sidebar folded to 56px; now it is its own 56px column, drawn in
+  every state and never moving (ADR-144). It keeps the rooms, a navigation landmark named Places:
+  the Kay mark, drawn from the polygon meetkay.ai declares (ADR-095), the five rooms still being
+  built, Documentation and Lab, each naming itself in an ink pill whatever the panel is doing.
+  The cloakroom, the account with the light switch (the theme) in its menu, sits at its foot.
+- **The stage** (`[data-slot="stage"]` in `window.tsx`) is the gate's aperture: the box beside
+  the rail that holds the projects panel and the workspace, and clips at the rail's edge. It
+  clips (`overflow: clip`), never hides, because `hidden` makes a scroll container, and a focus
+  or a scroll into view could then roll the film sideways through the gate.
+- **The projects panel** (`sidebar.tsx`) is the film. It is shadcn's offcanvas Sidebar holding
+  the project tree, a landmark named Sidebar. Docked, it pushes the workspace and resizes from its
+  edge; closed, it waits behind the gate, inert, and the peek (`sidebar-peek.tsx`, timed by
+  `peek.ts`) pulls it through and back when the pointer rests on the toggle, the rail's empty
+  stretch or the strip just past it.
 - **The compose canvas** is the cutting-room wall: pull a line out of the thread and pin it up to
   start a new cut, drag a card over to see it at size, and there is always bare wall to the right
   for the next idea (ADR-089). The pins move: take a lane by its grip and the others shuffle
@@ -384,7 +411,17 @@ The first entries are ideas from before any code existed; the rest are parts of 
   is a `SidebarMenuAction`. Each would otherwise have been a primitive to build, style and make
   accessible by hand, and AGENTS.md already says new components come from shadcn. The project rows
   follow Conductor's: "name >" when folded, and no chevron on an open one until the pointer is on
-  it (ADR-093).
+  it (ADR-093). ADR-144 later took the rail out of it, and the Sidebar is now `offcanvas`.
+- **Our own rail beside shadcn's offcanvas Sidebar, not sidebar-09.** shadcn has a block with a
+  rail and a panel nested inside one icon Sidebar. It would have needed slot overrides and an
+  icon-group trick for the rail, turned `--sidebar-width` into a sum of two widths, and kept the
+  pin that pops and reflows the rows. A plain column for the rail and the stock offcanvas panel
+  beside it gave each part one owner and kept the vendored primitive nearly as shipped (ADR-144).
+- **One SidebarProvider, not two.** A second provider for the rail looks tidy until you read the
+  vendored one: it hard-codes the `sidebar_state` cookie and a window-wide Cmd/Ctrl+B handler, so
+  two providers would both toggle on one key press, and every `useSidebar()` would answer from
+  whichever provider happened to be nearest. The rail needs no state of its own; it reads only
+  whether this is a phone and which route is open.
 - **Scenarios write through the store, never around it.** A fixture poured straight into the
   page's state could show something the app can never reach, such as a grandchild thread or a lane
   on another main's canvas. Each scenario fills a fresh in-memory SQLite through the store's own
@@ -1054,6 +1091,160 @@ base was 80% of the way down, not 50%, and out of step with the fade. The test t
 frame looked plausible on its own. The fix writes the curve out in both keyframes, with a
 comment saying why. Lesson: when CSS silently ignores something, only a measured assertion
 tells you.
+
+### Four frames that gave the polish away
+
+**The square "+".** The welcome's New project "+" drew square corners on hover and focus while
+every other button in the app rounds to 4px (design pillars rule 8). The vendored shadcn button
+comes from the base-lyra preset, which hard-codes `rounded-none`, so the `--radius: 4px` bridge in
+`globals.css` never reaches it: every call site opts back in with `rounded-[var(--radius)]`, and
+this one had not. It opts in now, and W6 reads its corners at rest, on hover and under focus.
+Lesson: a default that is wrong everywhere is fixed by an override everywhere, and the one place
+that forgets is the one people notice. The lasting fix is the default itself (a follow-up).
+Followed up (Ethan: "yes good idea"): the vendored button now rounds to `rounded-lg`, which is
+`--radius`, at every size, and none of the call sites that opted back in need to any more. A
+survey of every button's computed corner across the thread, Browser, Canvas and welcome views
+read the same before and after, and the four screenshots matched to the pixel.
+
+**The white frame.** Pressing "+" flashed the main pane to bare paper for one frame, 6.77s and
+10.89s into the recording, with "Opening New thread..." in its corner. It was not a page reload:
+the sidebar and tabs never moved, a marker left on `window` survived, and the page had one
+navigation entry. The thread pane asked the worker for its turns in a `useEffect`, and an effect
+runs after the first paint, so frame one was always the waiting frame, even for a thread created
+a moment ago that can only be empty. The snapshot now counts each thread's turns, and a thread
+with none opens empty in its first render; a thread that truly waits keeps its "Opening..." line
+hidden for 100ms, below what reads as a wait (rule 9). The skeptic then found a second flash
+behind the first: the Vitruvian sheet faded in from nothing on every new welcome, using a fade
+written for the empty canvas, so that fade is back where it belongs. Lesson: a loading state is
+for not knowing. If you already know, render.
+
+**The slide that went home in the dark.** The peek slid out over 220ms and back over 160ms, and the
+way back also faded its opacity on the drawer curve, which front-loads its change: the panel was
+at 0.32 opacity 33ms in, with its edge still 83px out. It was invisible before it had travelled,
+so the way back read as no motion at all (2 to 3 frames in the recording, against 8 on the way
+out). Both directions now share one `--peek-slide`, and the way back's fade is the fade-in played
+backwards, starting 100ms in, so the panel holds full strength until it is nearly home. Lesson:
+a mirror plays the tape backwards; pasting the same fade into both directions is not a mirror.
+
+**The ghost that grew.** A card lifted from a narrow thread, drawn compact at home (a 160px chart,
+a stacked footer), rode the pointer in the wide layout: the chart 40px taller, the footer on one
+row, "Show my work" 266px to the right, at the same width. The ghost wraps its clone in
+`display: contents` copies of every ancestor so selectors and inherited type still match, but the
+copy of `.thread-scroll` kept `container: thread`. A query still picks a container with no box,
+and reads its width as "unknown", so `@container thread (max-width: 480px)` failed. The copies
+stop being containers now, and each real container is rebuilt around them as a plain box at its
+home size. Lesson: a stand-in inherits every job on the call sheet, including the ones it has no
+body to do.
+
+**The check that ate a check.** The corners check and the new frame check were both named W6, and
+the runner spread its check collections into one object, so the second W6 replaced the first
+without a word: a green run that never ran the corners check. They are W6, W7 and W8 now, and
+`collect()` in `lever.mjs` throws on a duplicate id. Lesson: an object spread is a last-writer-wins
+merge; anything keyed by name needs a guard, not a hope.
+
+### The film that ran over the gate
+
+**The panel that covered the rail.** Ethan's report was one sentence: the thread panel covers the
+navigation icons. Seeked frame by frame, the peek slid the whole sidebar in from the window's
+edge, and for most of its 220ms every rail glyph's centre was drawn by the sliding panel, its
+own copy of each glyph 12px to the left of the rail's. A decorative echo of the rail sat beneath
+to hide the seam, which is a patch over the wrong shape. The rail now never moves and the panel
+passes behind a clip at its edge; P29 and P30 read the rail's glyphs, pixels and edge at twelve
+held frames of the slide. Lesson: when a fix needs a decoy of the thing it covers, the thing
+should not be covered.
+
+**Ctrl+B dropped focus on the floor.** With keyboard focus on a project row or the resize edge,
+Ctrl+B closed the sidebar and focus landed on `body`: the next Tab started from the top of the
+page. A focused element that stops being drawn simply loses focus. Closing now hands focus to
+Toggle sidebar first (`handFocusToToggle`), before the rows go. P27 was red before the fix.
+Lesson: anything that hides what the user is on owes them a new place to stand.
+
+**The third door out of the peek.** The review found the same drop on a path the fix missed:
+open a thread from a peeking panel, by Enter or a click, and the panel slides away with focus
+still on the row, which turns inert and lets go of it some hundreds of milliseconds later, onto
+`body`. Ctrl+B and Escape had each learned to hand focus over; a visit and the end of a slide
+back had not. Instead of a third patch, every step of the peek now goes through one door: a pure
+`putsAway(state, action)` says whether the step leaves the panel behind the rail, and if so focus
+moves to Toggle sidebar first. P34 fails without it (focus on `body` in all six peek cases) and
+checks a docked row keeps its focus. Lesson: when the same bug has three doors, fix the hallway.
+
+**The rail's focus held the panel out.** Tab to Kay, rest the pointer on the rail until the panel
+peeks, move away: the panel stayed out for good, because keyboard focus anywhere in the peek held
+it, and the rail counted as the peek. The rail stays whether the panel is out or not, so its
+focus now holds nothing; focus in the panel, or a menu open in either, still does. P28 was red
+before the fix, "held past 870ms".
+
+**Off canvas, but still on the call sheet.** shadcn's offcanvas sidebar slides its rows off to
+the left and leaves them there, tabbable and read by screen readers, just out of sight. The
+vendored container is now `inert` while it is away, so Tab, the accessibility tree and
+find-in-page all skip it. The check had its own trap: Playwright's role queries do not treat
+`inert` as hidden, so P32 asks the browser itself for its accessibility tree (over CDP) and walks
+60 real Tabs. Without the fix, the closed panel's rows were Tab stops.
+
+**The avatar that decided how every letter was drawn, again.** The pixel audit before and after
+found that the old sidebar drew every glyph on the page with coloured subpixel fringes while it
+was open, and greyscale while it was folded: the one avatar sat inside the sidebar's stacking
+context, so its blend never reached the window's layer, and folded, the rail's echo carried a
+second avatar outside it (the same mechanism as the first avatar blooper). The rail's avatar sits
+in plain flow, so the text is greyscale in every state now. The cost is honest: the folded rail
+is not bit for bit the old one, about 140 antialiased pixels at up to 23 levels, with every
+glyph on the same pixel. Lesson: when a screenshot changes where nothing moved, measure which
+pixels, then ask what layer they were drawn in.
+
+**The drawer that closed itself in a test.** The phone check opened the drawer on `/`, and the
+drawer shut again on its own, sometimes. `/` moves on to a thread, and any arrival closes the
+drawer (ADR-121), so a click that beat the redirect was undone by it. The check now starts on a
+thread's own address and waits for the drawer's open state, not a timer. Lesson: a flaky check is
+usually a race the product really has; find which two things are racing before adding a wait.
+
+### A check that knew the old curve by heart
+
+P24 guards the peek's slide back: the panel has to stay solid until it is almost home, or the
+slide reads as a blink. It said so as "still 0.97 when the edge is 3px out", a number measured on
+the old drawer curve. Ethan's curve eases into place instead of slamming there, so the last few
+pixels take longer, and the same late fade now overlaps them: 0.88 at 9px, 0.6 at 3px. Nothing on
+screen got worse (the panel is solid for its first 95% of the trip), but the check failed.
+The fix was to say what the rule means, not what one curve happened to produce: the panel keeps
+0.97 or more until its last 5% of travel. Lesson: a check that pins a symptom of today's tuning
+breaks the day the tuning changes; pin the intent, and the check survives a retime.
+
+### The type that stayed after the bar left
+
+The peek slid home correctly: the panel passed behind the rail's edge and never covered it. But
+the panel and the rail are the same paper, so in the last 20px of the trip the ends of the rows
+(a "18" count, an ellipsis, a "+", a sliver of the open row's fill) sat beside the rail's icons
+for four frames with no visible panel around them. Ethan saw it at once in a recording: "text is
+still rendered outside of the component".
+
+A lower third does not retract its bar with the name still on it: the type goes first, then the
+bar. The panel now does the same:
+
+```css
+/* apps/web/src/index.css - the rows leave on the fade-in's own clock; the paper slides on */
+[data-slot="sidebar"][data-peek] [data-slot="sidebar-inner"] > * {
+  transition: opacity 120ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+[data-slot="sidebar"][data-peek="leaving"] [data-slot="sidebar-inner"] > * {
+  opacity: 0;
+}
+```
+
+```mermaid
+gantt
+  title The peek's way home, in ms
+  dateFormat x
+  axisFormat %L
+  section Before
+  Slide, rows at full strength :crit, 0, 220
+  section After
+  Rows fade, strong ease-out   :0, 120
+  Paper, hairline, shadow slide:0, 220
+  Edge fade as it lands        :100, 220
+```
+
+The check had a blind spot on the way: opacity is not inherited, so the rows' own computed
+opacity read 1 while their parent faded. P24 now multiplies the opacity of every box from the rows
+up to the panel, the value actually drawn, and it fails on the old stylesheet.
 
 ### A grid rule that leaked onto the shared page
 
@@ -2126,6 +2317,335 @@ memory. Two actors reading one sheet cannot drift apart.
 Senior-engineer takeaway: when two components compute the same thing, the thing is a calculation
 asking for a name. Pull it out, keep it free of hooks and clocks, and let the components stay thin
 actions around it.
+
+### Don't send a runner to the vault for a shot you already have
+
+The white flash is the classic cost of fetching in an effect. React paints first and runs
+effects after, so a component that starts in "loading" and asks for its data in `useEffect` will
+paint "loading" at least once, however fast the answer comes. When the answer is already on hand,
+decide in the first render instead:
+
+```tsx
+// apps/web/src/components/turns.ts - a calculation: data in, data out
+export function turnsBefore(thread: ThreadSummary): Turns {
+  return thread.turnCount === 0 ? NONE : LOADING; // → open and empty, or ask the worker
+}
+
+// apps/web/src/components/thread-pane.tsx - read once, as the pane mounts
+const [turns, setTurns] = useState(() => turnsBefore(thread)); // → Turns
+useEffect(() => {
+  if (asking) void load(); // only a thread with turns still asks
+}, [runtime, id, asking]);
+```
+
+```mermaid
+sequenceDiagram
+  participant E as Ethan
+  participant P as Thread pane
+  participant W as Worker
+  Note over E,W: Before
+  E->>P: press "+"
+  P->>E: frame 1: "Opening..." on bare paper
+  P->>W: open(id), from useEffect after the paint
+  W-->>P: no turns
+  P->>E: frame 2: the welcome and its painting
+  Note over E,W: After
+  E->>P: press "+"
+  P->>P: the snapshot says turnCount 0
+  P->>E: frame 1: the welcome and its painting
+```
+
+The film version: the script supervisor already has the take on the sheet, so nobody sends a
+runner to the vault for it while the audience watches a blank screen.
+
+Senior-engineer takeaway: an effect is for what you truly do not know yet. Anything you can
+decide from what you already hold (props, a snapshot, a cache) belongs in the first render, and
+a wait people cannot perceive deserves no message at all.
+
+### A mirror plays the tape backwards
+
+Ethan asked for the peek to go back "with the same curve and duration". The slide took that
+literally: one custom property, so the two directions cannot drift apart. The fade could not,
+because a fade that races ahead on the way out has to trail behind on the way back:
+
+```css
+/* apps/web/src/index.css - one slide both ways; the fade reversed, not copied */
+[data-slot="sidebar"][data-peek] > [data-slot="sidebar-container"] {
+  --peek-slide: transform 220ms cubic-bezier(0.32, 0.72, 0, 1);
+  transition:
+    var(--peek-slide),
+    opacity 120ms cubic-bezier(0.23, 1, 0.32, 1); /* out: solid early */
+}
+[data-slot="sidebar"][data-peek="leaving"] > [data-slot="sidebar-container"] {
+  transition:
+    var(--peek-slide),
+    opacity 120ms cubic-bezier(0.68, 0, 0.77, 0) 100ms; /* back: the same curve reversed, late */
+}
+```
+
+```mermaid
+gantt
+  title The peek's tracks, in ms
+  dateFormat x
+  axisFormat %L
+  section Out
+  Slide, drawer curve       :0, 220
+  Fade in, strong ease-out  :0, 120
+  section Back, before
+  Slide                     :0, 160
+  Fade out, front-loaded    :crit, 0, 160
+  section Back, after
+  Slide, drawer curve       :0, 220
+  Full strength             :0, 100
+  Fade out, reversed curve  :100, 220
+```
+
+A curve reversed in time swaps and flips its control points: `(x1, y1, x2, y2)` becomes
+`(1 - x2, 1 - y2, 1 - x1, 1 - y1)`, which is how `(0.23, 1, 0.32, 1)` became `(0.68, 0, 0.77, 0)`.
+In the edit suite it is the difference between reversing a clip and pasting the same dissolve at
+both ends: only the reversed clip reads as the same move going home.
+
+### A stand-in inherits the whole call sheet
+
+The drag ghost is a clone laid out far from home, under `<body>`. To look the same it wears empty
+copies of its ancestors (`display: contents`, so they draw nothing and still match the CSS), and
+that is where the bug hid: the copies also inherited the job of being size containers, a job
+that needs a body.
+
+```ts
+// packages/catalog/src/carryGhost.ts
+shell.style.display = "contents"; // → matches .thread-panel, draws no box
+shell.style.containerType = "normal"; // → but is no longer a container nobody can measure
+
+// Every real container at home comes back as a plain box at its home size, outermost first
+return homeContainersOf(lift).reduceRight((inner, container) => {
+  const box = standInFor(container); // → <div style="container: thread; width: 426.6px">
+  box.append(inner);
+  return box;
+}, shells);
+```
+
+```mermaid
+flowchart TB
+  subgraph Before
+    G1[".carry-ghost, sized, named thread"] --> S1
+    S1[".thread-scroll copy<br/>display: contents<br/>container: thread"]
+    S1 --> C1["card: @container thread asks<br/>'width?' → unknown → wide layout"]
+  end
+  subgraph After
+    G2[".carry-ghost"] --> B2["stand-in box, container: thread<br/>426.6px, the home width"]
+    B2 --> S2[".thread-scroll copy<br/>display: contents, not a container"]
+    S2 --> C2["card: 'width?' → 426.6px → compact layout"]
+  end
+```
+
+On set, a stand-in takes the lead's marks for lighting, not the lead's lines. The copies here
+now do the same: they stand where the ancestors stood for the selectors, and leave the measuring
+to boxes that have a body.
+
+### Hide the cut in the gate: a step that moves nothing
+
+The peek slides the panel with `transform`, but a closed panel is parked with `left` (shadcn's
+offcanvas). So the slide back has to end with a switch from one to the other. Done with motion
+on, the switch would play `left` as a second slide. Done at the one moment both describe the same
+pixels, with motion off, nobody can see it:
+
+```ts
+// apps/web/src/shell/peek.ts - when the slide back ends, the rest step is marked instant
+left: (state) => (state.phase === "leaving" ? { phase: "away", instant: true } : state),
+```
+
+```css
+/* apps/web/src/index.css - a step marked instant runs no transition at all */
+[data-slot="sidebar-container"][data-peek-instant] {
+  transition: none;
+}
+/* leaving ends at   left: 0    + translateX(-100%)   → the panel sits one width to the left
+   away starts at    left: -W   + no transform        → the same pixels, behind the rail's edge */
+```
+
+```mermaid
+sequenceDiagram
+  participant P as Pointer
+  participant T as peekIntent (timing)
+  participant R as nextPeek (reducer)
+  participant C as Panel (CSS)
+  P->>T: leaves the rail and the panel
+  T->>T: waits 250ms, the grace
+  T->>R: hide
+  R->>C: phase "leaving": transform to -100%, fade late
+  C-->>R: transitionend, the last of two
+  R->>C: phase "away", instant: data-peek-instant, transition none
+  Note over C: left -W with no transform: the same pixels as translateX(-100%) at left 0
+  C->>R: box read (useSettle), then "settled"
+  R->>C: instant off; parked behind the rail's edge, inert
+```
+
+The film version is a cut hidden in the gate: two shots join on the frame where the camera
+whip-pans through black, and the audience sees one move. The engineering rule underneath: when
+two mechanisms own the same property at different times, hand over on a frame where their
+outputs agree, and turn the motion off for exactly that frame.
+
+### Read the graph, not the thumbnail
+
+Ethan asked for motion that is "fast in the beginning and then a bit of an ease into the final
+position", with a small sketch of a curve. A CSS easing curve is the same object as a keyframe
+pair in After Effects' value graph: time runs left to right, value bottom to top, and the two
+handles are the keyframes' tangents. The first handle says how hard the move leaves, the second
+how softly it lands.
+
+The first try read the handles off the sketch, (0.34, 1) and (1, 1), and missed: the sketch was a
+thumbnail with no scale, and a handle one third of the way along leaves the gate gently. Ethan
+answered with a screen recording of the real thing, a text layer moving 500px to 1500px over 100
+frames, with its value graph open. Sampling the red curve pixel by pixel and fitting a cubic
+Bezier to the samples gave the handles his graph actually holds:
+
+```css
+/* apps/web/src/index.css - fitted to the value graph of Ethan's After Effects move */
+:root {
+  --panel-ease: cubic-bezier(0.17, 1.02, 0.58, 1); /* handles at 17% and 58% of the time */
+  --panel-peek: 220ms; /* the hover peek, unchanged */
+  --panel-pin: 250ms; /* a click on the toggle: was shadcn's 200ms linear */
+}
+```
+
+```mermaid
+xychart-beta
+  title "How far the panel has travelled (%), 0 to 220ms"
+  x-axis "ms" [0, 20, 40, 60, 80, 100, 120, 140, 160, 180, 200, 220]
+  y-axis "travel %" 0 --> 100
+  line "old drawer curve" [0, 24, 59, 81, 90, 94, 97, 98, 99, 100, 100, 100]
+  line "first try, off the sketch" [0, 23, 40, 54, 65, 75, 82, 88, 93, 96, 99, 100]
+  line "fitted to the AE graph" [0, 39, 61, 76, 85, 91, 95, 98, 99, 100, 100, 100]
+```
+
+The fitted curve is 39% of the way there after 20ms, where both others sit near 23%: that is the
+"fast acceleration". Past 90% it spends the second half of the move closing the last few
+pixels: the "slower and smooth settle". The fit sits within 0.2% of Ethan's graph at every
+sampled point. In edit-suite terms, the first try matched the shape of a speed ramp from a
+storyboard frame; the second measured the ramp off the actual clip.
+
+### Fix the stamp, not the prints
+
+Two bugs this week had one cause. The splash's "+" came out square, and the "Unpin thread" label
+came out as a black box with an arrow, because the vendored shadcn parts (the base-lyra preset)
+default to square corners and a box tooltip. Every call site had been undoing the default by
+hand: a dozen `rounded-[var(--radius)]` overrides on buttons, and a `variant="pill"` on the
+rail's labels only. The fix moved the rule to where the parts are made:
+
+```tsx
+// packages/ui/src/components/button.tsx - the default is the brand, at every size
+const buttonVariants = cva("group/button inline-flex ... rounded-lg border ...", {
+  // rounded-lg is --radius, the site's 4px (design pillars, rule 8)
+});
+
+// packages/ui/src/components/tooltip.tsx - one look, no variant to forget
+<TooltipPrimitive.Popup data-slot="tooltip-content" className={cn(PILL, className)} />
+```
+
+```mermaid
+flowchart LR
+  subgraph Before
+    D1["shadcn default<br/>square, box tooltip"] --> A1["call site A<br/>override: 4px"]
+    D1 --> B1["call site B<br/>override: pill"]
+    D1 --> C1["call site C<br/>forgot → square"]
+  end
+  subgraph After
+    D2["Kay default<br/>4px, pill"] --> A2["call site A"]
+    D2 --> B2["call site B"]
+    D2 --> C2["call site C<br/>right by default"]
+  end
+```
+
+Proof that nothing else moved: every button's computed corner, surveyed in four views before and
+after, read the same, and the screenshots matched to the pixel. In print terms, a typo on the
+plate is fixed on the plate; correcting each copy by hand works until the one copy nobody
+checked goes out.
+
+### The line belongs to the set, not the actor
+
+Docked, a hairline parts the rail from the panel. It was first drawn on the panel's own left
+edge, which made sense at rest and failed in motion: during a pin the panel slides out from
+behind the rail's edge, so its left edge (and the line on it) stayed hidden behind the clip for
+the whole slide and only arrived on the last frames. With the curve's long settle, those last
+frames move by fractions of a pixel, so the 1px line smeared into view like a fade. Ethan: "it
+fades in and doesn't feel considered".
+
+The line is part of the set, the rail's edge, not of the actor sliding past it. So it moved onto
+the rail, and it switches with the docked state rather than riding the panel:
+
+```css
+/* apps/web/src/index.css - the rail's edge, on from a pin's first frame, off after an unpin */
+[data-slot="rail"] {
+  transition: box-shadow 0s var(--panel-pin); /* going off: hold, then step at 250ms */
+}
+[data-slot="sidebar-wrapper"]:has([data-slot="sidebar"][data-state="expanded"])
+  [data-slot="rail"] {
+  box-shadow: inset -1px 0 0 var(--hairline);
+  transition: none; /* coming on: at once */
+}
+```
+
+```mermaid
+sequenceDiagram
+  participant T as Toggle
+  participant R as Rail edge (line)
+  participant P as Panel
+  T->>R: pin: data-state expanded, line on at frame 1
+  T->>P: slides out from behind the line, 250ms
+  T->>P: unpin: slides back behind the line, 250ms
+  R-->>R: 0s transition, delayed 250ms: line off as the panel lands
+```
+
+The trick in the middle is a transition with no duration and a delay: the browser holds the old
+value for the delay, then steps. A transition runs on the rules of the state it arrives at, so
+the off state carries the delay and the on state carries none, and one line of CSS plays the
+pin backwards for the unpin with no JavaScript. In film terms: the door frame is dressed before
+the actor walks through it, and struck only after they have left the shot.
+
+### Keep the frame dressed while the set moves
+
+Three small tells made the panel's motion feel unconsidered, and they had one root: something
+that should have been on screen for the whole move was only there for part of it.
+
+- **The peek faded in.** For its first frames the panel was see-through, so the workspace's
+  border showed through it and the panel's own edge line drew in slowly. The toggle never faded,
+  which is why it read as sliding out from under the rail. The peek now slides out solid.
+- **A pin from a peek dropped its edge.** Clicking the toggle while peeking moves only the
+  workspace, which slides under the panel. The peek's edge line vanished at the click, and the
+  workspace's rounded border only crept out from under the panel as the curve settled. The edge
+  now holds for the pin's 250ms, the same delayed-step trick as the rail's divider.
+- **The rows lingered on the way home.** They now fade in 60ms and are gone once the panel has
+  three quarters of the trip behind it, on the peek and on the toggle alike.
+
+```css
+/* apps/web/src/index.css - a pin from a peek: the edge holds while the workspace moves under it */
+[data-slot="sidebar"][data-state="expanded"] > [data-slot="sidebar-container"] {
+  transition-property: left, right, width, box-shadow, clip-path;
+  transition-duration: var(--panel-pin), var(--panel-pin), var(--panel-pin), 0s, 0s;
+  transition-delay: 0s, 0s, 0s, var(--panel-pin), var(--panel-pin);
+}
+```
+
+```mermaid
+gantt
+  title A pin from a peek, in ms
+  dateFormat x
+  axisFormat %L
+  section Before
+  Peek edge                 :crit, 0, 1
+  Workspace slides under    :0, 250
+  Rounded border creeps out :crit, 150, 250
+  section After
+  Peek edge held            :0, 250
+  Workspace slides under    :0, 250
+```
+
+One catch in that rule: naming `transition-property` in plain CSS outranks the layered Tailwind
+utilities that turn transitions off for a key press, a drag and reduced motion. So each of those
+gets its own `transition: none` again, and P20 and P21 check that a key, a drag and reduced
+motion still move nothing. The film habit underneath: a door frame stays dressed while the dolly
+moves past it, and is struck only once the shot is over.
 
 ### A continuity desk for pixels
 

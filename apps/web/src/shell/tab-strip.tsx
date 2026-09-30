@@ -370,7 +370,7 @@ export function TabStrip({ shell, starting }: { shell: Shell | null; starting: b
         ref={plus}
         variant="ghost"
         size="icon-sm"
-        className="rounded-[var(--radius)] text-soft-ink"
+        className="text-soft-ink"
         aria-label="New thread"
         disabled={shell === null}
         onClick={() => {

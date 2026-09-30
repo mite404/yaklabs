@@ -85,6 +85,22 @@ export async function luminance(page, clip) {
   }, png.toString("base64"));
 }
 
+/**
+ * The checks of every collection in one set, for `run`. A spread would let a later check with an
+ * id already taken replace the earlier one without a word, so a run could pass without it.
+ * @throws {Error} When two collections name a check with the same id.
+ */
+export function collect(...collections) {
+  const checks = {};
+  for (const collection of collections) {
+    for (const [id, check] of Object.entries(collection)) {
+      if (Object.hasOwn(checks, id)) throw new Error(`Two checks are named ${id}`);
+      checks[id] = check;
+    }
+  }
+  return checks;
+}
+
 /** Runs each check (or those named by --only), prints PASS or FAIL, writes results.json. */
 export async function run(checks) {
   // Partial raster redraws only the part of a tile that changed, so an anti-aliased edge that
