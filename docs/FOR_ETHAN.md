@@ -2127,6 +2127,96 @@ Senior-engineer takeaway: when two components compute the same thing, the thing 
 asking for a name. Pull it out, keep it free of hooks and clocks, and let the components stay thin
 actions around it.
 
+### A continuity desk for pixels
+
+`apps/verify` adds a review room without building a second set of scenes. The production catalog
+owns the components, Storybook owns their examples, and the verification CLI photographs those
+examples in Chromium, Firefox, and WebKit. The React review app only reads the evidence.
+
+Think of approved screenshots as continuity photographs. A new take is compared with the approved
+take, not with a fresh photograph of itself. A missing reference means "not compared", not "looks
+fine". An agent must name the captures it intends to approve and the expected count. It cannot
+approve through the review page, and CI cannot approve at all.
+
+The important distinction is between a reference and a report. Changing a costume should produce
+a difference against the continuity photograph. It should not make that photograph disappear from
+the comparison. But a report photographed before today's costume change is stale and cannot be
+approved as today's result. Separate states encode that distinction instead of relying on a note
+an agent might forget.
+
+The tool also tests its own camera. It captures an untouched Button twice, then injects a wrong
+text color and wrong padding. The first pair must match; both altered pairs must differ. Unit
+tests alone cannot prove that the screenshot path actually sees the rendered CSS.
+
+A real blooper appeared in the review tool itself. Imported tabs used a translucent foreground
+instead of Kay's secondary-text role. Axe caught insufficient contrast. Using `--soft-ink` fixed
+the surface without inventing another gray or changing the shared shadcn mapping. Rams separately
+suggested increasing small labels. Its mobile Safari suggestion was outside this desktop tool's
+scope. A reviewer is useful because it raises questions, not because every suggestion is a rule.
+
+Hex and OKLCH are different notations for one color, like timecode and frame numbers naming the
+same edit point. Switching notation in the inspector does not redesign the theme. Two roles can
+also share one value without becoming one role. A recording indicator and destructive action may
+look identical today and need to diverge tomorrow.
+
+The senior-engineer habit is to keep the claims smaller than the evidence. Five stories across
+three engines and two themes means 30 captures, not complete product coverage. A screenshot diff
+does not establish accessibility. An axe pass does not establish taste. The review room makes each
+claim and its missing evidence visible. The commands and operating limits live in
+`apps/verify/README.md`.
+
+### The review room needs a monitor, not just a checklist
+
+The first verification page presented measurements and small screenshots. That answered whether
+pixels changed, but made it difficult to judge whether the change looked right. The selected mockup
+put three tools together. The results table locates a change, the before/after wipe exposes its
+visual effect, and the pixel inspector enlarges its geometry. They now share one selected capture.
+
+Think of a colorist switching between the scopes and the reference monitor. The scopes measure a
+signal; the monitor supports a judgment. Neither replaces the other. Kay Verify keeps the measured
+pixel count unchanged while the reviewer pans through zoomed captures and inspects corners.
+
+Both images occupy one coordinate plane. A narrower baseline stays narrower. Content framing uses
+the union of both images' visible content, never separate alignment that could hide displacement.
+Full capture remains available, and resized captures start there. Every magnified crop samples the
+same source coordinates without smoothing. Nothing in this viewer writes a baseline.
+
+The verification script checks rendered colors at both ends of the wipe, then samples known pixels
+from the magnifier. It also changes the real Button story's radius from 4px to 12px in an isolated
+browser page. The resulting corner differences appear in both the main image and the inspector.
+This proves that the review tool can expose a regression rather than merely displaying a slider.
+
+Axe caught coordinate values inheriting secondary text color over a dark input background at
+3.58:1 contrast. Using the primary text token fixed the values without changing their quieter
+labels.
+Rams separately recommended larger annotations; the new inspector uses 12px labels. These checks
+complement the designer's judgment rather than assigning a numerical score to taste.
+
+### The wide shot belongs beside the close-up
+
+Storybook photographs components in isolation. The production SPA's demo now supplies the wide shot,
+including the title bar, sidebar, and workspace. `pnpm verify run --app` records both through the
+same comparator. It does not rebuild the shell in a story. The inventory names all available stories
+and distinguishes them from the five-story smoke test, just as a shot list distinguishes planned
+coverage from footage already in the bin.
+
+The inspector revealed a hit-area bug. An invisible range-input track covered the middle of every
+image, so clicks intended for inspection moved the wipe instead. Only the visible handle now accepts
+wipe drags. The image accepts inspection drags, and each coordinate field accepts horizontal scrubs
+while retaining typing and keyboard controls. Labels sit outside the pixels they describe.
+
+The review server also serves the Storybook build retained with each report. Opening a component
+does not start a process, and it cannot accidentally show a newer build than the capture being
+reviewed. File containment checks protect both the asset route and the inventory reader. The browser
+tests pin their report too; following "Latest run" while another process publishes results made a
+test change inputs halfway through.
+
+Pixels comparisons use neon green as diagnostic ink, not a success status. Comparator proof uses
+red for its deliberately introduced mistakes. A highlighted edge says "these takes differ".
+Whether that difference improves the composition still belongs to the reviewer. The full-SPA test
+checks its camera twice, then shifts the actual title bar and verifies that the changed pixels are
+detected without promoting either capture to an approved baseline.
+
 ### Quiet prose is an editing decision, not another model
 
 The interview demo at `/demo/weekly-brief` uses an authored conversation. Think of its content as
