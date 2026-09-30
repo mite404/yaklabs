@@ -1,6 +1,8 @@
 import type { AgentEvent } from "@yaklabs/catalog/agent";
+import { resolveAwaiting } from "@yaklabs/catalog/awaiting";
 import { cancelReply, completeReply, type AgentMessage } from "@yaklabs/catalog/reply";
 import type { ThreadMessage } from "@yaklabs/catalog/thread";
+import { awaitingOf } from "@yaklabs/catalog/transcript";
 
 /** A thread's turns and the opening draft a dropped highlight left: what a reply rewrites. */
 export type Transcript = { messages: ThreadMessage[]; draft: string; updatedAt: string };
@@ -19,8 +21,21 @@ function nextId(messages: ThreadMessage[], prefix: "u" | "a"): string {
   return `${prefix}${Math.max(0, ...used) + 1}`;
 }
 
-// The user's side of an event, or nothing: a rejected question never reached the user.
-function userTurn(event: AgentEvent, id: string, time: string): ThreadMessage | undefined {
+// The wording of the question the thread waits on, as the reader saw it docked: only one that
+// passes the catalog's check is ever docked (ADR-040), so any other was never asked of them.
+function dockedWording(messages: ThreadMessage[]): string | undefined {
+  const checked = resolveAwaiting(awaitingOf(messages)); // → AwaitingResult
+  return checked.kind === "approved" ? checked.question.question : undefined;
+}
+
+// The user's side of an event, or nothing: a rejected question never reached the user. An
+// answer carries the question it answered, so the thread shows the two together.
+function userTurn(
+  event: AgentEvent,
+  messages: ThreadMessage[],
+  id: string,
+  time: string,
+): ThreadMessage | undefined {
   switch (event.kind) {
     case "message": {
       const { text, attachments, files = [] } = event;
@@ -34,8 +49,16 @@ function userTurn(event: AgentEvent, id: string, time: string): ThreadMessage | 
         ...(labels.length > 0 ? { files: labels } : {}),
       };
     }
-    case "answer":
-      return { id, role: "user", text: event.text, time };
+    case "answer": {
+      const question = dockedWording(messages); // → string | undefined
+      return {
+        id,
+        role: "user",
+        text: event.text,
+        time,
+        ...(question === undefined ? {} : { question }),
+      };
+    }
     case "question-rejected":
       return undefined;
     default: {
@@ -50,9 +73,10 @@ function userTurn(event: AgentEvent, id: string, time: string): ThreadMessage | 
  * the event has no user side.
  */
 export function withUserTurn(transcript: Transcript, event: AgentEvent, stamp: Stamp): Transcript {
-  const turn = userTurn(event, nextId(transcript.messages, "u"), stamp.time);
+  const { messages } = transcript;
+  const turn = userTurn(event, messages, nextId(messages, "u"), stamp.time);
   if (turn === undefined) return transcript;
-  return { messages: [...transcript.messages, turn], draft: "", updatedAt: stamp.at };
+  return { messages: [...messages, turn], draft: "", updatedAt: stamp.at };
 }
 
 /**

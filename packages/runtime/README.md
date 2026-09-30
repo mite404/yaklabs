@@ -154,8 +154,9 @@ lacks is silently dropped from every turn the store reads back.
   seed. A second `init` does nothing.
 - `send` saves the user's turn first, so a failed reply never loses what the user sent, and spends
   the thread's draft. A `message` becomes a user turn with its `attachments` and its `files` as
-  `{ id, label }`, an `answer` becomes a user turn with its text, and `question-rejected` adds no
-  user turn (ADR-040).
+  `{ id, label }`, an `answer` becomes a user turn with its text and the `question` it answered
+  (the wording of the question the last reply asked, when the catalog's check would dock it), and
+  `question-rejected` adds no user turn (ADR-040).
 - Each chunk the agent yields is folded into the agent's turn with the catalog's `applyChunk` and
   posted as a `chunk`; a `failure` event ends the turn, and nothing the agent says after it is
   read. The turn is saved when the stream ends, complete, or when an `abort` stops it, cancelled

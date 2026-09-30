@@ -18,6 +18,7 @@
     "./share": "./src/share.ts",
     "./thread": "./src/thread.ts",
     "./threadShare": "./src/threadShare.ts",
+    "./transcript": "./src/transcript.ts",
     "./tokens.css": "./src/tokens.css"
   },
   "scripts": {

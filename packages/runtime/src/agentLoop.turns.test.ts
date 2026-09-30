@@ -1,4 +1,4 @@
-import type { Agent } from "@yaklabs/catalog/agent";
+import type { Agent, AgentEvent } from "@yaklabs/catalog/agent";
 import {
   applyChunk,
   cancelReply,
@@ -7,6 +7,7 @@ import {
   type AgentMessage,
   type ReplyChunk,
 } from "@yaklabs/catalog/reply";
+import type { ThreadMessage } from "@yaklabs/catalog/thread";
 import { describe, expect, it, vi } from "vitest";
 import { beats, init, profit, sendAsk, startLoop } from "./agentLoop.harness";
 import type { Notice } from "./protocol";
@@ -34,6 +35,13 @@ const work: ReplyChunk[] = [
 const failure: ReplyChunk = {
   kind: "failure",
   failure: { title: "Reply interrupted", detail: "The sales system stopped answering." },
+};
+
+// A question the catalog would dock: a short question, its branches, a typed answer.
+const docked = {
+  question: "Which week should I compare?",
+  options: [{ label: "The week before" }, { label: "The same week last year" }],
+  answer: { placeholder: "Sep 7–13" },
 };
 
 // An agent that yields `chunks`, then ends, or with `hold`, waits until it is stopped.
@@ -129,5 +137,38 @@ describe("the agent loop settles a stopped or an empty reply", () => {
     await run(init);
     await run(sendAsk);
     expect((await opened(run, notices)).map((message) => message.id)).toEqual(["u1", "a1", "u2"]);
+  });
+});
+
+describe("the agent loop keeps a question with its answer", () => {
+  it("stores the question a reply asks, and the answer to it with the question's wording", async () => {
+    const asks: ReplyChunk[] = ["I can compare it.", { kind: "question", question: docked }];
+    const { notices, run } = await startLoop(() => says(asks));
+    await run(init);
+    await run(sendAsk);
+    const answer: AgentEvent = { kind: "answer", text: "The week before" };
+    await run({ ...sendAsk, requestId: "r2", event: answer });
+    const [asked, answered] = (await opened(run, notices)).slice(-3);
+    expect(asked).toMatchObject({ id: "a2", role: "agent", asks: docked });
+    const expected: ThreadMessage = {
+      id: "u3",
+      role: "user",
+      text: "The week before",
+      time: "10:03",
+      question: "Which week should I compare?",
+    };
+    expect(answered).toEqual(expected);
+  });
+
+  it("records no question for an answer when the reply asked none the catalog would dock", async () => {
+    const malformed = { question: "Which?" }; // no options, so it never docked
+    const { notices, run } = await startLoop(() =>
+      says([{ kind: "question", question: malformed }]),
+    );
+    await run(init);
+    await run(sendAsk);
+    await run({ ...sendAsk, requestId: "r2", event: { kind: "answer", text: "Any" } });
+    const answered = (await opened(run, notices)).at(-2);
+    expect(answered).toEqual({ id: "u3", role: "user", text: "Any", time: "10:03" });
   });
 });
