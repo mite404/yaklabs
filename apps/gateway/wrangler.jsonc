@@ -14,8 +14,8 @@
     // Only the API runs the Worker; every other request is a static file.
     "run_worker_first": ["/api/*"],
   },
-  // Both bindings live in the dashboard: `WORKOS_CLIENT_ID` as a variable, `ANTHROPIC_API_KEY`
-  // as a secret. Nothing environment-specific is written here, and keep_vars stops a deploy from
+  // Both bindings live in the dashboard: `WORKOS_CLIENT_ID` as a variable, `OPENROUTER_API_KEY`
+  // as a secret (ADR-146). Nothing environment-specific is written here, and keep_vars stops a deploy from
   // replacing what the dashboard holds (a value named under `vars` would be replaced).
   "keep_vars": true,
   // Public threads, sealed, each deleted by KV when its share ends (ADR-131). No id: the first

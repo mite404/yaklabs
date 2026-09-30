@@ -16,7 +16,7 @@ const verifyToken: TokenVerifier = (token) =>
 
 // The share routes never reach the model, so the client is never called.
 // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- an unused dependency's stand-in
-const anthropic = {} as Anthropic;
+const upstream = {} as Anthropic;
 
 // An app on a memory store and a clock the test moves; ids count up.
 function sharesApp() {
@@ -25,7 +25,7 @@ function sharesApp() {
   const store = memoryShares(() => clock.now);
   const app = createApp({
     verifyToken,
-    anthropic,
+    upstream,
     shares: {
       store,
       now: () => new Date(clock.now),
