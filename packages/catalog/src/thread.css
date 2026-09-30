@@ -491,6 +491,13 @@
   font-size: 13px;
   font-weight: 500;
 }
+/* The fold's chevron leads the label here, as a numbered list's marker would: at the header's
+   far right it sat under the reading tools, which float over the newest turn's bottom-right
+   corner (ADR-143), and a control hidden under a control is worse than a word covered. */
+.work-details .disclosure-header > .disclosure-chevron {
+  order: -1;
+  margin: 0;
+}
 .work-details .disclosure-body {
   padding-top: 12px;
 }
@@ -634,7 +641,7 @@
   padding-bottom: 8px;
 }
 .thread-footnote {
-  padding: 6px var(--thread-gutter) 8px;
+  padding: 6px var(--thread-gutter) 12px; /* 12px: a lane's 14px corner arc clears the words */
   color: var(--soft-ink);
   font-size: 12px;
   line-height: 16px;
