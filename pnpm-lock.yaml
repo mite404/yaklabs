@@ -98,6 +98,9 @@ importers:
       '@anthropic-ai/sdk':
         specifier: ^0.128.0
         version: 0.128.0(zod@4.6.5)
+      '@yaklabs/catalog':
+        specifier: workspace:*
+        version: link:../../packages/catalog
       hono:
         specifier: ^4.13.9
         version: 4.13.9
