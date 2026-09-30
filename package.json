@@ -12,6 +12,7 @@
     "test:stories": "turbo run test:stories",
     "storybook": "pnpm --filter storybook storybook",
     "build-storybook": "turbo run build-storybook",
+    "verify": "pnpm --filter verify cli",
     "lint": "pnpm --filter web exec react-router typegen && oxlint --disable-nested-config",
     "format": "oxfmt --write",
     "format:check": "oxfmt --check",
