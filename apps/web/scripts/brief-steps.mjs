@@ -257,9 +257,22 @@ async function recapJumpsToEvidence(page, run) {
   await run.shot("11-evidence");
 }
 
-async function askedThenAnswered(page, run) {
+async function cardViewRidesAlong(page, run) {
   await toolbarOf(page).getByRole("button", { name: "Fast forward, 2x" }).click();
   await button(page, "Play").click();
+  const slider = mainOf(page).getByRole("slider", { name: "Show" });
+  await until(
+    async () => (await slider.getAttribute("aria-valuetext")) === "Difference",
+    "the card to step",
+  );
+  const chip = mainOf(page).locator("article.turn-user .context-chip");
+  await chip.waitFor({ timeout: 30_000 });
+  assert.match(await chip.innerText(), /Difference · September/);
+  await run.shot("11b-card-view");
+  return await chip.innerText();
+}
+
+async function askedThenAnswered(page, run) {
   await mainOf(page)
     .getByText(/needs attention/i)
     .first()
@@ -268,6 +281,7 @@ async function askedThenAnswered(page, run) {
   await answers.waitFor({ timeout: 30_000 });
   assert.match(await answers.innerText(), /Hold them/);
   await untilDone(page);
+  assert.match(await agentTurns(page).nth(1).innerText(), /the difference on your card/);
   assert.match(await agentTurns(page).last().innerText(), /marked for review/);
   await run.shot("12-returned-done");
 }
@@ -306,7 +320,11 @@ export const returnedSteps = [
   ],
   ["a recap item jumps to its turn, and Work details holds the evidence", recapJumpsToEvidence],
   [
-    "Play asks what needs you: the question docks, Hold them is recorded, then Done",
+    "the player steps the card to Difference, and the choice rides on the request",
+    cardViewRidesAlong,
+  ],
+  [
+    "the reply speaks to that view; the question docks, Hold them is recorded, then Done",
     askedThenAnswered,
   ],
 ];

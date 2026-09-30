@@ -24,7 +24,8 @@ describe("the scripted scenarios", () => {
   });
 
   it.each(scripts)("$id opens with a request and answers every request with a reply", (script) => {
-    expect(script.beats[0]?.kind).toBe("user");
+    const first = script.beats.find((beat) => beat.kind !== "choose"); // → a card step may lead
+    expect(first?.kind).toBe("user");
     const unanswered = script.beats.filter(
       (beat, at) =>
         (beat.kind === "user" || beat.kind === "answer" || beat.kind === "retry") &&
@@ -59,6 +60,10 @@ describe("the scripted scenarios", () => {
     expect(scripts.map((script) => script.id)).toEqual(["brief", "interrupted", "returned"]);
     expect(scriptFor("nope").id).toBe("brief");
     expect(scriptFor().id).toBe("brief");
-    expect(userBeats(scriptFor("returned")).map((beat) => beat.kind)).toEqual(["user", "answer"]);
+    expect(userBeats(scriptFor("returned")).map((beat) => beat.kind)).toEqual([
+      "choose",
+      "user",
+      "answer",
+    ]);
   });
 });

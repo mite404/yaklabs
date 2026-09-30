@@ -1,12 +1,13 @@
-import { card, list, paragraph, plainText, strong, text, type Block } from "@yaklabs/catalog/prose";
+import { list, paragraph, plainText, strong, text, type Block } from "@yaklabs/catalog/prose";
 import type { ThreadMessage } from "@yaklabs/catalog/thread";
 import { activity, at, log, stream, type Script } from "../script";
-import { done, holdQuestion, sitesChart } from "./fixtures";
+import { done, holdQuestion, invoicesCard, sitesChart } from "./fixtures";
 
 // Scenario 3: a run the user did not watch. The thread opens on its record, 25 minutes after
 // the request: three children ran and finished, and the recap leads with their outcomes, each
-// a jump to the turn that holds the evidence. Then the user asks what still needs them, the one
-// decision docks, and the answer is recorded. About 30 seconds at 1x before reading time.
+// a jump to the turn that holds the evidence. The user steps the run's card to the view they
+// want, and the request after it carries that choice, so the reply speaks to it; the one
+// decision docks, and the answer is recorded. About 35 seconds at 1x before reading time.
 const summaryBlocks: Block[] = [
   paragraph([
     strong("212 invoices matched to deliveries across three sites."),
@@ -14,7 +15,6 @@ const summaryBlocks: Block[] = [
       " Five need a look: three deliveries at the northern warehouse have no invoice yet, and two southern invoices bill more than arrived.",
     ),
   ]),
-  card(sitesChart),
   paragraph([text("Nothing was changed or sent. The per-site detail is in Work details.")]),
 ];
 
@@ -32,6 +32,7 @@ const run: ThreadMessage[] = [
     text: plainText(summaryBlocks),
     time: "",
     blocks: summaryBlocks,
+    interactive: invoicesCard,
     work: {
       steps: [
         done(
@@ -66,7 +67,8 @@ const run: ThreadMessage[] = [
 export const returned: Script = {
   id: "returned",
   label: "Came back to it",
-  shows: "A run you did not watch: outcomes first, evidence a layer down, then what needs you.",
+  shows:
+    "A run you did not watch: outcomes first, evidence a layer down, a card's view carried into the next request, then what needs you.",
   standing: "Proposed: the recap as a missed run's summary. Shipped: the rest.",
   project: "Operations",
   thread: "September invoices",
@@ -86,20 +88,23 @@ export const returned: Script = {
   },
   opening: { awayMinutes: 25, turns: run },
   beats: [
+    { kind: "choose", after: 4500, measure: "Difference" },
     {
       kind: "user",
-      after: 5000,
+      after: 2500,
       text: "Back now. Anything I need to decide before this batch goes to payment?",
     },
     {
       kind: "reply",
       events: [
-        activity(600, "Checking what needs you."),
+        activity(600, "Reading the difference you're looking at."),
         ...stream(
           [
             paragraph([
-              strong("One thing."),
-              text(" Two southern invoices bill more than was delivered: "),
+              strong("One thing, and it is the difference on your card."),
+              text(
+                " The 7,500 sits at the southern warehouse, where two invoices bill more than was delivered: ",
+              ),
               strong("S-1187"),
               text(" for 12 pallets against 9 received, and "),
               strong("S-1203"),

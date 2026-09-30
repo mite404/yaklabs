@@ -90,7 +90,7 @@ export function userTurn(
 ): ThreadMessage[] {
   switch (event.kind) {
     case "message":
-      return [{ id, role: "user", text: event.text, time }];
+      return [{ id, role: "user", text: event.text, time, attachments: event.attachments }];
     case "answer":
       return [{ id, role: "user", text: event.text, time, question }];
     case "question-rejected":

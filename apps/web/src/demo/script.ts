@@ -14,11 +14,14 @@ export type Timed = { after: number; chunk: ReplyChunk };
  * controls (the compose box, the docked question, Stop, Try again); a reply beat is what the
  * scripted agent answers the request before it with. A user beat waits `after` ms once the
  * reply before it has settled, or, with `overlap`, once the user beat before it was performed,
- * so a second request can go out while the first reply still streams.
+ * so a second request can go out while the first reply still streams. A choose beat steps a
+ * card and sends nothing; the request after it carries the choice.
  */
 export type Beat =
   | { kind: "user"; after: number; text: string; overlap?: true }
   | { kind: "answer"; after: number; text: string }
+  /** Steps the latest interactive card to the stop named, so the choice rides with the next request. */
+  | { kind: "choose"; after: number; measure: string }
   | { kind: "stop"; after: number }
   | { kind: "retry"; after: number }
   | { kind: "reply"; events: Timed[] };

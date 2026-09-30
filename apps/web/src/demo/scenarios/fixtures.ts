@@ -1,5 +1,6 @@
 import type { AwaitingInput } from "@yaklabs/catalog/awaiting";
 import type { Selection } from "@yaklabs/catalog/catalog";
+import type { InteractiveSelection } from "@yaklabs/catalog/interactive";
 import type { WorkStep } from "@yaklabs/catalog/reply";
 import { at, type Timed } from "../script";
 
@@ -93,6 +94,58 @@ export const orderQuestion = {
   answer: { placeholder: "Or name the order you want" },
   elsewhere: "Skip the draft for now",
 } satisfies AwaitingInput;
+
+const bySite = (values: number[]) =>
+  ["Northern", "Southern", "Central"].map((label, i) => ({ label, value: values[i] }));
+
+/**
+ * September's invoices by site at three depths (ADR-029): billed, delivered, and the difference
+ * between them. The user steps the card to the view they want, and the choice rides along with
+ * their next request (ADR-030), so the reply can speak to that view.
+ */
+export const invoicesCard = {
+  catalogVersion: "1",
+  component: "BarChart",
+  props: {
+    title: "September invoices, by site",
+    source: "Demo supplier ledger · fixture data, September",
+    period: "September",
+    unit: "USD",
+    variant: "measure-steps",
+    control: {
+      label: "Show",
+      initial: "billed",
+      stops: [
+        {
+          id: "billed",
+          label: "Billed",
+          description: "What the suppliers invoiced for each site.",
+          rows: bySite([412_300, 338_900, 296_100]),
+        },
+        {
+          id: "delivered",
+          label: "Delivered",
+          description: "The value of what each site signed for.",
+          rows: bySite([412_300, 331_400, 296_100]),
+        },
+        {
+          id: "difference",
+          label: "Difference",
+          description: "Billed minus delivered: what would be paid for nothing.",
+          rows: bySite([0, 7_500, 0]),
+        },
+      ],
+    },
+    sentence:
+      "{measure} across the three sites came to {total} in {period}; {peakLabel} was the largest at {peakValue}.",
+    steps: [
+      "Read the 212 September invoices from the supplier ledger",
+      "Matched each to the delivery it names, per site",
+      "Summed what was billed and what was signed for",
+      "Took the difference where the two disagree",
+    ],
+  },
+} satisfies InteractiveSelection;
 
 /** The one decision left when the user comes back to the September invoices. */
 export const holdQuestion = {

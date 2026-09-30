@@ -144,8 +144,21 @@ async function perform(stage: Stage, beat: Cue["beat"], asked: number): Promise<
     return;
   }
   const handle = await handleOf(stage);
-  if (beat.kind === "stop") handle?.stop();
-  else handle?.retry();
+  switch (beat.kind) {
+    case "choose":
+      handle?.choose(beat.measure);
+      return;
+    case "stop":
+      handle?.stop();
+      return;
+    case "retry":
+      handle?.retry();
+      return;
+    default: {
+      const unhandled: never = beat;
+      return unhandled;
+    }
+  }
 }
 
 // Walks the script's cues in order: each waits on its reply, then its `after`, then is

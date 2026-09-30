@@ -55,6 +55,9 @@ function fakePanel(runtime: DemoRuntime): { handle: ThreadHandle; calls: string[
       calls.push(`answer ${text}`);
       tell({ kind: "answer", text });
     },
+    choose: (measure) => {
+      calls.push(`choose ${measure}`);
+    },
     stop: () => {
       calls.push("stop");
       for (const each of live) each.abort();
@@ -82,6 +85,7 @@ function finished(player: Player): Promise<void> {
 function noted(beat: Beat): string {
   if (beat.kind === "user" || beat.kind === "answer")
     return `${beat.kind === "user" ? "send" : "answer"} ${beat.text}`;
+  if (beat.kind === "choose") return `choose ${beat.measure}`;
   return beat.kind;
 }
 
