@@ -168,6 +168,19 @@ and offers Try again, an answer shows with the question it answered, a long requ
 Show more, and a jump to your latest request finally lands centred (ADR-148 to ADR-151). Three
 scenarios play in under a minute each at 1x, with a 2x for the impatient.
 
+A review of the demo against the job posting sent it back for a second draft. The strongest
+thing in the codebase, a design system that lets an agent draw only what the catalog will vouch
+for, was invisible in the demo, and every scenario had the user watching the whole time when the
+posting asks about the run they did not watch. So the weekly brief now has a child that asks for
+a pie chart and gets the catalog's limit instead, drawn where the chart would be; Working in the
+background became Came back to it, which opens 25 minutes late on a recap of outcomes, lets the
+user step a card to the view they want and carries that view into their next request, then docks
+the one decision; and the bar under the demo's name says, per scenario, what is shipped and what
+is proposed. To open a thread on a finished run the panel had to learn to read the recap, the
+idle time and the docked question from the turns themselves, which the real app had never given
+it (ADR-153). A `/new` route opens the real shell on nothing but a fresh thread, for trying the
+live model without a fixture in sight.
+
 ## 2. Cast & Crew
 
 The first entries are ideas from before any code existed; the rest are parts of the running app.
@@ -556,6 +569,23 @@ The first entries are ideas from before any code existed; the rest are parts of 
   mark that dates the whole exchange, so the request above needs none (ADR-152).
 - **One clock for the script and the agent.** The player's keystrokes and the agent's word pauses
   wait on the same clock, so Pause is one flag and 2x one number, and the two can never drift.
+- **The recap is a view, not a note.** The panel could show a recap, but only Storybook ever
+  handed it one; the app had nothing to hand. Rather than store a summary somebody writes after
+  the fact, the recap is read from the record: each finished step's outcome, each reply that
+  broke off, pointing at its turn. Same for the docked question (kept on the reply that asked it)
+  and the idle time (the last user turn's instant). The rushes are the source; the recap is the
+  edit (ADR-153).
+- **Let the boundary speak.** When a child asks for a pie chart, the scripted agent does not
+  narrate "my chart was refused"; it would not know. The catalog card says so itself, in the
+  reply and again behind Work details, and the child's number stands in its own sentence. The
+  refusal is the system's line, not the agent's, which is the point of the story.
+- **A choice is state the panel holds.** To step a card from a script, the card's slider had to
+  answer to something outside itself. Its shown stop now comes from the panel's outbox, the
+  choice pending for it or what the agent last saw, so a scripted choice moves the slider, a
+  sent choice stays put, and the "Card view" chip and the slider can never disagree (ADR-153).
+- **Say which parts are real.** Each scenario carries one line in the bar: shipped, scripted,
+  proposed. A demo that lets a watcher mistake a prototype for the product is a demo that costs
+  trust on the day it matters.
 - **Kimi through OpenRouter, in Anthropic's dialect.** OpenRouter is best known for its
   OpenAI-style API, but it also answers in Anthropic's Messages format. Speaking that one kept
   the browser's stream decoder untouched, so swapping Claude for Kimi K2.6 changed three lines of
@@ -1414,6 +1444,22 @@ once in thirty captures; at ten captures a run, one run in three went BROKEN. Fi
 the tool's own axe check is untouched: every cell still reports its axe results. Lesson: when
 two crews shoot the same scene with one camera, decide who rolls; a URL global is the quietest
 call sheet.
+
+### Work details, 0 steps
+
+The last reply of Came back to it does one thing: it holds two invoices and logs a line about it.
+No steps, one technical line. Its Work details header read "0 steps", which is true and useless,
+like a slate that says "Scene: none". The count now describes what is there: "1 technical line"
+when the work is lines alone, and the step count otherwise. A header that counts the wrong thing
+is worse than no header, because it teaches the reader that the number means nothing.
+
+### A patch that landed eleven lines late
+
+Splitting one working tree into two commits by feeding `git apply` a zero-context patch put a
+whole function inside another function's return statement, eleven lines below where the diff
+said. The pre-commit lint caught it before the commit did. GNU `patch` reversed onto the working
+copy did the split correctly, and the lesson is older than either tool: a diff without context is
+a cut without a slate, and the editor cannot tell you where it went.
 
 ## 5. Director's Commentary
 

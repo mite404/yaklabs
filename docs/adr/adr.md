@@ -2035,6 +2035,12 @@ gateway's own app and came back as text through the browser's decoder. That roun
 about 23 seconds, which is slow for a demo and not yet broken down between reasoning and the
 answer. The WorkOS half was stubbed, since a real token needs a person's sign-in, and the
 `/demo/weekly-brief` route is untouched, as it never reaches the gateway.
+Amended 2026-09-30 (Ethan: "a 'start a new thread' only route that's just the splashscreen and
+no other test child threads"): `/new` opens the whole shell on the runtime's empty scenario, in
+memory, and starts one thread on arrival, so the first thing on screen is that thread's welcome
+and a compose box, with no starter project, seeded thread or fixture child beside it, for trying
+the live agent. A reload of `/new` starts over; the device's own threads stay under `/` and
+`/t/:threadId`.
 
 ## ADR-147 - The reply seam carries events, not only words
 
@@ -2097,6 +2103,24 @@ and a stop. Words stream at 70ms, about fourteen a second: quick enough to read 
 enough to follow the emphasis as it lands.
 Known gap: Share still publishes through the gateway from the demo; "Nothing is sent" is not yet
 true for that one action.
+Amended 2026-09-30 (after a review of the demo against the posting: lead with the constrained
+design system, show an invalid payload failing visibly and a changed card state becoming context,
+show one unattended run summarised by outcomes, and say what is implemented and what is
+proposed). The weekly brief gained a third child whose evidence is a pie chart outside catalog
+v1: the catalog refuses it whole, in the reply where the chart would sit and again behind Work
+details, with nothing drawn, while the child's number stands in its own words and the valid
+cards land around it. Working in the background gave way to Came back to it: a scenario may now
+open on the record of a run (`Opening`: the main's turns, timed from how long ago the user spoke;
+every child a step names is made with its request and outcome as a live run would leave them),
+and this one opens 25 minutes after the request on a recap of three outcomes, each a jump to the
+turn whose Work details hold the evidence (ADR-153), on an interactive card of the invoices at
+three depths; the player steps the card to Difference, the request after it carries that choice
+as a chip (ADR-030), the reply speaks to the view, then the one decision docks and its answer is
+recorded. A `choose` beat steps the card through the thread handle's new `choose`, so the demo
+takes the path a person's slider does. Each script carries a standing line under the demo's name
+in the bar (what is shipped, what is scripted or proposed), so a watcher never takes one for the
+other. The Stop path lost its scenario; the panel's browser tests and the cancelled fixture keep
+it proven.
 
 ## ADR-149 - A jump lays runway so any turn can centre
 
@@ -2156,3 +2180,29 @@ the stamp can be computed; a turn stored with a reading ("9:02", the fixtures an
 seeded threads) shows the reading as its stamp, and the list of requests (ADR-143) formats either
 as a local clock time. The demo's children mint their turns from the wall clock too, so a child's
 answer reads "just now" beside its parent's.
+
+## ADR-153 - The recap, the dock and the idle time are read from the turns
+
+2026-09-30 - Accepted (the review's ask for "an unattended multi-agent run summarised by
+outcomes, with evidence one layer down and pending actions clearly separated"). Builds on
+ADR-005, ADR-027 and ADR-039; amends ADR-041's host duties.
+The web app never passed the panel a recap, an activity or a docked question: the recap lived in
+Storybook fixtures alone, and a question survived only in the panel that saw it stream. Now the
+record carries what they need. A reply keeps the question it ended on (`asks`) as part of its
+turn, and a reply that only asks is a turn, never dropped as empty. From the turns the panel
+reads, when its host passes none: the recap, one item per finished or failed step's outcome and
+one for a reply that broke off, each pointing at its turn (a view over recorded events, ADR-005,
+nothing written after the fact); the idle time, from the last user turn's instant (a turn timed
+as a clock reading yields none, since "9:02" cannot be measured from); whether the agent has
+worked since (a reply settled after that turn); and the question to dock, the one the latest
+reply ended with while no turn has followed it. A host that passes its own still wins.
+So a thread opened cold on a finished run shows its recap once the user has been away ten
+minutes (ADR-027), and its evidence sits one Disclosure down; while a question is open it takes
+the recap's place, as ADR-039 rules. That rule is the open design question the demo now poses:
+on return from six agents, should what needs you and what happened share one surface, or keep
+taking turns? The demo says which parts are shipped and which are proposed rather than deciding
+it here.
+Alongside, an interactive card's shown stop is held by the panel (the choice pending for it, else
+what the agent last saw) and the thread handle can `choose` a stop by its label, so a host that
+drives the thread steps a card by the same path a person's slider takes (ADR-029, ADR-030); a
+card on its own keeps its own state.
