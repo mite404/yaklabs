@@ -45,8 +45,7 @@ const agent = runtime.agent(threadId, { getAccessToken }); // AuthKit's (ADR-084
 under `/api` (ADR-086). `runtime.dispose()` stops the worker and fails whatever still waits.
 
 The consuming app's Vite config needs these lines. This package's own `vite.config.ts` has the
-same settings for its tests, naming the two worker dependencies directly; an app reaches them
-through the runtime with Vite's `>` form:
+same settings for its tests:
 
 ```ts
 export default defineConfig({
@@ -54,12 +53,6 @@ export default defineConfig({
     // Required: sqlite-wasm loads sqlite3.wasm from beside its own module, and pre-bundling
     // would move the module away from it.
     exclude: ["@sqlite.org/sqlite-wasm"],
-    // Recommended: Vite's dependency scan does not follow `new Worker(new URL(...))`, so without
-    // this it finds the worker's dependencies when the worker starts and reloads the page once.
-    include: [
-      "@yaklabs/runtime > hono/client",
-      "@yaklabs/runtime > @anthropic-ai/sdk/lib/MessageStream",
-    ],
   },
   worker: { format: "es" },
 });
@@ -167,17 +160,30 @@ lacks is silently dropped from every turn the store reads back.
   the seeds' u1/a1, u2/a2 pairing carries on.
 - Every new id and instant comes from the `Mint` (`src/mint.ts`): random ids and local turn times
   on the device, counted ids (`t-001`) and a stopped clock with UTC turn times in a scenario.
-- The lab agent is `createLabAgent()` from `@yaklabs/catalog/labAgent`. The gateway agent
-  (`src/gatewayAgent.ts`) reads the thread's turns, leaves out the user turn the worker just saved
-  (the event carries it), builds its request with `toModelRequest`, posts it through Hono's typed
-  client with `Authorization: Bearer <token>`, and yields the text deltas. A status other than
-  200 throws `The gateway replied <status>`, never the body.
+- The lab agent is `createLabAgent()` from `@yaklabs/catalog/labAgent`. The live agent
+  (`src/playgroundAgent.ts`, ADR-155) is the model with tools behind the gateway. It keeps
+  nothing between replies: it reads the thread's turns, leaves out the user turn the worker just
+  saved (the event carries it), projects them into a request with `planRequest`, posts it to
+  `/api/playground` with `Authorization: Bearer <token>`, and folds the NDJSON events into the
+  seam's chunks with `receive`, so the thread shows Work details, cards, limitations and the
+  question dock. Every failure is a terminal `failure` in plain words from one copy table
+  (`src/playgroundCopy.ts`), never a status or a body; only Stop ends a reply quietly.
 
-`toModelRequest(messages, event)` (`src/modelRequest.ts`, pure) is the point of the slice. A user
-turn carries one `[Card view: <label>]` line per card choice and one `[Attached file: <name>]`
-line per file, so the model sees what the user set on an interactive card (ADR-030, ADR-031). An
-agent turn carries each card it showed as compact JSON in a fenced block. When a thread outgrows
-the gateway's 200 turns, the oldest go first, and the request always starts with a user turn.
+`planRequest(history, event)` (`src/playgroundRequest.ts`, pure) is the whole memory of a live
+thread. User turns open exchanges and the reply after one settles it; its words, cards (by id,
+else position), done steps, limitations and a short end's cause become the exchange; a docked
+question pairs with its answer by position, and a later message after an open question is a
+`say`, which the gateway reads as a skip. An attempt that showed nothing is dropped, so Try again
+sends the identical request. The newest 49 exchanges are kept, and the whole request is checked
+with the gateway's request schema before it is sent.
+
+`receive(state, event)` (`src/playgroundReply.ts`, pure) reads protocol 2: a replayed `seq` is
+ignored, a gap ends the reply cut off, and a `start` of another version ends it naming the
+mismatch. Text streams through a Markdown emitter (`src/markdownEmitter.ts`) that yields closed
+lines as blocks and, inside the open line, the words up to the last space before anything still
+unclosed, so nothing shown is taken back and the whole block lands exactly as
+`parseQuietProse` (`src/markdown.ts`) reads it. A limit or a stopped upstream ends the reply with
+its line as a terminal failure, running steps cancelled first.
 
 Only one worker at a time can hold a database's OPFS pool, and sqlite-wasm answers a failed
 install by deleting the whole pool (ADR-118). So a device worker first takes the Web Lock
@@ -242,8 +248,9 @@ pnpm --filter @yaklabs/runtime typecheck
 ```
 
 - `unit` runs in node: the workspace helpers, the mint, the protocol, the schema and `planV2`, the
-  store in `:memory:`, the scenarios, the model request, the gateway agent against an in-process
-  Hono app that validates with the gateway's real contract, and the agent loop, faults included.
+  store in `:memory:`, the scenarios, the Markdown emitter, the live agent's fold and request
+  projection, the live agent against the gateway's real playground route and its test kit,
+  through the agent loop, and the agent loop, faults included.
 - `browser` runs in headless Chromium through `@vitest/browser-playwright`: the store in real OPFS
   across workers, Ethan's v1 database migrated, rerun and recovered from a crash inside the step
   (through `src/sqliteStore.testWorker.ts`, since OPFS's fast mode exists only in a Worker), and

@@ -3,7 +3,7 @@ import { createLabAgent } from "@yaklabs/catalog/labAgent";
 import { applyChunk, isEmptyReply, startReply } from "@yaklabs/catalog/reply";
 import { z } from "zod";
 import { settleReply, withAgentTurn, withUserTurn, type Stamp } from "./conversation";
-import { createGatewayAgent } from "./gatewayAgent";
+import { createPlaygroundAgent } from "./playgroundAgent";
 import {
   commandSchema,
   type AgentSpec,
@@ -34,7 +34,7 @@ export type LoopHost = {
   post: (notice: Notice) => void;
   /** Opens what `init` asked for; the device should fall back rather than fail. */
   open: (data: RuntimeData) => Promise<Opened>;
-  /** Builds the agent for one message; defaults to the lab stand-in or the gateway agent. */
+  /** Builds the agent for one message; defaults to the lab stand-in or the live model. */
   createAgent?: (spec: AgentSpec, context: AgentContext) => Agent;
   /** How the settling timer waits (`Schedule`); defaults to `setTimeout`. */
   schedule?: Schedule;
@@ -60,7 +60,7 @@ const requestIdSchema = z.object({ requestId: z.string().min(1) });
 function defaultAgent(spec: AgentSpec, context: AgentContext): Agent {
   return spec.kind === "lab"
     ? createLabAgent()
-    : createGatewayAgent({ baseUrl: spec.baseUrl, ...context });
+    : createPlaygroundAgent({ baseUrl: spec.baseUrl, ...context });
 }
 
 function reasonOf(error: unknown): string {
