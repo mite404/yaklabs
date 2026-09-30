@@ -60,8 +60,7 @@
    out as the compose row is (the same gutter, the same reserved scrollbar) puts the bar's right
    edge on the compose box's. It stands 8px clear of the box, its own 4px and the compose row's
    4px inset, and with a card docked (--dock-space, set by the panel) 8px clear of the card
-   instead. Its paper hides the turn under it; its corners and gaps are the menu's (8px) and the
-   title bar's actions' (2px). */
+   instead. Its corners and gaps are the menu's (8px) and the title bar's actions' (2px). */
 .reading-dock {
   position: absolute;
   left: 0;
@@ -76,16 +75,43 @@
   padding: 4px var(--thread-gutter);
   pointer-events: none;
 }
+/* At rest and under the pointer the bar is a translucent wash of the paper (--scrim, the paper at
+   72%) so the turn under it still reads through; only its glyph is opaque. Open, with search or
+   the list of requests up, it fills solid over 150ms on the strong ease-out, as a lane's menu
+   fades in (Ethan). */
 .reading-tools {
   display: flex;
   align-items: center;
   min-inline-size: 0; /* a fieldset's default is its content's width */
   margin: 0;
   padding: 2px;
-  background: var(--paper);
+  background: var(--scrim);
   border: 1px solid var(--hairline);
   border-radius: 8px;
   pointer-events: auto;
+  transition:
+    background-color 150ms cubic-bezier(0.23, 1, 0.32, 1),
+    opacity 150ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+.reading-tools:is([data-open], :has([aria-expanded="true"])) {
+  background: var(--paper);
+}
+/* One thread's tools at a time: the bar shows only in the thread that holds the focus (its
+   compose box, its turns, or the bar itself), so across a canvas of lanes the reader sees the
+   binder for the thread they are in and no other. Hidden, it takes no tab stop; visibility waits
+   out the fade so the bar is gone only once it has faded. */
+.thread-panel:not(:focus-within) .reading-tools {
+  opacity: 0;
+  visibility: hidden;
+  transition:
+    opacity 150ms cubic-bezier(0.23, 1, 0.32, 1),
+    visibility 0s linear 150ms;
+}
+/* The list of requests is the same wash, blurred behind so its 13px rows stay legible over the
+   turns it opens above; the bar's own solid fill anchors it. */
+.reading-tools .menu {
+  background: var(--scrim);
+  backdrop-filter: blur(8px);
 }
 .reading-search {
   display: flex;
@@ -117,32 +143,34 @@
   min-width: 0;
   padding: 0;
 }
-/* The tools beside Search, open by default: a touch screen has no hover to unfold them by. The
-   2px before Search lives inside the track, so it folds away with them. */
+/* Search and its bar, left of the bookmark, open by default: a touch screen has no hover to
+   unfold them by. The 2px before the bookmark lives inside the track, so it folds away with them. */
 .reading-more {
   display: grid;
   grid-template-columns: 1fr;
 }
-.reading-more > .menu-anchor {
+.reading-fold {
+  display: flex;
+  align-items: center;
   min-width: 0;
   overflow: hidden;
 }
-.reading-more .icon-btn {
+.reading-fold > .icon-btn {
   margin-inline-end: 2px; /* a margin, not padding: padding could not fold below 2px */
 }
 /* The fold clips anything past the tools' edges, the focus ring included, so the bar's rings sit
-   inside their buttons, as an awaiting tile's does; Search matches so the two read alike. */
+   inside their buttons, as an awaiting tile's does; the bookmark matches so the two read alike. */
 .reading-tools .icon-btn:focus-visible {
   outline-offset: -2px;
 }
-/* With a fine pointer the bar rests as Search alone and unfolds leftward while the pointer is on
-   it (data-unfolded, set from its pointer events so a story's synthetic hover can prove it), a
-   keyboard is in it, or search or the list of requests is open. Focus counts only when the last
-   input was not a pointer (ADR-053): a menu hands focus back to its trigger after a click, which
-   the browser calls focus-visible, and the bar would stay unfolded after the pointer left. The track clips from 0fr to 1fr
-   rather than scaling (pillar 22), over 150ms on the strong ease-out, as a lane's menu fades.
-   Folded, the tools are hidden, so a keyboard skips them until it reaches the bar; visibility
-   waits out the fold so the clip finishes first. */
+/* With a fine pointer the bar rests as the bookmark alone and unfolds leftward while the pointer
+   is on it (data-unfolded, set from its pointer events so a story's synthetic hover can prove
+   it), a keyboard is in it, or search or the list of requests is open. Focus counts only when the
+   last input was not a pointer (ADR-053): a menu hands focus back to its trigger after a click,
+   which the browser calls focus-visible, and the bar would stay unfolded after the pointer left.
+   The track clips from 0fr to 1fr rather than scaling (pillar 22), over 150ms on the strong
+   ease-out, as a lane's menu fades. Folded, Search is hidden, so a keyboard skips it until it
+   reaches the bar; visibility waits out the fold so the clip finishes first. */
 @media (hover: hover) and (pointer: fine) {
   .reading-more {
     grid-template-columns: 0fr;
@@ -160,7 +188,9 @@
 }
 @media (prefers-reduced-motion: reduce) {
   .reading-more,
-  .reading-tools .reading-more {
+  .reading-tools .reading-more,
+  .reading-tools,
+  .thread-panel:not(:focus-within) .reading-tools {
     transition: none;
   }
 }

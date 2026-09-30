@@ -171,12 +171,13 @@ function usePointerIn(bar: RefObject<HTMLElement | null>) {
 }
 
 /**
- * A thread's reading tools, floating above its compose box. At rest the bar is one Search button;
- * with the pointer on it, a keyboard in it, or either tool open, it unfolds leftward to show every
- * tool. Search the thread's words and step through the turns that hold them, or jump back to any
- * request the user sent, listed by its first 15 characters and its time. An Alt-click on the
- * bookmark goes straight to the latest request. Where a jump lands, and how it shows, is the
- * host's.
+ * A thread's reading tools, floating above its compose box, and only in the thread that has the
+ * focus (thread.css), so one thread's tools show at a time across the canvas. At rest the bar is
+ * one bookmark on a translucent fill; with the pointer on it, a keyboard in it, or either tool
+ * open, it unfolds leftward to show Search too, and open it fills solid. Search the thread's
+ * words and step through the turns that hold them, or jump back to any request the user sent,
+ * listed by its first 15 characters and its time. An Alt-click on the bookmark goes straight to
+ * the latest request. Where a jump lands, and how it shows, is the host's.
  * @param messages The thread's turns as they stand now, including ones sent since it opened.
  * @param onJump Brings the turn with this id into view.
  */
@@ -208,31 +209,33 @@ export function ReadingTools({
       data-unfolded={pointerIn ? "" : undefined}
       {...pointerHandlers}
     >
-      {searching && (
-        <SearchBar id={searchId} messages={messages} onJump={onJump} onClose={closeSearch} />
-      )}
-      {/* Folded away until the bar is in use (thread.css); left of Search, so the bar grows
+      {/* Folded away until the bar is in use (thread.css); left of the bookmark, so the bar grows
           leftward and the button under the pointer stays put. */}
       <span className="reading-more">
-        <Menu
-          label={BOOKMARKS}
-          placement="above-end"
-          items={bookmarkItems(requests, onJump)}
-          trigger={bookmarkTrigger(requests.at(-1)?.id, onJump)}
-        />
+        <span className="reading-fold">
+          {searching && (
+            <SearchBar id={searchId} messages={messages} onJump={onJump} onClose={closeSearch} />
+          )}
+          <IconButton
+            ref={searchButton}
+            label="Search this thread"
+            aria-expanded={searching}
+            aria-controls={searching ? searchId : undefined}
+            onClick={() => {
+              if (searching) closeSearch();
+              else setSearching(true);
+            }}
+          >
+            <SearchIcon />
+          </IconButton>
+        </span>
       </span>
-      <IconButton
-        ref={searchButton}
-        label="Search this thread"
-        aria-expanded={searching}
-        aria-controls={searching ? searchId : undefined}
-        onClick={() => {
-          if (searching) closeSearch();
-          else setSearching(true);
-        }}
-      >
-        <SearchIcon />
-      </IconButton>
+      <Menu
+        label={BOOKMARKS}
+        placement="above-end"
+        items={bookmarkItems(requests, onJump)}
+        trigger={bookmarkTrigger(requests.at(-1)?.id, onJump)}
+      />
     </fieldset>
   );
 }

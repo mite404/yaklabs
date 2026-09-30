@@ -884,12 +884,17 @@ export function ChatThreadPanel({
         />
       )}
       {/* The turns take a tab stop, so a keyboard can scroll a thread that holds nothing else
-          to focus, such as one of plain words. */}
+          to focus, such as one of plain words. The region carries the thread's name, so two
+          threads side by side (lanes on the canvas) are two landmarks, not one twice. */}
       <div
         className="thread-scroll"
         ref={scroller}
         data-empty={showEmpty ? "" : undefined}
-        {...(messages.length > 0 && { role: "region", "aria-label": "Messages", tabIndex: 0 })}
+        {...(messages.length > 0 && {
+          role: "region",
+          "aria-label": `Messages in ${thread.title}`,
+          tabIndex: 0,
+        })}
       >
         {messages.length === 0 && empty}
         {groupAnswers(messages).map((item) =>
