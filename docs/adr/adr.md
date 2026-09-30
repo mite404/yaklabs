@@ -1867,17 +1867,25 @@ label), a quiet `detail` at the right, and a height capped at the viewport, past
 scrolls. The unmounted draft in `apps/web/src/demo/` is gone.
 
 Amended 2026-09-30 (Ethan: "swap the placement of the magnifying glass with the bookmark. when
-collapsed only the bookmark should show", "the bookmark should only show when that thread panel
-component has focus", and a translucent bar and popover that fill solid once opened, after a
-screenshot of Claude's own). The bar rests as the bookmark alone, at the right, and Search unfolds
-to its left. It shows only in the thread that holds the focus (its compose box, its turns or the
-bar itself, `:focus-within`), so across a canvas of lanes the reader sees one binder, the thread
-they are in; it fades in and out over 150ms on the strong ease-out, and hidden it takes no tab
-stop. At rest and under the pointer the bar is a wash of the paper (`--scrim`, the paper at 72%)
-with only its glyph opaque; open, with search or the list of requests up, it fills solid over the
-same 150ms. The list of requests is the same wash with an 8px blur behind it, so its rows stay
-legible over the turns. The turns' region is now named "Messages in <thread>", so two threads side
-by side are two landmarks, not one twice (axe caught it in the two-thread story).
+collapsed only the bookmark should show", then "hidden unless the cursor is hovering over the
+streaming thread window ... as soon as the mouse goes outside of the chat compose component, the
+ReadingTools should fade up from transparent. lets try a 300ms fade anim", and a translucent bar
+and popover that fill solid once opened, after a screenshot of Claude's own). The bar rests as
+the bookmark alone, at the right, and Search unfolds to its left. It follows the pointer: clear
+until the pointer is over the thread, it fades up over 300ms on the strong ease-out as the pointer
+leaves the compose box for the turns, and fades back as it leaves the thread, so across a canvas
+of lanes the reader sees one binder, in the thread under their hand, and the box they are typing
+in stays bare. The panel reports the pointer's zone from its own pointer events (`data-pointer`),
+not CSS `:hover`, so a story can prove it. A tool that is open, or a keyboard in the bar, holds it
+up; clear is not hidden, so a keyboard can still reach it, and reaching it shows it. A touch
+screen, with no pointer to follow, keeps the bar. A first cut showed it in the thread that held
+the focus instead; it left the bar up over the box while the reader typed, which is what the
+pointer rule removes.
+At rest and under the pointer the bar is a wash of the paper (`--scrim`, the paper at 72%) with
+only its glyph opaque; open, with search or the list of requests up, it fills solid over 150ms.
+The list of requests is the same wash with an 8px blur behind it, so its rows stay legible over
+the turns. The turns' region is now named "Messages in <thread>", so two threads side by side are
+two landmarks, not one twice (axe caught it in the two-thread story).
 
 ## ADR-144 - The rail stays on the desktop, and the projects panel extends from its edge
 
@@ -2103,3 +2111,21 @@ sidebar row, where "↳" stood, and a step of work that ran in a child. The same
 agent-spawned child and one the user spun off; the working glyph beside it says which is busy.
 Below a child's compose box: "Controlled by parent thread", with a Running pill in the user
 bubble's fill while its work is in flight by the runtime's own state (ADR-141, ADR-142).
+
+## ADR-151 - The latest reply carries the thread's one stamp
+
+2026-09-30 - Accepted (Ethan: "showing a timestamp for user messages should be axed. lets only
+put a timestamp on the most recent message from the LLM. it'll start with just now and then
+update every 20min"). Amends ADR-025.
+A user's turn shows no time. The thread's one stamp sits under its latest settled reply, in the
+prose's 11px soft ink, and says how long ago it arrived: "just now" for the first twenty minutes,
+then "20m ago", "40m ago", "1h ago", "1h 20m ago", moving on the panel's minute clock (the recap's,
+ADR-027) so it never waits on a render. A reader glancing back learns how fresh the answer is
+without reading a clock; the request above it needs no time of its own, since the reply dates the
+exchange. While a reply streams, nothing is stamped: the running status by the compose box says
+what is happening (ADR-142).
+Turns the panel and the demo make now carry an instant (ISO 8601) rather than a clock reading, so
+the stamp can be computed; a turn stored with a reading ("9:02", the fixtures and the runtime's
+seeded threads) shows the reading as its stamp, and the list of requests (ADR-143) formats either
+as a local clock time. The demo's children mint their turns from the wall clock too, so a child's
+answer reads "just now" beside its parent's.

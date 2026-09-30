@@ -541,11 +541,18 @@ The first entries are ideas from before any code existed; the rest are parts of 
 - **Beats wait on replies, except when they overlap.** A user beat after a reply waits for that
   reply to settle; one marked to overlap counts from the beat before it. Without the exception,
   the background scenario's Stop would wait for the very job it is meant to stop (ADR-147).
-- **One binder at a time.** The reading tools now show only in the thread that holds the focus,
-  so a canvas of lanes never grows a bar in every corner; the bookmark rests alone on a wash of
-  the paper and Search unfolds to its left, and the bar fills solid only once a tool is open. Axe
-  caught the side effect of testing two threads side by side: their "Messages" regions were one
-  landmark twice, so the region now carries the thread's name (ADR-143, amended).
+- **One binder, under your hand.** The reading tools follow the pointer: clear until it is over
+  the thread's turns, up over a 300ms fade as it leaves the compose box, gone as it leaves the
+  thread. A first cut tied them to focus instead, and the bar sat over the box the whole time the
+  reader typed. The bookmark rests alone on a wash of the paper, Search unfolds to its left, and
+  the bar fills solid only once a tool is open. The panel reports the pointer's zone through a
+  data attribute from its own pointer events, because a story's synthetic hover cannot set CSS
+  `:hover`. Axe caught the side effect of testing two threads side by side: their "Messages"
+  regions were one landmark twice, so the region now carries the thread's name (ADR-143, amended).
+- **One stamp, on the newest answer.** Every turn used to carry a clock time under it; now only
+  the latest settled reply does, and it says how long ago rather than when: "just now", then
+  "20m ago", moving on the panel's minute clock. It is the slate at the end of the take: one
+  mark that dates the whole exchange, so the request above needs none (ADR-151).
 - **One clock for the script and the agent.** The player's keystrokes and the agent's word pauses
   wait on the same clock, so Pause is one flag and 2x one number, and the two can never drift.
 
