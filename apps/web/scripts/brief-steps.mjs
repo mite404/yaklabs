@@ -51,15 +51,17 @@ const typography = (paragraph) =>
 
 /** Opens a scenario on a fresh load, ready to play, at 2x. */
 async function openFast(page, run, script) {
-  await page.goto(`${run.base}/demo/weekly-brief?script=${script}`);
+  await page.goto(`${run.base}/t/demo-${script}`);
   await composeOf(page).waitFor({ timeout: 20_000 });
   await button(page, "Play").waitFor();
   await toolbarOf(page).getByRole("button", { name: "Fast forward, 2x" }).click();
   await button(page, "Play").click();
 }
 
+// The one step that arrives through a retired address, so the redirect stays proven.
 async function shellPresent(page, run) {
   await page.goto(`${run.base}/demo/weekly-brief`);
+  await page.waitForURL(/\/t\/demo-brief$/);
   await composeOf(page).waitFor({ timeout: 20_000 });
   await page.locator('[data-slot="rail"]').waitFor();
   await sidebarOf(page).locator('[data-thread="main"]', { hasText: "Weekly brief" }).waitFor();
@@ -226,7 +228,7 @@ async function restartFaster(page, run) {
 
 async function childOpensLane(page, run) {
   await sidebarOf(page).locator('[data-thread="child"]', { hasText: "Weekly workload" }).click();
-  await page.waitForURL(/\/demo\/weekly-brief\/t\//);
+  await page.waitForURL(/\/t\/demo-brief-/);
   const lane = onScreen(page)
     .getByRole("region", { name: "Compose canvas" })
     .locator('article[aria-label="Weekly workload"]');
@@ -257,7 +259,7 @@ async function sidebarAndBell(page, run) {
 }
 
 async function opensOnRecap(page, run) {
-  await page.goto(`${run.base}/demo/weekly-brief?script=returned`);
+  await page.goto(`${run.base}/t/demo-returned`);
   await composeOf(page).waitFor({ timeout: 20_000 });
   const recap = mainOf(page).getByRole("region", { name: "Recap" });
   await recap.waitFor({ timeout: 10_000 });

@@ -1,5 +1,5 @@
 // oxlint-disable no-await-in-loop, no-console -- a lever drives one step at a time and reports on stdout
-// The scripted demo's lever: drives /demo/weekly-brief in headless Chromium at 1280x900 through
+// The scripted demo's lever: drives the Demo threads at /t/demo-* in headless Chromium at 1280x900 through
 // its three scenarios and screenshots each stage to .artifacts/weekly-brief/. Exits 1 when any
 // step fails, and counts every console error as a failure.
 //
