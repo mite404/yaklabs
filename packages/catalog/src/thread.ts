@@ -1,8 +1,15 @@
 import { scenarios } from "./fixtures";
 import type { CardAttachment, InteractiveSelection } from "./interactive";
+import type { Block } from "./prose";
 import type { RecapItem } from "./recapRules";
+import type { Ended, Failure, Work } from "./reply";
 
-/** One turn in a thread; agent turns may carry a catalog payload the host validates. */
+/**
+ * One turn in a thread. A user turn is a request, or the answer to a question the agent was
+ * blocked on (`question`), which the thread shows as the question and its answer together. An
+ * agent turn is plain `text`, or structured `blocks` with the work behind them; the host
+ * validates every card payload.
+ */
 export type ThreadMessage =
   | {
       id: string;
@@ -13,10 +20,13 @@ export type ThreadMessage =
       attachments?: CardAttachment[];
       /** Files and screenshots sent with this message (ADR-063). */
       files?: { id: string; label: string }[];
+      /** The question this turn answers, when it answered a docked one (ADR-039). */
+      question?: string;
     }
   | {
       id: string;
       role: "agent";
+      /** The words, plain: what a search reads, and all a plain-text reply has. */
       text: string;
       time: string;
       payload?: unknown;
@@ -24,7 +34,37 @@ export type ThreadMessage =
       interactive?: unknown;
       /** Still streaming in from the agent (ADR-041). */
       streaming?: boolean;
+      /** The reply's structure (ADR-140): paragraphs, headings, lists, cards between them. */
+      blocks?: Block[];
+      /** The work behind the reply, shown behind Work details (ADR-139). */
+      work?: Work;
+      /** What the agent is doing right now, while the reply streams. */
+      activity?: string;
+      /** How the reply stopped short; absent for one that completed or is still streaming. */
+      ended?: Ended;
+      /** Why it stopped, when the agent said. */
+      failure?: Failure;
     };
+
+/**
+ * What a host that drives the thread can do (a scripted demo, a test): fill and send the
+ * compose box, answer the docked question, stop every reply in flight, or try a stopped reply
+ * again. Every call takes the same path a person's click would.
+ */
+export type ThreadHandle = {
+  setDraft(text: string): void;
+  /** Sends the compose box's draft, as Enter would; nothing happens on an empty draft. */
+  send(): void;
+  /** Answers the docked question with a tile's label or typed text. */
+  answer(text: string): void;
+  /** Stops every reply still streaming; each is marked cancelled, never complete. */
+  stop(): void;
+  /**
+   * Sends the request behind a reply that stopped short again, as a new turn: the turn named,
+   * or the latest such turn.
+   */
+  retry(turnId?: string): void;
+};
 
 /** A deterministic conversation used to evaluate cards in their real context. */
 export type Thread = {

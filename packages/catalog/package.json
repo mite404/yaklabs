@@ -12,6 +12,8 @@
     "./inputModality": "./src/inputModality.ts",
     "./interactive": "./src/interactive.ts",
     "./labAgent": "./src/labAgent.ts",
+    "./prose": "./src/prose.ts",
+    "./reply": "./src/reply.ts",
     "./share": "./src/share.ts",
     "./thread": "./src/thread.ts",
     "./threadShare": "./src/threadShare.ts",
