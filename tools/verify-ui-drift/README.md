@@ -35,6 +35,24 @@ amp orb service start verify-ui-drift --command 'pnpm verify-ui-drift review' --
 The review app reads saved evidence. **Reload saved report** reloads the selected run without taking
 new screenshots. To capture code changes, rerun the CLI with the same selection.
 
+## Reading the result
+
+Every run ends with a verdict, the report's path, and plain lines saying why and what to do next.
+Only PASS means everything was compared and found as approved.
+
+| Verdict | Exit | Meaning | Trust it? |
+| --- | --- | --- | --- |
+| PASS | 0 | Every capture matches its reference, no axe violations | Yes |
+| FAIL | 1 | Captures changed or axe found violations; each is listed | Decide each one |
+| INCOMPLETE | 2 | Part of the run was not compared: no reference for this machine, an engine that did not run, or a failed comparator proof | No, it is unverified |
+| BROKEN | 3 | The run did not finish cleanly; the cause is printed | No, do not use it |
+
+References are per machine, since browsers draw text slightly differently on each OS. The
+approved ones come from CI's Debian image, so a run on a Mac is INCOMPLETE and says so before it
+captures anything. To see CI's comparison, unzip the PR's `design-verification` artifact into
+`.artifacts/verify-ui-drift/` (it holds `runs/`) and open it in the review app. Changes and axe
+violations are listed even when a run is INCOMPLETE, so they are never hidden by it.
+
 ## From design to drift check
 
 1. Explore in Figma or code. Implement the component with semantic CSS tokens and add or update its
