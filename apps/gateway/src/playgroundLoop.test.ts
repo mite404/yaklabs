@@ -22,13 +22,9 @@ const work = (status: "running" | "done") => ({
 });
 const done = round("end_turn", text(0, "Friday was busiest."));
 const working = round("tool_use", tool(0, "update_work", work("running")));
-const cutShort = {
-  type: "failure",
-  workId: null,
-  limitation: "I stopped before finishing this reply.",
-  recovery: null,
-};
-const noResponse = { ...cutShort, limitation: "The model stopped responding." };
+// The closing events of a turn that stopped short: the reason and its line, in `end` alone.
+const cutShort = { type: "end", reason: "limit", line: "I stopped before finishing this reply." };
+const noResponse = { type: "end", reason: "upstream", line: "The model stopped responding." };
 describe("the tool loop shows", () => {
   it("a valid card and tells the model it was shown", async () => {
     const card = { cardId: "week", card: BAR_CARD };
@@ -169,31 +165,28 @@ describe("the tool loop ends", () => {
     const { events, requests } = await eventsFor("Keep going.", ...rounds);
 
     expect(requests).toHaveLength(8);
-    expect(events.slice(-2)).toEqual([cutShort, { type: "end", reason: "limit" }]);
+    expect(events.slice(-2)).toEqual([{ type: "work", ...work("running") }, cutShort]);
+    expect(events.filter(({ type }) => type === "failure")).toEqual([]);
   });
 
-  it("when a round runs out of tokens", async () => {
+  it("when a round runs out of tokens, with its line in the end event", async () => {
     const { events } = await eventsFor("Which day?", round("max_tokens", text(0, "Friday was")));
 
-    expect(events.slice(-2)).toEqual([cutShort, { type: "end", reason: "limit" }]);
+    expect(events).toEqual([{ type: "text", blockId: "r1b0", delta: "Friday was" }, cutShort]);
   });
 });
 
 describe("the tool loop reports", () => {
-  it("an upstream that refuses a later round", async () => {
+  it("an upstream that refuses a later round, with its line in the end event", async () => {
     const { events } = await eventsFor("Chart it.", working, overloaded);
 
-    expect(events).toEqual([
-      { type: "work", ...work("running") },
-      noResponse,
-      { type: "end", reason: "upstream" },
-    ]);
+    expect(events).toEqual([{ type: "work", ...work("running") }, noResponse]);
   });
 
   it("a round's stream that ends before it says why", async () => {
     const { events } = await eventsFor("Which day?", round(null, text(0, "Friday")));
 
-    expect(events.slice(-2)).toEqual([noResponse, { type: "end", reason: "upstream" }]);
+    expect(events).toEqual([{ type: "text", blockId: "r1b0", delta: "Friday" }, noResponse]);
   });
 });
 

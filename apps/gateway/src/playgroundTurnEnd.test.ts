@@ -2,14 +2,9 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { eventsFor, rawRound, round, text, tool } from "./playgroundTestKit";
 
 const running = { workId: "sum", label: "Adding up the week", status: "running" };
-const failure = (limitation: string) => ({
-  type: "failure",
-  workId: null,
-  limitation,
-  recovery: null,
-});
-const noResponse = failure("The model stopped responding.");
-const emptyAnswer = failure("I finished without an answer.");
+// A turn that stops short ends with its reason and line in one event.
+const noResponse = { type: "end", reason: "upstream", line: "The model stopped responding." };
+const emptyAnswer = { type: "end", reason: "upstream", line: "I finished without an answer." };
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -19,7 +14,7 @@ describe("a turn never ends silently", () => {
   it("when the reply answers with nothing to show", async () => {
     const { events } = await eventsFor("Which day?", round("end_turn", text(0, " ")));
 
-    expect(events).toEqual([emptyAnswer, { type: "end", reason: "upstream" }]);
+    expect(events).toEqual([emptyAnswer]);
   });
 
   it("and adds nothing to a reply that answered", async () => {
@@ -49,7 +44,7 @@ describe("a round that breaks", () => {
 
     const { events } = await eventsFor("Which day?", garbled);
 
-    expect(events).toEqual([noResponse, { type: "end", reason: "upstream" }]);
+    expect(events).toEqual([noResponse]);
     expect(logged).toHaveBeenCalledWith("[playground] round failed:", expect.any(SyntaxError));
   });
 
@@ -61,7 +56,7 @@ describe("a round that breaks", () => {
 
     const { events } = await eventsFor("Which day?", busy);
 
-    expect(events).toEqual([noResponse, { type: "end", reason: "upstream" }]);
+    expect(events).toEqual([noResponse]);
     expect(logged).not.toHaveBeenCalled();
   });
 });

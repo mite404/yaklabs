@@ -67,7 +67,7 @@ describe("splitLines", () => {
 
 describe("readPlayground", () => {
   it("joins lines and multi-byte characters split across chunks", async () => {
-    const text = `${JSON.stringify({ type: "start", seq: 0, v: 1 })}\n${JSON.stringify({
+    const text = `${JSON.stringify({ type: "start", seq: 0, v: 2 })}\n${JSON.stringify({
       type: "text",
       seq: 1,
       blockId: "b0",
@@ -82,7 +82,7 @@ describe("readPlayground", () => {
   });
 
   it("reads a whole last line without a newline and drops one cut off mid-way", async () => {
-    const start = JSON.stringify({ type: "start", seq: 0, v: 1 });
+    const start = JSON.stringify({ type: "start", seq: 0, v: 2 });
     serve(chunked([encoder.encode(start)]));
     expect(await collect()).toHaveLength(1);
     serve(chunked([encoder.encode(`${start}\n{"seq":1,"type":"text","blockId":"b0","del`)]));
@@ -111,7 +111,7 @@ describe("readPlayground", () => {
   it("throws on a line that is not JSON or not a known event", async () => {
     serve(chunked([encoder.encode("not json\n")]));
     await expect(collect()).rejects.toBeInstanceOf(PlaygroundProtocolError);
-    serve(chunked([encoder.encode(`${JSON.stringify({ type: "start", seq: 0, v: 2 })}\n`)]));
+    serve(chunked([encoder.encode(`${JSON.stringify({ type: "start", seq: 0, v: 1 })}\n`)]));
     await expect(collect()).rejects.toBeInstanceOf(PlaygroundProtocolError);
   });
 });
@@ -128,7 +128,7 @@ describe("readPlayground stops the gateway", () => {
 
   it("by cancelling the body when the reader stops early", async () => {
     const { response, cancelled } = heldOpen(
-      `${JSON.stringify({ type: "start", seq: 0, v: 1 })}\n`,
+      `${JSON.stringify({ type: "start", seq: 0, v: 2 })}\n`,
     );
     serve(response);
     const signal = new AbortController().signal;
@@ -142,7 +142,7 @@ describe("readPlayground stops the gateway", () => {
   });
 
   it("parses an unterminated last line once", async () => {
-    serve(chunked([encoder.encode(JSON.stringify({ type: "start", seq: 0, v: 1 }))]));
+    serve(chunked([encoder.encode(JSON.stringify({ type: "start", seq: 0, v: 2 }))]));
     const parse = vi.spyOn(JSON, "parse");
     await collect();
     expect(parse).toHaveBeenCalledTimes(1);

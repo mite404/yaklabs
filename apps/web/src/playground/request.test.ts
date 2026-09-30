@@ -4,14 +4,13 @@ import { toPlaygroundRequest } from "./request";
 import { CUT_OFF, initialPlayground } from "./state";
 import { QUESTION, barCard, event, run, say, send, streamed } from "./test-fixtures";
 
-const start = { type: "start", seq: 0, v: 1 } as const;
+const start = { type: "start", seq: 0, v: 2 } as const;
 
-// A finished reply with narration, answer text, a card, an outcome and a failure.
+// A finished reply with work, answer text, a card, an outcome and a failure.
 const full = streamed([
   start,
   { type: "work", seq: 1, workId: "count", label: "Counting", status: "running" },
   { type: "text", seq: 2, blockId: "b0", delta: "Counting Monday." },
-  { type: "narration", seq: 3, blockId: "b0", workId: "count" },
   { type: "card", seq: 4, cardId: "cases", selection: barCard("Cases") },
   { type: "outcome", seq: 5, workId: "count", result: "11 cases", evidence: ["Mon 4"] },
   { type: "failure", seq: 6, workId: null, limitation: "No live data.", recovery: null },
@@ -26,10 +25,10 @@ describe("toPlaygroundRequest", () => {
     });
   });
 
-  it("sends a finished reply's answer text, cards, outcomes and failures, never narration", () => {
+  it("sends a finished reply's text, cards, outcomes and failures", () => {
     const request = toPlaygroundRequest(full, say("next"));
     expect(request.exchanges.at(0)?.agent).toEqual({
-      text: "There were **11** cases.",
+      text: "Counting Monday.\n\nThere were **11** cases.",
       cards: [{ cardId: "cases", selection: barCard("Cases") }],
       outcomes: [{ workId: "count", result: "11 cases" }],
       failures: [{ limitation: "No live data." }],

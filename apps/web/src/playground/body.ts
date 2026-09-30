@@ -3,13 +3,12 @@ import type { PlaygroundEvent } from "@yaklabs/catalog/playground";
 import { assertNever } from "./never";
 
 // One visible step of work. `seq` is the event that last updated it, so the status line can
-// tell whether answer text has arrived since; `log` keeps earlier labels and narration.
+// tell whether answer text has arrived since; `log` keeps earlier labels.
 export type Work = {
   id: string;
   label: string;
   status: "running" | "done" | "failed" | "unfinished";
   seq: number;
-  narration?: string;
   log: string[];
   outcome?: { result: string; evidence: string[] };
 };
@@ -42,7 +41,7 @@ export type Body = {
 // The events that only add to a reply's body; start, question and end also move its phase.
 export type BodyEvent = Extract<
   PlaygroundEvent,
-  { type: "text" | "narration" | "work" | "card" | "outcome" | "failure" }
+  { type: "text" | "work" | "card" | "outcome" | "failure" }
 >;
 
 /** A reply's body before its first event. */
@@ -82,25 +81,6 @@ function appendText(body: Body, event: Extract<BodyEvent, { type: "text" }>): Bo
     ...body,
     items: known === undefined ? [...body.items, item] : body.items,
     text: { ...body.text, [event.blockId]: (known ?? "") + event.delta },
-  };
-}
-
-// The text block becomes the work's narration and leaves the answer; it is also logged, so
-// Work details keeps every narration the work had.
-function narrate(body: Body, event: Extract<BodyEvent, { type: "narration" }>): Body {
-  const source = body.text[event.blockId];
-  const work = body.works[event.workId];
-  if (source === undefined || work === undefined) return body;
-  const text = Object.fromEntries(
-    Object.entries(body.text).filter(([blockId]) => blockId !== event.blockId),
-  );
-  const narration = source.trim();
-  const narrated: Work = { ...work, narration, log: [...work.log, narration] };
-  return {
-    ...body,
-    text,
-    items: body.items.filter((item) => item.kind !== "text" || item.blockId !== event.blockId),
-    works: { ...body.works, [work.id]: narrated },
   };
 }
 
@@ -181,8 +161,6 @@ export function applyToBody(body: Body, event: BodyEvent): Body {
   switch (event.type) {
     case "text":
       return appendText(body, event);
-    case "narration":
-      return narrate(body, event);
     case "work":
       return updateWork(body, event);
     case "card":

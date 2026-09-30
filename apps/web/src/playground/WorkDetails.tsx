@@ -27,24 +27,18 @@ function statusWord(status: Work["status"]): string {
   }
 }
 
-// Earlier labels and superseded narration; the current narration already shows above them.
-function earlier(work: Work): string[] {
-  return work.log.filter((line) => line !== work.narration);
-}
-
+// `log` holds the work's earlier labels.
 function WorkEntry({ work }: { work: Work }) {
-  const history = earlier(work);
   return (
     <li className="pg-work">
       <p>
         <strong>{work.label}</strong>{" "}
         <span className="pg-work-status">{statusWord(work.status)}</span>
       </p>
-      {work.narration !== undefined && <p>{work.narration}</p>}
-      {history.length > 0 && (
+      {work.log.length > 0 && (
         <>
           <p className="pg-work-heading">Earlier</p>
-          <ul>{lineItems(history)}</ul>
+          <ul>{lineItems(work.log)}</ul>
         </>
       )}
       {work.outcome !== undefined && work.outcome.evidence.length > 0 && (
@@ -59,7 +53,7 @@ function WorkEntry({ work }: { work: Work }) {
 
 /**
  * The reply's "Work details" (ADR-139): every work item one fold down, closed by default,
- * with its status, narration, earlier labels and outcome evidence.
+ * with its status, earlier labels and outcome evidence.
  */
 export function WorkDetails({ body }: { body: Body }) {
   const [open, setOpen] = useState(false);

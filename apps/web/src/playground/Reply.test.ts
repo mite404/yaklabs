@@ -12,9 +12,10 @@ const failure = {
   type: "failure",
   seq: 1,
   workId: null,
-  limitation: "The model stopped responding.",
+  limitation: "I cannot fetch last year's numbers.",
   recovery: null,
 } as const;
+const line = "The model stopped responding.";
 
 // The reply the page shows after `events`, as markup.
 function shown(events: PlaygroundEvent[]): string {
@@ -25,10 +26,10 @@ function shown(events: PlaygroundEvent[]): string {
 
 describe("AgentReply", () => {
   it("offers Try again when the gateway ended the reply at a failure", () => {
-    const start = { type: "start", seq: 0, v: 1 } as const;
+    const start = { type: "start", seq: 0, v: 2 } as const;
     for (const reason of ["upstream", "limit"] as const) {
-      const html = shown([start, failure, { type: "end", seq: 2, reason }]);
-      expect(html).toContain("The model stopped responding.");
+      const html = shown([start, { type: "end", seq: 1, reason, line }]);
+      expect(html).toContain(line);
       expect(html).toContain("Try again");
     }
     expect(shown([start, failure, { type: "end", seq: 2, reason: "answered" }])).not.toContain(
@@ -37,14 +38,14 @@ describe("AgentReply", () => {
   });
 
   it("shows the working glyph while the model reasons before any event", () => {
-    const html = shown([{ type: "start", seq: 0, v: 1 }]);
+    const html = shown([{ type: "start", seq: 0, v: 2 }]);
     expect(html).toContain("agent-tree");
     expect(html).toContain("Thinking…");
   });
 
   it("puts Try again inside the failure section it recovers from", () => {
-    const start = { type: "start", seq: 0, v: 1 } as const;
-    const html = shown([start, failure, { type: "end", seq: 2, reason: "upstream" }]);
+    const start = { type: "start", seq: 0, v: 2 } as const;
+    const html = shown([start, failure, { type: "end", seq: 2, reason: "upstream", line }]);
     expect(html).toMatch(/aria-label="Limitation"(?:(?!<\/section>).)*Try again/s);
   });
 });

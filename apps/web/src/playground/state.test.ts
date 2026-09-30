@@ -10,7 +10,7 @@ import {
 } from "./state";
 import { QUESTION, barCard, event, run, say, send, streamed } from "./test-fixtures";
 
-const start = { type: "start", seq: 0, v: 1 } as const;
+const start = { type: "start", seq: 0, v: 2 } as const;
 const work = (seq: number, label: string, status: "running" | "done" = "running") =>
   ({ type: "work", seq, workId: "count", label, status }) as const;
 const text = (seq: number, blockId: string, delta: string) =>
@@ -64,23 +64,6 @@ describe("reducePlayground: cards and work", () => {
     expect(bodyOf(state)?.items.map((item) => item.kind)).toEqual(["card", "text"]);
     expect(bodyOf(state)?.cards.cases).toMatchObject({ revision: 1, note: "Updated" });
     expect(bodyOf(state)?.cards.cases?.selection.props.title).toBe("Second");
-  });
-
-  it("moves a narrated text block into its work, replacing the last narration", () => {
-    const state = streamed([
-      start,
-      work(1, "Counting"),
-      text(2, "b0", "First look."),
-      { type: "narration", seq: 3, blockId: "b0", workId: "count" },
-      text(4, "b1", " Second look. "),
-      { type: "narration", seq: 5, blockId: "b1", workId: "count" },
-    ]);
-    expect(bodyOf(state)?.items).toEqual([]);
-    expect(bodyOf(state)?.text).toEqual({});
-    expect(bodyOf(state)?.works.count).toMatchObject({
-      narration: "Second look.",
-      log: ["First look.", "Second look."],
-    });
   });
 
   it("logs the old label when a work item is relabelled", () => {
@@ -180,6 +163,17 @@ describe("reducePlayground: retrying what the gateway ended", () => {
     }
   });
 
+  it("shows an end event's line as the reply's closing failure", () => {
+    const line = "I stopped before finishing this reply.";
+    const ended = streamed([
+      start,
+      text(1, "b0", "Fri"),
+      { type: "end", seq: 2, reason: "limit", line },
+    ]);
+    expect(bodyOf(ended)?.items.map((item) => item.kind)).toEqual(["text", "failure"]);
+    expect(bodyOf(ended)?.failures).toEqual([{ workId: null, limitation: line, recovery: null }]);
+  });
+
   it("does not retry a reply that answered", () => {
     const answered = streamed([start, text(1, "b0", "Friday."), end(2)]);
     expect(canRetry(firstAgent(answered))).toBe(false);
@@ -224,16 +218,9 @@ describe("reducePlayground: questions", () => {
 });
 
 describe("statusLine", () => {
-  it("names the current work, then its narration, until answer text follows it", () => {
+  it("names the current work until answer text follows it", () => {
     const working = streamed([start, work(1, "Counting")]);
     expect(statusLine(firstAgent(working))).toBe("Counting");
-    const narrated = streamed([
-      start,
-      work(1, "Counting"),
-      text(2, "b0", "Adding Monday."),
-      { type: "narration", seq: 3, blockId: "b0", workId: "count" },
-    ]);
-    expect(statusLine(firstAgent(narrated))).toBe("Adding Monday.");
     const answered = streamed([start, work(1, "Counting"), text(2, "b1", "It is 12.")]);
     expect(statusLine(firstAgent(answered))).toBeUndefined();
     const blank = streamed([start, work(1, "Counting"), text(2, "b1", " ")]);

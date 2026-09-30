@@ -11,7 +11,7 @@ const MAX_EXCHANGES = 50;
 const MAX_RECORDS = 12;
 const MAX_TEXT = 20_000;
 
-// The answer prose only: narration already left `items`, so it is never sent back.
+// The reply's prose, every text block in order.
 function answerText(body: Body): string {
   return body.items
     .flatMap((item) => (item.kind === "text" ? [(body.text[item.blockId] ?? "").trim()] : []))

@@ -30,10 +30,11 @@ type RoundEnd = {
   broken: boolean;
 };
 
-// What the loop does after a round: stop with closing events, or send the results and go on.
-type Decision =
-  | { kind: "stop"; drafts: EventDraft[] }
-  | { kind: "continue"; drafts: EventDraft[]; messages: Messages };
+// The turn's closing event, before its `seq`.
+type EndDraft = Extract<EventDraft, { type: "end" }>;
+
+// What the loop does after a round: stop with the closing event, or send the results and go on.
+type Decision = { kind: "stop"; end: EndDraft } | { kind: "continue"; messages: Messages };
 
 // The playground's own prompt: the page sends only the user's turns.
 const SYSTEM_PROMPT = `You are Kay's assistant in a playground where people try out how you work.
@@ -66,39 +67,36 @@ const NO_RESPONSE = "The model stopped responding.";
 const NO_ANSWER = "I finished without an answer.";
 const encoder = new TextEncoder();
 
-const failureDrafts = (limitation: string, reason: "limit" | "upstream"): EventDraft[] => [
-  { type: "failure", workId: null, limitation, recovery: null },
-  { type: "end", reason },
-];
+// A turn that stops short says why in the closing event itself.
+const stoppedShort = (reason: "limit" | "upstream", line: string): Decision => ({
+  kind: "stop",
+  end: { type: "end", reason, line },
+});
 
-// A turn that answered: a reply with nothing to show says so rather than ending blank.
-const answeredDrafts = (state: TurnState): EventDraft[] => [
-  ...(state.shown
-    ? []
-    : [{ type: "failure" as const, workId: null, limitation: NO_ANSWER, recovery: null }]),
-  // A reply that showed nothing is the model failing, so the page can offer Try again.
-  { type: "end", reason: state.shown ? "answered" : "upstream" },
-];
+// A turn that answered. A reply that showed nothing is the model failing, so it says so and
+// the page can offer Try again.
+const answered = (state: TurnState): Decision =>
+  state.shown
+    ? { kind: "stop", end: { type: "end", reason: "answered" } }
+    : stoppedShort("upstream", NO_ANSWER);
 
 // The round's verdict. Pure: `messages` is what the next round sends when there is one.
 const decide = (
   { state, round, results, asked, broken }: RoundEnd,
   messages: Messages,
 ): Decision => {
-  if (broken) return { kind: "stop", drafts: failureDrafts(NO_RESPONSE, "upstream") };
-  if (asked) return { kind: "stop", drafts: [{ type: "end", reason: "asked" }] };
-  if (round.stop === null) return { kind: "stop", drafts: failureDrafts(NO_RESPONSE, "upstream") };
-  if (round.stop === "max_tokens")
-    return { kind: "stop", drafts: failureDrafts(CUT_SHORT, "limit") };
-  if (round.stop !== "tool_use" || results.length === 0)
-    return { kind: "stop", drafts: answeredDrafts(state) };
-  if (state.round >= MAX_ROUNDS) return { kind: "stop", drafts: failureDrafts(CUT_SHORT, "limit") };
+  if (broken) return stoppedShort("upstream", NO_RESPONSE);
+  if (asked) return { kind: "stop", end: { type: "end", reason: "asked" } };
+  if (round.stop === null) return stoppedShort("upstream", NO_RESPONSE);
+  if (round.stop === "max_tokens") return stoppedShort("limit", CUT_SHORT);
+  if (round.stop !== "tool_use" || results.length === 0) return answered(state);
+  if (state.round >= MAX_ROUNDS) return stoppedShort("limit", CUT_SHORT);
   const next: Messages = [
     ...messages,
     { role: "assistant", content: assistantContent(round) },
     { role: "user", content: results },
   ];
-  return { kind: "continue", drafts: [], messages: next };
+  return { kind: "continue", messages: next };
 };
 
 // Sends one round upstream; resolves once the upstream accepts it, or throws its APIError.
@@ -206,16 +204,17 @@ async function* playgroundEvents(
     const end: RoundEnd = yield* streamRound(events, { ...state, round: state.round + 1 });
     if (signal.aborted) return;
     const decision = decide(end, messages); // → stop | continue
-    const stamped = stamp(end.state, decision.drafts);
-    state = stamped.state;
-    yield* stamped.events;
-    if (decision.kind === "stop") return;
+    if (decision.kind === "stop") {
+      yield* stamp(end.state, [decision.end]).events;
+      return;
+    }
+    state = end.state;
     messages = decision.messages;
     // oxlint-disable-next-line no-await-in-loop -- each round needs the last round's tool results
     events = await tryOpenRound(upstream, messages, signal);
   }
   if (signal.aborted) return;
-  yield* stamp(state, failureDrafts(NO_RESPONSE, "upstream")).events;
+  yield* stamp(state, [{ type: "end", reason: "upstream", line: NO_RESPONSE }]).events;
 }
 
 // One event per line, as the page reads them.

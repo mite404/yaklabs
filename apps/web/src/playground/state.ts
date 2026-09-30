@@ -91,7 +91,7 @@ const answerStreaming = (body: Body): boolean => {
 };
 
 /**
- * The status line's words while a reply streams: the current work's narration or label, or
+ * The status line's words while a reply streams: the current work's label, or
  * "Thinking…" while no work is running, so a live reply never goes blank. Answer text replaces
  * it: after the running work's last update, or as the newest item when none is running.
  */
@@ -104,7 +104,7 @@ export function statusLine(turn: AgentTurn): string | undefined {
     (item) =>
       item.kind === "text" && item.seq > work.seq && (body.text[item.blockId] ?? "").trim() !== "",
   );
-  return answered ? undefined : (work.narration ?? work.label);
+  return answered ? undefined : work.label;
 }
 
 // What each event does to a reply's phase. Keyed by event type, so a new event type fails the
@@ -117,10 +117,15 @@ const streamOn = (body: Body, event: BodyEvent): AgentTurn => ({
   body: applyToBody(body, event),
 });
 
+// A reply that stopped short says why in its `end` line, shown as its closing failure.
+const closeWith = (body: Body, { seq, line }: EventOf["end"]): Body =>
+  line === undefined
+    ? body
+    : applyToBody(body, { type: "failure", seq, workId: null, limitation: line, recovery: null });
+
 const ARRIVALS: Arrivals = {
   start: (body) => ({ phase: "streaming", body }),
   text: streamOn,
-  narration: streamOn,
   work: streamOn,
   card: streamOn,
   outcome: streamOn,
@@ -130,7 +135,11 @@ const ARRIVALS: Arrivals = {
     body: settleWorks(body),
     asked: { questionId: event.questionId, question: event.question },
   }),
-  end: (body, event) => ({ phase: "done", body: settleWorks(body), reason: event.reason }),
+  end: (body, event) => ({
+    phase: "done",
+    body: settleWorks(closeWith(body, event)),
+    reason: event.reason,
+  }),
 };
 
 // `type` travels beside `event` so the lookup and the handler's input stay paired.
