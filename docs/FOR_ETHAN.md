@@ -1307,6 +1307,20 @@ the tool's own axe check is untouched: every cell still reports its axe results.
 two crews shoot the same scene with one camera, decide who rolls; a URL global is the quietest
 call sheet.
 
+### The pass that expired at the stage door
+
+On the live site the first reply streamed, and every one after it said "I couldn't finish that
+reply", in the main thread and in child threads alike. OpenRouter was fine: the same model and
+request streamed from a script. The Worker's logs held the clue: one 200 on `/api/messages`,
+then no request at all for the failed replies, so they broke in the browser before any network
+call. The one step before that call is `getAccessToken()`. Off localhost, AuthKit kept its
+refresh token in a cookie on `api.workos.com`, a third-party cookie the browser blocks, so when
+the short-lived access token ran out there was nothing to renew it with and AuthKit threw
+`LoginRequiredError`. Child threads looked worse only because you open them a few minutes after
+signing in. Fix: `devMode` on everywhere, which keeps the refresh token in `localStorage`
+(ADR-147); a custom auth domain is the grown-up version. Lesson: when a request never shows up
+in the server log, stop looking at the server and read what the client does before it sends.
+
 ## 5. Director's Commentary
 
 ### The agent only states intent; the design system does the rest
