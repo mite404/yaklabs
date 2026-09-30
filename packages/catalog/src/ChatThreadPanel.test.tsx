@@ -115,3 +115,59 @@ it("shows the host's own question in the dock, named by the host, over the agent
   expect(html).toContain("When should this thread come back?");
   expect(html).not.toContain("Request a forecast view");
 });
+
+it("renders a structured reply as quiet prose: strong findings, italic asides, a heading", () => {
+  const html = renderToStaticMarkup(<ChatThreadPanel thread={threads.brief} />);
+  expect(html).toContain('class="quiet-prose"');
+  expect(html).toContain("<strong>a peak of 62 on Saturday</strong>");
+  expect(html).toContain(
+    "<em>Success ran a person short from Wednesday, which explains its 56.</em>",
+  );
+  expect(html).toContain("<h3>What needs you</h3>");
+  expect(html).toContain(
+    "<li><strong>Approve weekend cover</strong> for Success before Friday.</li>",
+  );
+  expect(html.match(/class="prose-card"/g)).toHaveLength(1);
+});
+
+it("keeps a reply's work folded under Work details until the reader asks", () => {
+  const html = renderToStaticMarkup(<ChatThreadPanel thread={threads.brief} />);
+  expect(html).toMatch(
+    /aria-expanded="false"[^>]*>Work details<span class="disclosure-detail">2 steps<\/span>/,
+  );
+  expect(html).not.toContain('class="work-list"');
+  expect(html).not.toContain("Technical details");
+});
+
+it("labels a cut-off reply incomplete and offers Try again, keeping its words", () => {
+  const html = renderToStaticMarkup(<ChatThreadPanel thread={threads.interrupted} />);
+  expect(html).toContain("North closed 84 cases and Central 71.");
+  expect(html).toContain("Interrupted · Incomplete answer");
+  expect(html).toContain("The South region&#x27;s records stopped answering");
+  expect(html).toContain(">Try again</button>");
+  expect(html).toContain("3 steps · 1 did not finish");
+  expect(html).not.toContain("aria-busy");
+});
+
+it("says who stopped a cancelled reply, and offers no Try again", () => {
+  const html = renderToStaticMarkup(<ChatThreadPanel thread={threads.cancelled} />);
+  expect(html).toContain("Stopped by you");
+  expect(html).not.toContain("Try again");
+});
+
+it("sets consecutive answers on one surface, each question over its answer", () => {
+  const html = renderToStaticMarkup(<ChatThreadPanel thread={threads.answered} />);
+  expect(html.match(/aria-label="Your answers"/g)).toHaveLength(1);
+  expect(html.match(/class="answered-pair" data-turn-id="u[23]"/g)).toHaveLength(2);
+  expect(html).toContain("<dt>How many weeks ahead should it forecast?</dt><dd>Four weeks</dd>");
+  expect(html.match(/class="turn turn-user"/g)).toHaveLength(1);
+});
+
+it("puts a host's footnote under the compose box and offers no Stop while nothing streams", () => {
+  const html = renderToStaticMarkup(
+    <ChatThreadPanel thread={threads.trend} footnote="Controlled by parent thread" />,
+  );
+  expect(html).toContain('<div class="thread-footnote">Controlled by parent thread</div>');
+  expect(html).toContain('class="thread-compose" data-footnote=""');
+  expect(html).not.toContain('aria-label="Stop"');
+});

@@ -4,6 +4,8 @@ import {
   applyChunk,
   cancelReply,
   completeReply,
+  failReply,
+  isEmptyReply,
   startReply,
   workSummary,
   type AgentMessage,
@@ -152,6 +154,44 @@ describe("completeReply and cancelReply", () => {
     );
     expect(turn.ended).toBe("cancelled");
     expect(turn.work?.steps.map((step) => step.status)).toEqual(["done", "cancelled", "cancelled"]);
+  });
+});
+
+describe("failReply", () => {
+  it("fails a reply that broke off before any words, in plain words", () => {
+    const turn = failReply(fold([{ kind: "activity", text: "Thinking." }]));
+    expect(turn).toMatchObject({
+      ended: "failed",
+      streaming: false,
+      failure: { title: "Reply could not start" },
+    });
+    expect(turn.failure?.detail).toContain("Your request is still here");
+    expect(turn.activity).toBeUndefined();
+  });
+
+  it("interrupts a reply that broke off after some words, keeping them", () => {
+    const turn = failReply(fold(["39 of 41 match"]));
+    expect(turn).toMatchObject({
+      ended: "interrupted",
+      text: "39 of 41 match",
+      failure: { title: "Reply interrupted" },
+    });
+  });
+
+  it("keeps how a turn already ended", () => {
+    const stopped = cancelReply(fold(["Partial"]));
+    expect(failReply(stopped)).toBe(stopped);
+  });
+});
+
+describe("isEmptyReply", () => {
+  it("calls a reply empty until it holds words, a card, work or an ending", () => {
+    expect(isEmptyReply(fold([]))).toBe(true);
+    expect(isEmptyReply(fold([{ kind: "activity", text: "Thinking." }]))).toBe(true);
+    expect(isEmptyReply(fold(["Done."]))).toBe(false);
+    expect(isEmptyReply(fold([{ kind: "card", payload: {} }]))).toBe(false);
+    expect(isEmptyReply(fold([{ kind: "log", text: "check ok" }]))).toBe(false);
+    expect(isEmptyReply(cancelReply(fold([])))).toBe(false);
   });
 });
 

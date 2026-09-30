@@ -29,6 +29,15 @@ describe("requestsOf", () => {
     expect(requestsOf(messages).map((request) => request.id)).toEqual(["u1", "u2"]);
     expect(requestsOf(messages)[0]).toMatchObject({ label: "How did profit…", time: "9:02" });
   });
+
+  it("leaves out an answer to a docked question, which is not a request", () => {
+    const answered: ThreadMessage[] = [
+      ...messages,
+      { id: "u3", role: "user", text: "North", question: "Which region?", time: "9:06" },
+    ];
+    expect(requestsOf(answered).map((request) => request.id)).toEqual(["u1", "u2"]);
+    expect(matchesOf(answered, "north")).toEqual(["u3"]);
+  });
 });
 
 describe("matchesOf", () => {

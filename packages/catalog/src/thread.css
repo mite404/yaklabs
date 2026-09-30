@@ -70,6 +70,7 @@
   z-index: 1;
   display: flex;
   justify-content: flex-end;
+  gap: 8px;
   overflow: hidden;
   scrollbar-gutter: stable;
   padding: 4px var(--thread-gutter);
@@ -164,10 +165,37 @@
   }
 }
 
+/* The running status (ADR-142), for a reader scrolled up while a reply streams: at the left of
+   the reading tools' row, their mirror in paper, hairline and the menu's 8px corners, and as tall
+   (2px around a 28px button). Sharing the row, it gives way as the tools unfold, cutting its
+   narration short rather than running under them. */
+.thread-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  margin-inline-end: auto;
+  padding: 2px 2px 2px 10px; /* 10px: the field's inset, so the glyph sits as a field's text */
+  background: var(--paper);
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  color: var(--soft-ink);
+  font-size: 13px;
+  line-height: 20px;
+  pointer-events: auto;
+}
+.thread-status-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* Header and compose reserve the same scrollbar gutter as the scroll area,
    so all three share one text column on every platform. */
 .thread-header,
-.thread-compose {
+.thread-compose,
+.thread-footnote {
   overflow: hidden;
   scrollbar-gutter: stable;
 }
@@ -286,7 +314,8 @@
 }
 
 /* The user's turn is a tinted surface resting on the thread background: recognisable
-   as "you" by shape and position (right-aligned bubble), not by heavy contrast (ADR-025). */
+   as "you" by shape and position (right-aligned bubble), not by heavy contrast (ADR-025).
+   Line breaks the user typed (Shift+Enter) or pasted stay where they were. */
 .turn-user {
   align-self: flex-end;
   max-width: 85%;
@@ -294,11 +323,42 @@
   justify-items: end;
   gap: 4px;
 }
-.turn-user p {
+.user-bubble {
+  min-width: 0;
   background: linear-gradient(135deg, var(--bubble-tint), var(--bubble-tint-strong));
   border: 1px solid var(--bubble-line);
   border-radius: 12px;
   padding: 10px 14px;
+}
+.user-bubble p {
+  color: var(--ink);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+/* A long request folds to eight lines (--bubble-clamp, from Turns.tsx) and fades out over its
+   last two, so it reads as more to come rather than cut off. The mask takes only alpha, so any
+   opaque token draws it. */
+.user-bubble p[data-clamped] {
+  max-height: var(--bubble-clamp);
+  overflow: hidden;
+  mask-image: linear-gradient(to bottom, var(--ink) calc(100% - 48px), transparent);
+}
+/* Show more / Show less: a text button inside the bubble, the soft ink that darkens on hover
+   over the button's 150ms ease (pillar 8). */
+.bubble-more {
+  display: block;
+  margin: 4px 0 0;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--soft-ink);
+  font-size: 13px;
+  line-height: 20px;
+  transition: color 150ms ease;
+}
+.bubble-more:hover {
+  background: transparent;
   color: var(--ink);
 }
 .turn-user time {
@@ -308,9 +368,244 @@
   padding-right: 4px;
 }
 
+/* 16px between a turn's parts, the prose's own paragraph gap, so a card or a note after the
+   prose sits as a paragraph would (ADR-140). */
 .turn-agent {
   display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+/* Quiet prose (ADR-140; QuietProse.tsx): 15px Inter on a 24px line in the body ink, 16px between
+   paragraphs, headings at body size in 600 with 32px above, emphasis at 600 in the heading ink,
+   real italics, and a 510px measure for text. Cards between paragraphs take the thread's measure
+   and 16px above and below. The same rules hold while a reply streams and after it completes. */
+.quiet-prose {
+  min-width: 0;
+  font-size: 15px;
+  line-height: 24px;
+  color: var(--soft-ink);
+  overflow-wrap: anywhere;
+  font-synthesis: none;
+}
+.quiet-prose > :is(p, h3, ul) {
+  max-width: 510px;
+}
+.quiet-prose > p {
+  margin: 0 0 16px;
+  line-height: 24px;
+}
+.quiet-prose > h3 {
+  margin: 32px 0 4px;
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 24px;
+}
+.quiet-prose strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+.quiet-prose em {
+  font-style: italic;
+}
+.quiet-prose a {
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.quiet-prose a:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 3px;
+}
+.quiet-prose code {
+  padding: 2px 4px;
+  border-radius: 3px;
+  background: var(--paper-deep);
+  font:
+    13px/20px ui-monospace,
+    monospace;
+}
+.quiet-prose > ul {
+  margin: 0 0 16px;
+  padding-left: 22px;
+  list-style: disc;
+}
+.quiet-prose li {
+  margin: 0 0 6px;
+}
+.quiet-prose > .prose-card {
+  margin: 16px 0;
+}
+/* A block the stream has opened but not yet filled takes no room: no empty bullet or paragraph
+   gap flashes before its first words arrive. */
+.quiet-prose > :is(p, h3):empty,
+.quiet-prose > ul:not(:has(> li:not(:empty))),
+.quiet-prose li:empty {
+  display: none;
+}
+.quiet-prose > :first-child {
+  margin-top: 0;
+}
+.quiet-prose > :last-child {
+  margin-bottom: 0;
+}
+
+/* What a streaming reply is doing now, under its words: quiet, one step smaller (ADR-139). */
+.turn-activity {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--soft-ink);
+  font-size: 13px;
+  line-height: 20px;
+}
+
+/* A reply that stopped short says so after its words, set off by a rule at the left as a quote
+   is, never by an alarm colour: how it ended, why, and Try again (ADR-139). */
+.turn-ended {
+  display: grid;
+  justify-items: start;
+  gap: 8px;
+  padding-left: 16px;
+  border-left: 2px solid var(--hairline);
+  color: var(--soft-ink);
+  font-size: 13px;
+  line-height: 20px;
+}
+.turn-ended p {
+  margin: 0;
+  line-height: 20px;
+}
+.turn-ended-label {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* Work details (ADR-139; WorkDetails.tsx): the disclosure's header pulled back onto the text
+   column, so "Work details" starts where the prose does and its hover fill reaches 8px into the
+   gutter, as a card's rows reach into its padding. The nested Technical details match. */
+.work-details .disclosure-header {
+  width: calc(100% + 16px);
+  margin: 0 -8px;
+  font-size: 13px;
+  font-weight: 500;
+}
+.work-details .disclosure-body {
+  padding-top: 12px;
+}
+.work-list {
+  display: grid;
+  gap: 16px;
+  margin: 0 0 12px;
+  padding: 0;
+  list-style: none;
+}
+.work-step {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.work-step p {
+  margin: 0;
+}
+.work-step-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--soft-ink);
+  font-size: 12px;
+  line-height: 16px;
+}
+.work-step-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 24px;
+}
+.work-step-thread {
+  display: inline-flex;
+  color: var(--soft-ink);
+}
+/* The branch's words, for a screen reader: the glyph alone says nothing to one. */
+.work-step-thread-name {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.work-step-outcome {
+  max-width: 510px; /* the prose's measure */
+  font-size: 15px;
+  line-height: 24px;
+}
+.work-step > .card {
+  margin-top: 10px; /* with the row's 2px, the 12px a card keeps from the text above it */
+}
+.work-technical {
+  display: grid;
   gap: 12px;
+}
+.work-technical p,
+.work-narration {
+  margin: 0;
+  font-size: 13px;
+  line-height: 20px;
+}
+.work-technical-title {
+  color: var(--ink);
+  font-weight: 600;
+}
+.work-narration {
+  padding-left: 22px;
+  color: var(--soft-ink);
+}
+.work-logs {
+  margin: 0;
+  padding: 14px;
+  overflow: auto;
+  background: var(--paper-deep);
+}
+.work-logs code {
+  color: var(--ink);
+  font:
+    12px/20px ui-monospace,
+    monospace;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+/* The user's answers to the agent's questions (ADR-039): one quiet paper surface across the
+   column, each question over its answer, consecutive answers together. Not the sage bubble: an
+   answer picks from what was asked, and the question it answered stays beside it. */
+.turn-answered {
+  border: 1px solid var(--hairline);
+  border-radius: 12px;
+  background: var(--paper);
+  padding: 12px 16px;
+}
+.turn-answered dl {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+}
+.answered-pair dt {
+  color: var(--soft-ink);
+  font-size: 13px;
+  line-height: 20px;
+}
+.answered-pair dd {
+  margin: 2px 0 0;
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 500;
+  line-height: 24px;
+  overflow-wrap: anywhere;
 }
 
 /* A reply's iterator running with nothing to show yet: the working glyph and a quiet line,
@@ -333,6 +628,16 @@
 /* No divider: the compose box floats directly under the conversation. */
 .thread-compose {
   padding: var(--compose-inset) var(--thread-gutter) 16px;
+}
+/* A footnote under the box (who controls the thread, ADR-141) takes half the box's bottom room. */
+.thread-compose[data-footnote] {
+  padding-bottom: 8px;
+}
+.thread-footnote {
+  padding: 6px var(--thread-gutter) 8px;
+  color: var(--soft-ink);
+  font-size: 12px;
+  line-height: 16px;
 }
 .compose-box {
   border: 1px solid var(--hairline);
@@ -814,8 +1119,9 @@
   }
 }
 
-/* A jumped-to turn glows briefly so the eye finds it (ADR-022). */
-.turn[data-flash] {
+/* A jumped-to turn glows briefly so the eye finds it (ADR-022); an answer glows alone on its
+   surface. */
+:is(.turn, .answered-pair)[data-flash] {
   border-radius: 12px;
   animation: turn-flash 1.2s ease-out;
 }
@@ -832,14 +1138,17 @@
   .recap,
   .recap-chip,
   .awaiting,
-  .turn[data-flash] {
+  :is(.turn, .answered-pair)[data-flash] {
     animation: none;
+  }
+  .bubble-more {
+    transition: none;
   }
 }
 /* Without the glow's fade, a jumped-to turn holds the glow's first frame until it clears, so the
    eye still finds it. */
 @media (prefers-reduced-motion: reduce) {
-  .turn[data-flash] {
+  :is(.turn, .answered-pair)[data-flash] {
     box-shadow: 0 0 0 4px color-mix(in srgb, var(--focus) 25%, transparent);
   }
 }

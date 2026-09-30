@@ -2,6 +2,8 @@
    desktop shell: Inter for interface and body text, Newsreader for display moments.
    Optical-size cuts adjust letterforms between small labels and large headings. */
 @import "@fontsource-variable/inter/opsz.css";
+/* Inter's own italics, so an aside in a reply is a real italic, never a slanted roman (ADR-140). */
+@import "@fontsource-variable/inter/opsz-italic.css";
 @import "@fontsource-variable/newsreader/opsz.css";
 @import "./primitives.css";
 

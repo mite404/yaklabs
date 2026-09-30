@@ -107,8 +107,11 @@ function openBlock(blocks: Block[], block: "paragraph" | "heading" | "list" | "i
   return [...blocks, { kind: block, content: [] }];
 }
 
-// The turn's blocks so far, or its plain text as one paragraph the moment structure arrives.
-function blocksOf(message: AgentMessage): Block[] {
+/**
+ * A turn's words as blocks: its structure so far, or its plain text as one paragraph, so a
+ * reply of plain words and a structured one render and grow through the same elements.
+ */
+export function blocksOf(message: AgentMessage): Block[] {
   if (message.blocks !== undefined) return message.blocks;
   return message.text === ""
     ? []
@@ -127,6 +130,13 @@ function appendText(message: AgentMessage, run: { text: string; mark?: Mark }): 
 function upsertStep(steps: WorkStep[], step: WorkStep): WorkStep[] {
   const at = steps.findIndex((each) => each.id === step.id);
   return at === -1 ? [...steps, step] : steps.map((each, i) => (i === at ? step : each));
+}
+
+// New narration: it supersedes the current line, which is kept in the work's record.
+function narrate(message: AgentMessage, work: Work, text: string): AgentMessage {
+  const narration =
+    message.activity === undefined ? work.narration : [...work.narration, message.activity];
+  return { ...message, activity: text, work: { ...work, narration } };
 }
 
 // How a failure ends a turn: interrupted with words already shown, failed with none.
@@ -164,15 +174,7 @@ export function applyChunk(message: AgentMessage, chunk: ReplyChunk): AgentMessa
         blocks: [...blocksOf(message), { kind: "card", payload: chunk.payload }],
       };
     case "activity":
-      return {
-        ...message,
-        activity: chunk.text,
-        work: {
-          ...work,
-          narration:
-            message.activity === undefined ? work.narration : [...work.narration, message.activity],
-        },
-      };
+      return narrate(message, work, chunk.text);
     case "step":
       return { ...message, work: { ...work, steps: upsertStep(work.steps, chunk.step) } };
     case "log":
@@ -192,6 +194,21 @@ export function applyChunk(message: AgentMessage, chunk: ReplyChunk): AgentMessa
       return unhandled;
     }
   }
+}
+
+/**
+ * Whether a turn holds nothing a reader could see: no words, no cards, no work, and no ending
+ * to explain. A reply that finishes this way (an agent may yield nothing) leaves no turn.
+ */
+export function isEmptyReply(message: AgentMessage): boolean {
+  const { work } = message;
+  return (
+    blocksOf(message).length === 0 &&
+    message.payload === undefined &&
+    message.interactive === undefined &&
+    message.ended === undefined &&
+    (work === undefined || work.steps.length + work.logs.length === 0)
+  );
 }
 
 /** A reply's turn as it starts: nothing said yet, streaming. */
@@ -221,6 +238,23 @@ export function cancelReply(message: AgentMessage): AgentMessage {
           ),
         };
   return { ...message, streaming: false, activity: undefined, ended: "cancelled", work };
+}
+
+// What a reader is told when a reply breaks off without saying why (ADR-040): the cause stays in
+// the console, and the request is still in the thread to try again.
+const BROKE_OFF =
+  "I couldn't finish that reply. Your request is still here; try again when you're ready.";
+
+/**
+ * The turn once its stream broke off (a refused gateway, a dropped line): failed before any
+ * words, interrupted after some, with a plain-words failure, never the cause. A turn that
+ * already ended keeps how it ended.
+ */
+export function failReply(message: AgentMessage): AgentMessage {
+  if (message.ended !== undefined) return message;
+  const ended = endedBy(message);
+  const title = ended === "failed" ? "Reply could not start" : "Reply interrupted";
+  return applyChunk(message, { kind: "failure", failure: { title, detail: BROKE_OFF } });
 }
 
 /** What a turn's Work details header says at a glance: how many steps, and how many did not finish. */
