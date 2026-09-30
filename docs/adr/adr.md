@@ -2061,7 +2061,9 @@ was right; the scroller had no room below its last turn, so the scroll clamped a
 A jump now lays runway: extra bottom padding (`--jump-runway`) equal to the shortfall, so the turn
 can sit centred, then scrolls. The runway is released when a new turn lands, or when the reader
 scrolls with the natural end in view, where releasing moves nothing; the jump's own smooth scroll
-is waited out first (`scrollend`, or 600ms where a browser lacks it). A thread that fits its view
+is waited out first, by its arrival at the target rather than by `scrollend`, which the scroll
+before it can fire at once on a slow machine and hand the runway back mid-flight (CI caught it). A
+thread that fits its view
 has nothing to scroll and keeps only the glow. The reading tools story now requires the target to
 be centred, the latest request and the last search hit included.
 

@@ -14,9 +14,6 @@ export type Viewport = {
 
 // How long after a click or key press a turn's growth still counts as that interaction's result.
 const INTERACTION_WINDOW_MS = 1000;
-// How long a jump's smooth scroll is given to settle where `scrollend` is missing (Safari before
-// 26): its own scroll events must not release the room it is scrolling into.
-const JUMP_SETTLE_MS = 600;
 // The scroller's custom property that holds the jump runway (thread.css adds it to the thread's
 // bottom padding), and each scroller's runway in px, kept as a number beside it.
 const RUNWAY = "--jump-runway";
@@ -174,24 +171,28 @@ export function releaseRunway(scroller: HTMLElement): void {
 }
 
 // Releases the runway once the reader scrolls it out of view, when taking it back moves nothing.
-// The jump's own scroll is waited out first: it scrolls into the runway, and releasing midway
-// would clamp it short.
-function watchRunway(scroller: HTMLElement, scrolling: boolean): void {
+// The jump's own scroll is waited out first: by arrival at `target`, or by the scroll turning
+// away from it, which only the reader can do. Not by `scrollend`: on a slow machine the scroll
+// before this one may end a frame late, and its `scrollend` would hand the runway back while the
+// new scroll is still on its way into it.
+function watchRunway(scroller: HTMLElement, target: number): void {
   runwayWatches.get(scroller)?.();
-  let timer: number | undefined;
+  let previous = scroller.scrollTop;
+  let settled = Math.abs(previous - target) <= 1;
   const release = () => {
+    const now = scroller.scrollTop;
+    if (!settled) {
+      // A smooth scroll's first event can report no movement yet; only real movement away from
+      // the target means the reader took over.
+      const away = Math.abs(now - target) > Math.abs(previous - target);
+      previous = now;
+      settled = Math.abs(now - target) <= 1 || away;
+      if (!settled) return;
+    }
     if (distanceFromEnd(scroller) >= 0) releaseRunway(scroller);
   };
-  const listen = () => {
-    scroller.addEventListener("scroll", release, { passive: true });
-  };
-  if (!scrolling) listen();
-  else if ("onscrollend" in scroller)
-    scroller.addEventListener("scrollend", listen, { once: true });
-  else timer = window.setTimeout(listen, JUMP_SETTLE_MS);
+  scroller.addEventListener("scroll", release, { passive: true });
   runwayWatches.set(scroller, () => {
-    window.clearTimeout(timer);
-    scroller.removeEventListener("scrollend", listen);
     scroller.removeEventListener("scroll", release);
   });
 }
@@ -227,7 +228,7 @@ export function centerInScroller(scroller: HTMLElement, element: HTMLElement): v
   const reach = scroller.scrollHeight - scroller.clientHeight; // re-measured: the runway grew it
   const top = centerScrollTop(target, { ...view, maxScrollTop: reach });
   if (runway === 0) releaseRunway(scroller);
-  else watchRunway(scroller, top !== scroller.scrollTop);
+  else watchRunway(scroller, top);
   scroller.scrollTo({ top, behavior: prefersReducedMotion() ? "auto" : "smooth" });
 }
 
