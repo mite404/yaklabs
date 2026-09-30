@@ -1,7 +1,22 @@
 import type { ThreadHandle, ThreadMessage } from "@yaklabs/catalog/thread";
+import type { ThreadId } from "@yaklabs/runtime";
 import type { Clock, Rate } from "./clock";
-import type { DemoRuntime } from "./runtime";
 import type { Beat, Script } from "./script";
+
+/**
+ * How far a script's replies have got: how many the scripted agent has started, in script
+ * order, and which of those have settled (ended, failed or been stopped).
+ */
+export type Progress = { started: number; settled: ReadonlySet<number> };
+
+/** What a player watches: the thread it plays, its replies' progress, and the turns it holds. */
+export type Played = {
+  main: ThreadId;
+  /** The same object until a reply starts or settles; `subscribe` hears both. */
+  progress(): Progress;
+  subscribe(listener: () => void): () => void;
+  open(id: ThreadId): Promise<ThreadMessage[]>;
+};
 
 /** Where a playthrough stands: not started, playing, paused, or played to the end. */
 export type PlayerStatus = "idle" | "playing" | "paused" | "done";
@@ -33,10 +48,10 @@ export type Player = {
   dispose(): void;
 };
 
-/** What a player plays with: the script, the runtime playing it, its clock, and the panels. */
+/** What a player plays with: the script, the thread playing it, its clock, and the panels. */
 export type PlayerDeps = {
   script: Script;
-  runtime: Pick<DemoRuntime, "main" | "progress" | "subscribe" | "open">;
+  runtime: Played;
   clock: Clock;
   /** The mounted thread panels' handles, by thread id. */
   panels: { get(id: string): ThreadHandle | undefined };

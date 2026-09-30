@@ -9,7 +9,7 @@ import {
 } from "@yaklabs/catalog/reply";
 import type { ThreadMessage } from "@yaklabs/catalog/thread";
 import type { Clock } from "./clock";
-import { childOf, type ChildOf } from "./edits";
+import { childOf, type ChildOf } from "../world/spec";
 import type { Opening, Script, Timed } from "./script";
 
 /** What the main thread answers once the script's replies are spent. */
