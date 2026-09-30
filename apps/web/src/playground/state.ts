@@ -79,15 +79,27 @@ export function canRetry(turn: AgentTurn): boolean {
   return turn.phase === "done" && (turn.reason === "upstream" || turn.reason === "limit");
 }
 
+// What the status line says while the model reasons with no work item running: before its
+// first tool call, and between rounds.
+const THINKING = "Thinking…";
+
+// Whether answer text is what the reply is streaming right now: its newest item is text with
+// something in it. Text replaces the status line; a card or outcome after it does not.
+const answerStreaming = (body: Body): boolean => {
+  const last = body.items.at(-1);
+  return last?.kind === "text" && (body.text[last.blockId] ?? "").trim() !== "";
+};
+
 /**
- * The status line's words while a reply streams: the current work's narration or label,
- * until answer text arrives after that work's last update (text replaces narration).
+ * The status line's words while a reply streams: the current work's narration or label, or
+ * "Thinking…" while no work is running, so a live reply never goes blank. Answer text replaces
+ * it: after the running work's last update, or as the newest item when none is running.
  */
 export function statusLine(turn: AgentTurn): string | undefined {
   if (turn.phase !== "streaming") return undefined;
   const { body } = turn;
   const work = currentWork(body);
-  if (work === undefined) return undefined;
+  if (work === undefined) return answerStreaming(body) ? undefined : THINKING;
   const answered = body.items.some(
     (item) =>
       item.kind === "text" && item.seq > work.seq && (body.text[item.blockId] ?? "").trim() !== "",

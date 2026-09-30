@@ -240,6 +240,20 @@ describe("statusLine", () => {
     expect(statusLine(firstAgent(blank))).toBe("Counting");
   });
 
+  it("keeps Thinking on while the model reasons with no work running", () => {
+    expect(statusLine(firstAgent(streamed([start])))).toBe("Thinking…");
+    const card = {
+      type: "card",
+      seq: 3,
+      cardId: "cases",
+      selection: barCard("Cases"),
+    } as const;
+    const between = streamed([start, work(1, "Counting"), work(2, "Counting", "done"), card]);
+    expect(statusLine(firstAgent(between))).toBe("Thinking…");
+    const answering = streamed([start, card, text(4, "b1", "Tuesday was busiest.")]);
+    expect(statusLine(firstAgent(answering))).toBeUndefined();
+  });
+
   it("shows nothing once the reply is no longer streaming", () => {
     const done = streamed([start, work(1, "Counting"), end(2)]);
     expect(statusLine(firstAgent(done))).toBeUndefined();

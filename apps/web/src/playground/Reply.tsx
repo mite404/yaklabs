@@ -211,11 +211,12 @@ function BodyView({
   );
 }
 
+// Before the first event: the same status line the live reply shows, so nothing jumps when
+// the reply starts streaming.
 function Waiting() {
   return (
-    <div className="turn turn-agent turn-pending">
-      <AgentTree label="Thinking" />
-      <span aria-hidden="true">Thinking…</span>
+    <div className="turn turn-agent">
+      <Status text="Thinking…" />
     </div>
   );
 }
@@ -229,7 +230,9 @@ export function AgentReply({ turn, actions }: { turn: AgentTurn; actions: ReplyA
   if (turn.phase === "waiting") return <Waiting />;
   const body = turn.body;
   const status = statusLine(turn);
-  const shown = body !== null && (body.items.length > 0 || body.workOrder.length > 0);
+  // A live reply always shows its status line, even before it has anything else to show.
+  const shown =
+    body !== null && (body.items.length > 0 || body.workOrder.length > 0 || status !== undefined);
   const retryEnded = turn.phase === "done" && canRetry(turn) ? actions.onRetry : undefined;
   return (
     <>

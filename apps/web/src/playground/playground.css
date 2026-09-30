@@ -69,13 +69,6 @@
   gap: 16px; /* same as demo.css .weekly-brief .turn-agent */
   min-width: 0;
 }
-/* The thinking line keeps thread.css's row: the glyph beside its words (same as thread.css
-   .turn-pending). */
-.playground .turn-pending {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
 /* same as demo.css .wb-intro and .wb-intro p */
 .pg-empty {
   max-width: 510px;

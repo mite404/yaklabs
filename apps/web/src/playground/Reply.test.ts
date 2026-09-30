@@ -36,6 +36,12 @@ describe("AgentReply", () => {
     );
   });
 
+  it("shows the working glyph while the model reasons before any event", () => {
+    const html = shown([{ type: "start", seq: 0, v: 1 }]);
+    expect(html).toContain("agent-tree");
+    expect(html).toContain("Thinking…");
+  });
+
   it("puts Try again inside the failure section it recovers from", () => {
     const start = { type: "start", seq: 0, v: 1 } as const;
     const html = shown([start, failure, { type: "end", seq: 2, reason: "upstream" }]);
