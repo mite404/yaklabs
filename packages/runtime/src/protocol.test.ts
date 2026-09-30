@@ -19,6 +19,9 @@ const send = {
 const child = { kind: "child", parentId: "profit", at: 1, title: "Saturday", draft: "> Sat\n\n" };
 const accepts = (command: unknown) => commandSchema.safeParse(command).success;
 const saveShell = (shell: unknown) => ({ kind: "saveShell", requestId: "r1", shell });
+// Whether a chunk notice carrying `value` parses.
+const carries = (value: unknown) =>
+  noticeSchema.safeParse({ kind: "chunk", requestId: "r1", chunk: value }).success;
 
 describe("commandSchema checks what crosses into the worker", () => {
   it("accepts a send whose card choice rides along", () => {
@@ -128,6 +131,18 @@ describe("commandSchema checks the thread menu's writes (ADR-126)", () => {
 });
 
 describe("noticeSchema", () => {
+  it("carries a reply's words and its events in a chunk (ADR-147)", () => {
+    expect(carries("Saturday leads")).toBe(true);
+    expect(carries({ kind: "card", payload: { component: "BarChart" } })).toBe(true);
+    expect(carries({ kind: "step", step: { id: "s1", label: "Count", status: "done" } })).toBe(
+      true,
+    );
+    expect(carries({ kind: "step", step: { id: "s1", label: "Count", status: "stuck" } })).toBe(
+      false,
+    );
+    expect(carries({ kind: "shout", text: "Hi" })).toBe(false);
+  });
+
   it("parses exactly a stored turn, so a field the catalog adds to one fails to compile", () => {
     expectTypeOf<z.infer<typeof threadMessageSchema>>().toEqualTypeOf<ThreadMessage>();
   });

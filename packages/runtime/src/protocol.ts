@@ -1,7 +1,7 @@
 import type { AgentEvent, SharedFile } from "@yaklabs/catalog/agent";
 import type { CardAttachment } from "@yaklabs/catalog/interactive";
 import { blockSchema } from "@yaklabs/catalog/prose";
-import { endedSchema, failureSchema, workSchema } from "@yaklabs/catalog/reply";
+import { endedSchema, failureSchema, replyChunkSchema, workSchema } from "@yaklabs/catalog/reply";
 import { z } from "zod";
 import {
   laneIdSchema,
@@ -196,7 +196,8 @@ export const noticeSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("created"), requestId: idSchema, id: idSchema }),
   z.object({ kind: z.literal("done"), requestId: idSchema }),
   z.object({ kind: z.literal("failed"), requestId: idSchema, reason: z.string() }),
-  z.object({ kind: z.literal("chunk"), requestId: idSchema, text: z.string() }),
+  // One piece of a reply as the agent yielded it: words, or an event around them (ADR-147).
+  z.object({ kind: z.literal("chunk"), requestId: idSchema, chunk: replyChunkSchema }),
   z.object({ kind: z.literal("broken"), reason: z.string() }),
 ]);
 

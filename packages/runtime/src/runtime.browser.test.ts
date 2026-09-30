@@ -47,7 +47,7 @@ function ready(runtime: Runtime): Promise<Ready> {
   );
 }
 
-// The worker streams words alone; a structured chunk would show up here as its JSON.
+// The lab stand-in streams words alone; a structured chunk would show up here as its JSON.
 const wordsOf = (piece: ReplyChunk): string =>
   typeof piece === "string" ? piece : JSON.stringify(piece);
 
@@ -125,7 +125,7 @@ describe("the runtime in a Web Worker keeps threads on the device", () => {
     const kept = await first.open(id);
     expect(kept).toEqual([
       { id: "u1", role: "user", text: question, time: clockTime, attachments: [netProfitChoice] },
-      { id: "a1", role: "agent", text: reply, time: clockTime },
+      { id: "a1", role: "agent", text: reply, time: clockTime, streaming: false },
     ]);
     first.dispose();
 

@@ -1,4 +1,5 @@
 import type { AgentEvent } from "@yaklabs/catalog/agent";
+import { cancelReply, completeReply, type AgentMessage } from "@yaklabs/catalog/reply";
 import type { ThreadMessage } from "@yaklabs/catalog/thread";
 
 /** A thread's turns and the opening draft a dropped highlight left: what a reply rewrites. */
@@ -54,13 +55,21 @@ export function withUserTurn(transcript: Transcript, event: AgentEvent, stamp: S
   return { messages: [...transcript.messages, turn], draft: "", updatedAt: stamp.at };
 }
 
-/** The transcript with the agent's finished reply added. */
-export function withAgentReply(transcript: Transcript, text: string, stamp: Stamp): Transcript {
-  const turn: ThreadMessage = {
-    id: nextId(transcript.messages, "a"),
-    role: "agent",
-    text,
-    time: stamp.time,
-  };
-  return { ...transcript, messages: [...transcript.messages, turn], updatedAt: stamp.at };
+/**
+ * A streamed turn settled as its stream ended: a turn a failure already ended stays as it is,
+ * one the user stopped is cancelled with its running steps, and any other is complete.
+ */
+export function settleReply(turn: AgentMessage, stopped: boolean): AgentMessage {
+  if (turn.ended !== undefined) return turn;
+  return stopped ? cancelReply(turn) : completeReply(turn);
+}
+
+/**
+ * The transcript with the agent's settled turn added at `at`, as the reply folded it, under the
+ * next free `a<n>` id: minted here, not when the reply began, since another reply on the thread
+ * may have been saved meanwhile.
+ */
+export function withAgentTurn(transcript: Transcript, turn: AgentMessage, at: string): Transcript {
+  const saved: AgentMessage = { ...turn, id: nextId(transcript.messages, "a") };
+  return { ...transcript, messages: [...transcript.messages, saved], updatedAt: at };
 }

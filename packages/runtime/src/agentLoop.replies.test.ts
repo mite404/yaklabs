@@ -35,8 +35,13 @@ const waitsForAbort: Agent = {
   },
 };
 
+// The words the loop forwarded; these agents yield nothing else.
 const streamed = (notices: Notice[]): string =>
-  notices.flatMap((notice) => (notice.kind === "chunk" ? [notice.text] : [])).join("");
+  notices
+    .flatMap((notice) =>
+      notice.kind === "chunk" && typeof notice.chunk === "string" ? [notice.chunk] : [],
+    )
+    .join("");
 const turnIds = (store: Store, id: ThreadId = profit) =>
   store.transcript(id)?.messages.map((message) => message.id);
 
@@ -57,7 +62,7 @@ describe("the agent loop replies", () => {
         attachments: [netProfitChoice],
         files: [{ id: "u2-f1", label: "till-roll.png" }],
       },
-      { id: "a2", role: "agent", text: streamed(notices), time: "10:03" },
+      { id: "a2", role: "agent", text: streamed(notices), time: "10:03", streaming: false },
     ]);
   });
 
@@ -93,7 +98,7 @@ describe("the agent loop recovers", () => {
     expect(turnIds(store)).toEqual(["u1", "a1", "u2"]);
   });
 
-  it("stops a reply on abort and keeps what streamed so far", async () => {
+  it("stops a reply on abort and keeps what streamed so far, marked cancelled", async () => {
     const { notices, store, run } = await startLoop(() => waitsForAbort);
     await run(init);
     const sending = run(sendAsk);
@@ -103,6 +108,13 @@ describe("the agent loop recovers", () => {
     await run({ kind: "abort", requestId: "r1" });
     await sending;
     expect(notices.at(-1)).toEqual({ kind: "done", requestId: "r1" });
-    expect(store.transcript(profit)?.messages.at(-1)?.text).toBe("Net profit ");
+    expect(store.transcript(profit)?.messages.at(-1)).toEqual({
+      id: "a2",
+      role: "agent",
+      text: "Net profit ",
+      time: "10:03",
+      streaming: false,
+      ended: "cancelled",
+    });
   });
 });

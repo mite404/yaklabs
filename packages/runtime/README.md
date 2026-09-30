@@ -111,8 +111,12 @@ turn a dropped highlight into a child's title and opening draft.
 ## The protocol
 
 `src/protocol.ts` holds the zod schemas; it stays private to the package. The catalog's shapes
-(`AgentEvent`, `ThreadMessage`, `CardAttachment`, `SharedCard`) are typed against the catalog's
-own types, so a field the catalog adds as required, or retypes, fails to compile here.
+(`AgentEvent`, `CardAttachment`, `SharedCard`) are typed against the catalog's own types, so a
+field the catalog adds as required, or retypes, fails to compile here. `threadMessageSchema` is
+held equal to `ThreadMessage` in both directions by `protocol.test.ts`, and the reply seam's
+schemas (`replyChunkSchema`, `blockSchema`, `workSchema` and the rest, in the catalog's
+`reply.ts` and `prose.ts`) to their types by `reply.schemas.test.ts`, because a field a schema
+lacks is silently dropped from every turn the store reads back.
 
 | Command (page to worker)                            | Answered with                      |
 | --------------------------------------------------- | ---------------------------------- |
@@ -134,6 +138,9 @@ own types, so a field the catalog adds as required, or retypes, fails to compile
   tab lets go.
 - `state { source, workspace, replying }` is pushed after `init` and after every write, a reply's
   start and end included, and skipped when its serialized form equals the last one pushed.
+- `chunk { requestId, chunk }` carries one `ReplyChunk` as the agent yielded it: words, or an
+  event around them (ADR-147). The page's `Agent` yields it on as it came, so the thread panel
+  folds a worker's reply exactly as it folds an in-memory agent's.
 - One `Map<requestId, sink>` in the page routes every answer.
 
 ## The worker's contract
@@ -148,8 +155,13 @@ own types, so a field the catalog adds as required, or retypes, fails to compile
 - `send` saves the user's turn first, so a failed reply never loses what the user sent, and spends
   the thread's draft. A `message` becomes a user turn with its `attachments` and its `files` as
   `{ id, label }`, an `answer` becomes a user turn with its text, and `question-rejected` adds no
-  user turn (ADR-040). Each piece the agent yields is posted as a `chunk`; at the end the reply is
-  saved as an agent turn. An `abort` stops the agent and keeps what streamed so far.
+  user turn (ADR-040).
+- Each chunk the agent yields is folded into the agent's turn with the catalog's `applyChunk` and
+  posted as a `chunk`; a `failure` event ends the turn, and nothing the agent says after it is
+  read. The turn is saved when the stream ends, complete, or when an `abort` stops it, cancelled
+  with its running steps. It keeps the fold's `blocks`, `work`, `ended`, `failure` and `asks`, so
+  `open` answers the reply as it was shown. A turn that showed nothing is not saved, and a stream
+  that throws saves no turn and answers `failed`.
 - New turns take `u<n>` and `a<n>` ids, one past the highest number each role already uses, so
   the seeds' u1/a1, u2/a2 pairing carries on.
 - Every new id and instant comes from the `Mint` (`src/mint.ts`): random ids and local turn times

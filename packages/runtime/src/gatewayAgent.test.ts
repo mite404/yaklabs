@@ -105,7 +105,7 @@ function agentFor(reply: Reply, seen: Seen = {}, accessToken?: string): Agent {
   });
 }
 
-// The worker streams words alone; a structured chunk would show up here as its JSON.
+// The gateway agent streams words alone; a structured chunk would show up here as its JSON.
 const wordsOf = (piece: ReplyChunk): string =>
   typeof piece === "string" ? piece : JSON.stringify(piece);
 
