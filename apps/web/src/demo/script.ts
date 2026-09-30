@@ -81,12 +81,14 @@ function contentChunks(content: Inline[]): Timed[] {
 
 /**
  * Authored blocks as the stream an agent would send them in: a block boundary, then its words
- * one at a time, `WORD_MS` apart; a card arrives whole. `pause` is the wait before the first.
+ * one at a time, `WORD_MS` apart; a card or a limitation arrives whole, as its event carries
+ * it. `pause` is the wait before the first.
  */
 export function stream(blocks: Block[], pause = 0): Timed[] {
   return blocks.flatMap((block, at) => {
     const lead = at === 0 ? pause : WORD_MS * 4;
-    if (block.kind === "card") return [{ after: lead, chunk: block }];
+    if (block.kind === "card" || block.kind === "limitation")
+      return [{ after: lead, chunk: block }];
     if (block.kind === "list")
       return block.items.flatMap((item, i) => [
         {

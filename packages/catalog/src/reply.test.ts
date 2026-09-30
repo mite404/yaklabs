@@ -89,6 +89,59 @@ describe("applyChunk", () => {
     expect(turn.text).toBe("Before.After.");
   });
 
+  it("replaces a card in place when a later card carries its id", () => {
+    const draft = { component: "BarChart", props: { title: "Draft" } };
+    const settled = { component: "BarChart", props: { title: "Settled" } };
+    const turn = fold([
+      "Before.",
+      { kind: "card", payload: draft, id: "issues" },
+      { kind: "card", payload: { component: "LineChart" } },
+      { kind: "text", text: "After." },
+      { kind: "card", payload: settled, id: "issues" },
+      { kind: "text", text: " Still after." },
+    ]);
+    expect(turn.blocks).toEqual([
+      { kind: "paragraph", content: [{ kind: "run", text: "Before." }] },
+      { kind: "card", payload: settled, id: "issues" },
+      { kind: "card", payload: { component: "LineChart" } },
+      { kind: "paragraph", content: [{ kind: "run", text: "After. Still after." }] },
+    ]);
+  });
+
+  it("says a limitation in the words and goes on: still streaming, a new paragraph after", () => {
+    const recovery = { label: "Show it as a bar chart", prompt: "Show it as a bar chart" };
+    const turn = fold([
+      "First responses slowed.",
+      { kind: "limitation", text: "The catalog has no pie chart.", recovery },
+      { kind: "text", text: "Thursday was slowest." },
+    ]);
+    expect(turn.blocks).toEqual([
+      { kind: "paragraph", content: [{ kind: "run", text: "First responses slowed." }] },
+      { kind: "limitation", text: "The catalog has no pie chart.", recovery },
+      { kind: "paragraph", content: [{ kind: "run", text: "Thursday was slowest." }] },
+    ]);
+    expect(turn.streaming).toBe(true);
+    expect(turn.ended).toBeUndefined();
+    expect(turn.failure).toBeUndefined();
+    expect(turn.text).toBe(
+      "First responses slowed.The catalog has no pie chart.Thursday was slowest.",
+    );
+    expect(plainText(turn.blocks ?? [])).toBe(
+      "First responses slowed.\nThe catalog has no pie chart.\nThursday was slowest.",
+    );
+  });
+
+  it("appends a card whose id no earlier card carries", () => {
+    const turn = fold([
+      { kind: "card", payload: 1, id: "a" },
+      { kind: "card", payload: 2, id: "b" },
+    ]);
+    expect(turn.blocks).toEqual([
+      { kind: "card", payload: 1, id: "a" },
+      { kind: "card", payload: 2, id: "b" },
+    ]);
+  });
+
   it("supersedes narration and keeps what it replaced", () => {
     const turn = fold([
       { kind: "activity", text: "Thinking." },
@@ -128,6 +181,11 @@ describe("applyChunk", () => {
     const after = fold(["39 of 41 match", { kind: "failure", failure }]);
     expect(after.ended).toBe("interrupted");
     expect(after.failure).toEqual(failure);
+  });
+
+  it("keeps a failure's word that asking again cannot help", () => {
+    const failure = { title: "Sign-in needed", detail: "Nothing was sent.", retry: false as const };
+    expect(fold([{ kind: "failure", failure }])).toMatchObject({ ended: "failed", failure });
   });
 
   it("keeps the question a reply ends on, so the dock can be read back from the record", () => {

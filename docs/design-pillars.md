@@ -442,6 +442,7 @@ a run of text, set as `<strong>`, `<em>` or `<code>`.
 | Code | 13px on 20px, ui-monospace, on `--paper-deep`, 3px corners | derived |
 | Narration under a streaming reply | 13px on 20px, `--soft-ink`, the working glyph before it | derived (ADR-139) |
 | A reply that stopped short | its label in 600 `--ink`, why in `--soft-ink`, a 2px `--hairline` rule at the left | derived (ADR-139) |
+| A limitation in the words | reads as prose, never a warning colour: the sentence in the body's `--soft-ink`, the request it offers quoted in `--ink`, then the compact outline button (`.btn .btn-sm`) that sends it, held while a reply streams and absent where nothing can be sent; the stopped reply's 2px `--hairline` rule at the left, 16px inset and 8px between parts; the paragraph gap around it, the text's 510px measure | derived (ADR-147, widened; the row above) |
 
 ### 30. The answered surface, the folded request and the running status
 
@@ -456,6 +457,7 @@ ADR-150).
 | Running status by the compose box | paper, `--hairline`, 8px corners, 13px on 20px, shown 48px or more above the end | derived (ADR-142) |
 | Child footnote | 12px `--soft-ink`; the Running pill in `--bubble-tint-strong` with `--bubble-line`, 11px 500 | Ethan (ADR-142) |
 | The disclosure above the reply | 13px 500, its chevron first, mounted as the work starts; live, the working glyph then the activity; settled, the reply's summary or Work finished, incomplete, Stopped; its count in 12px `--soft-ink` beside the label ("3 checks · 1 needs attention") | Ethan (ADR-139, amended) |
+| Basis lines under a step's outcome | how the outcome was found, in a few lines between the outcome and its evidence card: 13px on 20px `--soft-ink`, disc bullets at the earlier narration's 22px indent, the prose's 510px measure, so the outcome stays the loudest line of the row | derived (ADR-147, widened; the narration row in pillar 29) |
 | Lane collapse toggle | a 20px fill, 13px glyph, flush with the lane's edge in the gutter; a child's title starts on the compose box's edge | Ethan (ADR-134, amended) |
 | Kay's mark | the bonsai's three pills on a 12-unit grid, `currentColor`, in the rail's 20px box | Ethan (ADR-094, amended) |
 | Reading tools at rest | the bookmark alone on `--scrim` (paper at 72%), glyph opaque; clear until the pointer is over the thread's turns, up over 300ms on the strong ease-out; Search unfolds over 220ms on the panel ease, the drawer's slide | Ethan (ADR-143, amended) |
@@ -463,6 +465,10 @@ ADR-150).
 | Reply stamp | 11px on 16px `--soft-ink`, tabular figures, under the latest settled reply only: "just now", then 20-minute steps; no time on a user's turn | Ethan (ADR-152) |
 
 ## Open questions
+
+- The limitation in the words (pillar 29) and the basis lines under a step's outcome (pillar 30)
+  borrow the stopped reply's rule and the narration's type rather than values of their own: keep
+  them, or pick a look for each (Ethan's call).
 
 - Whether the stepped slider, dictation controls, links and the primary button should move from
   olive to ink, so green only appears on button hovers (tracked in `docs/LATER.md`).

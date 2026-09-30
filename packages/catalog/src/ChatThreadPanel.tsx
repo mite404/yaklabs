@@ -23,6 +23,7 @@ import { IconButton } from "./IconButton";
 import { StepIcon } from "./icons";
 import { labAgent } from "./labAgent";
 import { attachmentLabel, resolveInteractive, type CardAttachment } from "./interactive";
+import type { Recover } from "./QuietProse";
 import { ReadingTools } from "./ReadingTools";
 import { Recap } from "./Recap";
 import { shouldShowRecap, type RecapItem, type ThreadActivity } from "./recapRules";
@@ -390,6 +391,7 @@ function Turn({
   message,
   onChoose,
   onRetry,
+  recover,
   cardsCarry,
   stamp,
   measure,
@@ -397,6 +399,7 @@ function Turn({
   message: ThreadMessage;
   onChoose: (attachment: CardAttachment) => void;
   onRetry: (turnId: string) => void;
+  recover: Recover;
   cardsCarry: boolean | undefined;
   stamp: string | undefined;
   measure: string | undefined;
@@ -409,6 +412,7 @@ function Turn({
       message={message}
       onChoose={onChoose}
       onRetry={onRetry}
+      recover={recover}
       cardsCarry={cardsCarry}
       stamp={stamp}
       measure={measure}
@@ -825,7 +829,8 @@ function StatusStrip({ activity, onJump }: { activity: string; onJump: () => voi
  * the frame.
  * Replies stream in as structured turns (ADR-139, ADR-140). The user can keep talking while they
  * stream, stop them all from the compose box, and try one that stopped short again; a reader
- * scrolled up while a reply runs sees its status by the compose box (ADR-142).
+ * scrolled up while a reply runs sees its status by the compose box (ADR-142). A limitation's
+ * recovery sends its prompt as the user's next message in one click, held while a reply streams.
  * @param ref What a host that drives the thread can do (ThreadHandle): fill and send the
  * compose box, answer the docked question, stop, or try again.
  * @param footnote A quiet line under the compose box, such as who controls the thread (ADR-141).
@@ -891,9 +896,8 @@ export function ChatThreadPanel({
   const running = runningActivity(messages); // → the latest streaming reply's narration
   const showEmpty = messages.length === 0 && empty !== undefined;
 
-  function send() {
-    const { attachments, files } = outbox.take();
-    const text = latest().trim();
+  // The user's message as their next turn, told to the agent with what rides along.
+  function post(text: string, attachments: CardAttachment[], files: { id: string; file: File }[]) {
     setMessages((current) => [
       ...current,
       {
@@ -905,7 +909,6 @@ export function ChatThreadPanel({
         files: files.map((item) => ({ id: item.id, label: item.file.name })),
       },
     ]);
-    setDraft("");
     recap.fold();
     recap.noteInput();
     replies.tell({
@@ -914,6 +917,20 @@ export function ChatThreadPanel({
       attachments,
       files: files.map(({ file }) => ({ name: file.name, type: file.type, size: file.size })),
     });
+  }
+
+  // The compose box's draft and the outbox, sent; the box empties.
+  function send() {
+    const { attachments, files } = outbox.take();
+    const text = latest().trim();
+    setDraft("");
+    post(text, attachments, files);
+  }
+
+  // A limitation's recovery, sent as the user's next message in one click. The draft and the
+  // outbox stay as they are, so a click never takes what the user was writing with it.
+  function sendText(prompt: string) {
+    post(prompt, [], []);
   }
 
   // An answer to the agent's question is the user's next turn, shown with the question it
@@ -1011,6 +1028,7 @@ export function ChatThreadPanel({
               message={item.message}
               onChoose={outbox.choose}
               onRetry={retry}
+              recover={{ onRecover: sendText, busy: running !== undefined }}
               cardsCarry={cardsCarry}
               stamp={item.message === stamped ? stampOf(item.message.time, clock) : undefined}
               measure={outbox.measureOf(item.message.id)}

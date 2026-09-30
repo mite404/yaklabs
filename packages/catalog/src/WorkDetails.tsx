@@ -16,7 +16,7 @@ const STATUS_WORDS: Record<StepStatus, string> = {
 };
 
 // One step: where it stands, what it was (a branch before it when it ran as a child thread),
-// what it found, and the card that backs it.
+// what it found, how it found it, and the card that backs it.
 function StepRow({ step, carries }: { step: WorkStep; carries: boolean }) {
   const word = STATUS_WORDS[step.status];
   return (
@@ -42,6 +42,15 @@ function StepRow({ step, carries }: { step: WorkStep; carries: boolean }) {
         {step.label}
       </p>
       {step.outcome !== undefined && <p className="work-step-outcome">{step.outcome}</p>}
+      {step.basis !== undefined && step.basis.length > 0 && (
+        <ul className="work-step-basis" aria-label="How this was found">
+          {step.basis.map((line, i) => (
+            // A step settles whole, so its lines never move: a line's place is its identity.
+            // oxlint-disable-next-line react/no-array-index-key -- see above
+            <li key={i}>{line}</li>
+          ))}
+        </ul>
+      )}
       {step.evidence !== undefined && (
         <CatalogCard
           payload={step.evidence}
@@ -93,8 +102,8 @@ function TechnicalDetails({ work }: { work: Work }) {
  * The one disclosure above a reply (ADR-139, amended): mounted when the work starts, so it never
  * appears over text someone is reading, its header says what the reply is doing now (live, with
  * the working glyph) and then what the work amounted to, with a count beside it (`workLabel`).
- * Folded under it: each step's state in a word, its label, its outcome in plain prose and the
- * card that backs it. The superseded narration and the technical logs sit one disclosure deeper,
+ * Folded under it: each step's state in a word, its label, its outcome in plain prose, the
+ * lines that say how it was found, and the card that backs it. The superseded narration and the technical logs sit one disclosure deeper,
  * so a reader who only wants the answer never has to read them. Both start folded; each turn
  * keeps its own.
  * @param cardsCarry Whether an evidence card's header carries it out onto the canvas (ADR-089).

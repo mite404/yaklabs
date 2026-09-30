@@ -5,7 +5,7 @@ import type { Agent } from "./agent";
 import type { ReplyChunk } from "./reply";
 import { useCarryTarget } from "./carry";
 import { ChatThreadPanel } from "./ChatThreadPanel";
-import { scenarios } from "./fixtures";
+import { scenarios, trend } from "./fixtures";
 import { threads } from "./thread";
 
 // A fixed clock keeps idle-time stories deterministic.
@@ -714,6 +714,91 @@ export const Streaming: Story = {
   },
 };
 
+// The team comparison twice under one id: a draft while its check runs, then the settled card.
+const settledTeams = {
+  ...trend,
+  component: "BarChart",
+  props: {
+    ...trend.props,
+    title: "Cases by team",
+    variant: "comparison",
+    rows: [
+      { label: "Support", value: 84 },
+      { label: "Success", value: 56 },
+      { label: "Operations", value: 71 },
+    ],
+  },
+};
+const draftTeams = {
+  ...settledTeams,
+  props: {
+    ...settledTeams.props,
+    title: "Cases by team (draft)",
+    rows: settledTeams.props.rows.slice(0, 2),
+  },
+};
+const replacedStream: ReplyChunk[] = [
+  { kind: "step", step: { id: "teams", label: "Cases by team", status: "running" } },
+  "Here is each team's count so far.",
+  { kind: "card", payload: draftTeams, id: "teams" },
+  { kind: "text", text: "Support leads either way." },
+  { kind: "step", step: { id: "teams", label: "Cases by team", status: "done" } },
+  { kind: "card", payload: settledTeams, id: "teams" },
+];
+
+/**
+ * A card sent again under its id (ADR-147, widened): the draft chart shown while its check runs
+ * becomes the settled one in the same place, the same card on screen, not a second one below.
+ */
+export const CardReplaced: Story = {
+  args: { thread: threads.trend, agent: scriptedAgent(replacedStream, 300) },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.type(canvas.getByRole("textbox", { name: "Message" }), "Compare teams{Enter}");
+    const draft = await canvas.findByRole("heading", { name: "Cases by team (draft)" });
+    const shown = draft.closest("section"); // → the card on screen
+    const settled = await canvas.findByRole("heading", { name: "Cases by team" });
+    await expect(settled.closest("section")).toBe(shown);
+    await expect(canvas.queryByRole("heading", { name: "Cases by team (draft)" })).toBeNull();
+    await expect(canvas.getByText("Support leads either way.")).toBeVisible();
+  },
+};
+
+/**
+ * What a reply could not do, said in its words (ADR-147, widened): the sentence in the prose's
+ * voice, the request it offers quoted, and a button that sends it as the next message in one
+ * click. The button waits while a reply streams, and what the user was writing stays put.
+ */
+export const Limitation: Story = {
+  args: {
+    thread: threads.limited,
+    agent: scriptedAgent(["Here it is as bars. ", "Thursday stands out."], 400),
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(
+      canvas.getByText("The catalog has no pie chart, so I didn't draw one."),
+    ).toBeVisible();
+    const box = canvas.getByRole("textbox", { name: "Message" });
+    await userEvent.type(box, "Half a thought");
+    const recover = canvas.getByRole("button", { name: "Show it as a bar chart" });
+    await expect(recover).toHaveAccessibleDescription(/Show first response times as a bar chart/);
+    await userEvent.click(recover);
+    await waitFor(async () => {
+      await expect(canvas.getAllByRole("article", { name: "You" })).toHaveLength(2);
+    });
+    await expect(canvas.getAllByRole("article", { name: "You" })[1]).toHaveTextContent(
+      "Show first response times as a bar chart",
+    );
+    await expect(recover).toBeDisabled();
+    await expect(await canvas.findByText(/Thursday stands out\./)).toBeVisible();
+    await waitFor(async () => {
+      await expect(recover).toBeEnabled();
+    });
+    await expect(box).toHaveValue("Half a thought");
+  },
+};
+
 /**
  * A reply cut off partway keeps its words, says it is incomplete and why, and offers Try again.
  * Trying again asks for the same request as a new reply below; the cut-off one keeps its label.
@@ -746,6 +831,20 @@ export const Cancelled: Story = {
   },
 };
 
+/**
+ * A reply that could not start where asking again cannot help, such as a missing sign-in: it
+ * says why, and offers no Try again that would only fail the same way.
+ */
+export const RetryWithheld: Story = {
+  args: { thread: threads["no-retry"] },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByText("Could not start")).toBeVisible();
+    await expect(canvas.getByText(/answers signed-in users only/)).toBeVisible();
+    await expect(canvas.queryByRole("button", { name: "Try again" })).toBeNull();
+  },
+};
+
 /** Answers to the agent's questions (ADR-039): one surface, each question over its answer. */
 export const AnsweredQuestions: Story = {
   args: { thread: threads.answered },
@@ -757,8 +856,9 @@ export const AnsweredQuestions: Story = {
 };
 
 /**
- * Work details open: each step's state in a word, its outcome and its evidence, a branch marking
- * the one that ran as a child thread. Technical details stay folded until asked for.
+ * Work details open: each step's state in a word, its outcome, the lines that say how it was
+ * found, and its evidence, a branch marking the one that ran as a child thread. Technical details
+ * stay folded until asked for.
  */
 export const WorkDetailsOpen: Story = {
   args: { thread: threads.brief },
@@ -767,6 +867,9 @@ export const WorkDetailsOpen: Story = {
     await userEvent.click(canvas.getByRole("button", { name: /Work finished/ }));
     await expect(canvas.getByText("Weekly workload")).toBeVisible();
     await expect(canvas.getByText("Child thread:")).toBeInTheDocument();
+    const [workload] = canvas.getAllByRole("list", { name: "How this was found" });
+    await expect(within(workload).getAllByRole("listitem")).toHaveLength(2);
+    await expect(workload).toHaveTextContent("Took the busiest day's count as the peak");
     const technical = canvas.getByRole("button", { name: "Technical details" });
     await expect(technical).toHaveAttribute("aria-expanded", "false");
     await userEvent.click(technical);

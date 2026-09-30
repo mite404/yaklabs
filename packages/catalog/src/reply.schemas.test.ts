@@ -28,6 +28,14 @@ const events: ReplyEvent[] = [
   { kind: "link", text: "the queue", href: "https://example.com/queue" },
   { kind: "block", block: "item" },
   { kind: "card", payload: { component: "BarChart" } },
+  { kind: "card", payload: { component: "LineChart", draft: true }, id: "trend" },
+  { kind: "card", payload: { component: "LineChart" }, id: "trend" },
+  { kind: "limitation", text: "No live sales here." },
+  {
+    kind: "limitation",
+    text: "The catalog has no pie chart.",
+    recovery: { label: "Show it as a bar chart", prompt: "Show it as a bar chart" },
+  },
   {
     kind: "step",
     step: {
@@ -35,6 +43,7 @@ const events: ReplyEvent[] = [
       label: "Count cases",
       status: "done",
       outcome: "46 open",
+      basis: ["Counted open tickets at close", "Left out the weekend"],
       evidence: { rows: 3 },
       threadId: "t-1",
     },
@@ -43,6 +52,7 @@ const events: ReplyEvent[] = [
   { kind: "summary", text: "Counted the backlog" },
   { kind: "question", question: { question: "Which week?" } },
   { kind: "failure", failure: { title: "Reply interrupted", detail: "The source went quiet." } },
+  { kind: "failure", failure: { title: "Sign-in needed", detail: "Nothing sent.", retry: false } },
 ];
 
 describe("the seam's schemas", () => {
@@ -66,6 +76,11 @@ describe("the seam's schemas", () => {
     const step = { kind: "step", step: { id: "s1", label: "Count cases" } };
     expect(replyEventSchema.safeParse(step).success).toBe(false);
     expect(replyChunkSchema.safeParse(42).success).toBe(false);
+  });
+
+  it("refuse a failure that offers retry: true, since only false says anything", () => {
+    const failure = { title: "Reply interrupted", detail: "Try again.", retry: true };
+    expect(failureSchema.safeParse(failure).success).toBe(false);
   });
 
   it("parse the blocks, the work and the ending a folded reply holds", () => {

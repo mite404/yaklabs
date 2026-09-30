@@ -122,9 +122,18 @@ async function pauseHolds(page, run) {
 }
 
 async function cardBetweenParagraphs(page) {
-  const card = agentTurns(page).first().locator(".quiet-prose > .prose-card").first();
+  const prose = agentTurns(page).first().locator(".quiet-prose");
+  const card = prose.locator("> .prose-card").first();
   await card.waitFor({ timeout: 30_000 });
   await until(() => card.evaluate(betweenParagraphs), "a paragraph after the card");
+  // The open issues arrive as a draft and settle in place: one card, the same node, by its id.
+  const issues = prose.locator("> .prose-card", { hasText: "Still open on Friday" });
+  await issues.first().waitFor({ timeout: 30_000 });
+  const shown = await issues.first().elementHandle();
+  const settled = async () => (await shown.innerText()).includes("(draft)") === false;
+  await until(settled, "the draft to settle");
+  assert.equal(await issues.count(), 1, "the settled card took the draft's place");
+  assert.equal(await shown.evaluate((el) => el.isConnected), true, "the same card on screen");
 }
 
 async function refusedChartShowsLimit(page) {
@@ -134,6 +143,12 @@ async function refusedChartShowsLimit(page) {
   assert.match(words, /CATALOG LIMIT/);
   assert.match(words, /No unvalidated content was rendered/);
   assert.equal(await refused.locator("svg, table").count(), 0, "nothing drawn for it");
+  // The reply says so in its words and offers a bar chart, held while the reply streams.
+  const limit = agentTurns(page).first().locator(".quiet-prose > .prose-limitation");
+  await limit.waitFor({ timeout: 30_000 });
+  assert.match(await limit.innerText(), /The catalog has no pie chart/);
+  const offer = limit.getByRole("button", { name: "Show it as a bar chart" });
+  assert.equal(await offer.isDisabled(), true, "the offer waits while the reply streams");
   return words.split("\n")[1];
 }
 
@@ -183,6 +198,7 @@ async function workDetails(page, run) {
   assert.ok((await turn.locator("pre code").count()) > 0, "the logs sit in pre code");
   const steps = turn.locator(".work-step");
   assert.equal(await steps.count(), 3, "three children, one step each");
+  assert.equal(await steps.locator(".work-step-basis").count(), 3, "each says how it was found");
   assert.equal(await steps.locator(".card:not(.state)").count(), 2, "two cards passed");
   assert.equal(await steps.locator(".card.state").count(), 1, "one card was refused");
   const narration = mainOf(page).getByText("Reading the support records.", { exact: true });

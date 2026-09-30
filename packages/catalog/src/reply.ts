@@ -1,5 +1,14 @@
 import { z } from "zod";
-import { markSchema, type Block, type Inline, type Mark } from "./prose";
+import {
+  card,
+  limitation,
+  markSchema,
+  recoverySchema,
+  type Block,
+  type Inline,
+  type Mark,
+  type Recovery,
+} from "./prose";
 import type { ThreadMessage } from "./thread";
 
 /** Where one step of the agent's work stands. Words, never colour alone, tell them apart. */
@@ -7,14 +16,16 @@ export type StepStatus = "pending" | "running" | "done" | "failed" | "cancelled"
 
 /**
  * One step of the work behind a reply (ADR-139): a check, a tool run, or a child thread the
- * agent spawned (`threadId`). `outcome` is what a reader needs; `evidence` is a catalog card
- * that backs it. Only `outcome` and `evidence` go in Work details; the logs go one level deeper.
+ * agent spawned (`threadId`). `outcome` is what a reader needs; `basis` is a few short lines on
+ * how it was reached; `evidence` is a catalog card that backs it. Only these go in Work details;
+ * the logs go one level deeper.
  */
 export type WorkStep = {
   id: string;
   label: string;
   status: StepStatus;
   outcome?: string;
+  basis?: string[];
   evidence?: unknown;
   threadId?: string;
 };
@@ -25,8 +36,12 @@ export type WorkStep = {
  */
 export type Work = { steps: WorkStep[]; logs: string[]; narration: string[]; summary?: string };
 
-/** Why a reply stopped short, in words for the reader. */
-export type Failure = { title: string; detail: string };
+/**
+ * Why a reply stopped short, in words for the reader. `retry: false` says asking again cannot
+ * help (a sign-in is missing, the request itself was refused), so no Try again is offered;
+ * absent, it is.
+ */
+export type Failure = { title: string; detail: string; retry?: false };
 
 /** How a reply that did not complete ended: cut off after some text, before any, or by the user. */
 export type Ended = "interrupted" | "failed" | "cancelled";
@@ -44,8 +59,18 @@ export type ReplyEvent =
   | { kind: "link"; text: string; href: string }
   /** Opens a new block; `item` opens the next item of the list at hand, or a list. */
   | { kind: "block"; block: "paragraph" | "heading" | "list" | "item" }
-  /** A catalog card, placed after the prose so far; the next text starts a new paragraph. */
-  | { kind: "card"; payload: unknown }
+  /**
+   * A catalog card, placed after the prose so far; the next text starts a new paragraph. A card
+   * whose `id` names an earlier card in this reply takes that card's place instead, so a draft
+   * chart becomes the settled one where the reader already saw it.
+   */
+  | { kind: "card"; payload: unknown; id?: string }
+  /**
+   * What the reply cannot do, said in the words where it applies, and the request the reader
+   * can send in one click instead, when there is one. Not a failure: the reply goes on, and
+   * the next text starts a new paragraph.
+   */
+  | { kind: "limitation"; text: string; recovery?: Recovery }
   /** A step of the work, new or updated, by its id. */
   | { kind: "step"; step: WorkStep }
   /** One technical line, kept behind Technical details. */
@@ -73,6 +98,7 @@ export const workStepSchema = z.object({
   label: z.string(),
   status: z.enum(["pending", "running", "done", "failed", "cancelled"]),
   outcome: z.string().optional(),
+  basis: z.array(z.string()).optional(),
   evidence: z.unknown().optional(),
   threadId: z.string().optional(),
 });
@@ -86,7 +112,11 @@ export const workSchema = z.object({
 });
 
 /** Parses a `Failure`. */
-export const failureSchema = z.object({ title: z.string(), detail: z.string() });
+export const failureSchema = z.object({
+  title: z.string(),
+  detail: z.string(),
+  retry: z.literal(false).optional(),
+});
 
 /** Parses an `Ended`. */
 export const endedSchema = z.enum(["interrupted", "failed", "cancelled"]);
@@ -100,7 +130,12 @@ export const replyEventSchema = z.discriminatedUnion("kind", [
     kind: z.literal("block"),
     block: z.enum(["paragraph", "heading", "list", "item"]),
   }),
-  z.object({ kind: z.literal("card"), payload: z.unknown() }),
+  z.object({ kind: z.literal("card"), payload: z.unknown(), id: z.string().optional() }),
+  z.object({
+    kind: z.literal("limitation"),
+    text: z.string(),
+    recovery: recoverySchema.optional(),
+  }),
   z.object({ kind: z.literal("step"), step: workStepSchema }),
   z.object({ kind: z.literal("log"), text: z.string() }),
   z.object({ kind: z.literal("summary"), text: z.string() }),
@@ -133,10 +168,10 @@ function appendRun(content: Inline[], run: Extract<Inline, { kind: "run" }>): In
 }
 
 // Appends an inline to the open block: the last item of an open list, the content of an open
-// paragraph or heading, or a new paragraph after a card or at the start.
+// paragraph or heading, or a new paragraph after a card, a limitation or at the start.
 function appendInline(blocks: Block[], inline: Inline): Block[] {
   const open = lastBlock(blocks);
-  if (open === undefined || open.kind === "card")
+  if (open === undefined || open.kind === "card" || open.kind === "limitation")
     return [...blocks, { kind: "paragraph", content: [inline] }];
   if (open.kind === "list") {
     const item = open.items.at(-1) ?? [];
@@ -148,6 +183,15 @@ function appendInline(blocks: Block[], inline: Inline): Block[] {
 
 function appendTo(content: Inline[], inline: Inline): Inline[] {
   return inline.kind === "run" ? appendRun(content, inline) : [...content, inline];
+}
+
+// Places a card where the earlier card of its id stands, else after the prose so far.
+function placeCard(blocks: Block[], placed: Extract<Block, { kind: "card" }>): Block[] {
+  const at =
+    placed.id === undefined
+      ? -1
+      : blocks.findIndex((block) => block.kind === "card" && block.id === placed.id);
+  return at === -1 ? [...blocks, placed] : blocks.map((block, i) => (i === at ? placed : block));
 }
 
 // Opens a block. `item` adds an item to the list at hand, or starts a list.
@@ -201,9 +245,10 @@ function endedBy(message: AgentMessage): Ended {
 /**
  * Folds one chunk of a reply into the agent's turn: pure, so the same stream always builds the
  * same turn. Text grows the plain `text` always and the `blocks` once the reply has structure;
- * narration supersedes and is kept; a failure ends the turn as interrupted or failed. A
- * `question` is kept on the turn as what it asks, so the dock can be read back from the record;
- * the host docks it as it streams.
+ * a card with an earlier card's id takes its place; a limitation is said in the words and the
+ * reply goes on; narration supersedes and is kept; a failure ends the turn as interrupted or
+ * failed. A `question` is kept on the turn as what it asks, so the dock can be read back from
+ * the record; the host docks it as it streams.
  */
 export function applyChunk(message: AgentMessage, chunk: ReplyChunk): AgentMessage {
   if (typeof chunk === "string") return appendText(message, { text: chunk });
@@ -224,9 +269,12 @@ export function applyChunk(message: AgentMessage, chunk: ReplyChunk): AgentMessa
     case "block":
       return { ...message, blocks: openBlock(blocksOf(message), chunk.block) };
     case "card":
+      return { ...message, blocks: placeCard(blocksOf(message), card(chunk.payload, chunk.id)) };
+    case "limitation":
       return {
         ...message,
-        blocks: [...blocksOf(message), { kind: "card", payload: chunk.payload }],
+        text: message.text + chunk.text,
+        blocks: [...blocksOf(message), limitation(chunk.text, chunk.recovery)],
       };
     case "activity":
       return narrate(message, work, chunk.text);

@@ -195,6 +195,13 @@ it("labels a cut-off reply incomplete and offers Try again, keeping its words", 
   expect(html).not.toContain("aria-busy");
 });
 
+it("offers no Try again when the failure says asking again cannot help", () => {
+  const html = renderToStaticMarkup(<ChatThreadPanel thread={threads["no-retry"]} />);
+  expect(html).toContain("Could not start");
+  expect(html).toContain("The live model answers signed-in users only. Nothing was sent.");
+  expect(html).not.toContain("Try again");
+});
+
 it("says who stopped a cancelled reply, and offers no Try again", () => {
   const html = renderToStaticMarkup(<ChatThreadPanel thread={threads.cancelled} />);
   expect(html).toContain("Stopped by you");
