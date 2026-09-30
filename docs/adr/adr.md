@@ -2248,3 +2248,19 @@ Alongside, an interactive card's shown stop is held by the panel (the choice pen
 what the agent last saw) and the thread handle can `choose` a stop by its label, so a host that
 drives the thread steps a card by the same path a person's slider takes (ADR-029, ADR-030); a
 card on its own keeps its own state.
+
+## ADR-154 - AuthKit runs in dev mode on the deployed site
+
+2026-09-30 - Accepted (Ethan: "okay option 1", then "go ahead"); settles the refresh check
+ADR-084 left open.
+The web app now passes `devMode` to `AuthKitProvider` everywhere, not only on localhost, so
+AuthKit keeps the refresh token in `localStorage`. With dev mode off, AuthKit refreshes through
+a cookie on `api.workos.com`, which the browser blocks as third-party on the deployed site;
+once the first access token expired, `getAccessToken()` threw
+`LoginRequiredError` and every reply, in a main thread or a child, failed before the page sent
+a request. The Worker's logs showed it: one 200 on `/api/messages`, then nothing for the failed
+replies.
+WorkOS documents dev mode as the setting to use without a custom authentication domain. The
+cost is that a script injected into the page could read the refresh token; the proper
+production setup is a custom auth domain (`apiHostname`), a paid WorkOS feature that needs a
+domain we own, which this demo does not have.
