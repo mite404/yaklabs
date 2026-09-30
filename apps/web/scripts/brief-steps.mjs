@@ -65,6 +65,10 @@ async function shellPresent(page, run) {
   await sidebarOf(page).locator('[data-thread="main"]', { hasText: "Weekly brief" }).waitFor();
   await page.getByLabel("Open threads").getByText("Weekly brief", { exact: true }).waitFor();
   await toolbarOf(page).getByText("Nothing is sent or changed").waitFor();
+  assert.match(
+    await page.locator('[data-slot="demo-standing"]').innerText(),
+    /^Shipped: .* Scripted: /,
+  );
   await button(page, "Play").waitFor();
   assert.equal(await statusOf(page).innerText(), "Ready");
   await run.shot("01-ready");

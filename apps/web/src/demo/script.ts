@@ -43,6 +43,11 @@ export type Script = {
   label: string;
   /** One line on what this scenario shows, for the picker's description. */
   shows: string;
+  /**
+   * What of this scenario is the product's and what is proposed, in one line under the demo's
+   * name, so a watcher never takes a prototype for shipped work or the other way round.
+   */
+  standing: string;
   project: string;
   thread: string;
   children: Record<string, ChildScript>;

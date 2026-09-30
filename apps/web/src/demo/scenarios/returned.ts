@@ -67,6 +67,7 @@ export const returned: Script = {
   id: "returned",
   label: "Came back to it",
   shows: "A run you did not watch: outcomes first, evidence a layer down, then what needs you.",
+  standing: "Proposed: the recap as a missed run's summary. Shipped: the rest.",
   project: "Operations",
   thread: "September invoices",
   children: {

@@ -188,10 +188,32 @@ function Transport() {
   );
 }
 
+// What this is, that nothing leaves the page (ADR-096), and the open scenario's standing: what
+// of it is shipped and what is proposed, so the bar says so before anyone asks.
+function Standing() {
+  const { script } = useDemo();
+  return (
+    <div className="flex min-w-0 flex-col justify-center leading-4">
+      <div className="flex min-w-0 items-baseline gap-2">
+        <span className="shrink-0 text-[11px] font-medium tracking-[0.1em] text-soft-ink uppercase">
+          Scripted demo
+        </span>
+        <span className="truncate text-[11px] text-soft-ink max-lg:hidden">
+          Nothing is sent or changed
+        </span>
+      </div>
+      <p data-slot="demo-standing" className="truncate text-[11px] text-soft-ink max-md:hidden">
+        {script.standing}
+      </p>
+    </div>
+  );
+}
+
 /**
  * The scripted demo's controls, one row under the title bar (two on a phone, the picker
- * scrolling below): what this is and that nothing leaves the page (ADR-096), the scenario
- * picker, and the transport. The thread below is the app's own, driven through its own controls.
+ * scrolling below): what this is, that nothing leaves the page (ADR-096) and what of the open
+ * scenario is shipped or proposed, the scenario picker, and the transport. The thread below is
+ * the app's own, driven through its own controls.
  */
 export function DemoControls() {
   return (
@@ -201,14 +223,7 @@ export function DemoControls() {
       data-slot="demo-controls"
       className="grid h-10 shrink-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 border-b border-hairline bg-paper px-3 max-md:h-auto max-md:grid-cols-[minmax(0,1fr)_auto] max-md:grid-rows-[40px_auto] max-md:gap-y-0 max-md:pb-1.5"
     >
-      <div className="flex min-w-0 items-baseline gap-2">
-        <span className="shrink-0 text-[11px] font-medium tracking-[0.1em] text-soft-ink uppercase">
-          Scripted demo
-        </span>
-        <span className="truncate text-xs text-soft-ink max-lg:hidden">
-          Nothing is sent or changed
-        </span>
-      </div>
+      <Standing />
       <div className="max-md:no-scrollbar max-md:col-span-full max-md:row-start-2 max-md:overflow-x-auto">
         <ScenarioPicker />
       </div>
