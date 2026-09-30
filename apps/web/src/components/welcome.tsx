@@ -73,7 +73,11 @@ export function Welcome({ thread, pane }: { thread: ThreadSummary; pane: PaneKin
         <Projects />
         <Actions thread={thread} />
       </div>
-      {pane === "thread" && <SplashSwitch className={`${ACTION} absolute top-4 right-4 z-10`} />}
+      {/* A developer's picker for the painting: development builds only, so the product's first
+          screen carries no debug control (ADR-156). */}
+      {import.meta.env.DEV && pane === "thread" && (
+        <SplashSwitch className={`${ACTION} absolute top-4 right-4 z-10`} />
+      )}
     </div>
   );
 }

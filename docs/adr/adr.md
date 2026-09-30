@@ -2364,7 +2364,7 @@ Known gaps: the live model is unverified from the sandbox, since the gateway nee
 token. An in-process test runs the gateway's test-kit rounds through the real route, the agent,
 the worker loop and `open()`, and a browser check drove the splash, the rows, the redirects and a
 live-thread reply that survives a reload, with the lab stand-in answering. The debug splash
-picker now shows on a first visit, because first run opens the thread pane where it was always
-drawn; whether to hide it is open for Ethan. The device levers `apps/web/scripts/web-check.mjs`
+picker showed on a first visit once first run opened the thread pane where it was always drawn;
+it now renders in development builds only. The device levers `apps/web/scripts/web-check.mjs`
 and `workspace-check.mjs` drive `?scenario=` fixtures, where the overlay is off and the profit
 thread still exists, so they run unchanged.

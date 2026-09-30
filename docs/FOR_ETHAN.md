@@ -1608,8 +1608,10 @@ product's first screen. Nothing about the switch changed. The welcome draws it o
 layout, never beside the canvas, and the old first run opened Demo store's profit thread beside its
 canvas, where the switch stays hidden. The new `firstRun` opens the empty Live Playground thread on
 the thread pane, which is exactly where the switch was always drawn. Moving the front door moved a
-developer's tool into the lobby. It is not solved yet: whether to hide it is Ethan's call, and
-ADR-156 lists it as a known gap.
+developer's tool into the lobby. The fix keeps the tool and moves the lobby: the picker renders
+in development builds only (`import.meta.env.DEV`), so Ethan keeps it on his machine and the
+deployed first screen carries no debug control. The `?splash=` address still picks a painting for
+a screenshot run.
 
 ### The bar that had not left yet
 
