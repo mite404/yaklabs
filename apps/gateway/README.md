@@ -28,6 +28,9 @@ one allowed origin in WorkOS (ADR-086).
     to the model as an error result and never reaches the page (`src/playgroundTools.ts`);
   - the reply streams as `application/x-ndjson`, one `PlaygroundEvent` per line, from `start`
     to `end`, with `seq` counting up without a gap;
+  - text is prose from its first delta and is never relabelled; progress reaches the page only
+    as `update_work` labels, and a turn that stops at a limit or loses the model says why in
+    `end`'s `line` (protocol 2);
   - a turn stops at 8 rounds; tool calls past 16 in a turn get an error result instead of
     running, and a refused first round answers 502 like `/api/messages`.
 - Every other path is a static file from `apps/web/build/client`; a path that is not a file gets
