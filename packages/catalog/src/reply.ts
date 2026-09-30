@@ -260,9 +260,14 @@ export function failReply(message: AgentMessage): AgentMessage {
   return applyChunk(message, { kind: "failure", failure: { title, detail: BROKE_OFF } });
 }
 
-/** What a turn's Work details header says at a glance: how many steps, and how many did not finish. */
+/**
+ * What a turn's Work details header says at a glance: how many steps, and how many did not
+ * finish; for work that is technical lines alone, how many of those.
+ */
 export function workSummary(work: Work): string {
   const steps = work.steps.length;
+  const lines = work.logs.length;
+  if (steps === 0 && lines > 0) return `${lines} technical ${lines === 1 ? "line" : "lines"}`;
   const short = work.steps.filter(
     (step) => step.status === "failed" || step.status === "cancelled",
   ).length;

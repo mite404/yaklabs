@@ -203,6 +203,9 @@ describe("isEmptyReply", () => {
 describe("workSummary", () => {
   it("counts the steps, the ones running, and the ones that did not finish", () => {
     expect(workSummary({ steps: [], logs: [], narration: [] })).toBe("0 steps");
+    expect(workSummary({ steps: [], logs: ["hold:south"], narration: [] })).toBe(
+      "1 technical line",
+    );
     expect(
       workSummary({
         steps: [
