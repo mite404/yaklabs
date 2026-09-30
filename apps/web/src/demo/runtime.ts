@@ -12,15 +12,7 @@ import {
 import type { Runtime, ThreadId } from "@yaklabs/runtime";
 import type { Clock } from "./clock";
 import { addChild, childOf, mainIdOf, notified, type ChildOf } from "./edits";
-import {
-  childTurns,
-  END_REPLY,
-  openingTurns,
-  play,
-  TURN_TIME,
-  userTurn,
-  wordingOf,
-} from "./replies";
+import { childTurns, END_REPLY, openingTurns, play, userTurn, wordingOf } from "./replies";
 import type { Script } from "./script";
 import { liveOf, SOURCE, storeOf, type Progress, type Store } from "./store";
 import { menuVerbs, workspaceVerbs } from "./verbs";
@@ -43,6 +35,10 @@ export type DemoOptions = {
 // What a scripted reply plays with.
 type Stage = { store: Store; script: Script; clock: Clock; reduce: boolean };
 
+// When a turn is made: the wall clock, as an instant, so a child's latest reply reads "just now"
+// and ages with the main's (turnTime.ts) rather than sitting at the demo's fixed morning.
+const now = (): string => new Date().toISOString();
+
 // Whether the page asks for less motion; a page without a window never does.
 function prefersReducedMotion(): boolean {
   return (
@@ -54,12 +50,12 @@ function prefersReducedMotion(): boolean {
 // then answered, failed or cancelled; a failure leaves a note for the bell.
 function moveChild(store: Store, script: Script, step: WorkStep, child: ChildOf): void {
   if (!store.live.transcripts.has(child.id)) {
-    const opening = openingTurns(child);
+    const opening = openingTurns(child, now());
     store.live.transcripts.set(child.id, opening);
     store.commit(addChild(child, mainIdOf(script), opening, store.stamp()));
   }
   const wasRunning = store.live.replying.has(child.id);
-  store.keep(child.id, childTurns(store.turnsOf(child.id), step));
+  store.keep(child.id, childTurns(store.turnsOf(child.id), step, now()));
   const settled = step.status !== "running" && step.status !== "pending";
   if (step.status === "running" && !wasRunning) store.begin(child.id);
   if (settled && wasRunning) store.end(child.id);
@@ -82,9 +78,9 @@ async function* converse(
   const { stopAll } = store.live;
   const stop = AbortSignal.any([signal, stopAll.signal]);
   const before = store.turnsOf(id);
-  const asked = userTurn(event, `${id}-${before.length + 1}`, store.live.question);
+  const asked = userTurn(event, `${id}-${before.length + 1}`, now(), store.live.question);
   const at = before.length + asked.length; // → the reply's index in the turns
-  let reply: AgentMessage = startReply(`${id}-${at + 1}`, TURN_TIME);
+  let reply: AgentMessage = startReply(`${id}-${at + 1}`, now());
   const put = () => store.turnsOf(id).with(at, reply);
   store.keep(id, [...before, ...asked, reply]);
   store.begin(id);

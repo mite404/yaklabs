@@ -12,9 +12,6 @@ import type { Clock } from "./clock";
 import type { ChildOf } from "./edits";
 import type { Timed } from "./script";
 
-/** A turn's time as the scenarios' mint writes it: the demo clock's, in UTC. */
-export const TURN_TIME = "9:00";
-
 /** What the main thread answers once the script's replies are spent. */
 export const END_REPLY: Timed[] = [
   {
@@ -81,13 +78,21 @@ export function wordingOf(question: unknown): string | undefined {
   return typeof wording === "string" ? wording : undefined;
 }
 
-/** The user's turn an event records: a message, or the answer to the docked question. */
-export function userTurn(event: AgentEvent, id: string, question?: string): ThreadMessage[] {
+/**
+ * The user's turn an event records at `time` (an instant, so the thread can say how long ago):
+ * a message, or the answer to the docked question.
+ */
+export function userTurn(
+  event: AgentEvent,
+  id: string,
+  time: string,
+  question?: string,
+): ThreadMessage[] {
   switch (event.kind) {
     case "message":
-      return [{ id, role: "user", text: event.text, time: TURN_TIME }];
+      return [{ id, role: "user", text: event.text, time }];
     case "answer":
-      return [{ id, role: "user", text: event.text, time: TURN_TIME, question }];
+      return [{ id, role: "user", text: event.text, time, question }];
     case "question-rejected":
       return [];
     default: {
@@ -97,11 +102,14 @@ export function userTurn(event: AgentEvent, id: string, question?: string): Thre
   }
 }
 
-/** A child's turns as its parent starts it: the request it was given, and its work under way. */
-export function openingTurns(child: ChildOf): ThreadMessage[] {
+/**
+ * A child's turns as its parent starts it at `time`: the request it was given, and its work
+ * under way.
+ */
+export function openingTurns(child: ChildOf, time: string): ThreadMessage[] {
   return [
-    { id: `${child.local}-1`, role: "user", text: child.request, time: TURN_TIME },
-    { ...startReply(`${child.local}-2`, TURN_TIME), activity: WORKING },
+    { id: `${child.local}-1`, role: "user", text: child.request, time },
+    { ...startReply(`${child.local}-2`, time), activity: WORKING },
   ];
 }
 
@@ -138,11 +146,11 @@ function settledTurn(turn: AgentMessage, step: WorkStep): AgentMessage {
  * A child's turns once its step moves: a new attempt when it runs again after it ended, else
  * its last turn settled as the step says.
  */
-export function childTurns(turns: ThreadMessage[], step: WorkStep): ThreadMessage[] {
+export function childTurns(turns: ThreadMessage[], step: WorkStep, time: string): ThreadMessage[] {
   const last = turns.at(-1);
   if (last?.role !== "agent") return turns;
   if (step.status !== "running") return [...turns.slice(0, -1), settledTurn(last, step)];
   if (last.streaming === true) return turns;
-  const attempt = startReply(`${step.id}-${turns.length + 1}`, TURN_TIME);
+  const attempt = startReply(`${step.id}-${turns.length + 1}`, time);
   return [...turns, { ...attempt, activity: WORKING }];
 }
