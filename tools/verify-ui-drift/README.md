@@ -33,7 +33,9 @@ amp orb service start verify-ui-drift --command 'pnpm verify-ui-drift review' --
 ```
 
 The review app reads saved evidence. **Reload saved report** reloads the selected run without taking
-new screenshots. To capture code changes, rerun the CLI with the same selection.
+new screenshots. To capture code changes, rerun the CLI with the same selection. The review server
+listens on every interface so orb portals and containers can reach it, with no sign-in: anyone on
+your network can read the saved evidence while it runs.
 
 ## Reading the result
 
