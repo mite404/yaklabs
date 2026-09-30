@@ -1,4 +1,4 @@
-# Yaklabs UI Verification Tool
+# verify-ui-drift
 
 Internal Use Only.
 
@@ -16,9 +16,9 @@ From the repository root, using Node 26 and the repository's pinned pnpm version
 
 ```sh
 pnpm install --frozen-lockfile
-pnpm --filter verify exec playwright install --with-deps chromium firefox webkit
-pnpm verify run
-pnpm verify review
+pnpm --filter verify-ui-drift exec playwright install --with-deps chromium firefox webkit
+pnpm verify-ui-drift run
+pnpm verify-ui-drift review
 ```
 
 The default run captures five foundation stories in light and dark themes across Chromium, Firefox,
@@ -29,7 +29,7 @@ Open the address printed by the review command. In an Amp orb, start a supervise
 its portal instead:
 
 ```sh
-amp orb service start kay-verify --command 'pnpm verify review' --portal
+amp orb service start verify-ui-drift --command 'pnpm verify-ui-drift review' --portal
 ```
 
 The review app reads saved evidence. **Reload saved report** reloads the selected run without taking
@@ -58,13 +58,13 @@ Keyboard and screen-reader checks still need human review.
 After inspecting a capture, copy its command from **Review and approve this capture**:
 
 ```sh
-pnpm verify approve --run RUN_ID --keys foundations-button--default.chromium.light --expect 1
-pnpm verify run
+pnpm verify-ui-drift approve --run RUN_ID --keys foundations-button--default.chromium.light --expect 1
+pnpm verify-ui-drift run
 ```
 
-Approval writes a PNG and `approved.json` under `apps/verify/baselines/`.
+Approval writes a PNG and `approved.json` under `tools/verify-ui-drift/baselines/`.
 Commit these with the code.
-Reports and comparison images live in `.artifacts/verify/runs/`, which Git ignores.
+Reports and comparison images live in `.artifacts/verify-ui-drift/runs/`, which Git ignores.
 
 The CLI rejects stale or incomplete evidence, failed comparator checks, altered images, and selected
 captures with axe violations. CI cannot approve references. Never approve an unexplained difference
@@ -75,9 +75,9 @@ just to make a check pass.
 After a default capture run, check the tool with:
 
 ```sh
-pnpm --filter verify test
-pnpm --filter verify typecheck
-pnpm --filter verify test:review
+pnpm --filter verify-ui-drift test
+pnpm --filter verify-ui-drift typecheck
+pnpm --filter verify-ui-drift test:review
 ```
 
-For capture options and exit codes, run `pnpm verify --help`.
+For capture options and exit codes, run `pnpm verify-ui-drift --help`.

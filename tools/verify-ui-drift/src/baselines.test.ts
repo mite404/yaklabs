@@ -18,7 +18,7 @@ const fingerprint = {
 } as const;
 const source = "a".repeat(64);
 async function setup() {
-  const runDir = await mkdtemp(path.join(tmpdir(), "kay-verify-"));
+  const runDir = await mkdtemp(path.join(tmpdir(), "verify-ui-drift-"));
   dirs.push(runDir);
   const baselineDir = path.join(runDir, "refs");
   const png = new PNG({ width: 3, height: 2 });

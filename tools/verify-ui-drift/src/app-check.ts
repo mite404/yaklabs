@@ -11,7 +11,9 @@ import { ROOT, serveBuild } from "./workspace.ts";
  * @throws If the production shell is absent, the control drifts, or the mutation is invisible.
  */
 export async function checkAppComparison(browser: Browser, run: string) {
-  const server = await serveBuild(path.join(ROOT, "apps/web/.artifacts/verify", run, "client"));
+  const server = await serveBuild(
+    path.join(ROOT, "apps/web/.artifacts/verify-ui-drift", run, "client"),
+  );
   try {
     for (const theme of ["light", "dark"] as const) {
       const first = await openApp(browser, server.url, theme);

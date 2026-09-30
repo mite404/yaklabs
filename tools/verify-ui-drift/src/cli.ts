@@ -14,10 +14,10 @@ import { runVerification } from "./run.ts";
 import { BASELINES, RUNS, sourceSnapshot } from "./workspace.ts";
 
 const HELP = `Kay verification
-  pnpm verify run [--stories id,id | --all | --since ref] [--app] [--engines chromium,firefox,webkit]
-  pnpm verify selftest [--engines chromium,firefox,webkit]
-  pnpm verify approve --run RUN --keys KEY,KEY --expect N
-  pnpm verify review                 starts the read-only review app
+  pnpm verify-ui-drift run [--stories id,id | --all | --since ref] [--app] [--engines chromium,firefox,webkit]
+  pnpm verify-ui-drift selftest [--engines chromium,firefox,webkit]
+  pnpm verify-ui-drift approve --run RUN --keys KEY,KEY --expect N
+  pnpm verify-ui-drift review                 starts the read-only review app
 
 Options: --themes light,dark, --baselines DIRECTORY
 --app adds the production SPA demo composition to the selected stories.

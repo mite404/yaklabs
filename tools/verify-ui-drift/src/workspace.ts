@@ -7,9 +7,9 @@ import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 
 export const ROOT = fileURLToPath(new URL("../../../", import.meta.url));
-export const RUNS = path.join(ROOT, ".artifacts/verify/runs");
-export const BUILDS = path.join(ROOT, ".artifacts/verify/builds");
-export const BASELINES = path.join(ROOT, "apps/verify/baselines");
+export const RUNS = path.join(ROOT, ".artifacts/verify-ui-drift/runs");
+export const BUILDS = path.join(ROOT, ".artifacts/verify-ui-drift/builds");
+export const BASELINES = path.join(ROOT, "tools/verify-ui-drift/baselines");
 const exec = promisify(execFile);
 const INPUTS = [
   "packages/catalog",
@@ -23,10 +23,10 @@ const INPUTS = [
   "apps/storybook/.storybook",
   "apps/storybook/vite.config.ts",
   "apps/storybook/package.json",
-  "apps/verify/src",
-  "apps/verify/package.json",
-  "apps/verify/vite.config.ts",
-  "apps/verify/index.html",
+  "tools/verify-ui-drift/src",
+  "tools/verify-ui-drift/package.json",
+  "tools/verify-ui-drift/vite.config.ts",
+  "tools/verify-ui-drift/index.html",
   "package.json",
   "pnpm-lock.yaml",
   "pnpm-workspace.yaml",

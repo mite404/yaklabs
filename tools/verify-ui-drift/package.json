@@ -1,5 +1,5 @@
 {
-  "name": "verify",
+  "name": "verify-ui-drift",
   "private": true,
   "type": "module",
   "scripts": {

@@ -2651,7 +2651,8 @@ moves past it, and is struck only once the shot is over.
 
 ### A continuity desk for pixels
 
-`apps/verify` adds a review room without building a second set of scenes. The production catalog
+`tools/verify-ui-drift` adds a review room without building a second set of scenes. The production
+catalog
 owns the components, Storybook owns their examples, and the verification CLI photographs those
 examples in Chromium, Firefox, and WebKit. The React review app only reads the evidence.
 
@@ -2685,7 +2686,7 @@ The senior-engineer habit is to keep the claims smaller than the evidence. Five 
 three engines and two themes means 30 captures, not complete product coverage. A screenshot diff
 does not establish accessibility. An axe pass does not establish taste. The review room makes each
 claim and its missing evidence visible. The commands and operating limits live in
-`apps/verify/README.md`.
+`tools/verify-ui-drift/README.md`.
 
 ### The review room needs a monitor, not just a checklist
 
@@ -2717,7 +2718,8 @@ complement the designer's judgment rather than assigning a numerical score to ta
 ### The wide shot belongs beside the close-up
 
 Storybook photographs components in isolation. The production SPA's demo now supplies the wide shot,
-including the title bar, sidebar, and workspace. `pnpm verify run --app` records both through the
+including the title bar, sidebar, and workspace. `pnpm verify-ui-drift run --app` records both
+through the
 same comparator. It does not rebuild the shell in a story. The inventory names all available stories
 and distinguishes them from the five-story smoke test, just as a shot list distinguishes planned
 coverage from footage already in the bin.

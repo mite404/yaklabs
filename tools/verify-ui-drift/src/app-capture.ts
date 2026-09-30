@@ -10,7 +10,7 @@ import { command, ROOT, serveBuild } from "./workspace.ts";
  */
 export async function buildApp(run: string, directory: string) {
   // Prerendered server imports must resolve against apps/web/node_modules under pnpm.
-  const build = path.join(ROOT, "apps/web/.artifacts/verify", run);
+  const build = path.join(ROOT, "apps/web/.artifacts/verify-ui-drift", run);
   const result = await command("pnpm", ["--filter", "web", "build"], {
     ...process.env,
     WEB_BUILD_DIRECTORY: build,

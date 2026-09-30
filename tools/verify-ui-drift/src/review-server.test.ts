@@ -175,7 +175,7 @@ describe("reviewRequest", () => {
 
   it("403s an evidence request that escapes the run directory via a symlink", async () => {
     const { id, dir } = await makeRun();
-    const outside = path.join(tmpdir(), `kay-verify-outside-${randomUUID()}`);
+    const outside = path.join(tmpdir(), `verify-ui-drift-outside-${randomUUID()}`);
     await mkdir(outside, { recursive: true });
     const secret = path.join(outside, "secret.png");
     await writeFile(secret, Buffer.from([9]));
@@ -279,7 +279,7 @@ describe("reviewRequest", () => {
   it("403s a Storybook asset that escapes the build directory via a symlink", async () => {
     const { id } = await makeRun();
     const { dir } = await makeBuild(id);
-    const outside = path.join(tmpdir(), `kay-verify-sb-outside-${randomUUID()}`);
+    const outside = path.join(tmpdir(), `verify-ui-drift-sb-outside-${randomUUID()}`);
     await mkdir(outside, { recursive: true });
     const secret = path.join(outside, "secret.js");
     await writeFile(secret, "leak");
@@ -291,7 +291,7 @@ describe("reviewRequest", () => {
 
   it("403s when the run's build root itself is a symlink escaping the builds directory", async () => {
     const id = randomUUID();
-    const outside = path.join(tmpdir(), `kay-verify-sb-root-${randomUUID()}`);
+    const outside = path.join(tmpdir(), `verify-ui-drift-sb-root-${randomUUID()}`);
     await mkdir(outside, { recursive: true });
     await writeFile(path.join(outside, "index.html"), "<!doctype html><title>outside</title>");
     const dir = path.join(BUILDS, id);

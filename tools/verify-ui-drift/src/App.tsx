@@ -170,7 +170,7 @@ function PixelDetail({
             capture; it does not fix the code.
           </p>
           <CopyCommand
-            command={`pnpm verify approve --run ${report.id} --keys ${cell.key} --expect 1`}
+            command={`pnpm verify-ui-drift approve --run ${report.id} --keys ${cell.key} --expect 1`}
           />
         </details>
       )}
@@ -625,7 +625,7 @@ function Proof({ report }: { report: Report }) {
           </div>
         </section>
       ))}
-      <CopyCommand command="pnpm verify selftest" />
+      <CopyCommand command="pnpm verify-ui-drift selftest" />
     </>
   );
 }
@@ -651,7 +651,7 @@ export function ReportView({
           Run the matrix in the repository terminal, then return here. A missing report is not a
           passing check.
         </p>
-        <CopyCommand command="pnpm verify run" />
+        <CopyCommand command="pnpm verify-ui-drift run" />
       </section>
     );
   const stale = state.stale || disconnected;
@@ -832,7 +832,7 @@ export function App() {
                   : review.message}
               </p>
             </div>
-            {review.kind === "offline" && <CopyCommand command="pnpm verify review" />}
+            {review.kind === "offline" && <CopyCommand command="pnpm verify-ui-drift review" />}
             <p>Your saved evidence is unchanged. This page retries every ten seconds.</p>
             <Button
               variant="outline"
@@ -850,7 +850,7 @@ export function App() {
         )}
         <footer>
           <span>Code is the reference. Figma receives the tokens.</span>
-          <code>pnpm verify run</code>
+          <code>pnpm verify-ui-drift run</code>
           <span>Approval is explicit. No automatic baseline updates.</span>
         </footer>
       </main>

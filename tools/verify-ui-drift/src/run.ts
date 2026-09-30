@@ -234,7 +234,7 @@ export async function runVerification(options: RunOptions): Promise<Report> {
     .replaceAll(/[^\da-z]/giu, "-")
     .toLowerCase()}-${randomUUID().slice(0, 8)}`;
   const directory = path.join(RUNS, id);
-  const build = path.join(ROOT, ".artifacts/verify/builds", id);
+  const build = path.join(ROOT, ".artifacts/verify-ui-drift/builds", id);
   await mkdir(directory, { recursive: true });
   const report: Report = {
     schema: 1,

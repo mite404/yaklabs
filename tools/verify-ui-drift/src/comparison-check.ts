@@ -325,7 +325,7 @@ export async function checkStoryComparison(
       item.story === "foundations-button--default",
   );
   assert.ok(cell?.kind === "rendered");
-  const server = await serveBuild(path.join(ROOT, ".artifacts/verify/builds", report.id));
+  const server = await serveBuild(path.join(ROOT, ".artifacts/verify-ui-drift/builds", report.id));
   try {
     const story = await openStory(browser, server.url, cell.story, "light");
     try {

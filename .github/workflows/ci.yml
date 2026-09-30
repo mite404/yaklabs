@@ -82,19 +82,19 @@ jobs:
       - uses: pnpm/action-setup@v4
       - run: pnpm install --frozen-lockfile
       - name: Install the three browser engines
-        run: pnpm --filter verify exec playwright install --with-deps chromium firefox webkit
+        run: pnpm --filter verify-ui-drift exec playwright install --with-deps chromium firefox webkit
       - name: Compare the foundation matrix
-        run: pnpm verify run
+        run: pnpm verify-ui-drift run
       - name: Exercise the review interface
         if: success() || failure()
-        run: pnpm --filter verify test:review
+        run: pnpm --filter verify-ui-drift test:review
       - name: Upload design evidence even when comparison fails
         if: always()
         uses: actions/upload-artifact@v7
         with:
           name: design-verification
           path: |
-            .artifacts/verify/runs/
-            .artifacts/verify/review-check/
+            .artifacts/verify-ui-drift/runs/
+            .artifacts/verify-ui-drift/review-check/
           include-hidden-files: true
           if-no-files-found: error

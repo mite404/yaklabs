@@ -122,7 +122,9 @@ it("shows a first capture as incomplete and offers only explicit approval", () =
   );
   expect(html).toContain("<strong>incomplete</strong>");
   expect(html).toContain("First capture. Nothing has been compared or approved.");
-  expect(html).toContain("pnpm verify approve --run test --keys button.chromium.light --expect 1");
+  expect(html).toContain(
+    "pnpm verify-ui-drift approve --run test --keys button.chromium.light --expect 1",
+  );
 });
 
 it("distinguishes a measured match from missing difference evidence", () => {
@@ -170,6 +172,6 @@ it("links retained stories and distinguishes the uncaptured inventory from resul
   expect(html).toContain("packages/catalog/src/Button.tsx");
   expect(html).toContain("Catalog/Recap");
   expect(html).toContain("Not captured");
-  expect(html).toContain("pnpm verify run --stories uncaptured");
-  expect(html).toContain("pnpm verify run --app");
+  expect(html).toContain("pnpm verify-ui-drift run --stories uncaptured");
+  expect(html).toContain("pnpm verify-ui-drift run --app");
 });

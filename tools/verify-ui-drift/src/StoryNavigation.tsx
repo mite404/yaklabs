@@ -44,7 +44,8 @@ export function StoryInventory({ report, index }: { report: Report; index: Story
         evidence. Storybook links open this run’s retained build; no separate server is needed.
       </p>
       <p>
-        <code>pnpm verify run --all --app</code> captures every story and the full app shell.
+        <code>pnpm verify-ui-drift run --all --app</code> captures every story and the full app
+        shell.
       </p>
       <div className="inventory-scroll">
         <ul>
@@ -60,7 +61,7 @@ export function StoryInventory({ report, index }: { report: Report; index: Story
                 ? "Selected in this run"
                 : "Not captured"}
             </span>
-            <code>pnpm verify run --app</code>
+            <code>pnpm verify-ui-drift run --app</code>
           </li>
           {index.kind === "available" ? (
             index.stories.map((story) => (
@@ -76,7 +77,7 @@ export function StoryInventory({ report, index }: { report: Report; index: Story
                     ? "Selected in this run"
                     : "Not captured"}
                 </span>
-                <code>pnpm verify run --stories {story.id}</code>
+                <code>pnpm verify-ui-drift run --stories {story.id}</code>
               </li>
             ))
           ) : (

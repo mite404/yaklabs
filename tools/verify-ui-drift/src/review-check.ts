@@ -44,7 +44,7 @@ async function checkReportRecovery(page: Page, artifacts: string, engine: string
   const recovery = page.getByRole("region", { name: "Verify server not running" });
   await recovery.waitFor({ timeout: 5000 });
   assert.equal(await page.getByRole("region", { name: "Run coverage" }).count(), 0);
-  assert.equal(await recovery.locator("code").innerText(), "pnpm verify review");
+  assert.equal(await recovery.locator("code").innerText(), "pnpm verify-ui-drift review");
   assert.equal(await page.getByRole("tab", { name: "Pixels", exact: true }).count(), 0);
   await checkRecoveryAppearance(page, artifacts, engine);
   await page.unroute("**/api/state*");
@@ -116,10 +116,10 @@ async function checkResultList(page: Page) {
   await page.setViewportSize({ width: 1440, height: 1000 });
 }
 
-const artifacts = path.join(ROOT, ".artifacts/verify/review-check");
+const artifacts = path.join(ROOT, ".artifacts/verify-ui-drift/review-check");
 const server = await createServer({
-  root: path.join(ROOT, "apps/verify"),
-  configFile: path.join(ROOT, "apps/verify/vite.config.ts"),
+  root: path.join(ROOT, "tools/verify-ui-drift"),
+  configFile: path.join(ROOT, "tools/verify-ui-drift/vite.config.ts"),
   server: { host: "127.0.0.1", port: 6175, strictPort: true },
 });
 await mkdir(artifacts, { recursive: true });
