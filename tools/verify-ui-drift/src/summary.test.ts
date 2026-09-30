@@ -75,6 +75,13 @@ describe("run summary", () => {
     expect(text(lines)).toContain("linux-x64-debian-12");
   });
 
+  it("does not claim references exist only elsewhere when this machine has some", () => {
+    const missing: Cell = { ...cell, pixels: { kind: "missing-baseline" } };
+    const lines = summarize(report([missing]), ["darwin-arm64", "linux-x64-debian-12"]);
+    expect(text(lines)).toContain("Approved references exist for linux-x64-debian-12.");
+    expect(text(lines)).not.toContain("exist only for");
+  });
+
   it("never lets an incomplete run hide an accessibility violation or a change", () => {
     const violating: Cell = {
       ...cell,
