@@ -1287,6 +1287,21 @@ nothing cleared the last one. With reduced motion, where the glow now holds stil
 sat outlined at once and none of them said "you are here". A jump now clears every glow in the
 thread before it lights the new one.
 
+### The other axe on the stage
+
+Two of three drift runs died at random, each time on a different capture, with "Axe is already
+running". The page had two axe runners: the drift tool injects its own `window.axe` through
+AxeBuilder, and Storybook's a11y addon auto-runs axe after every story render
+(`a11y: { test: "error" }` in `preview.ts`). The addon's axe chunk assigns `window.axe` the
+moment it loads, so a chunk landing between the tool's injection and its `axe.runPartial` left
+the tool knocking on a run the addon had already started, and the capture failed. A probe
+mirroring the capture's real timing (screenshot, aria snapshot, then axe) hit the race about
+once in thirty captures; at ten captures a run, one run in three went BROKEN. Fix:
+`a11y.manual:!true` in the story URL's globals keeps the addon's run off the tool's set, and
+the tool's own axe check is untouched: every cell still reports its axe results. Lesson: when
+two crews shoot the same scene with one camera, decide who rolls; a URL global is the quietest
+call sheet.
+
 ## 5. Director's Commentary
 
 ### The agent only states intent; the design system does the rest
