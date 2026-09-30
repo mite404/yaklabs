@@ -1,18 +1,6 @@
-import { Playground } from "../playground/Playground";
-import { RequireSession } from "../session";
+import { Navigate } from "react-router";
 
-export function meta() {
-  return [{ title: "Playground" }];
-}
-
-/**
- * The live playground (ADR-155), a standalone route outside `_app`'s runtime: it talks to the
- * gateway directly and keeps nothing. Sign-in guards it wherever the build has sign-in.
- */
+/** The standalone playground is gone: the live model answers its thread in the shell. */
 export default function PlaygroundRoute() {
-  return (
-    <RequireSession>
-      <Playground />
-    </RequireSession>
-  );
+  return <Navigate replace to="/t/playground" />;
 }

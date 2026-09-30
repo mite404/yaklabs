@@ -12,10 +12,8 @@ const rawSchema = z.object({
 /** Who answers in the thread: the scripted stand-in, or a model behind the gateway (ADR-085). */
 export type AgentSource = { kind: "lab" } | { kind: "gateway"; baseUrl: string };
 
-/** How visitors sign in: not at all (local evaluation), or WorkOS AuthKit (ADR-084). */
-export type AuthSource =
-  | { kind: "none" }
-  | { kind: "workos"; clientId: string; redirectUri: string };
+// How visitors sign in: not at all (local evaluation), or WorkOS AuthKit (ADR-084).
+type AuthSource = { kind: "none" } | { kind: "workos"; clientId: string; redirectUri: string };
 
 /**
  * The running build's configuration, with no half-set states. `shareBase` is where public

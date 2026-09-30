@@ -17,9 +17,9 @@ const onSlate = (search: string): boolean => new URLSearchParams(search).get(PAR
 
 /**
  * A blank slate: the whole shell on an empty workspace, with one new thread started on
- * arrival, so the first thing on screen is that thread's welcome and its compose box. The live
- * model's own route is `/playground` (ADR-155); this one is for the shell around a fresh thread. Nothing persists: the empty scenario lives in memory, so a reload starts over,
- * and a thread's address under it does not survive one either. The device's own threads stay
+ * arrival, so the first thing on screen is that thread's welcome and its compose box. Nothing
+ * persists: the empty scenario lives in memory, so a reload starts over, and a thread's address
+ * under it does not survive one either. The device's own threads stay
  * under `/` and `/t/:threadId`.
  */
 export default function NewThread() {
