@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { approvalCells, proved, verdict } from "./report.ts";
+import { approvalCells, brokenReasons, proved, verdict } from "./report.ts";
 import type { Cell, Probe, RenderedCell, Report } from "./report.ts";
 
 const source = "a".repeat(64);
@@ -104,6 +104,24 @@ describe("evidence verdict", () => {
     expect(proved([{ ...probe, color: probe.control }], ["chromium"])).toBe(false);
     expect(proved([{ ...probe, control: delta }], ["chromium"])).toBe(false);
     expect(proved([], [])).toBe(false);
+  });
+});
+
+describe("broken reasons", () => {
+  it("names each run error and render error by its first line", () => {
+    const launch = "firefox did not launch: Error: Executable doesn't exist\n╔═══ box ═══╗";
+    expect(
+      brokenReasons({
+        ...report([{ ...cell, kind: "render-error", errors: ["blank page", "second"] }]),
+        errors: [launch],
+      }),
+    ).toEqual([
+      "firefox did not launch: Error: Executable doesn't exist",
+      "button.chromium.light: blank page",
+    ]);
+  });
+  it("has nothing to say about a run that is not broken", () => {
+    expect(brokenReasons(report())).toEqual([]);
   });
 });
 

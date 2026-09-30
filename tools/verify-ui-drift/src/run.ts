@@ -10,7 +10,7 @@ import { APP_SHELL } from "./app-target.ts";
 import { compareBaseline, imageRef } from "./baselines.ts";
 import { accessibility, mutationProof, openStory, sampleTokens, screenshot } from "./capture.ts";
 import { inventoryCss } from "./colors.ts";
-import { idSchema, reportSchema, verdict } from "./report.ts";
+import { brokenReasons, idSchema, reportSchema, verdict } from "./report.ts";
 import type { Cell, Engine, Fingerprint, Probe, Report, Theme } from "./report.ts";
 import {
   BASELINES,
@@ -313,5 +313,6 @@ export async function runVerification(options: RunOptions): Promise<Report> {
   process.stdout.write(
     `${verdict(report).toUpperCase()} ${path.relative(ROOT, directory)}/report.json\n`,
   );
+  for (const reason of brokenReasons(report)) process.stderr.write(`  ${reason}\n`);
   return report;
 }

@@ -176,6 +176,20 @@ export function proved(probes: Probe[], engines: Engine[]): boolean {
   );
 }
 
+// Playwright's install notes follow an error's first line, which already names the cause.
+function firstLine(message: string): string {
+  return message.split("\n")[0] ?? message;
+}
+
+/** Why a run is broken, one line per run error and per render-error cell, so the terminal can
+ * say what the review app would. */
+export function brokenReasons(report: Report): string[] {
+  const cellErrors = report.cells.flatMap((cell) =>
+    cell.kind === "render-error" ? [`${cell.key}: ${firstLine(cell.errors[0] ?? "")}`] : [],
+  ); // → string[]
+  return [...report.errors.map(firstLine), ...cellErrors];
+}
+
 /** One verdict policy for the review app and command exit code. */
 export function verdict(report: Report): Verdict {
   if (report.errors.length > 0 || report.cells.some((cell) => cell.kind === "render-error"))
