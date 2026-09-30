@@ -5,7 +5,7 @@ import { Button } from "@yaklabs/ui/components/button";
 import { FileText, Folder, Globe, Plus, Terminal } from "lucide-react";
 import { env } from "../env";
 import { useShell } from "../shell/model";
-import { KayMark } from "../shell/rail-places";
+import { BonsaiMark } from "../shell/rail-places";
 import type { PaneKind } from "../shell/state";
 import { WelcomeArt } from "./splash";
 import { SplashSwitch } from "./splash-switch";
@@ -138,7 +138,7 @@ export function Welcome({ thread, pane }: { thread: ThreadSummary; pane: PaneKin
       <div className="welcome-words flex w-full max-w-sm flex-col gap-7">
         <div className="flex flex-col gap-4">
           <span className="grid size-10 place-items-center rounded-full bg-paper-deep text-ink">
-            <KayMark className="size-5" />
+            <BonsaiMark className="size-5" />
           </span>
           <GreetingLine />
         </div>
