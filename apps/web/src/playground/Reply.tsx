@@ -31,15 +31,20 @@ function FailureItem({ failure, actions }: { failure: Failure; actions: ReplyAct
         <p>{failure.limitation}</p>
       </div>
       {recovery !== null && (
-        <Button
-          variant="outline"
-          disabled={actions.locked}
-          onClick={() => {
-            actions.onSend({ kind: "say", text: recovery.prompt });
-          }}
-        >
-          {recovery.label}
-        </Button>
+        <>
+          <blockquote className="pg-recovery">
+            <p>{recovery.prompt}</p>
+          </blockquote>
+          <Button
+            variant="outline"
+            disabled={actions.locked}
+            onClick={() => {
+              actions.onSend({ kind: "say", text: recovery.prompt });
+            }}
+          >
+            {recovery.label}
+          </Button>
+        </>
       )}
     </section>
   );

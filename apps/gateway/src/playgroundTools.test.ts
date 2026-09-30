@@ -99,7 +99,7 @@ describe("translateToolUse shows", () => {
     expect(reply(only).text).toMatch(/^shown as a table: A trend needs at least two known/);
   });
 
-  it("a failure with its recovery prompt behind a fixed label", () => {
+  it("a failure with its recovery prompt and a fixed send label", () => {
     const [only] = run([
       call("report_failure", {
         limitation: "I cannot fetch data.",
@@ -113,7 +113,7 @@ describe("translateToolUse shows", () => {
         seq: 0,
         workId: null,
         limitation: "I cannot fetch data.",
-        recovery: { label: "Try this instead", prompt: "Use these numbers." },
+        recovery: { label: "Send this", prompt: "Use these numbers." },
       },
     ]);
   });

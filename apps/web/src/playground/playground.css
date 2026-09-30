@@ -105,6 +105,25 @@
 .pg-failure [data-slot="button"] {
   justify-self: start;
 }
+/* The prompt the button sends, read before it is sent; the marks come from CSS so a copy of
+   the prompt carries none. */
+.pg-recovery {
+  max-width: 510px;
+  margin: 0;
+  color: var(--soft-ink);
+  font: 400 15px/24px var(--font-text);
+  overflow-wrap: anywhere;
+  quotes: "\201C" "\201D";
+}
+.pg-recovery p {
+  margin: 0;
+}
+.pg-recovery p::before {
+  content: open-quote;
+}
+.pg-recovery p::after {
+  content: close-quote;
+}
 .playground [data-slot="button"] {
   border-radius: var(--btn-radius);
   transition-property: color, background-color;

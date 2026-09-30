@@ -61,7 +61,7 @@ export const initialTurn: TurnState = {
 const MAX_TOOL_CALLS = 16;
 // Distinct cards one turn may show; updating a card by its id does not count.
 const MAX_CARDS = 6;
-const RECOVERY_LABEL = "Try this instead";
+const RECOVERY_LABEL = "Send this";
 
 // A handler's verdict. "invalid" counts toward the tool's validation failures; "refused" is a
 // limit, not a mistake in the input.
