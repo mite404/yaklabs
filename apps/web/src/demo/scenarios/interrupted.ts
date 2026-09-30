@@ -26,7 +26,7 @@ export const interrupted: Script = {
       kind: "reply",
       events: [
         activity(700, "Thinking."),
-        activity(1000, "Selecting the refund records."),
+        activity(1000, "Reading the refund records."),
         step(600, running("refunds", "Refund export")),
         step(300, running("orders", "Order lookups")),
         activity(300, "Matching 41 refunds to their orders."),
@@ -40,7 +40,7 @@ export const interrupted: Script = {
           threadId: "orders",
         }),
         log(100, "lookup:orders 39/41 answered · then HTTP 503 from orders.example (3 retries)"),
-        activity(500, "Writing what I found so far."),
+        activity(500, "Writing what I found."),
         ...stream(
           [
             paragraph([

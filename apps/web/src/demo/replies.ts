@@ -21,7 +21,7 @@ export const END_REPLY: Timed[] = [
 ];
 
 // What a child's turn says while its parent's work on it runs.
-const WORKING = "Working on it";
+const WORKING = "Working";
 
 // Whether a chunk is words inside the block at hand.
 function isInline(chunk: ReplyChunk): boolean {

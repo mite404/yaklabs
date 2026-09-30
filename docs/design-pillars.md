@@ -396,6 +396,17 @@ menus keep their transition through it. Measured in Chromium: the bell's menu re
 and `pointer-events: none` from the first frame after Escape, is gone at 104ms, and a reopen at
 25ms turns back from 0.09.
 
+### 32. An activity line says what was done, and nothing fancy
+
+A line that reports the agent's work is a verb and its object: "Read skill bro", "Explored 1
+skill", "Reading the support records", "Checked workload, open issues and response times"
+(Ethan, after Claude Code's own rows). Present tense while it runs, past once it is done, a count
+where there are several, the object named as the reader knows it. No adverbs, no "successfully",
+no tool names unless the tool is the object, no theatre ("Analyzing your request…"), no full stop
+on a label. A child's placeholder is "Working", a reply's before any words "Thinking". The
+disclosure's header (rule 30) and the recap's items are held to this; the technical lines one
+fold down may be as technical as they like.
+
 ## Verification workbench exceptions
 
 The Pixels workbench uses neon green (`#39ff14`) for changed pixels. Comparator proof uses red

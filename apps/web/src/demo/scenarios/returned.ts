@@ -98,7 +98,7 @@ export const returned: Script = {
     {
       kind: "reply",
       events: [
-        activity(600, "Reading the difference you're looking at."),
+        activity(600, "Reading the difference view."),
         ...stream(
           [
             paragraph([

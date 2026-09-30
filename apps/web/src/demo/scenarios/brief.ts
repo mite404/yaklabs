@@ -125,7 +125,7 @@ export const brief: Script = {
       kind: "reply",
       events: [
         activity(700, "Thinking."),
-        activity(1100, "Selecting the support records."),
+        activity(1100, "Reading the support records."),
         log(600, "source: support-desk fixtures · weekdays Sep 22 to 26 · 2 files"),
         step(500, running("workload", "Weekly workload")),
         step(400, running("issues", "Open issues by category")),

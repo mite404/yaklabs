@@ -607,6 +607,10 @@ The first entries are ideas from before any code existed; the rest are parts of 
   so a menu reopened mid-fade turns back from where it is, and `pointer-events: none` while it
   leaves, so a ghost never takes the click. The drawer is the establishing shot; the popovers
   are its cutaways.
+- **Say what was done, nothing fancy.** "Explored 1 skill" over "Read skill bro" is the whole
+  grammar: a verb, its object, a count when there are several. The scripts' narration was tidied
+  to it ("Reading the support records", not "Selecting"), a child's placeholder is plain
+  "Working", and the rule is written down as pillar 32 so the next line is held to it too.
 - **Kimi through OpenRouter, in Anthropic's dialect.** OpenRouter is best known for its
   OpenAI-style API, but it also answers in Anthropic's Messages format. Speaking that one kept
   the browser's stream decoder untouched, so swapping Claude for Kimi K2.6 changed three lines of

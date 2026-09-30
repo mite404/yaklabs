@@ -185,7 +185,7 @@ async function workDetails(page, run) {
   assert.equal(await steps.count(), 3, "three children, one step each");
   assert.equal(await steps.locator(".card:not(.state)").count(), 2, "two cards passed");
   assert.equal(await steps.locator(".card.state").count(), 1, "one card was refused");
-  const narration = mainOf(page).getByText("Selecting the support records.", { exact: true });
+  const narration = mainOf(page).getByText("Reading the support records.", { exact: true });
   assert.equal(await narration.count(), 1, "the narration shows once in the transcript");
   assert.equal(await narration.evaluate((el) => el.closest(".work-technical") !== null), true);
   await technical.scrollIntoViewIfNeeded();
