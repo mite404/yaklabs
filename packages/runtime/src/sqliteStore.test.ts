@@ -18,7 +18,6 @@ import {
   turns,
 } from "./sqliteStore.harness";
 import { ensureStarter } from "./store";
-import { profitThread } from "./testing";
 import { lanesOf, threadLane } from "./workspace";
 
 // A reply that showed its work and broke off on a question, and the answer to it.
@@ -243,17 +242,24 @@ describe("the store searches", () => {
 });
 
 describe("ensureStarter", () => {
-  it("gives an empty device the Demo store and its profit thread, once", async () => {
+  it("gives an empty device the Live Playground and its one empty thread, once", async () => {
     const store = await openEmpty();
     ensureStarter(store, at(0));
     const once = store.workspace();
     ensureStarter(store, at(5));
     expect(store.workspace()).toEqual(once);
-    expect(once.projects).toEqual([{ id: "demo-store", name: "Demo store", createdAt: at(0) }]);
-    expect(once.threads.map((each) => [each.id, each.title])).toEqual([
-      ["profit", profitThread.title],
+    expect(once.projects).toEqual([
+      { id: "live-playground", name: "Live Playground", createdAt: at(0) },
     ]);
-    expect(store.transcript(t("profit"))?.messages).toEqual(profitThread.messages);
+    expect(once.threads).toEqual([
+      expect.objectContaining({
+        id: "playground",
+        title: "New thread",
+        place: { kind: "main", projectId: "live-playground" },
+        turnCount: 0,
+      }),
+    ]);
+    expect(store.transcript(t("playground"))?.messages).toEqual([]);
   });
 
   it("leaves a store that holds any thread alone", async () => {

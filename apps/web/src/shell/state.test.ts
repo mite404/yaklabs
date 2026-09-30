@@ -76,10 +76,11 @@ const WS: Workspace = {
 const OPEN: ShellState = { version: 1, tabs: [PROFIT, REFUNDS, TREND], views: {}, read: [] };
 
 describe("firstRun", () => {
-  it("opens the main with the newest activity, children counted, beside its canvas", () => {
+  it("opens the main with the newest activity, children counted, on the thread pane", () => {
     const state = firstRun(WS);
     expect(state.tabs).toEqual([PROFIT]);
-    expect(viewOf(state, PROFIT).pane).toBe("canvas");
+    expect(viewOf(state, PROFIT).pane).toBe("thread");
+    expect(state.views).toHaveProperty(PROFIT);
   });
   it("opens nothing in an empty workspace", () => {
     expect(firstRun({ ...WS, threads: [] }).tabs).toEqual([]);

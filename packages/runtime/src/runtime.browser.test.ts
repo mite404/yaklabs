@@ -9,8 +9,8 @@ import { lanesOf, locate, threadIdSchema, threadLane, type ThreadId } from "./wo
 
 type Ready = Extract<RuntimeState, { kind: "ready" }>;
 
-const profit = threadIdSchema.parse("profit");
-// The user stepped the profit card to net profit, then asked about it.
+const starter = threadIdSchema.parse("playground"); // the device starter's thread (store.ts)
+// The user stepped a profit card to net profit, then asked about it.
 const question = "Why is Saturday high?";
 const ask: AgentEvent = { kind: "message", text: question, attachments: [netProfitChoice] };
 // Turn times read like the seeds': "9:02", "10:02".
@@ -69,12 +69,12 @@ function pinnedAtOf(state: RuntimeState, id: ThreadId): string | null | undefine
   return state.workspace.threads.find((thread) => thread.id === id)?.pinnedAt;
 }
 
-// A fresh child of the profit thread, so a rerun in the same browser profile never collides.
+// A fresh child of the starter's thread, so a rerun in the same browser profile never collides.
 async function newChild(runtime: Runtime): Promise<ThreadId> {
   const draft = "> Saturday leads\n\n";
   const id = await runtime.create({
     kind: "child",
-    parentId: profit,
+    parentId: starter,
     at: 0,
     title: "Saturday",
     draft,
@@ -103,15 +103,15 @@ describe("the runtime in a Web Worker runs the thread menu (ADR-126)", () => {
 });
 
 describe("the runtime in a Web Worker keeps threads on the device", () => {
-  it("starts from OPFS with the profit thread, and lists a new child before create settles", async () => {
+  it("starts from OPFS with the starter's thread, and lists a new child before create settles", async () => {
     const runtime = startLab();
     const state = await ready(runtime);
     expect(state.source).toEqual({ kind: "device", storage: "opfs" });
-    expect(locate(state.workspace, profit)).toEqual({ main: profit, focus: null });
+    expect(locate(state.workspace, starter)).toEqual({ main: starter, focus: null });
     const id = await newChild(runtime);
     const { workspace } = await ready(runtime);
-    expect(locate(workspace, id)).toEqual({ main: profit, focus: id });
-    expect(lanesOf(workspace, profit).at(0)).toEqual(threadLane(id));
+    expect(locate(workspace, id)).toEqual({ main: starter, focus: id });
+    expect(lanesOf(workspace, starter).at(0)).toEqual(threadLane(id));
   }, 20_000);
 
   it("streams a reply about the card view and keeps the thread across workers", async () => {
@@ -165,22 +165,22 @@ describe("the runtime shows the page's edits at once", () => {
 
   it("rolls a refused arrange back and says why", async () => {
     const runtime = startLab();
-    const before = lanesOf((await ready(runtime)).workspace, profit);
+    const before = lanesOf((await ready(runtime)).workspace, starter);
     const stranger = threadLane(threadIdSchema.parse("stranger"));
-    const arranging = runtime.arrange(profit, [stranger]);
-    expect(lanesOf((await ready(runtime)).workspace, profit)).toEqual([stranger]);
+    const arranging = runtime.arrange(starter, [stranger]);
+    expect(lanesOf((await ready(runtime)).workspace, starter)).toEqual([stranger]);
     await expect(arranging).rejects.toThrow("a thread lane on its own");
-    expect(lanesOf((await ready(runtime)).workspace, profit)).toEqual(before);
+    expect(lanesOf((await ready(runtime)).workspace, starter)).toEqual(before);
   }, 20_000);
 
   it("keeps a child created while an arrange was on its way", async () => {
     const runtime = startLab();
-    const reversed = lanesOf((await ready(runtime)).workspace, profit).toReversed();
+    const reversed = lanesOf((await ready(runtime)).workspace, starter).toReversed();
     const creating = newChild(runtime); // its lane lands first, left of the rest
-    const arranging = runtime.arrange(profit, reversed);
+    const arranging = runtime.arrange(starter, reversed);
     const id = await creating;
     await arranging;
-    expect(lanesOf((await ready(runtime)).workspace, profit)).toEqual([
+    expect(lanesOf((await ready(runtime)).workspace, starter)).toEqual([
       ...reversed.slice(0, -1),
       threadLane(id),
       ...reversed.slice(-1),
@@ -190,7 +190,7 @@ describe("the runtime shows the page's edits at once", () => {
   it("keeps the page's shell across workers", async () => {
     const first = startLab();
     await ready(first);
-    const shell = { version: 1, tabs: ["profit"], nonce: crypto.randomUUID() };
+    const shell = { version: 1, tabs: ["playground"], nonce: crypto.randomUUID() };
     await first.saveShell(shell);
     first.dispose();
     const second = startLab();
@@ -248,7 +248,7 @@ describe("the runtime waits its turn and breaks down plainly", () => {
     first.dispose(); // the first tab closes
     const { source, workspace } = await ready(second);
     expect(source).toEqual({ kind: "device", storage: "opfs" });
-    expect(locate(workspace, id)).toEqual({ main: profit, focus: id });
+    expect(locate(workspace, id)).toEqual({ main: starter, focus: id });
   }, 20_000);
 
   it("breaks, rather than hide the saved threads, on a database newer than this build", async () => {
@@ -276,10 +276,10 @@ describe("the runtime fails what waits when it stops", () => {
   it("fails what is waiting when it is stopped, and every call after", async () => {
     const runtime = startLab();
     await ready(runtime);
-    const opening = runtime.open(profit);
+    const opening = runtime.open(starter);
     runtime.dispose();
     await expect(opening).rejects.toThrow("The runtime was stopped");
-    await expect(runtime.open(profit)).rejects.toThrow("The runtime was stopped");
+    await expect(runtime.open(starter)).rejects.toThrow("The runtime was stopped");
     expect(runtime.state()).toEqual({
       kind: "broken",
       source: { kind: "device", storage: "opfs" },
@@ -293,7 +293,7 @@ describe("the runtime fails what waits when it stops", () => {
     const token = Promise.withResolvers<string>();
     const session = { getAccessToken: () => token.promise };
     const replying = collect(
-      runtime.agent(profit, session).respond(ask, new AbortController().signal),
+      runtime.agent(starter, session).respond(ask, new AbortController().signal),
     );
     runtime.dispose();
     token.resolve("a-token");

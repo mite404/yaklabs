@@ -81,17 +81,13 @@ export function viewOf(state: ShellState, main: ThreadId): View {
 
 /**
  * The first document on a device or in a scenario with none saved: the main with the newest
- * activity, open beside its canvas, as the thread page always opened.
+ * activity, open on the thread pane with the canvas hidden, so a first visit to an empty
+ * thread shows its welcome.
  */
 export function firstRun(ws: Workspace): ShellState {
   const main = latestMain(ws);
   if (main === undefined) return { version: 1, tabs: [], views: {}, read: [] };
-  return {
-    version: 1,
-    tabs: [main],
-    views: { [main]: { ...DEFAULT_VIEW, pane: "canvas" } },
-    read: [],
-  };
+  return { version: 1, tabs: [main], views: { [main]: DEFAULT_VIEW }, read: [] };
 }
 
 /**
