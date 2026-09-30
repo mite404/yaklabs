@@ -38,6 +38,8 @@ const events = [
   { type: "end", seq: 8, reason: "answered" },
 ];
 
+const skip = (questionId: string) => ({ exchanges: [{ user: { kind: "skip", questionId } }] });
+
 describe("playground contract", () => {
   it.each(playgroundTools)("gives $name a top-level object input schema", (tool) => {
     expect(tool.input_schema.type).toBe("object");
@@ -76,6 +78,10 @@ describe("playground contract", () => {
       ],
     };
     expect(playgroundRequestSchema.safeParse(request).success).toBe(true);
+  });
+  it("rejects a questionId longer than 64 characters", () => {
+    expect(playgroundRequestSchema.safeParse(skip("q".repeat(64))).success).toBe(true);
+    expect(playgroundRequestSchema.safeParse(skip("q".repeat(65))).success).toBe(false);
   });
   it("rejects a request with no exchanges", () => {
     expect(playgroundRequestSchema.safeParse({ exchanges: [] }).success).toBe(false);

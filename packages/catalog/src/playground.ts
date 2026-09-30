@@ -7,7 +7,7 @@ import { selectionSchema } from "./catalog";
 const seq = z.number().int().nonnegative();
 const slug = z.string().regex(/^[a-z][a-z0-9-]{0,39}$/);
 const line = z.string().trim().min(1).max(160);
-const id = z.string().min(1);
+const id = z.string().min(1).max(64);
 const workStatus = z.enum(["running", "done", "failed"]);
 
 /** Wire version of the playground stream; bump on any breaking change to the event union. */
