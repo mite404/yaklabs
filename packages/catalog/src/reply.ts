@@ -1,4 +1,5 @@
-import type { Block, Inline, Mark } from "./prose";
+import { z } from "zod";
+import { markSchema, type Block, type Inline, type Mark } from "./prose";
 import type { ThreadMessage } from "./thread";
 
 /** Where one step of the agent's work stands. Words, never colour alone, tell them apart. */
@@ -61,6 +62,54 @@ export type ReplyChunk = string | ReplyEvent;
 
 /** An agent's turn, as the fold below builds it. */
 export type AgentMessage = Extract<ThreadMessage, { role: "agent" }>;
+
+// The seam's shapes as data, for a boundary that must parse a reply or the turn it builds: the
+// worker's protocol and its store. Card payloads, questions and evidence stay unknown, since the
+// catalog checks each as it renders. Each parses exactly its type, which the tests hold to.
+
+/** Parses a `WorkStep`. */
+export const workStepSchema = z.object({
+  id: z.string(),
+  label: z.string(),
+  status: z.enum(["pending", "running", "done", "failed", "cancelled"]),
+  outcome: z.string().optional(),
+  evidence: z.unknown().optional(),
+  threadId: z.string().optional(),
+});
+
+/** Parses a `Work`. */
+export const workSchema = z.object({
+  steps: z.array(workStepSchema),
+  logs: z.array(z.string()),
+  narration: z.array(z.string()),
+  summary: z.string().optional(),
+});
+
+/** Parses a `Failure`. */
+export const failureSchema = z.object({ title: z.string(), detail: z.string() });
+
+/** Parses an `Ended`. */
+export const endedSchema = z.enum(["interrupted", "failed", "cancelled"]);
+
+/** Parses a `ReplyEvent`. */
+export const replyEventSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("activity"), text: z.string() }),
+  z.object({ kind: z.literal("text"), text: z.string(), mark: markSchema.optional() }),
+  z.object({ kind: z.literal("link"), text: z.string(), href: z.string() }),
+  z.object({
+    kind: z.literal("block"),
+    block: z.enum(["paragraph", "heading", "list", "item"]),
+  }),
+  z.object({ kind: z.literal("card"), payload: z.unknown() }),
+  z.object({ kind: z.literal("step"), step: workStepSchema }),
+  z.object({ kind: z.literal("log"), text: z.string() }),
+  z.object({ kind: z.literal("summary"), text: z.string() }),
+  z.object({ kind: z.literal("question"), question: z.unknown() }),
+  z.object({ kind: z.literal("failure"), failure: failureSchema }),
+]);
+
+/** Parses a `ReplyChunk`: words, or an event around them. */
+export const replyChunkSchema = z.union([z.string(), replyEventSchema]);
 
 const EMPTY_WORK: Work = { steps: [], logs: [], narration: [] };
 

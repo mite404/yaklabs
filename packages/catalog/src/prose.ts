@@ -2,6 +2,8 @@
 // paragraphs, lists, headings, emphasis and cards; the app owns how they look. No Markdown is
 // parsed here, so a half-arrived delimiter can never show.
 
+import { z } from "zod";
+
 /** How a run of text is set: semibold for findings and asks, italic for asides, mono for code. */
 export type Mark = "strong" | "em" | "code";
 
@@ -16,6 +18,25 @@ export type Block =
   | { kind: "heading"; content: Inline[] }
   | { kind: "list"; items: Inline[][] }
   | { kind: "card"; payload: unknown };
+
+/** Parses a `Mark`. */
+export const markSchema = z.enum(["strong", "em", "code"]);
+
+const inlineSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("run"), text: z.string(), mark: markSchema.optional() }),
+  z.object({ kind: z.literal("link"), text: z.string(), href: z.string() }),
+]);
+
+/**
+ * Parses a `Block` where one crosses a boundary (the worker's protocol, the store). A card's
+ * payload stays unknown: the catalog checks it as it renders.
+ */
+export const blockSchema = z.discriminatedUnion("kind", [
+  z.object({ kind: z.literal("paragraph"), content: z.array(inlineSchema) }),
+  z.object({ kind: z.literal("heading"), content: z.array(inlineSchema) }),
+  z.object({ kind: z.literal("list"), items: z.array(z.array(inlineSchema)) }),
+  z.object({ kind: z.literal("card"), payload: z.unknown() }),
+]);
 
 /** A plain run of text. */
 export const text = (value: string): Inline => ({ kind: "run", text: value });
