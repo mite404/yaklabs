@@ -181,6 +181,17 @@ idle time and the docked question from the turns themselves, which the real app 
 it (ADR-153). A `/new` route opens the real shell on nothing but a fresh thread, for trying the
 live model without a fixture in sight.
 
+Then two recordings of Bonsai itself arrived as the brief for the opposite: hover cards that
+linger and stay live while they fade, and a "Did work · 25s" fold over a wall of "Read file
+/Users/…" rows with raw JSON under each. Our popovers now come and go in half the drawer's slide
+on the drawer's curve, by transitions that turn back mid-fade and take no pointer on the way out.
+And the one disclosure above a reply became what the pillar asks for: mounted as the work
+starts, labelled by state, "Checking open issues" beside the working glyph and then "Checked
+workload, open issues and response times · 3 checks", never a duration or a list of what ran
+(ADR-139, amended). The K in the rail gave way to the bonsai, the lane's collapse moved into the
+gutter so a child's title sits on the compose box's edge, and Search unfolds at the drawer's own
+pace.
+
 ## 2. Cast & Crew
 
 The first entries are ideas from before any code existed; the rest are parts of the running app.
@@ -586,6 +597,16 @@ The first entries are ideas from before any code existed; the rest are parts of 
 - **Say which parts are real.** Each scenario carries one line in the bar: shipped, scripted,
   proposed. A demo that lets a watcher mistake a prototype for the product is a demo that costs
   trust on the day it matters.
+- **A label, not a log.** Bonsai's "Did work · 25s" tells you how long the machine ran, which
+  is the one thing a reader cannot use. The disclosure's header now says what the reply is doing
+  or what the work amounted to, with how many checks and how many need attention: the slate,
+  not the timecode. The words come from the reply itself, a summary event on the seam, and the
+  state supplies "Work finished", "Work incomplete" or "Stopped" when it gave none.
+- **Popovers answer the drawer at double speed.** One family of motion: the drawer slides in
+  220ms on its curve, its popovers in 110ms on the same curve. Transitions rather than keyframes,
+  so a menu reopened mid-fade turns back from where it is, and `pointer-events: none` while it
+  leaves, so a ghost never takes the click. The drawer is the establishing shot; the popovers
+  are its cutaways.
 - **Kimi through OpenRouter, in Anthropic's dialect.** OpenRouter is best known for its
   OpenAI-style API, but it also answers in Anthropic's Messages format. Speaking that one kept
   the browser's stream decoder untouched, so swapping Claude for Kimi K2.6 changed three lines of
@@ -1452,6 +1473,16 @@ No steps, one technical line. Its Work details header read "0 steps", which is t
 like a slate that says "Scene: none". The count now describes what is there: "1 technical line"
 when the work is lines alone, and the step count otherwise. A header that counts the wrong thing
 is worse than no header, because it teaches the reader that the number means nothing.
+
+### The menu that vanished in one frame
+
+Switching the menus from keyframes to transitions made the exit measurably nothing: gone at
+0ms after Escape. The ink pill, on the same classes, faded fine. The difference was one
+utility copied from the pill, `data-instant:transition-none`, which for a tooltip means "a
+neighbour's pill was up, open at once" and for a menu means "this was a dismissal": Base UI
+marks Escape and a click outside `data-instant`, so the menu's exit had no transition at all.
+A class borrowed from a sibling carries the sibling's meaning. The measurement caught it in one
+run; the eye had called it "fast".
 
 ### A patch that landed eleven lines late
 

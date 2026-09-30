@@ -209,7 +209,8 @@ The page's ink, turned over, stands out from the paper shell in either theme wit
 Its corners are half a one-line pill's height, so one line is a capsule, and a name long enough to
 wrap keeps the same ends instead of turning into a lozenge.
 It waits for the pointer to rest, so passing over a row of icons does not flash a label at each,
-and once one is up its neighbours open at once.
+and once one is up its neighbours open at once. It comes and goes as every popover does (rule
+31).
 Storybook has no story for it: Storybook holds the catalog's hand-made primitives, and this is
 the vendored shadcn tooltip. P23 reads the rail's pills in both themes.
 
@@ -381,6 +382,20 @@ with its edge still 83px out, it read as no motion at all.
 The sidebar checks' P24 seeks both directions to the same instants, holds them to this and
 measures that share; P29 and P30 hold the rail still, and its edge its own, at every such frame.
 
+### 31. A popover comes and goes in half the drawer's slide, and takes no pointer on its way out
+
+Every popover, the ink pill and the menus, opens and closes in 110ms, half the projects drawer's
+220ms, on the drawer's curve, `cubic-bezier(0.17, 1.02, 0.58, 1)` (Ethan). The two are one
+family of motion: the drawer slides, its popovers answer at double speed on the same curve.
+It leaves by a transition, never a keyframe, so a popover reopened while it fades turns back
+from where it is rather than finishing its exit first; and while it fades it takes no pointer,
+so the row under the cursor is the page's, never a ghost's (derived). Bonsai's own hover cards,
+which linger and stay live while they fade, are the example of what this rule refuses.
+A dismissal is not instant: Base UI marks Escape and a click outside `data-instant`, and the
+menus keep their transition through it. Measured in Chromium: the bell's menu reads 0 opacity
+and `pointer-events: none` from the first frame after Escape, is gone at 104ms, and a reopen at
+25ms turns back from 0.09.
+
 ## Verification workbench exceptions
 
 The Pixels workbench uses neon green (`#39ff14`) for changed pixels. Comparator proof uses red
@@ -429,8 +444,10 @@ ADR-150).
 | Folded request | eight lines (192px), a fade over the last 48px, Show more in 13px `--soft-ink` to `--ink` over 150ms | Ethan (screenshot) |
 | Running status by the compose box | paper, `--hairline`, 8px corners, 13px on 20px, shown 48px or more above the end | derived (ADR-142) |
 | Child footnote | 12px `--soft-ink`; the Running pill in `--bubble-tint-strong` with `--bubble-line`, 11px 500 | Ethan (ADR-142) |
-| Work details header | 13px 500, its chevron first, its count in 12px `--soft-ink` beside the label | derived (ADR-143's float) |
-| Reading tools at rest | the bookmark alone on `--scrim` (paper at 72%), glyph opaque; clear until the pointer is over the thread's turns, up over 300ms on the strong ease-out | Ethan (ADR-143, amended) |
+| The disclosure above the reply | 13px 500, its chevron first, mounted as the work starts; live, the working glyph then the activity; settled, the reply's summary or Work finished, incomplete, Stopped; its count in 12px `--soft-ink` beside the label ("3 checks · 1 needs attention") | Ethan (ADR-139, amended) |
+| Lane collapse toggle | a 20px fill, 13px glyph, flush with the lane's edge in the gutter; a child's title starts on the compose box's edge | Ethan (ADR-134, amended) |
+| Kay's mark | the bonsai's three pills on a 12-unit grid, `currentColor`, in the rail's 20px box | Ethan (ADR-094, amended) |
+| Reading tools at rest | the bookmark alone on `--scrim` (paper at 72%), glyph opaque; clear until the pointer is over the thread's turns, up over 300ms on the strong ease-out; Search unfolds over 220ms on the panel ease, the drawer's slide | Ethan (ADR-143, amended) |
 | Reading tools open | `--paper`, solid, over 150ms on the strong ease-out; the list of requests on `--scrim` with an 8px blur | Ethan (ADR-143, amended) |
 | Reply stamp | 11px on 16px `--soft-ink`, tabular figures, under the latest settled reply only: "just now", then 20-minute steps; no time on a user's turn | Ethan (ADR-152) |
 

@@ -1102,6 +1102,11 @@ each says "Out of demo scope", in its pill, beside its name in the phone drawer'
 screen reader, one phrase in all three. The phone drawer is 85% of the width up to 20rem
 (ADR-121), 320px on the checks' 390px phone, which leaves "Automations" 64px clear of the whole
 phrase, so the short "Soon" goes. P23 and P25 read the new words.
+Amended 2026-09-30 (Ethan: "the K logo in the navbar needs to be replaced w/ the bonsai
+component from AgentTree"). Kay's mark is now the bonsai: the working glyph's three pills held
+still (`BonsaiMark`, `rail-places.tsx`), drawn on the glyph's own 12-unit grid in the text
+colour, at the 20px box the K filled, in the rail's home place and on the welcome. The animated
+glyph stays the working indicator; the mark is its resting form.
 
 ## ADR-095 - The Kay mark is the vector Kay's site declares
 
@@ -1613,6 +1618,13 @@ the canvas is off screen or empty, so the bar never shifts. A mock with the cont
 row's leading edge was set aside for it.
 Proof: P13 (the phone's top row), P14 (the toggle in the title bar and the strip) and P18
 (Collapse all, kept across a reload) in `apps/web/scripts/workspace-check.mjs`.
+Amended 2026-09-30 (Ethan: "the expand collapse btn needs to be scaled down by 20%. the first
+character of the titlebar of a child thread needs to be vertically aligned with the left side
+of the chat compose input"). The toggle is a 20px fill with a 13px glyph, a fifth under the
+bar's other controls, in the bar and in the strip alike. In a thread's bar it sits in the gutter,
+flush with the lane's edge and closing the row's gap, so the title's first character starts on
+the text column, where the compose box's edge is: the marker in the margin, the title on the
+line, as a list sets them.
 
 ## ADR-135 - The empty canvas has three looks behind a debug switch, and Kay leaves it
 
@@ -1773,6 +1785,22 @@ level where the user needs to act, rather than disappearing into technical detai
 The demo retains superseded narration under Technical details. An interrupted answer stays visible
 with an incomplete label and a retry action; retry keeps the earlier partial answer for reference.
 This is session-local UI behavior, not persisted history or a change to the real-model runtime.
+Amended 2026-09-30 (Ethan's pillar, "activity is not value": "Keep one restrained disclosure
+above the response. Mount it when work starts so it does not suddenly appear above text someone
+is reading. Its label changes with the actual scripted state"; Bonsai's own thread, with its
+"Did work · 25s" fold over a wall of "Read file /Users/…" rows, as the example of what not to
+do). The work behind a reply now sits above its words as one disclosure, mounted as the first
+step or technical line arrives, so it is there before any text is. Its header is the reply's
+state: while the reply streams, what it is doing now, live, beside the working glyph
+("Checking open issues"; a narration's full stop dropped, since it is a label); once it settles,
+what the work amounted to in the reply's own words, from a new `summary` event on the seam
+(ADR-147), or "Work finished", "Work incomplete" or "Stopped" when it gave none; beside either,
+how many checks and how many need attention ("3 checks · 1 needs attention"). Never a duration,
+never a list of what ran. Each parallel task keeps its own row beneath; the narration the reply
+moved past and its technical lines sit one disclosure deeper, as before. A reply with no work
+narrates under its words, as it did; a reply with work no longer repeats its activity there.
+Failures, stops and questions stay where they were: in the ended note and the dock, visible
+until resolved, never folded away as routine.
 
 ## ADR-140 - Own the Quiet prose response styling, independent of the Markdown renderer
 
@@ -1886,6 +1914,9 @@ only its glyph opaque; open, with search or the list of requests up, it fills so
 The list of requests is the same wash with an 8px blur behind it, so its rows stay legible over
 the turns. The turns' region is now named "Messages in <thread>", so two threads side by side are
 two landmarks, not one twice (axe caught it in the two-thread story).
+Amended 2026-09-30 (Ethan: "the storytool needs to have the same speed slide out as the
+drawer. right now its too instant"). Search unfolds from the bookmark over 220ms on the panel
+ease, the projects drawer's own slide (pillar 26), rather than 150ms on the strong ease-out.
 
 ## ADR-144 - The rail stays on the desktop, and the projects panel extends from its edge
 
@@ -2008,6 +2039,14 @@ since 12px is half a one-line pill's height. The rail's own provider and its del
 since the app's provider now carries the same values. A new label cannot come out in another
 shape without editing `packages/ui/src/components/tooltip.tsx`. P23 and P28 read the pills, and
 the web checks read a cut row's name on hover and focus and a name that wraps.
+Amended 2026-09-30 (Ethan: "our popover animations need to be 1/2 the length of the drawer
+slide and with the same animation curve as the drawer slide"; Bonsai's own hover cards, which
+linger and catch the pointer while they fade, as the example of what not to do). The pill and
+the menus come and go in 110ms each way, half the drawer's 220ms, on the panel ease (pillar
+31). The menus moved from keyframe exits to transitions, so a menu reopened while it fades turns
+back from where it is; a popover on its way out takes no pointer; and Base UI's "instant" mark
+on a dismissal (Escape, a click outside) no longer switches the transition off, which made a
+menu vanish in one frame.
 
 ## ADR-146 - The gateway streams Kimi K2.6 through OpenRouter's Anthropic-format endpoint
 
@@ -2068,6 +2107,9 @@ here (ADR-137).
 Alternatives weighed: a controlled panel whose host owns the messages (the eventual shape once the
 runtime is the source of truth for turns; every host would change today), and a worker scenario
 with a structured protocol (the backend project the goals defer).
+Amended 2026-09-30: the stream may carry a `summary` event, what the work amounted to in the
+reader's words, kept on the turn's `work` for the disclosure's label once the reply settles
+(ADR-139, amended).
 
 ## ADR-148 - The scripted demo plays on the real shell from an in-memory runtime
 
