@@ -7,17 +7,25 @@ The agent loop and the conversation store run in a Web Worker from `@yaklabs/run
 
 ## Routes
 
-| Path           | What it shows                                                        | Sign-in  |
-| -------------- | -------------------------------------------------------------------- | -------- |
-| `/`            | The last thread shown, else the latest main, else "Nothing open"     | required |
-| `/t/:threadId` | That thread's tab: a main beside its canvas, or a child's lane in it | required |
-| `/lab`         | The evaluation workbench: fixtures through the same validation       | required |
-| `/new`         | A blank slate: the shell on one thread started on the empty scenario | required |
-| `/playground`  | A live model showing its work as typed events (ADR-155)              | required |
-| `/share.html`  | One shared card from the link's fragment (ADR-064)                   | public   |
-| `/callback`    | Where WorkOS sends visitors back; the provider finishes sign-in      | public   |
+| Path                       | What it shows                                                        | Sign-in  |
+| -------------------------- | -------------------------------------------------------------------- | -------- |
+| `/`                        | The last thread shown, else the latest main, else "Nothing open"     | required |
+| `/t/:threadId`             | That thread's tab: a main beside its canvas, or a child's lane in it | required |
+| `/lab`                     | The evaluation workbench: fixtures through the same validation       | required |
+| `/playground`              | Redirects to `/t/playground`, the Live Playground's thread           | required |
+| `/demo/weekly-brief`       | Redirects to `/t/demo-<script>` (`?script=`, else the brief)         | required |
+| `/demo/weekly-brief/t/:id` | Redirects to `/t/:id`                                                | required |
+| `/share.html`              | One shared card from the link's fragment (ADR-064)                   | public   |
+| `/callback`                | Where WorkOS sends visitors back; the provider finishes sign-in      | public   |
 
-Any signed-in route takes `?scenario=` (below), and every link inside the app keeps it.
+Any signed-in route takes `?scenario=` (below), and every link inside the app keeps it. The
+redirects keep only `?splash=`.
+
+A fresh device starts with the Live Playground project and its one empty thread, open on the
+thread layout, so the first visit lands on the welcome. On the device's data the scripted Demo
+plays beside it: a Demo project whose three threads (`/t/demo-brief`, `/t/demo-interrupted`,
+`/t/demo-returned`) play their scenarios in memory, with Play, 2x and Restart in a bar under the
+title bar while one of them is on screen. Nothing of the Demo is kept; a reload starts it over.
 
 ## The window
 
@@ -68,6 +76,7 @@ variable to the browser, so nothing here is secret.
 | `VITE_AUTH`                | `none` (default), `workos` | Whether visitors sign in through AuthKit         |
 | `VITE_WORKOS_CLIENT_ID`    | the WorkOS client id | Needed with `workos`                                 |
 | `VITE_WORKOS_REDIRECT_URI` | a URL                | Needed with `workos`; must be registered in WorkOS   |
+| `VITE_DEMO`                | `on` (default), `off` | Whether the scripted Demo plays beside the device's threads |
 
 `src/env.ts` parses them once into a shape with no half-set states, so a contradiction fails
 at start rather than on the first sign-in.

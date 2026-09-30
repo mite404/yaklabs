@@ -10,7 +10,7 @@ import { show, worldOf } from "./spec";
 import { createWorld, type World } from "./world";
 
 // A clock on which every wait is over at once.
-export const instant: Clock = {
+const instant: Clock = {
   state: () => ({ rate: 1, paused: false }),
   subscribe: () => () => {},
   wait: () => Promise.resolve(),
