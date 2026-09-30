@@ -1,5 +1,5 @@
 import type { Selection } from "@yaklabs/catalog/catalog";
-import { card, em, paragraph, strong, text } from "@yaklabs/catalog/prose";
+import { card, em, limitation, paragraph, strong, text } from "@yaklabs/catalog/prose";
 import { applyChunk, startReply, type AgentMessage, type ReplyChunk } from "@yaklabs/catalog/reply";
 import { describe, expect, it } from "vitest";
 import { COPY } from "./playgroundCopy";
@@ -70,51 +70,54 @@ describe("receive streams text", () => {
 });
 
 describe("receive folds work and cards", () => {
-  it("turns work into a step, and an outcome into its result, a summary and evidence", () => {
+  it("turns work into a step, and an outcome into its result, basis and a summary", () => {
     const { chunks } = play(working, {
       type: "outcome",
       workId: "sum",
       result: "Friday was busiest",
       evidence: ["Added Monday to Friday"],
     });
+    const settled = {
+      id: "sum",
+      label: "Adding up",
+      status: "done",
+      outcome: "Friday was busiest",
+    };
     expect(chunks).toEqual([
       { kind: "step", step: { id: "sum", label: "Adding up", status: "running" } },
-      {
-        kind: "step",
-        step: { id: "sum", label: "Adding up", status: "done", outcome: "Friday was busiest" },
-      },
+      { kind: "step", step: { ...settled, basis: ["Added Monday to Friday"] } },
       { kind: "summary", text: "Friday was busiest" },
-      { kind: "log", text: "Adding up: Added Monday to Friday" },
     ]);
   });
 
-  it("shows a card, and a repeated cardId again with a line saying the first stands", () => {
+  it("shows a card under its id, so a repeat replaces it in place, and logs a note", () => {
     const shown: Draft = { type: "card", cardId: "week", selection: SELECTION };
-    const { chunks } = play(shown, { ...shown, note: "Rows trimmed" });
-    expect(chunks).toEqual([
-      { kind: "card", payload: SELECTION },
-      { kind: "card", payload: SELECTION },
-      { kind: "log", text: COPY.cardAgain("week") },
-      { kind: "log", text: COPY.cardNote("week", "Rows trimmed") },
-    ]);
-    expect(turnOf(chunks).blocks).toEqual([card(SELECTION), card(SELECTION)]);
+    const redrawn: Selection = { ...SELECTION, props: { ...SELECTION.props, title: "Redrawn" } };
+    const { chunks } = play(
+      shown,
+      { type: "text", blockId: "r1b0", delta: "Between." },
+      { ...shown, selection: redrawn, note: "Rows trimmed" },
+    );
+    expect(chunks.at(-1)).toEqual({ kind: "log", text: COPY.cardNote("week", "Rows trimmed") });
+    expect(turnOf(chunks).blocks).toEqual([card(redrawn, "week"), paragraph([text("Between.")])]);
   });
 });
 
 describe("receive folds limitations and questions", () => {
-  it("fails a limitation's step and puts it in the words with its recovery prompt", () => {
+  it("fails a limitation's step and says it in the words with its recovery", () => {
+    const recovery = { label: "Use examples", prompt: "Chart example numbers" };
     const { chunks, done } = play(working, {
       type: "failure",
       workId: "sum",
       limitation: "I cannot fetch real sales.",
-      recovery: { label: "Use examples", prompt: "Chart example numbers" },
+      recovery,
     });
     expect(done).toBe(false);
     const turn = turnOf(chunks);
     expect(turn.work?.steps).toEqual([
       { id: "sum", label: "Adding up", status: "failed", outcome: "I cannot fetch real sales." },
     ]);
-    expect(turn.text).toBe(`I cannot fetch real sales. ${COPY.recovery("Chart example numbers")}`);
+    expect(turn.blocks).toEqual([limitation("I cannot fetch real sales.", recovery)]);
     expect(turn.ended).toBeUndefined();
   });
 
@@ -126,7 +129,7 @@ describe("receive folds limitations and questions", () => {
       recovery: null,
     });
     const turn = turnOf(chunks);
-    expect(turn.text).toBe("I cannot see files.");
+    expect(turn.blocks).toEqual([limitation("I cannot see files.")]);
     expect(turn.work).toBeUndefined();
   });
 

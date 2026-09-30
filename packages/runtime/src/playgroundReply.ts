@@ -35,7 +35,6 @@ export type ReplyState = Readonly<{
   next: number;
   phase: "waiting" | "reading" | "over";
   steps: readonly WorkStep[];
-  cards: readonly string[];
   prose: Prose | undefined;
 }>;
 
@@ -47,7 +46,6 @@ export const newReply: ReplyState = {
   next: 0,
   phase: "waiting",
   steps: [],
-  cards: [],
   prose: undefined,
 };
 
@@ -87,62 +85,34 @@ function onText(state: ReplyState, event: EventOf<"text">): Receipt {
   return { state: { ...closed.state, prose }, chunks: [...closed.chunks, ...written.chunks] };
 }
 
-// TODO(U3): yield `card {id: cardId, payload}` so a repeated cardId replaces the earlier card
-// in place, and drop the `cardAgain` line. Until then a repeat is appended and the log says
-// the earlier card stands.
-function showCard(state: ReplyState, event: EventOf<"card">): Receipt {
-  const again = state.cards.includes(event.cardId);
-  const lines = [
-    ...(again ? [COPY.cardAgain(event.cardId)] : []),
-    ...(event.note === undefined ? [] : [COPY.cardNote(event.cardId, event.note)]),
-  ];
-  const cards = again ? state.cards : [...state.cards, event.cardId];
-  const chunks: ReplyChunk[] = [
-    { kind: "card", payload: event.selection },
-    ...lines.map((line): ReplyChunk => ({ kind: "log", text: line })),
-  ];
-  return { state: { ...state, cards }, chunks };
+// A card under its cardId, so showing that id again replaces it where the reader saw it; the
+// gateway's note on it is a technical line.
+function showCard(event: EventOf<"card">): ReplyChunk[] {
+  const shown: ReplyChunk = { kind: "card", payload: event.selection, id: event.cardId };
+  if (event.note === undefined) return [shown];
+  return [shown, { kind: "log", text: COPY.cardNote(event.cardId, event.note) }];
 }
 
-// TODO(U3): put the evidence on the step as `basis` lines under its outcome. Until then each
-// line is a technical line naming the step.
-function evidenceChunks(label: string, evidence: readonly string[]): ReplyChunk[] {
-  return evidence.map((line) => ({ kind: "log", text: COPY.evidence(label, line) }));
-}
-
-// A step settled with its result, which also sums up the work so far.
+// A step settled with its result, and how it was reached as basis lines under it; the result
+// also sums up the work so far.
 function settleStep(state: ReplyState, event: EventOf<"outcome">): Receipt {
-  const done = moveStep(state, event.workId, { status: "done", outcome: event.result });
-  const label = stepOf(done.state, event.workId)?.label ?? event.workId;
-  const chunks: ReplyChunk[] = [
-    ...done.chunks,
-    { kind: "summary", text: event.result },
-    ...evidenceChunks(label, event.evidence),
-  ];
-  return { state: done.state, chunks };
+  const basis = event.evidence.length === 0 ? {} : { basis: [...event.evidence] };
+  const done = moveStep(state, event.workId, { status: "done", outcome: event.result, ...basis });
+  return { state: done.state, chunks: [...done.chunks, { kind: "summary", text: event.result }] };
 }
 
-// TODO(U3): yield the `limitation` block with its `recovery`, so the reader sends the prompt
-// in one click. Until then the limitation is a paragraph and the prompt a quoted sentence.
-function limitationChunks(
-  limitation: string,
-  recovery: EventOf<"failure">["recovery"],
-): ReplyChunk[] {
-  const words = recovery === null ? limitation : `${limitation} ${COPY.recovery(recovery.prompt)}`;
-  return [
-    { kind: "block", block: "paragraph" },
-    { kind: "text", text: words },
-  ];
-}
-
-// A limitation the reply goes on after: its step fails with it, and the words say it.
+// A limitation the reply goes on after: its step fails with it, and the words say it, with
+// the request the reader can send in one click instead, when the model gave one.
 function noteLimitation(state: ReplyState, event: EventOf<"failure">): Receipt {
   const failed =
     event.workId === null
       ? noChunks(state)
       : moveStep(state, event.workId, { status: "failed", outcome: event.limitation });
-  const words = limitationChunks(event.limitation, event.recovery);
-  return { state: failed.state, chunks: [...failed.chunks, ...words] };
+  const said: ReplyChunk =
+    event.recovery === null
+      ? { kind: "limitation", text: event.limitation }
+      : { kind: "limitation", text: event.limitation, recovery: event.recovery };
+  return { state: failed.state, chunks: [...failed.chunks, said] };
 }
 
 /**
@@ -179,7 +149,7 @@ function onEvent(state: ReplyState, event: Exclude<Received, { type: "text" }>):
     case "work":
       return moveStep(state, event.workId, { label: event.label, status: event.status });
     case "card":
-      return showCard(state, event);
+      return { state, chunks: showCard(event) };
     case "outcome":
       return settleStep(state, event);
     case "failure":
@@ -226,9 +196,9 @@ export function readLine(line: string): Received | undefined {
 /**
  * Folds one event of the gateway's stream into the reply's chunks. A replayed `seq` changes
  * nothing; a skipped one means a line was lost, and the reply ends cut off. Text streams
- * through the Markdown emitter; a work item becomes a step; a card, a card chunk; an outcome
- * settles its step and sums up the work; a limitation fails its step and reaches the words; a
- * question docks and ends the reply; `end` ends it, short with a failure for a limit or an
+ * through the Markdown emitter; a work item becomes a step; a card, a card chunk under its id;
+ * an outcome settles its step with its basis and sums up the work; a limitation fails its step
+ * and reaches the words with its recovery; a question docks and ends the reply; `end` ends it, short with a failure for a limit or an
  * upstream that stopped.
  */
 export function receive(state: ReplyState, event: Received): Receipt {

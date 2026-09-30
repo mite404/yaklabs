@@ -32,7 +32,7 @@ function joinRuns(content: readonly Inline[]): Inline[] {
 
 function joinBlock(block: Block): Block {
   if (block.kind === "list") return { ...block, items: block.items.map((item) => joinRuns(item)) };
-  if (block.kind === "card") return block;
+  if (block.kind === "card" || block.kind === "limitation") return block;
   return { ...block, content: joinRuns(block.content) };
 }
 
@@ -58,7 +58,15 @@ function blockChunks(block: Block): ReplyChunk[] {
     case "list":
       return block.items.flatMap((item, i) => contentChunks(item, i === 0 ? "list" : "item"));
     case "card":
-      return [{ kind: "card", payload: block.payload }];
+      return [
+        {
+          kind: "card",
+          payload: block.payload,
+          ...(block.id === undefined ? {} : { id: block.id }),
+        },
+      ];
+    case "limitation":
+      return [{ ...block }];
     default: {
       const unhandled: never = block;
       return unhandled;

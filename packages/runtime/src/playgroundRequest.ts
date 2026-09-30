@@ -74,27 +74,35 @@ function questionOf(agent: AgentMessage | undefined, index: number): PastAgent["
     : undefined;
 }
 
-// What the reader saw of a reply, in the gateway's words. Card ids are positional.
+// What the reader saw of a reply, in the gateway's words. A card keeps the id it came with,
+// else takes its position. A limitation is carried once, as a failure: said in the words, or
+// on its failed step, or both. The words leave limitations out, since the failures carry them.
 function pastAgent(agent: AgentMessage, index: number): PastAgent {
   const blocks = agent.blocks ?? [];
   const steps = agent.work?.steps ?? [];
-  // TODO(U3): use the card block's own `id` when it has one.
   const cards = blocks
-    .flatMap((block) => (block.kind === "card" ? [block.payload] : []))
-    .map((selection, n) => ({ cardId: `c${n + 1}`, selection }));
+    .flatMap((block) => (block.kind === "card" ? [block] : []))
+    .map((block, n) => ({ cardId: block.id ?? `c${n + 1}`, selection: block.payload }));
   const outcomes = steps
     .filter((step) => step.status === "done")
     .map((step) => ({ workId: step.id, result: step.outcome }));
-  const failures = [
-    ...steps.filter((step) => step.status === "failed").map((step) => step.outcome),
-    agent.failure?.title,
-  ].map((limitation) => ({ limitation }));
+  const limitations = new Set([
+    ...blocks.flatMap((block) => (block.kind === "limitation" ? [block.text] : [])),
+    ...steps.flatMap((step) =>
+      step.status === "failed" && step.outcome !== undefined ? [step.outcome] : [],
+    ),
+    ...(agent.failure === undefined ? [] : [agent.failure.title]),
+  ]); // → Set<string>, each limitation once, in the order the reader met them
+  const words = blocks.filter((block) => block.kind !== "limitation");
   const question = questionOf(agent, index);
   return {
-    text: (agent.blocks === undefined ? agent.text : plainText(agent.blocks)).slice(0, MAX_TEXT),
+    text: (agent.blocks === undefined ? agent.text : plainText(words)).slice(0, MAX_TEXT),
     cards: kept(agentShape.cards.element, cards),
     outcomes: kept(agentShape.outcomes.element, outcomes),
-    failures: kept(agentShape.failures.element, failures),
+    failures: kept(
+      agentShape.failures.element,
+      [...limitations].map((limitation) => ({ limitation })),
+    ),
     ...(question === undefined ? {} : { question }),
   };
 }

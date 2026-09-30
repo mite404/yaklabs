@@ -77,7 +77,7 @@ describe("planRequest projects folded turns", () => {
         user: { kind: "say", text: "Go." },
         agent: {
           text: "Friday led the week.",
-          cards: [{ cardId: "c1", selection: BAR_CARD }],
+          cards: [{ cardId: "week", selection: BAR_CARD }],
           outcomes: [{ workId: "sum", result: "Friday was busiest" }],
           failures: [],
         },
@@ -127,7 +127,7 @@ describe("planRequest reads questions and short ends", () => {
     ]);
     const request = sent(planRequest([user("u1", "Go."), cut], message("Again")));
     expect(request.exchanges[0]?.agent).toMatchObject({
-      text: `${limitation}\nFriday was`,
+      text: "Friday was",
       failures: [{ limitation }, { limitation: COPY.ended.limit.title }],
     });
   });
@@ -165,10 +165,15 @@ describe("planRequest fits the request schema", () => {
     expect(clipped.exchanges[0]?.agent?.text).toHaveLength(20_000);
   });
 
-  it("leaving out a stored card the catalog would not show", () => {
-    const odd = { ...settled("a1"), blocks: [{ kind: "card" as const, payload: { no: 1 } }] };
-    const { exchanges } = sent(planRequest([user("u1", "Go."), odd], message("Next")));
-    expect(exchanges[0]?.agent?.cards).toEqual([]);
+  it("naming a stored card without an id by position, and leaving out one it cannot show", () => {
+    const blocks = [
+      { kind: "card" as const, payload: { no: 1 } },
+      { kind: "card" as const, payload: BAR_CARD },
+    ];
+    const { exchanges } = sent(
+      planRequest([user("u1", "Go."), { ...settled("a1"), blocks }], message("Next")),
+    );
+    expect(exchanges[0]?.agent?.cards).toEqual([{ cardId: "c2", selection: BAR_CARD }]);
   });
 
   it("sending a long answer as a say, and refusing a message longer than the gateway reads", () => {
