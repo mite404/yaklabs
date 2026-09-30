@@ -1,14 +1,11 @@
 import { useAuth } from "@workos-inc/authkit-react";
 import type { ThreadSummary } from "@yaklabs/runtime";
-import { sidebarTree } from "@yaklabs/runtime";
-import { Button } from "@yaklabs/ui/components/button";
-import { FileText, Folder, Globe, Plus, Terminal } from "lucide-react";
 import { env } from "../env";
-import { useShell } from "../shell/model";
 import { BonsaiMark } from "../shell/rail-places";
 import type { PaneKind } from "../shell/state";
 import { WelcomeArt } from "./splash";
 import { SplashSwitch } from "./splash-switch";
+import { ACTION, Actions, Projects } from "./welcome-sections";
 
 // The part of the day the greeting names: the morning in the light theme, the evening in the
 // dark one (Ethan), rather than the clock. Both are in the DOM; index.css shows the theme's.
@@ -16,19 +13,12 @@ type Part = "morning" | "evening";
 const PARTS: readonly Part[] = ["morning", "evening"];
 
 const DATE = new Intl.DateTimeFormat("en-US", { weekday: "long", month: "long", day: "numeric" });
-const NOT_HERE = "Not in the web build yet";
 
 // "Good morning, Ethan", or "Good morning" for a build with no sign-in.
 const greetingFor = (part: Part, name: string | null): string =>
   `Good ${part}${name === null ? "" : `, ${name}`}`;
 
 const lineFor = (part: Part): string => `Spend your ${part} on the thing that matters.`;
-
-// Kay's own corners for the greeting's actions, the app's 8px and not the site's 4px button:
-// one step up from --radius, so it follows the token.
-const ACTION = "h-8 rounded-xl px-3";
-
-const LABEL = "text-[11px] font-medium tracking-[0.1em] text-soft-ink uppercase";
 
 function Greeting({ name }: { name: string | null }) {
   return (
@@ -59,68 +49,6 @@ function LocalGreeting() {
 }
 
 const GreetingLine = env.auth.kind === "workos" ? WorkOsGreeting : LocalGreeting;
-
-function Projects() {
-  const shell = useShell();
-  const projects = shell === null ? [] : sidebarTree(shell.workspace).map((node) => node.project);
-  return (
-    <section aria-labelledby="welcome-projects" className="flex flex-col gap-1">
-      <div className="flex items-center justify-between">
-        <h2 id="welcome-projects" className={LABEL}>
-          Projects
-        </h2>
-        <Button
-          variant="ghost"
-          size="icon-xs"
-          aria-label="New project"
-          onClick={() => shell?.newProject()}
-        >
-          <Plus />
-        </Button>
-      </div>
-      {projects.length > 0 && (
-        <ul className="flex flex-col">
-          {projects.map((project) => (
-            <li key={project.id} className="flex items-center gap-2 py-1.5 text-sm text-ink">
-              <Folder className="size-4 text-soft-ink" aria-hidden="true" />
-              {project.name}
-            </li>
-          ))}
-        </ul>
-      )}
-    </section>
-  );
-}
-
-function Actions({ thread }: { thread: ThreadSummary }) {
-  const shell = useShell();
-  return (
-    <section aria-labelledby="welcome-actions" className="flex flex-col gap-2">
-      <h2 id="welcome-actions" className={LABEL}>
-        More actions
-      </h2>
-      <div className="flex flex-wrap gap-2">
-        <Button variant="outline" size="sm" className={ACTION} disabled title={NOT_HERE}>
-          <FileText />
-          Open file
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          className={ACTION}
-          onClick={() => shell?.setPane(thread.id, "browser")}
-        >
-          <Globe />
-          Open browser
-        </Button>
-        <Button variant="outline" size="sm" className={ACTION} disabled title={NOT_HERE}>
-          <Terminal />
-          Open terminal
-        </Button>
-      </div>
-    </section>
-  );
-}
 
 /**
  * A new thread's welcome (ADR-136), after Kay's own new tab: the mark, the date, a greeting for

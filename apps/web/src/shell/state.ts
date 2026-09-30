@@ -256,6 +256,16 @@ export function resume(
   return latestMain(open) ?? null;
 }
 
+/**
+ * The main a project opens on: its main with the newest activity in it or its children, as
+ * `latestMain` ranks them; undefined for a project with no main.
+ */
+export function entryOf(ws: Workspace, projectId: string): ThreadId | undefined {
+  const inProject = (thread: ThreadSummary) =>
+    thread.place.kind === "child" || thread.place.projectId === projectId;
+  return latestMain({ ...ws, threads: ws.threads.filter(inProject) });
+}
+
 /** The thread the address names and its project's name, as the phone's bar shows them. */
 export type OnScreen = { name: string | null; thread: ThreadSummary | null };
 

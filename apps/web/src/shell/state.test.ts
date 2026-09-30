@@ -12,6 +12,7 @@ import {
   badgeText,
   browse,
   closeTab,
+  entryOf,
   firstRun,
   leavesChild,
   markRead,
@@ -252,6 +253,31 @@ describe("the bell", () => {
   });
   it("caps the badge at 9+ and shows none at zero", () => {
     expect([0, 1, 9, 10, 12].map((n) => badgeText(n))).toEqual([null, "1", "9", "9+", "9+"]);
+  });
+});
+
+describe("entryOf", () => {
+  // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- a fixture id, never parsed from outside
+  const [LIVE, EMPTY] = ["p-2", "p-3"] as ProjectId[];
+  const PLAYGROUND = id("playground");
+  const two: Workspace = {
+    ...WS,
+    projects: [
+      ...WS.projects,
+      { id: LIVE, name: "Live Playground", createdAt: "2026-09-22T09:00:00.000Z" },
+      { id: EMPTY, name: "Empty", createdAt: "2026-09-22T09:00:00.000Z" },
+    ],
+    threads: [
+      ...WS.threads,
+      thread(PLAYGROUND, { kind: "main", projectId: LIVE }, "2026-09-22T09:00:00.000Z"),
+    ],
+  };
+  it("opens a project on its main with the newest activity, a child's reply included", () => {
+    expect(entryOf(two, STORE)).toBe(PROFIT);
+    expect(entryOf(two, LIVE)).toBe(PLAYGROUND);
+  });
+  it("finds nothing for a project with no main", () => {
+    expect(entryOf(two, EMPTY)).toBeUndefined();
   });
 });
 
