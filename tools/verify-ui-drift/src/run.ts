@@ -264,7 +264,8 @@ async function captureEngine(
 }
 
 /** Builds code once, captures the requested matrix, and writes an immutable report last.
- * @throws When the source cannot be read or the report cannot be persisted.
+ * @throws When the source cannot be read, an approved reference is unreadable or invalid, or
+ *   the report cannot be persisted.
  */
 export async function runVerification(options: RunOptions): Promise<Report> {
   const snapshot = await sourceSnapshot();
