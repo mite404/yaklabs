@@ -85,7 +85,8 @@ const answeredDrafts = (state: TurnState): EventDraft[] => [
   ...(hasAnswer(state)
     ? []
     : [{ type: "failure" as const, workId: null, limitation: NO_ANSWER, recovery: null }]),
-  { type: "end", reason: "answered" },
+  // A reply that showed nothing is the model failing, so the page can offer Try again.
+  { type: "end", reason: hasAnswer(state) ? "answered" : "upstream" },
 ];
 
 // The round's verdict. Pure: `messages` is what the next round sends when there is one.
@@ -147,10 +148,15 @@ const advance = (
   const read: RoundEnd = { ...end, round: step.round, state: text.state };
   if (step.tool === undefined) return { end: read, events: text.events };
   const { state, events, result } = translateToolUse(read.state, step.tool); // → Translation
-  const translated: RoundEnd =
-    result === "asked"
-      ? { ...read, state, asked: true }
-      : { ...read, state, results: [...read.results, result] };
+  if (result === "asked") {
+    // The page stops reading at a question, so narration goes first; asking changes no work,
+    // so the question is translated again from the narrated state to keep `seq` in order.
+    const lead = narrateLead(read); // → { end, events }
+    const asked = translateToolUse(lead.end.state, step.tool);
+    const settled: RoundEnd = { ...lead.end, state: asked.state, asked: true };
+    return { end: settled, events: [...text.events, ...lead.events, ...asked.events] };
+  }
+  const translated: RoundEnd = { ...read, state, results: [...read.results, result] };
   const narrated = narrateLead(translated); // → { end, events }
   return { end: narrated.end, events: [...text.events, ...events, ...narrated.events] };
 };

@@ -191,6 +191,27 @@ describe("the tool loop narrates", () => {
   });
 });
 
+describe("the tool loop narrates across rounds", () => {
+  it("the text before a question ahead of the question, when the work ran in an earlier round", async () => {
+    const starts = round("tool_use", tool(0, "update_work", work("running")));
+    const asks = round(
+      "tool_use",
+      text(0, "Checking what matters."),
+      tool(1, "ask_question", { question: QUESTION }),
+    );
+
+    const { events } = await eventsFor("Plan next week.", starts, asks);
+
+    expect(events.map(({ type }) => type)).toEqual([
+      "work",
+      "text",
+      "narration",
+      "question",
+      "end",
+    ]);
+  });
+});
+
 describe("the tool loop ends", () => {
   it("at a question, without a tool_result or another round", async () => {
     const asks = round("tool_use", text(0, " "), tool(1, "ask_question", { question: QUESTION }));

@@ -19,7 +19,7 @@ describe("a turn never ends silently", () => {
   it("when the reply answers with nothing to show", async () => {
     const { events } = await eventsFor("Which day?", round("end_turn", text(0, " ")));
 
-    expect(events).toEqual([emptyAnswer, { type: "end", reason: "answered" }]);
+    expect(events).toEqual([emptyAnswer, { type: "end", reason: "upstream" }]);
   });
 
   it("when every line of text was narration for work", async () => {
@@ -31,7 +31,7 @@ describe("a turn never ends silently", () => {
 
     const { events } = await eventsFor("Chart it.", first, round("end_turn"));
 
-    expect(events.slice(-2)).toEqual([emptyAnswer, { type: "end", reason: "answered" }]);
+    expect(events.slice(-2)).toEqual([emptyAnswer, { type: "end", reason: "upstream" }]);
   });
 
   it("and adds nothing to a reply that answered", async () => {
