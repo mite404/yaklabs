@@ -13,7 +13,7 @@ import {
 import { runVerification } from "./run.ts";
 import { BASELINES, RUNS, sourceSnapshot } from "./workspace.ts";
 
-const HELP = `Kay verification
+const HELP = `yaklabs verification
   pnpm verify-ui-drift run [--stories id,id | --all | --since ref] [--app] [--engines chromium,firefox,webkit]
   pnpm verify-ui-drift selftest [--engines chromium,firefox,webkit]
   pnpm verify-ui-drift approve --run RUN --keys KEY,KEY --expect N
