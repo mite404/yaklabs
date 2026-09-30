@@ -6,14 +6,16 @@ import { assertNever } from "./never";
 export type Asked = { questionId: string; question: AwaitingInput };
 export type Reply = { kind: "answer"; text: string; at: string } | { kind: "skip" };
 export type Cause = { title: string; detail: string; retry: boolean };
+export type EndReason = Extract<PlaygroundEvent, { type: "end" }>["reason"];
 
 // One reply's lifecycle: sent, streaming, then asked (and later resolved), done or failed.
+// `reason` is why the gateway ended it; a limit or an upstream failure can be tried again.
 export type AgentTurn =
   | { phase: "waiting" }
   | { phase: "streaming"; body: Body }
   | { phase: "asked"; body: Body; asked: Asked }
   | { phase: "resolved"; body: Body; asked: Asked; reply: Reply }
-  | { phase: "done"; body: Body }
+  | { phase: "done"; body: Body; reason: EndReason }
   | { phase: "failed"; body: Body | null; cause: Cause };
 
 // `at` is the display time the user sent it.
@@ -62,6 +64,15 @@ export function canSend(state: PlaygroundState, user: UserInput): boolean {
 }
 
 /**
+ * Whether a settled reply offers Try again: one the transport broke with a retryable cause,
+ * or one the gateway ended at a limit or because the model stopped responding.
+ */
+export function canRetry(turn: AgentTurn): boolean {
+  if (turn.phase === "failed") return turn.cause.retry;
+  return turn.phase === "done" && (turn.reason === "upstream" || turn.reason === "limit");
+}
+
+/**
  * The status line's words while a reply streams: the current work's narration or label,
  * until answer text arrives after that work's last update (text replaces narration).
  */
@@ -99,7 +110,7 @@ function receive(turn: AgentTurn, event: PlaygroundEvent): AgentTurn {
         asked: { questionId: event.questionId, question: event.question },
       };
     case "end":
-      return { phase: "done", body: settleWorks(body) };
+      return { phase: "done", body: settleWorks(body), reason: event.reason };
     default:
       return assertNever(event);
   }
@@ -112,7 +123,7 @@ function breakOff(turn: AgentTurn, cause: Cause): AgentTurn {
 }
 
 function retry(turn: AgentTurn): AgentTurn {
-  return turn.phase === "failed" && turn.cause.retry ? { phase: "waiting" } : turn;
+  return canRetry(turn) ? { phase: "waiting" } : turn;
 }
 
 // The question a reply waits on, settled by the answer or skip that is being sent.

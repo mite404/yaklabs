@@ -6,8 +6,8 @@ import { QuietProse } from "../demo/QuietProse";
 import type { Body, Failure, Item } from "./body";
 import { parseQuietProse } from "./markdown";
 import { assertNever } from "./never";
-import { statusLine, type AgentTurn, type Asked, type Cause, type Reply } from "./state";
-import { WorkDetails } from "./WorkDetails";
+import { canRetry, statusLine, type AgentTurn, type Asked, type Cause, type Reply } from "./state";
+import { WorkDetails, lineItems } from "./WorkDetails";
 
 // What a reply can ask the page to do: send a new input (a recovery, an answer, a skip), or
 // resend the failed exchange, which only the last one may.
@@ -72,13 +72,7 @@ function ItemView({ item, body, actions }: { item: Item; body: Body; actions: Re
           <p>
             <strong>{outcome.result}</strong>
           </p>
-          {outcome.evidence.length > 0 && (
-            <ul>
-              {outcome.evidence.map((line) => (
-                <li key={line}>{line}</li>
-              ))}
-            </ul>
-          )}
+          {outcome.evidence.length > 0 && <ul>{lineItems(outcome.evidence)}</ul>}
         </div>
       );
     }
@@ -132,6 +126,16 @@ function QuestionRecord({ asked, reply }: { asked: Asked; reply: Reply }) {
   );
 }
 
+// Resends the reply's own input; only the last reply has somewhere to send it.
+function TryAgain({ onRetry }: { onRetry: (() => void) | undefined }) {
+  if (onRetry === undefined) return null;
+  return (
+    <Button variant="outline" onClick={onRetry}>
+      Try again
+    </Button>
+  );
+}
+
 function CauseSection({ cause, actions }: { cause: Cause; actions: ReplyActions }) {
   return (
     <section className="pg-failure" aria-label={cause.title}>
@@ -141,11 +145,7 @@ function CauseSection({ cause, actions }: { cause: Cause; actions: ReplyActions 
         </p>
         {cause.detail !== "" && <p>{cause.detail}</p>}
       </div>
-      {cause.retry && actions.onRetry !== undefined && (
-        <Button variant="outline" onClick={actions.onRetry}>
-          Try again
-        </Button>
-      )}
+      {cause.retry && <TryAgain onRetry={actions.onRetry} />}
     </section>
   );
 }
@@ -181,8 +181,8 @@ function Waiting() {
 
 /**
  * One reply as the page shows it, by phase: a thinking line while it waits, its items in
- * arrival order with the status line and Work details, then its question (live or answered)
- * or the reason it failed.
+ * arrival order with the status line and Work details, then its question (live or answered),
+ * the reason it failed, or Try again when the gateway ended it at a limit or a failure.
  */
 export function AgentReply({ turn, actions }: { turn: AgentTurn; actions: ReplyActions }) {
   if (turn.phase === "waiting") return <Waiting />;
@@ -213,6 +213,11 @@ export function AgentReply({ turn, actions }: { turn: AgentTurn; actions: ReplyA
       {turn.phase === "failed" && (
         <div className="turn turn-agent">
           <CauseSection cause={turn.cause} actions={actions} />
+        </div>
+      )}
+      {turn.phase === "done" && canRetry(turn) && actions.onRetry !== undefined && (
+        <div className="turn turn-agent">
+          <TryAgain onRetry={actions.onRetry} />
         </div>
       )}
     </>

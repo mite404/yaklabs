@@ -4,7 +4,16 @@ import {
   type PlaygroundEvent,
   type PlaygroundRequest,
 } from "@yaklabs/catalog/playground";
-import type { Cause } from "./state";
+import type { Session } from "@yaklabs/runtime";
+import type { AuthSource } from "../env";
+import type { Cause, PlaygroundAction } from "./state";
+
+/** Where a reply streams from: the gateway, the build's sign-in and the visitor's session. */
+export type PlaygroundTransport = {
+  baseUrl: string;
+  auth: AuthSource["kind"];
+  session: Session | undefined;
+};
 
 /** The gateway answered with a status other than 200; the body is never read. */
 export class PlaygroundHttpError extends Error {
@@ -34,46 +43,62 @@ export function splitLines(buffered: string): { lines: string[]; rest: string } 
   return { lines: parts.filter((line) => line.trim() !== ""), rest };
 }
 
-/**
- * Parses one NDJSON line with the shared event schema.
- * @throws {PlaygroundProtocolError} When the line is not JSON or not a known event.
- */
-export function parseEventLine(line: string): PlaygroundEvent {
-  let raw: unknown;
+const NOT_JSON = Symbol("not JSON");
+
+function parseJson(line: string): unknown {
   try {
-    raw = JSON.parse(line);
+    return JSON.parse(line) as unknown;
   } catch {
-    throw new PlaygroundProtocolError("A stream line is not JSON.");
+    return NOT_JSON;
   }
+}
+
+function toEvent(raw: unknown): PlaygroundEvent {
   const parsed = playgroundEventSchema.safeParse(raw); // → typed event, or the issues
   if (!parsed.success) throw new PlaygroundProtocolError("A stream line is not a known event.");
   return parsed.data;
 }
 
+/**
+ * Parses one NDJSON line with the shared event schema.
+ * @throws {PlaygroundProtocolError} When the line is not JSON or not a known event.
+ */
+export function parseEventLine(line: string): PlaygroundEvent {
+  const raw = parseJson(line); // → unknown | NOT_JSON
+  if (raw === NOT_JSON) throw new PlaygroundProtocolError("A stream line is not JSON.");
+  return toEvent(raw);
+}
+
 // A last line with no newline is read only if it is whole JSON: one cut off mid-way means the
 // connection dropped, which the reader learns from the stream ending without its `end` event.
-function isWholeLine(line: string): boolean {
-  try {
-    JSON.parse(line);
-    return true;
-  } catch {
-    return false;
-  }
+function parseLastLine(line: string): PlaygroundEvent | undefined {
+  if (line.trim() === "") return undefined;
+  const raw = parseJson(line); // → unknown | NOT_JSON
+  return raw === NOT_JSON ? undefined : toEvent(raw);
+}
+
+// A 401 means no sign-in in a build without one, which trying again cannot fix; with WorkOS
+// it means the token expired, and trying again fetches a fresh one.
+function unauthorized(auth: AuthSource["kind"]): Cause {
+  if (auth === "none")
+    return {
+      title: "The playground needs sign-in, and this build has none.",
+      detail: "",
+      retry: false,
+    };
+  return { title: "Your sign-in expired.", detail: "Try again.", retry: true };
 }
 
 /**
  * What a failed stream tells the reader, or undefined when the page itself aborted it.
- * Sign-in and a rejected request cannot be fixed by trying again, so they offer no retry.
+ * A rejected request, or sign-in in a build without it, cannot be fixed by trying again, so
+ * they offer no retry.
+ * @param auth The build's sign-in, which decides what a 401 means.
  */
-export function failureCause(error: unknown): Cause | undefined {
+export function failureCause(error: unknown, auth: AuthSource["kind"]): Cause | undefined {
   if (error instanceof DOMException && error.name === "AbortError") return undefined;
   if (error instanceof PlaygroundHttpError) {
-    if (error.status === 401)
-      return {
-        title: "The playground needs sign-in, and this build has none.",
-        detail: "",
-        retry: false,
-      };
+    if (error.status === 401) return unauthorized(auth);
     if (error.status === 400)
       return {
         title: "The gateway did not accept this conversation.",
@@ -98,6 +123,7 @@ export function failureCause(error: unknown): Cause | undefined {
 /**
  * Streams one reply from the gateway's POST /api/playground as validated events, in order.
  * A last line cut off mid-way is dropped, so a dropped connection reads as a short stream.
+ * A bad line, or a reader that stops early, cancels the body so the gateway stops the turn.
  * @param token The session's bearer token; without one no Authorization header is sent.
  * @throws {PlaygroundHttpError} When the gateway answers anything but 200.
  * @throws {PlaygroundProtocolError} When a line is not a known event, or there is no body.
@@ -124,13 +150,50 @@ export async function* readPlayground(
   if (response.body === null) throw new PlaygroundProtocolError("The reply has no body.");
   const reader = response.body.pipeThrough(new TextDecoderStream()).getReader();
   let buffered = "";
-  for (;;) {
-    // oxlint-disable-next-line eslint/no-await-in-loop -- a stream is read in order, one chunk at a time
-    const chunk = await reader.read(); // → { done, value: string }
-    if (chunk.done) break;
-    const { lines, rest } = splitLines(buffered + chunk.value);
-    buffered = rest;
-    for (const line of lines) yield parseEventLine(line);
+  try {
+    for (;;) {
+      // oxlint-disable-next-line eslint/no-await-in-loop -- a stream is read in order, one chunk at a time
+      const chunk = await reader.read(); // → { done, value: string }
+      if (chunk.done) break;
+      const { lines, rest } = splitLines(buffered + chunk.value);
+      buffered = rest;
+      for (const line of lines) yield parseEventLine(line);
+    }
+    const last = parseLastLine(buffered); // → PlaygroundEvent | undefined
+    if (last !== undefined) yield last;
+  } finally {
+    await reader.cancel().catch(() => {});
   }
-  if (buffered.trim() !== "" && isWholeLine(buffered)) yield parseEventLine(buffered);
+}
+
+/**
+ * Streams one reply into the page's reducer, then closes it or records why it broke. The
+ * page aborting it (on leaving) is not a failure; any other failure aborts the request, so
+ * the gateway stops spending model rounds on a reply nobody reads.
+ */
+export async function pumpPlayground({
+  exchangeId,
+  request,
+  transport,
+  controller,
+  dispatch,
+}: {
+  exchangeId: string;
+  request: PlaygroundRequest;
+  transport: PlaygroundTransport;
+  controller: AbortController;
+  dispatch: (action: PlaygroundAction) => void;
+}): Promise<void> {
+  const { baseUrl, auth, session } = transport;
+  try {
+    const token = await session?.getAccessToken(); // → string | undefined
+    for await (const event of readPlayground(baseUrl, request, token, controller.signal)) {
+      dispatch({ kind: "event", exchangeId, event });
+    }
+    dispatch({ kind: "closed", exchangeId });
+  } catch (error) {
+    controller.abort();
+    const cause = failureCause(error, auth); // → Cause | undefined
+    if (cause !== undefined) dispatch({ kind: "broke", exchangeId, cause });
+  }
 }

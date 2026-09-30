@@ -1,9 +1,11 @@
 import type { PlaygroundEvent, PlaygroundRequest } from "@yaklabs/catalog/playground";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import type { PlaygroundAction } from "./state";
 import {
   PlaygroundHttpError,
   PlaygroundProtocolError,
   failureCause,
+  pumpPlayground,
   readPlayground,
   splitLines,
 } from "./stream";
@@ -20,6 +22,20 @@ function chunked(chunks: Uint8Array[], status = 200): Response {
     },
   });
   return new Response(body, { status });
+}
+
+// A 200 response that sends `text` and then stays open, recording whether it was cancelled.
+function heldOpen(text: string) {
+  const cancelled = { value: false };
+  const body = new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.enqueue(encoder.encode(text));
+    },
+    cancel() {
+      cancelled.value = true;
+    },
+  });
+  return { response: new Response(body, { status: 200 }), cancelled };
 }
 
 // Stubs fetch with one response, recording what was asked of it.
@@ -40,6 +56,7 @@ async function collect(token?: string): Promise<PlaygroundEvent[]> {
 
 afterEach(() => {
   vi.unstubAllGlobals();
+  vi.restoreAllMocks();
 });
 
 describe("splitLines", () => {
@@ -99,20 +116,82 @@ describe("readPlayground", () => {
   });
 });
 
+describe("readPlayground stops the gateway", () => {
+  it("by cancelling the body when a line is not a known event", async () => {
+    const { response, cancelled } = heldOpen("not json\n");
+    serve(response);
+    await expect(collect()).rejects.toBeInstanceOf(PlaygroundProtocolError);
+    await vi.waitFor(() => {
+      expect(cancelled.value).toBe(true);
+    });
+  });
+
+  it("by cancelling the body when the reader stops early", async () => {
+    const { response, cancelled } = heldOpen(
+      `${JSON.stringify({ type: "start", seq: 0, v: 1 })}\n`,
+    );
+    serve(response);
+    const signal = new AbortController().signal;
+    const events = readPlayground("https://gateway.test", REQUEST, undefined, signal);
+    const first = await events.next();
+    expect(first.value).toMatchObject({ type: "start" });
+    await events.return(null);
+    await vi.waitFor(() => {
+      expect(cancelled.value).toBe(true);
+    });
+  });
+
+  it("parses an unterminated last line once", async () => {
+    serve(chunked([encoder.encode(JSON.stringify({ type: "start", seq: 0, v: 1 }))]));
+    const parse = vi.spyOn(JSON, "parse");
+    await collect();
+    expect(parse).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("pumpPlayground", () => {
+  it("aborts the exchange's request when its stream breaks", async () => {
+    serve(chunked([encoder.encode("not json\n")]));
+    const controller = new AbortController();
+    const actions: PlaygroundAction[] = [];
+    await pumpPlayground({
+      exchangeId: "x1",
+      request: REQUEST,
+      transport: { baseUrl: "https://gateway.test", auth: "none", session: undefined },
+      controller,
+      dispatch: (action) => {
+        actions.push(action);
+      },
+    });
+    expect(controller.signal.aborted).toBe(true);
+    expect(actions).toMatchObject([
+      { kind: "broke", cause: { title: "The reply could not be read." } },
+    ]);
+  });
+});
+
 describe("failureCause", () => {
-  it("offers no retry for sign-in or a rejected request, and a retry otherwise", () => {
-    expect(failureCause(new PlaygroundHttpError(401))).toEqual({
+  it("offers no retry for a rejected request, and a retry otherwise", () => {
+    expect(failureCause(new PlaygroundHttpError(400), "none")?.retry).toBe(false);
+    expect(failureCause(new PlaygroundHttpError(502), "none")?.retry).toBe(true);
+    expect(failureCause(new PlaygroundProtocolError("bad line"), "none")?.retry).toBe(true);
+    expect(failureCause(new TypeError("Failed to fetch"), "none")?.retry).toBe(true);
+  });
+
+  it("explains a 401 by the build: no sign-in to fix, or a sign-in to renew", () => {
+    expect(failureCause(new PlaygroundHttpError(401), "none")).toEqual({
       title: "The playground needs sign-in, and this build has none.",
       detail: "",
       retry: false,
     });
-    expect(failureCause(new PlaygroundHttpError(400))?.retry).toBe(false);
-    expect(failureCause(new PlaygroundHttpError(502))?.retry).toBe(true);
-    expect(failureCause(new PlaygroundProtocolError("bad line"))?.retry).toBe(true);
-    expect(failureCause(new TypeError("Failed to fetch"))?.retry).toBe(true);
+    expect(failureCause(new PlaygroundHttpError(401), "workos")).toEqual({
+      title: "Your sign-in expired.",
+      detail: "Try again.",
+      retry: true,
+    });
   });
 
   it("says nothing when the page aborted the stream itself", () => {
-    expect(failureCause(new DOMException("aborted", "AbortError"))).toBeUndefined();
+    expect(failureCause(new DOMException("aborted", "AbortError"), "none")).toBeUndefined();
   });
 });

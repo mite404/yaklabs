@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   CUT_OFF,
+  canRetry,
   canSend,
   reducePlayground,
   statusLine,
@@ -166,7 +167,27 @@ describe("reducePlayground: retry and questions", () => {
     const final = broken({ ...CUT_OFF, retry: false });
     expect(reducePlayground(final, retry)).toBe(final);
   });
+});
 
+describe("reducePlayground: retrying what the gateway ended", () => {
+  it("retries a reply the gateway ended at a limit or an upstream failure", () => {
+    const retry = { kind: "retry", exchangeId: "x1" } as const;
+    for (const reason of ["upstream", "limit"] as const) {
+      const ended = streamed([start, text(1, "b0", "Fri"), { type: "end", seq: 2, reason }]);
+      expect(lastAgent(ended)).toMatchObject({ phase: "done", reason });
+      expect(canRetry(firstAgent(ended))).toBe(true);
+      expect(lastAgent(reducePlayground(ended, retry))).toEqual({ phase: "waiting" });
+    }
+  });
+
+  it("does not retry a reply that answered", () => {
+    const answered = streamed([start, text(1, "b0", "Friday."), end(2)]);
+    expect(canRetry(firstAgent(answered))).toBe(false);
+    expect(reducePlayground(answered, { kind: "retry", exchangeId: "x1" })).toBe(answered);
+  });
+});
+
+describe("reducePlayground: questions", () => {
   it("holds the page while a question waits and takes only its own answer", () => {
     const state = streamed([start, asked(1)]);
     expect(lastAgent(state)?.phase).toBe("asked");

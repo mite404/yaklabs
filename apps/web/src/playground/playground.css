@@ -9,24 +9,26 @@
   overflow: hidden;
   background: var(--paper);
   color: var(--ink);
-  font-size: 14px;
+  font-size: 14px; /* same as demo.css .weekly-brief */
 }
 .pg-header {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
   gap: 4px 12px;
+  /* same as demo.css .wb-disclosure */
   padding: 9px 20px;
   border-bottom: 1px solid var(--hairline);
 }
 .pg-header h1 {
   margin: 0;
-  font: 500 14px/20px var(--font-text);
+  font: 500 14px/20px var(--font-text); /* same as demo.css .wb-titlebar-title */
   letter-spacing: 0;
 }
 .pg-header p {
   margin: 0;
   color: var(--soft-ink);
+  /* same as demo.css .wb-disclosure */
   font-size: 12px;
   line-height: 18px;
 }
@@ -42,7 +44,9 @@
   overflow-y: auto;
   overflow-anchor: none;
   scrollbar-gutter: stable;
-  /* The last turn rests 20px above the compose box (design pillars, rule 12). */
+  /* The last turn rests 20px above the compose box (design pillars, rule 12). Same as
+     demo.css .wb-scroll; the fallbacks are thread.css .thread-panel's --rest-gap and
+     --compose-inset. */
   padding: 32px max(var(--space), calc((100% - 640px) / 2))
     calc(var(--rest-gap, 20px) - var(--compose-inset, 4px));
   scroll-padding-bottom: calc(var(--rest-gap, 20px) - var(--compose-inset, 4px));
@@ -53,7 +57,7 @@
 .playground .turn {
   flex: none;
   width: 100%;
-  max-width: 640px;
+  max-width: 640px; /* same as demo.css .weekly-brief .turn */
 }
 .playground .turn-user {
   width: fit-content;
@@ -62,15 +66,17 @@
 }
 .playground .turn-agent {
   display: grid;
-  gap: 16px;
+  gap: 16px; /* same as demo.css .weekly-brief .turn-agent */
   min-width: 0;
 }
-/* The thinking line keeps thread.css's row: the glyph beside its words. */
+/* The thinking line keeps thread.css's row: the glyph beside its words (same as thread.css
+   .turn-pending). */
 .playground .turn-pending {
   display: flex;
   align-items: center;
   gap: 8px;
 }
+/* same as demo.css .wb-intro and .wb-intro p */
 .pg-empty {
   max-width: 510px;
   margin: auto 0;
@@ -81,13 +87,14 @@
 .playground .pg-note {
   margin: 0;
   color: var(--soft-ink);
-  font: 400 13px/20px var(--font-text);
+  font: 400 13px/20px var(--font-text); /* same as demo.css .wb-turn-note */
 }
 .pg-card {
   display: grid;
   gap: 8px;
   min-width: 0;
 }
+/* same as demo.css .wb-narration */
 .pg-status {
   display: flex;
   gap: 8px;
@@ -99,6 +106,7 @@
 .pg-failure {
   display: grid;
   gap: 12px;
+  /* same as demo.css .wb-interrupted */
   border-left: 2px solid var(--hairline);
   padding-left: 16px;
 }
@@ -108,6 +116,7 @@
 /* The prompt the button sends, read before it is sent; the marks come from CSS so a copy of
    the prompt carries none. */
 .pg-recovery {
+  /* same as demo.css .weekly-brief .quiet-prose */
   max-width: 510px;
   margin: 0;
   color: var(--soft-ink);
@@ -130,9 +139,9 @@
 }
 .pg-works {
   display: grid;
-  gap: 16px;
+  gap: 16px; /* same as demo.css .wb-evidence-item */
   margin: 0;
-  padding: 12px 0 0;
+  padding: 12px 0 0; /* same as demo.css .wb-evidence */
   list-style: none;
 }
 .playground .quiet-prose .pg-work p {
@@ -148,6 +157,7 @@
 .playground .quiet-prose .pg-work-status,
 .playground .quiet-prose .pg-work-heading {
   color: var(--soft-ink);
+  /* same as demo.css .wb-next */
   font-size: 13px;
   line-height: 20px;
 }
@@ -158,8 +168,9 @@
   display: block;
   margin: 0;
   border-top: 0;
+  /* same as thread.css .thread-compose, on the turns' column */
   padding: var(--compose-inset, 4px) max(var(--space), calc((100% - 640px) / 2)) 16px;
-  font-size: 14px;
+  font-size: 14px; /* same as demo.css .wb-footer */
   line-height: normal;
   /* The scroller's scrollbar gutter, mirrored, keeps the compose box on the turns' column. */
   overflow-y: hidden;
@@ -179,7 +190,8 @@
   pointer-events: none;
 }
 
-/* Quiet prose (ADR-140), as the demo sets it: 15px/24px body in soft ink, ink for emphasis. */
+/* Quiet prose (ADR-140), as the demo sets it: 15px/24px body in soft ink, ink for emphasis.
+   Every value below is the same as demo.css .weekly-brief .quiet-prose and its children. */
 .playground .quiet-prose {
   max-width: 510px;
   font: 400 15px/24px var(--font-text);
@@ -242,12 +254,14 @@
 
 @media (max-width: 720px) {
   .pg-scroll {
+    /* same as demo.css .wb-scroll at this width */
     padding: 24px 16px calc(var(--rest-gap, 20px) - var(--compose-inset, 4px));
   }
   .pg-header {
-    padding: 8px 16px;
+    padding: 8px 16px; /* same as demo.css .wb-disclosure at this width */
   }
   .pg-compose {
+    /* same as thread.css .thread-compose, at the narrow gutter */
     padding: var(--compose-inset, 4px) 16px 16px;
   }
   .playground .turn-user {

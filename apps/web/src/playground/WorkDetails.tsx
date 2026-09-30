@@ -1,7 +1,16 @@
 import { Disclosure } from "@yaklabs/catalog";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactElement } from "react";
 import type { Body, Work } from "./body";
 import { assertNever } from "./never";
+
+/**
+ * One `<li>` per line, for the short append-only lists a reply shows. Keyed by position: a
+ * line can repeat, and an appended line never moves the ones before it.
+ */
+export function lineItems(lines: readonly string[]): ReactElement[] {
+  // oxlint-disable-next-line react/no-array-index-key -- lines repeat and only ever append
+  return lines.map((line, index) => <li key={index}>{line}</li>);
+}
 
 function statusWord(status: Work["status"]): string {
   switch (status) {
@@ -35,21 +44,13 @@ function WorkEntry({ work }: { work: Work }) {
       {history.length > 0 && (
         <>
           <p className="pg-work-heading">Earlier</p>
-          <ul>
-            {history.map((line) => (
-              <li key={line}>{line}</li>
-            ))}
-          </ul>
+          <ul>{lineItems(history)}</ul>
         </>
       )}
       {work.outcome !== undefined && work.outcome.evidence.length > 0 && (
         <>
           <p className="pg-work-heading">Evidence</p>
-          <ul>
-            {work.outcome.evidence.map((line) => (
-              <li key={line}>{line}</li>
-            ))}
-          </ul>
+          <ul>{lineItems(work.outcome.evidence)}</ul>
         </>
       )}
     </li>

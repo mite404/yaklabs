@@ -1,6 +1,6 @@
 import { ComposeBox, UserTurn } from "@yaklabs/catalog";
 import type { PlaygroundRequest, UserInput } from "@yaklabs/catalog/playground";
-import { useEffect, useReducer, useRef, useState, type Dispatch } from "react";
+import { useEffect, useReducer, useRef, useState } from "react";
 import { env } from "../env";
 import { useSession } from "../session";
 import { AgentReply } from "./Reply";
@@ -12,7 +12,7 @@ import {
   type Exchange,
   type PlaygroundAction,
 } from "./state";
-import { failureCause, readPlayground } from "./stream";
+import { pumpPlayground } from "./stream";
 import "./playground.css";
 
 // How close to the end, in px, still counts as reading the latest turn.
@@ -20,26 +20,6 @@ const PINNED_WITHIN = 48;
 
 function clockTime(): string {
   return new Date().toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
-}
-
-// Streams one reply into the reducer. The page aborting it (on leaving) is not a failure.
-async function pump(
-  exchangeId: string,
-  request: PlaygroundRequest,
-  session: ReturnType<typeof useSession>,
-  signal: AbortSignal,
-  dispatch: Dispatch<PlaygroundAction>,
-): Promise<void> {
-  try {
-    const token = await session?.getAccessToken(); // → string | undefined
-    for await (const event of readPlayground(env.shareBase, request, token, signal)) {
-      dispatch({ kind: "event", exchangeId, event });
-    }
-    dispatch({ kind: "closed", exchangeId });
-  } catch (error) {
-    const cause = failureCause(error); // → Cause | undefined
-    if (cause !== undefined) dispatch({ kind: "broke", exchangeId, cause });
-  }
 }
 
 // New turns land at the end while the reader is there; a reader who scrolled up stays put.
@@ -83,7 +63,14 @@ function usePlaygroundReplies(onStart: () => void) {
     controller.current?.abort();
     const next = new AbortController();
     controller.current = next;
-    void pump(action.exchangeId, request, session, next.signal, dispatch);
+    const transport = { baseUrl: env.shareBase, auth: env.auth.kind, session };
+    void pumpPlayground({
+      exchangeId: action.exchangeId,
+      request,
+      transport,
+      controller: next,
+      dispatch,
+    });
     return true;
   }
 
