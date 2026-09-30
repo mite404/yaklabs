@@ -2816,3 +2816,34 @@ same `messages` the panel renders from means the binder and the page can never d
 Senior-engineer takeaway: a tool that points at things should not also move them. Give it the
 data, take back an intent, and let the owner of the scroll, the focus or the network carry it
 out.
+
+### The label says what's in the case; the truck says who it's for
+
+Two tools checked components under nearly the same name: the `verify-storybook` skill and the
+`apps/verify` app. A teammate could not tell which one to reach for, or that the app never ships.
+The rename splits the two questions a name has to answer. The name says what the tool does, and
+the folder says who it is for:
+
+```yaml
+# pnpm-workspace.yaml - a third shelf beside apps and packages
+packages:
+  - apps/* # ships: web, gateway (and storybook, for now)
+  - packages/* # shared: @yaklabs/catalog, ui, runtime, config
+  - tools/* # the team's own: verify-ui-drift
+```
+
+```mermaid
+flowchart LR
+  E[Component change] --> S[verify-storybook-component skill<br/>one browser, no memory<br/>does this take look right?]
+  S --> P[Pull request]
+  P --> D[tools/verify-ui-drift<br/>3 engines x 2 themes vs baselines<br/>has anything drifted?]
+  D -->|drift or axe violation| F[CI fails]
+  D -->|intended change| A[A person approves locally<br/>new baseline committed]
+```
+
+"Internal" never went into the name. Every workspace here is already private, so the folder carries
+that signal once and for all, and `pnpm verify-ui-drift run` stays about the job. Storybook is an
+internal tool too; it still lives in `apps/` and is the obvious next move onto the `tools/` shelf.
+
+Senior-engineer takeaway: when two things share a verb, name them by the question each answers,
+and let the location tell who they serve.
