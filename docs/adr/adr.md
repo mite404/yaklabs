@@ -1701,6 +1701,12 @@ loop, the flame graph and `MessagePort` agent, and the Cloudflare share deploy. 
 that stays is ADR-086's: visual regression and accessibility checks in CI, with the contrast
 guard.
 If a cut item looks needed, ask Ethan; do not decide it.
+Amended 2026-09-30 (ADR-156): the interview build now runs the production runtime with sign-in,
+`VITE_AGENT=gateway` and `VITE_AUTH=workos`, since the Live Playground thread is answered by the
+model through the gateway and the gateway verifies a WorkOS token on every request. The
+`VITE_AUTH=none` and `VITE_AGENT=lab` line above still describes the sandbox and the levers,
+where the lab stand-in answers the live thread and no one signs in. The rest of this record's
+cuts stand as ADR-146 left them.
 
 ## ADR-138 - A main thread stands on the pane, and a window's controls live in its title bar
 
@@ -2080,6 +2086,9 @@ memory, and starts one thread on arrival, so the first thing on screen is that t
 and a compose box, with no starter project, seeded thread or fixture child beside it. A reload of
 `/new` starts over; the device's own threads stay under `/` and `/t/:threadId`. Since ADR-155,
 `/playground` is the route for the live model; `/new` is for the shell around a fresh thread.
+Amended again 2026-09-30 (ADR-156): `/new` is deleted. The device starter's empty Live
+Playground thread is the fresh thread now, at `/t/playground`, persisted in the worker like any
+other thread; the shell around it is the same one every thread opens in.
 
 ## ADR-147 - The reply seam carries events, not only words
 
@@ -2110,6 +2119,17 @@ with a structured protocol (the backend project the goals defer).
 Amended 2026-09-30: the stream may carry a `summary` event, what the work amounted to in the
 reader's words, kept on the turn's `work` for the disclosure's label once the reply settles
 (ADR-139, amended).
+Amended 2026-09-30 (ADR-156): the worker now carries the seam. The `chunk` notice is a
+`ReplyChunk`, the reply loop folds each chunk with `applyChunk` and saves the folded turn, and a
+stored agent turn keeps `blocks`, `work`, `activity`, `ended`, `failure` and `asks`, a user turn
+its `question`. The seam's zod schemas live in the catalog, held equal to their types by tests.
+No database migration: the message row already spreads a turn's extra fields into JSON beside
+its text, so only the protocol schema had to accept them. The seam also gained four members,
+each with an `applyChunk` rule, a render and a test, and each used by the brief scenario so the
+demo proves it: a card `id`, so a later card replaces the earlier one in place; a non-terminal
+`limitation` block, said in the reply's words, whose `recovery` the reader sends in one click;
+`WorkStep.basis`, the evidence as short lines under a step's outcome; and `Failure.retry: false`,
+which hides Try again when asking again cannot help.
 
 ## ADR-148 - The scripted demo plays on the real shell from an in-memory runtime
 
@@ -2163,6 +2183,12 @@ takes the path a person's slider does. Each script carries a standing line under
 in the bar (what is shipped, what is scripted or proposed), so a watcher never takes one for the
 other. The Stop path lost its scenario; the panel's browser tests and the cancelled fixture keep
 it proven.
+Amended 2026-09-30 (ADR-156): the route and its `?script=` are retired. The three scenarios
+play as the Demo project's three threads (`/t/demo-brief`, `/t/demo-interrupted`,
+`/t/demo-returned`) inside the one shell, beside the device's own threads, over a page-side
+overlay composed with the worker. `/demo/weekly-brief[?script=]` and its `/t/:id` threads
+redirect there. The scenario picker is gone, since the sidebar's Demo project lists the shows,
+and Restart resets one show instead of remounting the shell.
 
 ## ADR-149 - A jump lays runway so any turn can centre
 
@@ -2284,3 +2310,61 @@ lived in the client. Here the limits sit where the key and the cost are: 8 round
 and 6 cards per turn. Live runs shaped the prompt: Kimi explained limits in prose until
 `report_failure` was made mandatory, and a turn told to end with no text made OpenRouter insert
 its own placeholder, so a failure turn closes with one short sentence.
+Amended 2026-09-30 (ADR-156): protocol 2. Text is always prose, from its first delta. The
+`narration` event is deleted, and progress reaches the page through `work` labels alone. `end`
+carries the closing line, so no consumer looks one event ahead. `PLAYGROUND_PROTOCOL` is 2, so a
+page and a gateway on different versions fail at `start` and say so. The reason: the gateway
+relabelled a round's lead text as narration after the fact, which forced every consumer to hold
+text back until it knew what the text was. Two of the three adapter designs and the cross-judge
+named that retroactive relabelling the root cause, and removing it deleted the holding gate each
+consumer would otherwise need. The cost is that a model which writes prose before a tool call
+shows that line as prose, which the prompt already forbids. The model agent now runs inside the
+worker (`packages/runtime/src/playgroundAgent.ts`) and answers the Live Playground thread through
+`ChatThreadPanel`; the standalone page and all of `apps/web/src/playground` are deleted, and
+`/playground` redirects to `/t/playground`. So the thread, its store and the worker protocol did
+change after all, which is what ADR-156 decided.
+
+## ADR-156 - One shell hosts the Demo and the live model
+
+2026-09-30 - Accepted (Ethan: "the head of product goes to the main page route... 2 active
+projects... it should behave like a real in production app"). Retires ADR-148's route and the
+`/new` of ADR-146's amendment; amends ADR-137, ADR-147 and ADR-155.
+On a fresh device `/` lands on the splash, which lists two projects, Demo and Live Playground. A
+project row opens its latest thread (`entryOf`, the main with the newest activity) at `/t/:id`
+in the same shell. The Live Playground thread is an ordinary device thread: the store seeds it
+as the device starter (project `live-playground`, thread `playground`, no turns) in place of
+Demo store and its profit thread, so it lives in the worker and survives a reload. For
+`VITE_AGENT=gateway` the production agent is now the model with tools behind `/api/playground`
+(`packages/runtime/src/playgroundAgent.ts`, ADR-155). It runs inside the worker, keeps nothing
+between replies, and projects each request from the store's turns, so the stored transcript is
+the only record of the conversation. The scripted Demo is a page-side overlay composed with the
+worker behind one `Runtime` (`composeRuntime`, `apps/web/src/world/compose.ts`): reads merge by
+concatenation, every verb routes to the side that owns the id it names, the shell document is
+the worker's alone, and no record has two writers. `VITE_DEMO` (on by default) gates the overlay,
+and only over the device source, so a `?scenario=` fixture opens as it always has.
+The Demo is a World of three Shows (`demo-brief`, `demo-interrupted`, `demo-returned`), each
+played as a Take on one Stage (`apps/web/src/world/stage.ts`). The Stage has no turn writer of
+its own: every writer holds a Lease, and a Restart revokes the leases on a show's threads in the
+same commit that resets its slice. So Restart scopes to one show, its main and the children it
+spawned, and a reply still unwinding when Restart lands writes nothing. The pane learns of it by
+one generic rule: a turn count that drops means reread. The show bar (`ShowBar`) takes the
+window's banner slot on a show's thread and draws nothing off a show. `firstRun` opens the
+starter thread on the thread pane, so the canvas stays hidden until the layout switch, and a
+first visit paints the abstract splash. `/new` is deleted. `/playground`,
+`/demo/weekly-brief[?script=]` and `/demo/weekly-brief/t/:id` redirect to `/t/:id` through one
+table (`apps/web/src/world/redirects.ts`) that carries only `?splash=`.
+Alternatives weighed (Door 1 in `docs/decisions/one-shell-plan.md`, and the trail in
+`docs/decisions/one-shell.tsv`): one in-memory world hosting both projects behind a
+`VITE_WORLD` switch, the first recommendation, rejected once Ethan asked for the live thread to
+behave as production, since a reload would throw its turns away; seeding the Demo into the
+worker, which then stored text-only turns and would have reloaded the shows as plain text, when a
+demo that runs on its own clock, Pause and player should start clean on a reload anyway; and
+Restart by remounting the whole world, which would tear the worker down with it.
+Known gaps: the live model is unverified from the sandbox, since the gateway needs a WorkOS
+token. An in-process test runs the gateway's test-kit rounds through the real route, the agent,
+the worker loop and `open()`, and a browser check drove the splash, the rows, the redirects and a
+live-thread reply that survives a reload, with the lab stand-in answering. The debug splash
+picker now shows on a first visit, because first run opens the thread pane where it was always
+drawn; whether to hide it is open for Ethan. The device levers `apps/web/scripts/web-check.mjs`
+and `workspace-check.mjs` drive `?scenario=` fixtures, where the overlay is off and the profit
+thread still exists, so they run unchanged.
