@@ -66,6 +66,50 @@ it("never lets the recap ask for anything, even when the user has been away", ()
   expect(recap).not.toContain("Needs attention");
 });
 
+it("reads the recap and the idle time from turns that carry instants and outcomes", () => {
+  const now = Date.UTC(2026, 8, 30, 9, 30);
+  const away = new Date(now - 25 * 60_000).toISOString();
+  const thread = {
+    title: "Came back",
+    messages: [
+      { id: "u1", role: "user" as const, text: "Reconcile September.", time: away },
+      {
+        id: "a1",
+        role: "agent" as const,
+        text: "Done.",
+        time: away,
+        work: {
+          steps: [{ id: "n", label: "North", status: "done" as const, outcome: "84 matched." }],
+          logs: [],
+          narration: [],
+        },
+      },
+    ],
+  };
+  const html = renderToStaticMarkup(<ChatThreadPanel thread={thread} now={now} />);
+  expect(html).toContain('aria-label="Recap"');
+  expect(html).toContain("84 matched.");
+  expect(html).toContain("25 min since your last message");
+});
+
+it("docks the question the latest reply ended on, read from the record", () => {
+  const thread = {
+    title: "Asked",
+    messages: [
+      { id: "u1", role: "user" as const, text: "Go.", time: "9:00" },
+      {
+        id: "a1",
+        role: "agent" as const,
+        text: "Ready.",
+        time: "9:01",
+        asks: threads.awaiting.awaiting,
+      },
+    ],
+  };
+  const html = renderToStaticMarkup(<ChatThreadPanel thread={thread} />);
+  expect(html).toContain('aria-label="Needs attention"');
+});
+
 it("keeps a card's header draggable by default, and drops data-carry when told not to", () => {
   const carrying = renderToStaticMarkup(<ChatThreadPanel thread={threads.trend} />);
   expect(carrying.match(/data-carry=""/g)).toHaveLength(2);

@@ -25,7 +25,7 @@ import { labAgent } from "./labAgent";
 import { resolveInteractive, type CardAttachment } from "./interactive";
 import { ReadingTools } from "./ReadingTools";
 import { Recap } from "./Recap";
-import { shouldShowRecap, type RecapItem } from "./recapRules";
+import { shouldShowRecap, type RecapItem, type ThreadActivity } from "./recapRules";
 import {
   applyChunk,
   cancelReply,
@@ -44,7 +44,15 @@ import {
   scrollToEnd,
   watchEndDistance,
 } from "./threadReveal";
-import { groupAnswers, latestEnded, requestBefore, runningActivity } from "./transcript";
+import {
+  activityOf,
+  awaitingOf,
+  groupAnswers,
+  latestEnded,
+  recapOf,
+  requestBefore,
+  runningActivity,
+} from "./transcript";
 import { stampOf } from "./turnTime";
 import { AgentTurn, AnsweredTurns, UserTurn } from "./Turns";
 import "./thread.css";
@@ -61,7 +69,7 @@ export type HostAsk = {
 };
 
 /** Whether the thread is still running, and when the user last sent something. */
-export type ThreadActivity = { active: boolean; lastUserInputAt: number };
+export type { ThreadActivity };
 
 /**
  * How the thread takes dictation: which audio it hears, simulated unless told otherwise, and
@@ -497,14 +505,13 @@ function useAwaiting(
   setAwaiting: Dispatch<SetStateAction<AwaitingInput | undefined>>;
   ask: (payload: unknown) => void;
 } {
-  const [checked] = useState(() =>
-    thread.awaiting === undefined ? undefined : resolveAwaiting(thread.awaiting),
-  );
+  const asked = thread.awaiting ?? awaitingOf(thread.messages); // → the question to dock, if any
+  const [checked] = useState(() => (asked === undefined ? undefined : resolveAwaiting(asked)));
   const [awaiting, setAwaiting] = useState<AwaitingInput | undefined>(() =>
     checked?.kind === "approved" ? checked.question : undefined,
   );
   const reportMalformed = useEffectEvent((reason: string) =>
-    tell({ kind: "question-rejected", reason, question: thread.awaiting }),
+    tell({ kind: "question-rejected", reason, question: asked }),
   );
   useEffect(
     () => (checked?.kind === "malformed" ? reportMalformed(checked.reason) : undefined),
@@ -584,16 +591,18 @@ type RecapState = {
 
 function useRecap(input: {
   thread: Thread;
+  messages: ThreadMessage[];
   activity: ThreadActivity | undefined;
   clock: number;
   awaiting: AwaitingInput | undefined;
   draft: string;
 }): RecapState {
-  const { thread, activity, clock, awaiting, draft } = input;
+  const { thread, messages, clock, awaiting, draft } = input;
+  const activity = input.activity ?? activityOf(messages); // → the host's word, else the turns'
   const [lastInputAt, setLastInputAt] = useState(activity?.lastUserInputAt);
   const [dismissedAt, setDismissedAt] = useState<number>();
   const [peeking, setPeeking] = useState(false);
-  const items = thread.recap ?? []; // → RecapItem[]
+  const items = thread.recap ?? recapOf(messages); // → RecapItem[]
   return {
     visible: recapIsVisible({
       awaiting,
@@ -755,7 +764,8 @@ function StatusStrip({ activity, onJump }: { activity: string; onJump: () => voi
  * a recap of recorded outcomes (ADR-018). Anything that grows inside the thread is kept
  * clear of both (ADR-038).
  * @param width Panel width in px; omit to use the measure plus gutters.
- * @param activity Thread state that drives the recap; omit and no recap is shown.
+ * @param activity Thread state that drives the recap; omit and it is read from the turns, so a
+ * thread whose turns carry instants shows its recap once the user has been away.
  * A thread's awaiting question shows regardless: being blocked is not an idle state.
  * @param now Fixed clock for deterministic stories and tests; omit for live time.
  * @param dictation Audio for dictation, simulated by default, and whether recording is
@@ -837,7 +847,7 @@ export function ChatThreadPanel({
     questions.current = ask;
   });
   const clock = useClock(now); // → the time, ticking, for the recap and the latest reply's stamp
-  const recap = useRecap({ thread, activity, clock, awaiting, draft });
+  const recap = useRecap({ thread, messages, activity, clock, awaiting, draft });
   const stamped = latestReply(messages); // → the reply that carries the thread's one stamp
   const { scroller, setDockSlot } = useScroller();
   const away = useAwayFromEnd(scroller);

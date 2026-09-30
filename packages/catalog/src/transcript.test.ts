@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 import type { ThreadMessage } from "./thread";
-import { groupAnswers, latestEnded, requestBefore, runningActivity } from "./transcript";
+import {
+  activityOf,
+  awaitingOf,
+  groupAnswers,
+  latestEnded,
+  recapOf,
+  requestBefore,
+  runningActivity,
+} from "./transcript";
 
 const ask = (id: string, text: string): ThreadMessage => ({ id, role: "user", text, time: "9:00" });
 const answer = (id: string, question: string, text: string): ThreadMessage => ({
@@ -103,5 +111,74 @@ describe("runningActivity", () => {
         { ...reply("a2"), streaming: true, activity: "Checking the refunds." },
       ]),
     ).toBe("Checking the refunds.");
+  });
+});
+
+describe("recapOf", () => {
+  it("lists each finished or failed step's outcome and a broken reply's title, by turn", () => {
+    const worked: ThreadMessage = {
+      ...reply("a1"),
+      work: {
+        steps: [
+          { id: "n", label: "North", status: "done", outcome: "84 matched." },
+          { id: "s", label: "South", status: "running" },
+          { id: "c", label: "Central", status: "failed", outcome: "The ledger was locked." },
+          { id: "p", label: "Pending", status: "cancelled", outcome: "Stopped early." },
+        ],
+        logs: [],
+        narration: [],
+      },
+    };
+    const broke: ThreadMessage = {
+      ...reply("a2"),
+      ended: "interrupted",
+      failure: { title: "Reply interrupted", detail: "The line dropped." },
+    };
+    const stopped: ThreadMessage = {
+      ...reply("a3"),
+      ended: "cancelled",
+      failure: { title: "Stopped", detail: "" },
+    };
+    expect(recapOf([ask("u1", "Go"), worked, broke, stopped])).toEqual([
+      { text: "84 matched.", turnId: "a1" },
+      { text: "The ledger was locked.", turnId: "a1" },
+      { text: "Reply interrupted", turnId: "a2" },
+    ]);
+  });
+
+  it("is empty for plain replies", () => {
+    expect(recapOf([ask("u1", "Hi"), reply("a1")])).toEqual([]);
+  });
+});
+
+describe("activityOf", () => {
+  const at = "2026-09-30T09:00:00.000Z";
+  it("reads when the user last spoke and whether a reply has settled since", () => {
+    const settled = [{ ...ask("u1", "Go"), time: at }, reply("a1")];
+    expect(activityOf(settled)).toEqual({ active: true, lastUserInputAt: Date.parse(at) });
+    const streaming = [
+      { ...ask("u1", "Go"), time: at },
+      { ...reply("a1"), streaming: true },
+    ];
+    expect(activityOf(streaming)).toEqual({ active: false, lastUserInputAt: Date.parse(at) });
+    const unanswered = [reply("a0"), { ...ask("u1", "Go"), time: at }];
+    expect(activityOf(unanswered)).toEqual({ active: false, lastUserInputAt: Date.parse(at) });
+  });
+
+  it("is undefined with no user turn, or a user turn timed as a clock reading", () => {
+    expect(activityOf([reply("a1")])).toBeUndefined();
+    expect(activityOf([ask("u1", "Go"), reply("a1")])).toBeUndefined();
+  });
+});
+
+describe("awaitingOf", () => {
+  const question = { question: "Which order?" };
+  it("is the question the latest reply ended on, until a turn follows it", () => {
+    expect(awaitingOf([ask("u1", "Go"), { ...reply("a1"), asks: question }])).toEqual(question);
+    expect(
+      awaitingOf([ask("u1", "Go"), { ...reply("a1"), asks: question }, answer("u2", "Q", "A")]),
+    ).toBeUndefined();
+    expect(awaitingOf([ask("u1", "Go"), reply("a1")])).toBeUndefined();
+    expect(awaitingOf([])).toBeUndefined();
   });
 });

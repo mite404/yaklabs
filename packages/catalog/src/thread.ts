@@ -44,6 +44,8 @@ export type ThreadMessage =
       ended?: Ended;
       /** Why it stopped, when the agent said. */
       failure?: Failure;
+      /** The question the reply ended on (ADR-039), kept in the record; the dock reads it. */
+      asks?: unknown;
     };
 
 /**

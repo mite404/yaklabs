@@ -9,6 +9,9 @@ export type RecapItem = {
   turnId: string;
 };
 
+/** Whether the agent has worked since the user last spoke, and when that was (ADR-027). */
+export type ThreadActivity = { active: boolean; lastUserInputAt: number };
+
 /** How long an active thread must go without user input before the recap appears. */
 export const RECAP_IDLE_MS = 10 * 60 * 1000;
 

@@ -1,5 +1,7 @@
 import type { AgentEvent } from "./agent";
+import type { RecapItem, ThreadActivity } from "./recapRules";
 import type { ThreadMessage } from "./thread";
+import { instantOf } from "./turnTime";
 
 /** A user turn that answered a docked question (ADR-039). */
 export type AnsweredMessage = Extract<ThreadMessage, { role: "user" }> & { question: string };
@@ -67,4 +69,51 @@ export function runningActivity(messages: ThreadMessage[]): string | undefined {
   );
   if (running?.role !== "agent") return undefined;
   return running.activity ?? "Working";
+}
+
+/**
+ * The outcomes the thread's replies recorded, each pointing at its turn, for the recap
+ * (ADR-005, ADR-027): every finished or failed step's outcome, and the title of a reply that
+ * broke off. Nothing is written after the fact: the recap is a view over the record.
+ */
+export function recapOf(messages: ThreadMessage[]): RecapItem[] {
+  return messages.flatMap((message) => {
+    if (message.role !== "agent") return [];
+    const turnId = message.id;
+    const outcomes = (message.work?.steps ?? []).flatMap((step) =>
+      step.outcome !== undefined && (step.status === "done" || step.status === "failed")
+        ? [{ text: step.outcome, turnId }]
+        : [],
+    );
+    const broke =
+      message.failure !== undefined && message.ended !== "cancelled"
+        ? [{ text: message.failure.title, turnId }]
+        : [];
+    return [...outcomes, ...broke];
+  });
+}
+
+/**
+ * When the user last spoke and whether the agent has worked since (ADR-027), read from the
+ * turns: undefined for a thread with no user turn, or one whose time is a clock reading rather
+ * than an instant, since an idle stretch cannot be measured from "9:02".
+ */
+export function activityOf(messages: ThreadMessage[]): ThreadActivity | undefined {
+  const asked = findLast(messages, (message) => message.role === "user");
+  if (asked === undefined) return undefined;
+  const lastUserInputAt = instantOf(asked.time);
+  if (lastUserInputAt === undefined) return undefined;
+  const active = messages
+    .slice(messages.indexOf(asked) + 1)
+    .some((message) => message.role === "agent" && message.streaming !== true);
+  return { active, lastUserInputAt };
+}
+
+/**
+ * The question the thread waits on (ADR-039): the one its latest reply ended with, while no
+ * turn has followed it; undefined once answered, or when no reply asked.
+ */
+export function awaitingOf(messages: ThreadMessage[]): unknown {
+  const last = messages.at(-1);
+  return last?.role === "agent" ? last.asks : undefined;
 }

@@ -130,9 +130,13 @@ describe("applyChunk", () => {
     expect(after.failure).toEqual(failure);
   });
 
-  it("leaves a question to the host", () => {
+  it("keeps the question a reply ends on, so the dock can be read back from the record", () => {
     const turn = fold(["Ready.", { kind: "question", question: { question: "Which order?" } }]);
-    expect(turn).toEqual({ ...startReply("a1", "9:02"), text: "Ready." });
+    expect(turn).toEqual({
+      ...startReply("a1", "9:02"),
+      text: "Ready.",
+      asks: { question: "Which order?" },
+    });
   });
 });
 
@@ -191,6 +195,7 @@ describe("isEmptyReply", () => {
     expect(isEmptyReply(fold(["Done."]))).toBe(false);
     expect(isEmptyReply(fold([{ kind: "card", payload: {} }]))).toBe(false);
     expect(isEmptyReply(fold([{ kind: "log", text: "check ok" }]))).toBe(false);
+    expect(isEmptyReply(fold([{ kind: "question", question: {} }]))).toBe(false);
     expect(isEmptyReply(cancelReply(fold([])))).toBe(false);
   });
 });

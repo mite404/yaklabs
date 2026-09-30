@@ -148,7 +148,8 @@ function endedBy(message: AgentMessage): Ended {
  * Folds one chunk of a reply into the agent's turn: pure, so the same stream always builds the
  * same turn. Text grows the plain `text` always and the `blocks` once the reply has structure;
  * narration supersedes and is kept; a failure ends the turn as interrupted or failed. A
- * `question` changes nothing here: the host docks it.
+ * `question` is kept on the turn as what it asks, so the dock can be read back from the record;
+ * the host docks it as it streams.
  */
 export function applyChunk(message: AgentMessage, chunk: ReplyChunk): AgentMessage {
   if (typeof chunk === "string") return appendText(message, { text: chunk });
@@ -188,7 +189,7 @@ export function applyChunk(message: AgentMessage, chunk: ReplyChunk): AgentMessa
         failure: chunk.failure,
       };
     case "question":
-      return message;
+      return { ...message, asks: chunk.question };
     default: {
       const unhandled: never = chunk;
       return unhandled;
@@ -197,8 +198,9 @@ export function applyChunk(message: AgentMessage, chunk: ReplyChunk): AgentMessa
 }
 
 /**
- * Whether a turn holds nothing a reader could see: no words, no cards, no work, and no ending
- * to explain. A reply that finishes this way (an agent may yield nothing) leaves no turn.
+ * Whether a turn holds nothing a reader could see: no words, no cards, no work, no question and
+ * no ending to explain. A reply that finishes this way (an agent may yield nothing) leaves no
+ * turn.
  */
 export function isEmptyReply(message: AgentMessage): boolean {
   const { work } = message;
@@ -206,6 +208,7 @@ export function isEmptyReply(message: AgentMessage): boolean {
     blocksOf(message).length === 0 &&
     message.payload === undefined &&
     message.interactive === undefined &&
+    message.asks === undefined &&
     message.ended === undefined &&
     (work === undefined || work.steps.length + work.logs.length === 0)
   );
