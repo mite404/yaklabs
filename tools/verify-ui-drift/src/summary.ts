@@ -62,7 +62,7 @@ function referenceLines(report: Report, cells: RenderedCell[], known: string[]):
   const here = new Set(missing.map((cell) => cell.fingerprint.environment)); // → Set<string>
   const elsewhere = known.filter((environment) => !here.has(environment));
   return [
-    `${missing.length} of ${report.cells.length} captures have no approved reference for this machine (${[...here].join(", ")}), so they were not compared.`,
+    `${missing.length} of ${report.cells.length} ${report.cells.length === 1 ? "capture" : "captures"} ${missing.length === 1 ? "has" : "have"} no approved reference for this machine (${[...here].join(", ")}), so ${missing.length === 1 ? "it was" : "they were"} not compared.`,
     elsewhere.length > 0
       ? `Approved references exist for ${elsewhere.join(", ")}. Review CI's design-verification artifact, or approve local references on purpose.`
       : "No approved references exist for them yet.",

@@ -70,7 +70,7 @@ describe("run summary", () => {
     const missing: Cell = { ...cell, pixels: { kind: "missing-baseline" } };
     const lines = summarize(report([missing]), ["linux-x64-debian-12"]);
     expect(lines[0]).toMatch(/not a pass/i);
-    expect(text(lines)).toContain("1 of 1 captures have no approved reference");
+    expect(text(lines)).toContain("1 of 1 capture has no approved reference");
     expect(text(lines)).toContain("darwin-arm64");
     expect(text(lines)).toContain("linux-x64-debian-12");
   });
