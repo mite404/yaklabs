@@ -6,7 +6,8 @@ import {
   type ThreadSummary,
   type Workspace,
 } from "@yaklabs/runtime";
-import { mainIdOf, seed, touched, withThread, type Edit, type Tomb } from "./edits";
+import { addChild, mainIdOf, seed, touched, withThread, type Edit, type Tomb } from "./edits";
+import { openedRun } from "./replies";
 import type { Script, Timed } from "./script";
 
 /**
@@ -63,13 +64,33 @@ export function promised<T>(work: () => T): Promise<T> {
   });
 }
 
+// The workspace and the transcripts a script opens on: empty, or the run its opening records,
+// with each child the run made on the main's canvas.
+function opened(
+  script: Script,
+  at: string,
+): { workspace: Workspace; transcripts: Map<string, ThreadMessage[]> } {
+  const main = mainIdOf(script);
+  const { opening } = script;
+  if (opening === undefined)
+    return { workspace: seed(script, at), transcripts: new Map([[main, []]]) };
+  const run = openedRun(script, opening, Date.now());
+  const transcripts = new Map([[main, run.main]]);
+  let workspace = withThread(main, touched(run.main, at))(seed(script, at));
+  for (const [child, turns] of run.children) {
+    transcripts.set(child.id, turns);
+    workspace = addChild(child, main, turns, at)(workspace);
+  }
+  return { workspace, transcripts };
+}
+
 /** A script's state before anything has played: its seeded workspace, and every reply to come. */
 export function liveOf(script: Script): Live {
-  const workspace = seed(script, new Date(CLOCK).toISOString());
+  const { workspace, transcripts } = opened(script, new Date(CLOCK).toISOString());
   return {
     state: { kind: "ready", source: SOURCE, workspace, replying: [] },
     progress: { started: 0, settled: new Set() },
-    transcripts: new Map([[mainIdOf(script), []]]),
+    transcripts,
     replying: new Map(),
     queue: script.beats.flatMap((beat) => (beat.kind === "reply" ? [beat.events] : [])),
     tombs: new Map(),

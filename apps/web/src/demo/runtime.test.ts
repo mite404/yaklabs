@@ -102,6 +102,39 @@ describe("the demo runtime's workspace", () => {
     await expect(runtime.open(idOf("nobody"))).rejects.toThrow(/no thread "nobody"/);
   });
 
+  it("opens on the run its opening records: the main's turns and each child's, timed", async () => {
+    const returned = scriptFor("returned");
+    const before = Date.now();
+    const runtime = createDemoRuntime(returned, instant);
+    const ws = workspaceOf(runtime.state());
+    expect(ws.threads.map((each) => each.title).toSorted()).toEqual([
+      "Central depot",
+      "Northern warehouse",
+      "September invoices",
+      "Southern warehouse",
+    ]);
+    expect(ws.lanes[runtime.main]).toHaveLength(3);
+    const main = await runtime.open(runtime.main);
+    expect(main.map((turn) => turn.role)).toEqual(["user", "agent"]);
+    const asked = Date.parse(main[0].time); // → when the user last spoke
+    expect(before - asked).toBeGreaterThanOrEqual(25 * 60_000);
+    expect(before - asked).toBeLessThan(26 * 60_000);
+    expect(Date.parse(main[1].time) - asked).toBe(1000);
+    const reply = main[1];
+    expect(reply.role === "agent" ? reply.work?.steps.map((step) => step.threadId) : []).toEqual([
+      "demo-returned-north",
+      "demo-returned-central",
+      "demo-returned-south",
+    ]);
+    const south = await runtime.open(idOf("demo-returned-south"));
+    expect(south.map((turn) => turn.role)).toEqual(["user", "agent"]);
+    expect(south[1]).toMatchObject({
+      streaming: false,
+      text: "67 invoices matched; 2 bill more than was delivered.",
+    });
+    expect(south[1].role === "agent" ? south[1].blocks?.at(-1)?.kind : undefined).toBe("card");
+  });
+
   it("keeps the other verbs in memory, and refuses what it lacks", async () => {
     const runtime = createDemoRuntime(brief, instant);
     await runtime.rename({ kind: "thread", id: runtime.main }, "Monday brief");

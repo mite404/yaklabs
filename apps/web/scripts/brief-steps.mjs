@@ -215,25 +215,43 @@ async function sidebarAndBell(page, run) {
   await run.shot("09-retried");
 }
 
-async function twoRepliesAtOnce(page, run) {
-  await openFast(page, run, "background");
-  await until(async () => (await busyTurns(page).count()) >= 2, "two busy agent turns", 60_000);
-  await run.shot("10-two-replies");
+async function opensOnRecap(page, run) {
+  await page.goto(`${run.base}/demo/weekly-brief?script=returned`);
+  await composeOf(page).waitFor({ timeout: 20_000 });
+  const recap = mainOf(page).getByRole("region", { name: "Recap" });
+  await recap.waitFor({ timeout: 10_000 });
+  assert.match(await recap.innerText(), /25 min since your last message/);
+  assert.equal(await recap.locator("li").count(), 3, "one item per finished step");
+  assert.equal(await sidebarOf(page).locator('[data-thread="child"]').count(), 3);
+  assert.match(await agentTurns(page).first().locator(".turn-stamp").innerText(), /20m ago/);
+  await run.shot("10-recap");
+  return (await recap.innerText()).replaceAll("\n", " · ");
 }
 
-async function stopEndsWork(page, run) {
-  await mainOf(page).getByText("Stopped by you").waitFor({ timeout: 60_000 });
-  assert.equal(await agentTurns(page).locator(".agent-tree").count(), 0);
-  await run.shot("11-stopped");
+async function recapJumpsToEvidence(page, run) {
+  const recap = mainOf(page).getByRole("region", { name: "Recap" });
+  await recap.locator("li button").first().click();
+  const turn = agentTurns(page).first();
+  await until(async () => (await turn.getAttribute("data-flash")) !== null, "the turn to glow");
+  await turn.getByRole("button", { name: /^Work details/ }).click();
+  await turn.locator(".work-step").nth(2).waitFor();
+  assert.equal(await turn.locator(".work-step .card").count(), 1, "the southern card backs it");
+  await run.shot("11-evidence");
 }
 
-async function stoppedWorkDetails(page, run) {
-  const turn = agentTurns(page).filter({ hasText: "Stopped by you" });
-  const summary = turn.getByRole("button", { name: /^Work details/ });
-  assert.match(await summary.innerText(), /did not finish/);
+async function askedThenAnswered(page, run) {
+  await toolbarOf(page).getByRole("button", { name: "Fast forward, 2x" }).click();
+  await button(page, "Play").click();
+  await mainOf(page)
+    .getByText(/needs attention/i)
+    .first()
+    .waitFor({ timeout: 60_000 });
+  const answers = mainOf(page).locator('[aria-label="Your answers"]');
+  await answers.waitFor({ timeout: 30_000 });
+  assert.match(await answers.innerText(), /Hold them/);
   await untilDone(page);
-  await run.shot("12-background-done");
-  return (await summary.innerText()).replaceAll("\n", " ");
+  assert.match(await agentTurns(page).last().innerText(), /marked for review/);
+  await run.shot("12-returned-done");
 }
 
 /** The brief at 1x step by step, again at 2x after Restart, then the shell's own navigation. */
@@ -261,11 +279,17 @@ export const interruptedSteps = [
   ["the sidebar lists Order lookups and the bell counts one", sidebarAndBell],
 ];
 
-/** Work in the background: two replies at once, then Stop. */
-export const backgroundSteps = [
-  ["two replies stream at once", twoRepliesAtOnce],
-  ["Stop leaves Stopped by you, and no working glyph in the transcript", stopEndsWork],
-  ["the stopped turn's Work details says what did not finish", stoppedWorkDetails],
+/** A run the user did not watch: the recap, its evidence, then the one thing that needs them. */
+export const returnedSteps = [
+  [
+    "opens on a recap of three outcomes, 25 min since the last message, three children",
+    opensOnRecap,
+  ],
+  ["a recap item jumps to its turn, and Work details holds the evidence", recapJumpsToEvidence],
+  [
+    "Play asks what needs you: the question docks, Hold them is recorded, then Done",
+    askedThenAnswered,
+  ],
 ];
 
 /** Where a step's screenshot goes. */

@@ -9,8 +9,8 @@ import {
 } from "@yaklabs/catalog/reply";
 import type { ThreadMessage } from "@yaklabs/catalog/thread";
 import type { Clock } from "./clock";
-import type { ChildOf } from "./edits";
-import type { Timed } from "./script";
+import { childOf, type ChildOf } from "./edits";
+import type { Opening, Script, Timed } from "./script";
 
 /** What the main thread answers once the script's replies are spent. */
 export const END_REPLY: Timed[] = [
@@ -153,4 +153,51 @@ export function childTurns(turns: ThreadMessage[], step: WorkStep, time: string)
   if (last.streaming === true) return turns;
   const attempt = startReply(`${step.id}-${turns.length + 1}`, time);
   return [...turns, { ...attempt, activity: WORKING }];
+}
+
+// One second between an opening's turns, so they keep their order by time too.
+const TURN_GAP_MS = 1000;
+
+/** A run that already happened: the main's turns and each child's, all timed. */
+export type OpenedRun = { main: ThreadMessage[]; children: Map<ChildOf, ThreadMessage[]> };
+
+// `turns` timed from `from`, a second apart in order.
+function timed(turns: ThreadMessage[], from: number): ThreadMessage[] {
+  return turns.map((turn, i) => ({
+    ...turn,
+    time: new Date(from + i * TURN_GAP_MS).toISOString(),
+  }));
+}
+
+// A step of an opening's work with its child's workspace id, as the scripted reply writes one.
+function placed(script: Script, step: WorkStep): { step: WorkStep; child: ChildOf } | undefined {
+  if (step.threadId === undefined) return undefined;
+  const child = childOf(script, step.threadId);
+  return { step: { ...step, threadId: child.id }, child };
+}
+
+/**
+ * The run a scenario opens on, as a live run would have left it: the main's turns timed from
+ * `awayMinutes` before `now`, a second apart, so the recap counts from the user's turn and the
+ * latest reply's stamp reads how long ago the run ended; and for each child a step names, that
+ * child's request and its outcome as the step settled it, under the child's workspace id.
+ * @throws When a step names a child the script does not.
+ */
+export function openedRun(script: Script, opening: Opening, now: number): OpenedRun {
+  const from = now - opening.awayMinutes * 60_000; // → when the user last spoke
+  const children = new Map<ChildOf, ThreadMessage[]>();
+  const main = timed(opening.turns, from).map((turn) => {
+    if (turn.role !== "agent" || turn.work === undefined) return turn;
+    const steps = turn.work.steps.map((step) => {
+      const found = placed(script, step);
+      if (found === undefined) return step;
+      children.set(
+        found.child,
+        childTurns(openingTurns(found.child, turn.time), found.step, turn.time),
+      );
+      return found.step;
+    });
+    return { ...turn, work: { ...turn.work, steps } };
+  });
+  return { main, children };
 }

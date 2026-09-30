@@ -7,7 +7,7 @@
 //   PLAYWRIGHT_CHROMIUM=/path/to/chrome node apps/web/scripts/brief-check.mjs
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { backgroundSteps, briefSteps, interruptedSteps, shotIn } from "./brief-steps.mjs";
+import { briefSteps, interruptedSteps, returnedSteps, shotIn } from "./brief-steps.mjs";
 import { arg, launch, ROOT } from "./harness.mjs";
 
 const base = arg("--base", "http://127.0.0.1:5173");
@@ -43,7 +43,7 @@ try {
   });
   page.on("pageerror", (error) => errors.push(String(error)));
   const run = { base, timing: {}, shot: shotIn(out, page) };
-  for (const steps of [briefSteps, interruptedSteps, backgroundSteps])
+  for (const steps of [briefSteps, interruptedSteps, returnedSteps])
     await scenario(steps, page, run, results);
   results.push({ step: "no console errors", ok: errors.length === 0, detail: errors.join(" | ") });
 } finally {

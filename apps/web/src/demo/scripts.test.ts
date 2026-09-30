@@ -33,8 +33,8 @@ describe("the scripted scenarios", () => {
     expect(unanswered).toEqual([]);
   });
 
-  it.each(scripts)("$id names every child a step spawns", (script) => {
-    const spawned = script.beats.flatMap((beat) =>
+  it.each(scripts)("$id names every child a step spawns, in its beats or its opening", (script) => {
+    const played = script.beats.flatMap((beat) =>
       beat.kind === "reply"
         ? beat.events.flatMap(({ chunk }) =>
             typeof chunk !== "string" && chunk.kind === "step" && chunk.step.threadId !== undefined
@@ -43,19 +43,22 @@ describe("the scripted scenarios", () => {
           )
         : [],
     );
+    const opened = (script.opening?.turns ?? []).flatMap((turn) =>
+      turn.role === "agent"
+        ? (turn.work?.steps ?? []).flatMap((step) =>
+            step.threadId === undefined ? [] : [step.threadId],
+          )
+        : [],
+    );
+    const spawned = [...played, ...opened];
     expect(spawned.length).toBeGreaterThan(0);
     for (const id of spawned) expect(script.children[id]).toBeDefined();
   });
 
   it("shows three separations of concern, and falls back to the first", () => {
-    expect(scripts.map((script) => script.id)).toEqual(["brief", "interrupted", "background"]);
+    expect(scripts.map((script) => script.id)).toEqual(["brief", "interrupted", "returned"]);
     expect(scriptFor("nope").id).toBe("brief");
     expect(scriptFor().id).toBe("brief");
-    expect(userBeats(scriptFor("background")).map((beat) => beat.kind)).toEqual([
-      "user",
-      "user",
-      "stop",
-      "user",
-    ]);
+    expect(userBeats(scriptFor("returned")).map((beat) => beat.kind)).toEqual(["user", "answer"]);
   });
 });

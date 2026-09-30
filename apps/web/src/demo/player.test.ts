@@ -97,9 +97,16 @@ function presenterAnswersFirst(panel: ThreadHandle): Clock {
 
 describe("the demo player", () => {
   it("waits on the reply before each beat, or counts from the beat before it", () => {
-    expect(
-      cuesOf(scriptFor("background").beats).map((cue) => [cue.beat.kind, cue.settles]),
-    ).toEqual([
+    const beats: Beat[] = [
+      { kind: "user", after: 900, text: "Go" },
+      { kind: "reply", events: [] },
+      { kind: "user", after: 500, overlap: true, text: "Meanwhile" },
+      { kind: "reply", events: [] },
+      { kind: "stop", after: 1800 },
+      { kind: "user", after: 2200, text: "Only the north" },
+      { kind: "reply", events: [] },
+    ];
+    expect(cuesOf(beats).map((cue) => [cue.beat.kind, cue.settles])).toEqual([
       ["user", null],
       ["user", null],
       ["stop", 1],
@@ -108,7 +115,7 @@ describe("the demo player", () => {
     expect(cuesOf(scriptFor("brief").beats).map((cue) => cue.settles)).toEqual([null, 0]);
   });
 
-  it.each(["brief", "interrupted", "background"])(
+  it.each(["brief", "interrupted", "returned"])(
     "performs every user beat of %s through the panel, in order, and ends done",
     async (id) => {
       const script = scriptFor(id);

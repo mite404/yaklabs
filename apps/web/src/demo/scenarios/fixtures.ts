@@ -70,6 +70,17 @@ export const orderQuestion = {
   elsewhere: "Skip the draft for now",
 } satisfies AwaitingInput;
 
+/** The one decision left when the user comes back to the September invoices. */
+export const holdQuestion = {
+  question: "Two southern invoices bill more than was delivered. What should happen to them?",
+  options: [
+    { label: "Hold them", detail: "Mark both for review; nothing is paid until someone looks." },
+    { label: "Pay what arrived", detail: "Pay the delivered amount and query the difference." },
+  ],
+  answer: { placeholder: "Or say what you'd rather do" },
+  elsewhere: "Leave them for now",
+} satisfies AwaitingInput;
+
 /** A step of the work after a pause. */
 export const step = (after: number, work: WorkStep): Timed =>
   at(after, { kind: "step", step: work });

@@ -1,5 +1,6 @@
 import type { Block, Inline } from "@yaklabs/catalog/prose";
 import type { ReplyChunk, ReplyEvent } from "@yaklabs/catalog/reply";
+import type { ThreadMessage } from "@yaklabs/catalog/thread";
 
 // Time between streamed words at 1x: about fourteen words a second, quick enough to read as a
 // live reply and slow enough that a watcher can follow the emphasis as it lands (goal 4).
@@ -25,6 +26,16 @@ export type Beat =
 /** A child thread the agent spawns: what the sidebar calls it and the request it was given. */
 export type ChildScript = { title: string; request: string };
 
+/**
+ * A run that already happened while the user was away, for a scenario that opens on its record
+ * rather than on an empty thread: the main thread's turns as the run left them, and how long
+ * ago the user last spoke. Every child a step of those turns names is made with the request
+ * and the outcome the run would have left it, as a live run does. The turns' times are set when
+ * the demo loads, that many minutes before now, so the recap and the stamp count from them;
+ * whatever `time` they are written with is ignored.
+ */
+export type Opening = { awayMinutes: number; turns: ThreadMessage[] };
+
 /** One scenario: the workspace it plays in, its children, and its beats in order. */
 export type Script = {
   id: string;
@@ -35,6 +46,8 @@ export type Script = {
   project: string;
   thread: string;
   children: Record<string, ChildScript>;
+  /** What the thread holds before the first beat; none for a scenario that starts empty. */
+  opening?: Opening;
   beats: Beat[];
 };
 

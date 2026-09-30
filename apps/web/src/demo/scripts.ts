@@ -1,10 +1,10 @@
 import type { Beat, Script } from "./script";
-import { background } from "./scenarios/background";
 import { brief } from "./scenarios/brief";
 import { interrupted } from "./scenarios/interrupted";
+import { returned } from "./scenarios/returned";
 
 /** The scenarios the demo plays, in the order the picker lists them. */
-export const scripts: Script[] = [brief, interrupted, background];
+export const scripts: Script[] = [brief, interrupted, returned];
 
 /** A script by its id, or the first when the id is unknown. */
 export function scriptFor(id?: string | null): Script {
