@@ -40,8 +40,10 @@ export async function openStory(browser: Browser, base: string, story: string, t
     new URL(route.request().url()).origin === base ? route.continue() : route.abort(),
   );
   try {
+    // a11y.manual keeps the addon's own axe run out of this page: its axe chunk replaces
+    // window.axe on load and raced this tool's AxeBuilder, failing runs at random.
     await page.goto(
-      `${base}/iframe.html?id=${encodeURIComponent(story)}&viewMode=story&globals=theme:${theme}`,
+      `${base}/iframe.html?id=${encodeURIComponent(story)}&viewMode=story&globals=theme:${theme};a11y.manual:!true`,
     );
     await page.waitForFunction(
       () =>
