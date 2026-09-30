@@ -30,7 +30,7 @@ const INPUTS = [
   "package.json",
   "pnpm-lock.yaml",
   "pnpm-workspace.yaml",
-  ".agents/skills/verify-storybook/scripts/affected-stories.mjs",
+  ".agents/skills/verify-storybook-component/scripts/affected-stories.mjs",
 ];
 export const MIME: Record<string, string> = {
   ".html": "text/html",

@@ -5,7 +5,7 @@ Storybook. Read this index, then use the matching feature file as the recipe.
 
 ## Baseline preconditions
 
-- Launch with `.agents/skills/verify-storybook/scripts/control-storybook.sh launch`.
+- Launch with `.agents/skills/verify-storybook-component/scripts/control-storybook.sh launch`.
 - `control-storybook.sh doctor` reports `storybook doctor: OK` at `http://127.0.0.1:6106/`.
 - Never drive a Storybook this run did not start; a human's instance on 6006 may hold edits
   in progress.
@@ -18,7 +18,7 @@ Storybook. Read this index, then use the matching feature file as the recipe.
 - Locate elements by ARIA role and accessible name, as written in each feature file. The same
   component renders in several stories and layouts, so CSS classes and positions are not stable.
 - Stories are stateless between page loads. Reload the story to reset; nothing persists.
-- Render proof: `node .agents/skills/verify-storybook/scripts/shoot.mjs <story-id>...`.
+- Render proof: `node .agents/skills/verify-storybook-component/scripts/shoot.mjs <story-id>...`.
 - Interaction proof: a `play` function in the story, run by `pnpm test:stories`.
 
 ## Proof and skip reporting

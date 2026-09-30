@@ -49,7 +49,8 @@ Preconditions:
 - **Refusal.** Load `catalog-approved-answers--unsupported` and `--unsafe-props`. Both show
   `heading "We don’t have a safe view for this yet."` and
   `No unvalidated content was rendered.`, and no `img` or `table`.
-- **Proof.** `node .agents/skills/verify-storybook/scripts/shoot.mjs` with the nine ids above, plus
+- **Proof.** `node .agents/skills/verify-storybook-component/scripts/shoot.mjs` with the nine ids
+  above, plus
   `--width 420` for the narrow layout.
 
 ## Gotchas

@@ -18,7 +18,7 @@ const PAIRS = [
   ["--attention-hover-ink", "--attention-hover", 4.5],
 ] as const;
 
-/** Opens an isolated story using the theme and readiness rules of verify-storybook/shoot.mjs.
+/** Opens an isolated story using the theme and readiness rules of verify-storybook-component/shoot.mjs.
  * @throws On empty renders, Storybook overlays, page errors, or console errors.
  */
 export async function openStory(browser: Browser, base: string, story: string, theme: Theme) {

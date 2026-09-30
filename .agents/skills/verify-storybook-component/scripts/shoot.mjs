@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Render stories in Chromium and save proof: a screenshot, the ARIA tree, and any errors.
 //
-//   node .agents/skills/verify-storybook/scripts/shoot.mjs <story-id>... [--out dir] [--width px]
+//   node .agents/skills/verify-storybook-component/scripts/shoot.mjs <story-id>... [--out dir] [--width px]
 //
 // Exits 1 when a story throws, logs a console error, or renders nothing, so a PASS line
 // means the story actually drew something.
@@ -29,7 +29,7 @@ function readPort() {
 
 function parseArgs(argv) {
   const stamp = new Date().toISOString().replaceAll(":", "-").slice(0, 19);
-  const args = { ids: [], out: path.join(ROOT, ".artifacts/verify-storybook", stamp), width: 1280 };
+  const args = { ids: [], out: path.join(ROOT, ".artifacts/verify-storybook-component", stamp), width: 1280 };
   for (let i = 0; i < argv.length; i++) {
     if (argv[i] === "--out") args.out = path.resolve(argv[++i]);
     else if (argv[i] === "--width") args.width = Number(argv[++i]);

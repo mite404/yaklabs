@@ -1,5 +1,5 @@
 ---
-name: verify-storybook
+name: verify-storybook-component
 description: >-
   Prove a UI component change in yaklabs by driving its Storybook stories in a real browser.
   Launches a private Storybook for the catalog package, lists the stories a change can affect, renders
@@ -46,7 +46,7 @@ Run these first. They are cheap, and nothing below re-proves them.
 ## Launch
 
 ```bash
-.agents/skills/verify-storybook/scripts/control-storybook.sh launch
+.agents/skills/verify-storybook-component/scripts/control-storybook.sh launch
 ```
 
 Ready when it prints `storybook: ready at http://127.0.0.1:6106/`. It clears Storybook's build
@@ -61,7 +61,7 @@ this repo's stories. For a second concurrent run, set both `VERIFY_RUN_ID=<name>
 ## Doctor
 
 ```bash
-.agents/skills/verify-storybook/scripts/control-storybook.sh doctor
+.agents/skills/verify-storybook-component/scripts/control-storybook.sh doctor
 ```
 
 `storybook doctor: OK` with `stories: 40` (or the current count) means the pid is ours, the port is
@@ -74,8 +74,8 @@ blank, or unfamiliar. A 200 from someone else's Storybook fails the content chec
 every story a change can reach:
 
 ```bash
-node .agents/skills/verify-storybook/scripts/affected-stories.mjs --since main
-node .agents/skills/verify-storybook/scripts/affected-stories.mjs packages/catalog/src/Menu.tsx
+node .agents/skills/verify-storybook-component/scripts/affected-stories.mjs --since main
+node .agents/skills/verify-storybook-component/scripts/affected-stories.mjs packages/catalog/src/Menu.tsx
 ```
 
 It follows fallow's impact closure, so editing `Menu.tsx` lists 32 stories (every card has a share
@@ -90,8 +90,8 @@ Three harnesses, for three jobs.
 **Render proof for many stories** (screenshot, ARIA tree, console errors):
 
 ```bash
-node .agents/skills/verify-storybook/scripts/shoot.mjs \
-  $(node .agents/skills/verify-storybook/scripts/affected-stories.mjs --since main)
+node .agents/skills/verify-storybook-component/scripts/shoot.mjs \
+  $(node .agents/skills/verify-storybook-component/scripts/affected-stories.mjs --since main)
 ```
 
 Each story prints `PASS <id>` or `FAIL <id>` with the reason, then the paths of
@@ -120,7 +120,7 @@ export const ShareMenuOpens: Story = {
 **Controls proof** (every knob in the Controls panel does something):
 
 ```bash
-node .agents/skills/verify-storybook/scripts/audit-controls.mjs [story-id...]
+node .agents/skills/verify-storybook-component/scripts/audit-controls.mjs [story-id...]
 ```
 
 It moves every visible control on every story (or the ones named) and checks that the story's
@@ -146,10 +146,12 @@ nth-child, or coordinates; the stories render the same components in several lay
 
 ## Evidence
 
-- Artifacts go to `.artifacts/verify-storybook/<timestamp>/` at the repo root (gitignored).
+- Artifacts go to `.artifacts/verify-storybook-component/<timestamp>/` at the repo root
+  (gitignored).
   `shoot.mjs` writes there by default; pass `--out` to group a before/after pair.
 - AGENTS.md requires a screenshot before and after when you touch a component. Run `shoot.mjs`
-  on the affected stories before editing (`--out .artifacts/verify-storybook/<task>/before`) and
+  on the affected stories before editing (`--out
+  .artifacts/verify-storybook-component/<task>/before`) and
   again after (`.../after`), then compare each pair. Report every visual difference and whether it
   was intended.
 - Proof is the user path: the story renders the real component with real props and fixtures. The
@@ -165,11 +167,12 @@ nth-child, or coordinates; the stories render the same components in several lay
 ## Cleanup
 
 ```bash
-.agents/skills/verify-storybook/scripts/control-storybook.sh stop
+.agents/skills/verify-storybook-component/scripts/control-storybook.sh stop
 ```
 
 It kills only the pid this run recorded. Never `pkill storybook` or `killall node`: the user may
-have their own Storybook and dev servers open. Evidence in `.artifacts/verify-storybook/` survives
+have their own Storybook and dev servers open. Evidence in `.artifacts/verify-storybook-component/`
+survives
 cleanup; confirm the files are still there before reporting.
 
 ## Feature map

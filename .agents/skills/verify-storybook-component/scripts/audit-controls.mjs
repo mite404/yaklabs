@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Move every visible control on every story and report the ones that change nothing.
 //
-//   node .agents/skills/verify-storybook/scripts/audit-controls.mjs [story-id...]
+//   node .agents/skills/verify-storybook-component/scripts/audit-controls.mjs [story-id...]
 //
 // A control passes when moving it changes the rendered story: its DOM, and its pixels unless
 // only an animation moved. A control whose effect needs a click or a drag (a menu's placement,

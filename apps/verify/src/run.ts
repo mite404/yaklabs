@@ -105,7 +105,11 @@ export async function chooseStories(
   if (options.since) {
     const { stdout } = await command(
       "node",
-      [".agents/skills/verify-storybook/scripts/affected-stories.mjs", "--since", options.since],
+      [
+        ".agents/skills/verify-storybook-component/scripts/affected-stories.mjs",
+        "--since",
+        options.since,
+      ],
       { ...process.env, VERIFY_PORT: String(port), VERIFY_STATE_DIR: directory },
     );
     selected = stdout.trim().split("\n").filter(Boolean);

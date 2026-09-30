@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // List every story a set of changed files can affect, from fallow's import graph.
 //
-//   node .agents/skills/verify-storybook/scripts/affected-stories.mjs <file>...
-//   node .agents/skills/verify-storybook/scripts/affected-stories.mjs --since main
+//   node .agents/skills/verify-storybook-component/scripts/affected-stories.mjs <file>...
+//   node .agents/skills/verify-storybook-component/scripts/affected-stories.mjs --since main
 //
 // Prints story ids, one per line, ready to pass to shoot.mjs. Needs a running instance
 // (control-storybook.sh launch) because story ids come from its index.json.

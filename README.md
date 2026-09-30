@@ -42,5 +42,5 @@ what `node_modules` holds, so a branch that adds a package never leaves the dev 
 resolve it. CI (`.github/workflows/ci.yml`) runs the rest on every pull request: format, lint,
 types, the fallow audit against the base branch, unit and story tests, and both builds.
 
-To prove a component change in a real browser, use the `verify-storybook` skill under
+To prove a component change in a real browser, use the `verify-storybook-component` skill under
 `.agents/skills/`.

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Launch, check, and stop a Storybook dev server owned by one verification run.
 #
-# The four `..` in ROOT walk scripts -> verify-storybook -> skills -> .agents -> repo root.
-# .claude/skills/verify-storybook/scripts/ sits at the same depth through its symlink.
+# The four `..` in ROOT walk scripts -> verify-storybook-component -> skills -> .agents -> repo root.
+# .claude/skills/verify-storybook-component/scripts/ sits at the same depth through its symlink.
 
 set -euo pipefail
 
@@ -94,7 +94,7 @@ cmd_stop() {
     echo "$APP: pid $pid was not running"
   fi
   rm -f "$PID_FILE"
-  # Evidence lives in .artifacts/verify-storybook/ and is never removed here.
+  # Evidence lives in .artifacts/verify-storybook-component/ and is never removed here.
 }
 
 case "${1:-}" in

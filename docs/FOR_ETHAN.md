@@ -15,7 +15,8 @@ Ideas we agreed on but have not started live in `docs/LATER.md`.
 The thread now keeps every expanded card 20px above the compose box (ADR-038), and a question the
 agent is blocked on gets its own "Needs you" card instead of hiding inside the recap (ADR-039).
 Every component is now run, not just read: all 40 stories render in headless Chromium with an axe
-check on each commit and in CI, beside oxlint, oxfmt, `tsc` and fallow, and a `verify-storybook`
+check on each commit and in CI, beside oxlint, oxfmt, `tsc` and fallow, and a
+`verify-storybook-component`
 skill lets an agent screenshot whatever a change reaches.
 The lab has become an app. The repo is now a pnpm monorepo in Better-T-Stack's layout
 (ADR-087): the catalog is a package beside its stories, `apps/web` is the React Router site that
@@ -754,7 +755,8 @@ The first entries are ideas from before any code existed; the rest are parts of 
   its place, and no path shows the hand while one is down. The story now makes a selection under a
   held button and expects the I-beam. Lesson: when two events can reach one decision, the decision
   needs the same facts from both.
-- **The screening room that never got the new pages.** The verify-storybook harness kept failing
+- **The screening room that never got the new pages.** The verify-storybook-component harness kept
+  failing
   the grab story while the story suite passed, before and after the fix alike, and a stash-and-shoot
   "before" looked identical to "after". The tell was a timestamp in the stack trace that never
   changed: the private Storybook was serving the catalog from a build cache made in the previous
@@ -1641,7 +1643,7 @@ flowchart LR
   H --> A[fallow audit<br/>only what this commit adds]
   A --> P[Push / PR]
   P --> C{CI: same checks<br/>+ Storybook build<br/>+ audit vs PR base}
-  E -.->|agent proving a change| V[verify-storybook<br/>affected stories → screenshots + ARIA trees]
+  E -.->|agent proving a change| V[verify-storybook-component<br/>affected stories → screenshots + ARIA trees]
 ```
 
 The film version: the linter is the script supervisor reading pages, the story tests are the table
@@ -1753,9 +1755,9 @@ were compared byte for byte, and the only differences were those known animation
 
 ```sh
 # The same lever, before and after; cmp says identical or nothing.
-node .agents/skills/verify-storybook/scripts/shoot.mjs $IDS --out before
+node .agents/skills/verify-storybook-component/scripts/shoot.mjs $IDS --out before
 git mv catalog-lab packages/catalog   # ... the whole move ...
-node .agents/skills/verify-storybook/scripts/shoot.mjs $IDS --out after
+node .agents/skills/verify-storybook-component/scripts/shoot.mjs $IDS --out after
 for f in before/*.png; do cmp -s "$f" "after/$(basename "$f")" || echo "differs: $f"; done
 ```
 
@@ -2255,7 +2257,7 @@ loaded (a catalog card's thread look), and one started unticked while the compon
 "unset" as on, so the first click set what was already true.
 
 ```js
-// .agents/skills/verify-storybook/scripts/audit-controls.mjs: for each visible control, move it
+// .agents/skills/verify-storybook-component/scripts/audit-controls.mjs: for each visible control, move it
 // and compare the story before and after, in the DOM and in pixels.
 const before = await snapshot(page); // → { dom, pixels }
 await setArgs(page, storyId, { [name]: value }); // the Controls panel's own message
