@@ -33,7 +33,7 @@ const events = [
     seq: 7,
     workId: null,
     limitation: "I cannot fetch real data.",
-    recovery: { label: "Try this instead", prompt: "Chart these numbers: 3, 5" },
+    recovery: { label: "Send this", prompt: "Chart these numbers: 3, 5" },
   },
   { type: "end", seq: 8, reason: "answered" },
 ];
@@ -42,6 +42,12 @@ describe("playground contract", () => {
   it.each(playgroundTools)("gives $name a top-level object input schema", (tool) => {
     expect(tool.input_schema.type).toBe("object");
     expect(tool.description.length).toBeGreaterThan(0);
+  });
+  it("tells the model what ask_question's elsewhere and placeholder are for", () => {
+    const ask = playgroundTools.find((tool) => tool.name === "ask_question");
+    expect(ask?.description).toMatch(/`elsewhere` is the label of the final way-out row/);
+    expect(ask?.description).toMatch(/never put notes or explanations/i);
+    expect(ask?.description).toMatch(/`answer\.placeholder` is a short example answer/);
   });
   it.each(events)("parses a valid $type event", (event) => {
     expect(playgroundEventSchema.safeParse(event).success).toBe(true);

@@ -126,9 +126,12 @@ export const playgroundTools: readonly PlaygroundTool[] = [
   {
     name: "ask_question",
     description:
-      "Ask the user one decision you cannot make for them. Give up to four short options and a " +
-      "concrete typed-answer placeholder. After calling it, stop: the user's answer or skip " +
-      "arrives as this tool's result in the next turn.",
+      "Ask the user one decision you cannot make for them. `options` are the choices, up to " +
+      "four. `answer.placeholder` is a short example answer for the row where the user types " +
+      "their own. `elsewhere` is the label of the final way-out row the user can pick instead " +
+      'of answering, such as "Chat about something else"; leave it out unless you want to word ' +
+      "that row, and never put notes or explanations there. After calling it, stop: the " +
+      "user's answer or skip arrives as this tool's result in the next turn.",
     input_schema: toolSchema(askQuestionInputSchema),
   },
   {
