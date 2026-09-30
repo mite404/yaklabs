@@ -1,8 +1,9 @@
 import type { Block, Inline } from "@yaklabs/catalog/prose";
 import type { ReplyChunk, ReplyEvent } from "@yaklabs/catalog/reply";
 
-// Time between streamed words at 1x: the lab stand-in's pace, live enough to read as typing.
-const WORD_MS = 45;
+// Time between streamed words at 1x: about fourteen words a second, quick enough to read as a
+// live reply and slow enough that a watcher can follow the emphasis as it lands (goal 4).
+const WORD_MS = 70;
 
 /** One chunk of a reply and the pause before it, in milliseconds at 1x. */
 export type Timed = { after: number; chunk: ReplyChunk };
