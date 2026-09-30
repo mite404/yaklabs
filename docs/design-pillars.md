@@ -399,7 +399,7 @@ the rendered rows so source-path wrapping and font changes do not hide entries (
 
 ### 29. Quiet prose: one reading treatment, streaming or finished
 
-Every agent reply renders through the catalog's own prose component (ADR-140, ADR-146), never a
+Every agent reply renders through the catalog's own prose component (ADR-140, ADR-147), never a
 Markdown renderer's defaults, and the same rules hold while the words stream and after they
 finish, so nothing restyles as a reply completes. Emphasis is authored, never inferred: a mark on
 a run of text, set as `<strong>`, `<em>` or `<code>`.
@@ -419,7 +419,7 @@ a run of text, set as `<strong>`, `<em>` or `<code>`.
 ### 30. The answered surface, the folded request and the running status
 
 Three surfaces the legibility demo added, all built from the thread's own tokens (ADR-142,
-ADR-149).
+ADR-150).
 
 | Property | Value | Source |
 | --- | --- | --- |
@@ -431,7 +431,7 @@ ADR-149).
 | Work details header | 13px 500, its chevron first, its count in 12px `--soft-ink` beside the label | derived (ADR-143's float) |
 | Reading tools at rest | the bookmark alone on `--scrim` (paper at 72%), glyph opaque; clear until the pointer is over the thread's turns, up over 300ms on the strong ease-out | Ethan (ADR-143, amended) |
 | Reading tools open | `--paper`, solid, over 150ms on the strong ease-out; the list of requests on `--scrim` with an 8px blur | Ethan (ADR-143, amended) |
-| Reply stamp | 11px on 16px `--soft-ink`, tabular figures, under the latest settled reply only: "just now", then 20-minute steps; no time on a user's turn | Ethan (ADR-151) |
+| Reply stamp | 11px on 16px `--soft-ink`, tabular figures, under the latest settled reply only: "just now", then 20-minute steps; no time on a user's turn | Ethan (ADR-152) |
 
 ## Open questions
 

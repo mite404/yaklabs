@@ -2009,7 +2009,7 @@ since the app's provider now carries the same values. A new label cannot come ou
 shape without editing `packages/ui/src/components/tooltip.tsx`. P23 and P28 read the pills, and
 the web checks read a cut row's name on hover and focus and a name that wraps.
 
-## ADR-146 - The reply seam carries events, not only words
+## ADR-147 - The reply seam carries events, not only words
 
 2026-09-30 - Accepted (Ethan's goals for the legibility demo: an interleaved conversation, honest
 failures, work details behind a disclosure). Widens ADR-041; builds on ADR-139 and ADR-140.
@@ -2036,14 +2036,14 @@ Alternatives weighed: a controlled panel whose host owns the messages (the event
 runtime is the source of truth for turns; every host would change today), and a worker scenario
 with a structured protocol (the backend project the goals defer).
 
-## ADR-147 - The scripted demo plays on the real shell from an in-memory runtime
+## ADR-148 - The scripted demo plays on the real shell from an in-memory runtime
 
 2026-09-30 - Accepted (Ethan: "/demo/weekly-brief should render the whole app shell and the main
 chat thread component"). Supersedes the standalone demo page of ADR-139 and ADR-140.
 `/demo/weekly-brief` is a route layout that composes the same shell as `/t/:threadId` (the
 window, its title bar and tabs, the rail, the projects panel, the deck of panes) over a runtime
 built in the page, no worker: an in-memory workspace seeded from a scenario script, whose agent
-for the main thread streams the script's reply events through the widened seam (ADR-146). A step
+for the main thread streams the script's reply events through the widened seam (ADR-147). A step
 that names a child thread creates that child in the workspace and its lane on the canvas, marks
 it replying while it runs, and writes its outcome into it when it finishes, so the sidebar's
 working glyphs, the canvas and the bell show real threads. Every other thread is answered by the
@@ -2071,7 +2071,7 @@ enough to follow the emphasis as it lands.
 Known gap: Share still publishes through the gateway from the demo; "Nothing is sent" is not yet
 true for that one action.
 
-## ADR-148 - A jump lays runway so any turn can centre
+## ADR-149 - A jump lays runway so any turn can centre
 
 2026-09-30 - Accepted (Ethan: a jumped-to request and a search hit "should be vertically centered
 within the chat main thread component"; measured, they were not near the end). Amends ADR-022 and
@@ -2088,7 +2088,7 @@ thread that fits its view
 has nothing to scroll and keeps only the glow. The reading tools story now requires the target to
 be centred, the latest request and the last search hit included.
 
-## ADR-149 - An answer reads with its question; a long request folds
+## ADR-150 - An answer reads with its question; a long request folds
 
 2026-09-30 - Accepted (Ethan's screenshots: the answered-question surface "we can just straight up
 copy", and the folded long message with Show more).
@@ -2102,7 +2102,7 @@ over its last two lines, with Show more inside the bubble; Show less folds it ba
 the user typed or pasted stay where they were. Nothing else about the bubble changes (ADR-025,
 ADR-047).
 
-## ADR-150 - Child threads carry one glyph
+## ADR-151 - Child threads carry one glyph
 
 2026-09-30 - Accepted (Ethan: "some icon for child threads since those will either be spawned by
 an agent or will be a new thread a user has spun off from a main thread").
@@ -2112,7 +2112,7 @@ agent-spawned child and one the user spun off; the working glyph beside it says 
 Below a child's compose box: "Controlled by parent thread", with a Running pill in the user
 bubble's fill while its work is in flight by the runtime's own state (ADR-141, ADR-142).
 
-## ADR-151 - The latest reply carries the thread's one stamp
+## ADR-152 - The latest reply carries the thread's one stamp
 
 2026-09-30 - Accepted (Ethan: "showing a timestamp for user messages should be axed. lets only
 put a timestamp on the most recent message from the LLM. it'll start with just now and then

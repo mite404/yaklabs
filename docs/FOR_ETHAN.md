@@ -160,11 +160,11 @@ of its own, with a cardboard sidebar and a stage machine of its own, while the r
 door. Ethan asked for the real thing: `/demo/weekly-brief` now draws the whole app, title bar and
 tabs, rail, projects panel, the bare main thread, over a runtime built in the page from a script,
 and a player that types into the real compose box, answers the real Needs attention card, presses
-the real Stop. To get there the reply seam learned to carry more than words (ADR-146): progress
+the real Stop. To get there the reply seam learned to carry more than words (ADR-147): progress
 narration, blocks of prose, cards, steps of work, a question, a failure, folded into a turn by one
 pure function. Every reply in the app now reads as Quiet prose, a reply that stops short says so
 and offers Try again, an answer shows with the question it answered, a long request folds behind
-Show more, and a jump to your latest request finally lands centred (ADR-147 to ADR-150). Three
+Show more, and a jump to your latest request finally lands centred (ADR-148 to ADR-151). Three
 scenarios play in under a minute each at 1x, with a 2x for the impatient.
 
 ## 2. Cast & Crew
@@ -283,7 +283,7 @@ The first entries are ideas from before any code existed; the rest are parts of 
   stream arrives as words and events, and one function, `applyChunk`, cuts each chunk into the
   turn's structure: prose blocks, the work record, the narration line, how it ended. The panel
   never reads a chunk itself; it hands every one to the fold and shows what comes back
-  (ADR-146).
+  (ADR-147).
 - **Quiet prose** (`packages/catalog/src/QuietProse.tsx`) is the house typesetter. It takes the
   fold's blocks and sets them in one treatment, 15px on 24px, emphasis at 600, real italics, a
   card between paragraphs at the thread's width, the same before and after a reply finishes
@@ -296,7 +296,7 @@ The first entries are ideas from before any code existed; the rest are parts of 
   `replies.ts` and `verbs.ts`) is a soundstage built to the plans of the real one: the same
   `Runtime` doors, an in-memory workspace, a scripted agent for the main thread that spawns,
   runs and settles child threads as its steps name them, and the lab stand-in for every other
-  thread (ADR-147).
+  thread (ADR-148).
 - **The player** (`apps/web/src/demo/player.ts`) is the actor who plays the user: it types each
   request into the compose box, answers the docked question, presses Stop and Try again, all
   through the panel's own handle, and waits on the runtime for each reply to settle. One clock
@@ -524,7 +524,7 @@ The first entries are ideas from before any code existed; the rest are parts of 
   the messages. The seam won: existing agents keep working unchanged (a word stream is a subtype),
   the demo exercises the path a real backend would take, and the diff stays in the catalog and
   the demo. The controlled panel is the eventual shape once the runtime persists structured
-  turns, and is recorded as such (ADR-146).
+  turns, and is recorded as such (ADR-147).
 - **The turn is its own placeholder.** A reply's turn appears the moment it is asked for, so
   "Thinking…" shows at once even for an agent that goes quiet before speaking, and a reply that
   ends having shown nothing leaves no turn. One list of turns, no separate list of pending ones.
@@ -534,13 +534,13 @@ The first entries are ideas from before any code existed; the rest are parts of 
 - **The runway, not a taller thread.** A jump to a turn near the end could not centre because the
   scroller had no room below its last turn. The fix adds exactly the missing room as padding and
   takes it back when the reader scrolls it out of view or a new turn lands, rather than padding
-  every thread with half a screen of nothing (ADR-148).
+  every thread with half a screen of nothing (ADR-149).
 - **Work details leads with its chevron.** At the header's far right the chevron sat under the
   reading tools, which float over the newest turn's bottom-right corner by design (ADR-143). A
   control hidden under a control is worse than a word covered, so the chevron moved first.
 - **Beats wait on replies, except when they overlap.** A user beat after a reply waits for that
   reply to settle; one marked to overlap counts from the beat before it. Without the exception,
-  the background scenario's Stop would wait for the very job it is meant to stop (ADR-147).
+  the background scenario's Stop would wait for the very job it is meant to stop (ADR-148).
 - **One binder, under your hand.** The reading tools follow the pointer: clear until it is over
   the thread's turns, up over a 300ms fade as it leaves the compose box, gone as it leaves the
   thread. A first cut tied them to focus instead, and the bar sat over the box the whole time the
@@ -552,7 +552,7 @@ The first entries are ideas from before any code existed; the rest are parts of 
 - **One stamp, on the newest answer.** Every turn used to carry a clock time under it; now only
   the latest settled reply does, and it says how long ago rather than when: "just now", then
   "20m ago", moving on the panel's minute clock. It is the slate at the end of the take: one
-  mark that dates the whole exchange, so the request above needs none (ADR-151).
+  mark that dates the whole exchange, so the request above needs none (ADR-152).
 - **One clock for the script and the agent.** The player's keystrokes and the agent's word pauses
   wait on the same clock, so Pause is one flag and 2x one number, and the two can never drift.
 
@@ -1366,7 +1366,7 @@ measured first, in the long scenario: a jump to the tenth request landed 2px off
 hit likewise. Then a jump to the latest request landed 217px low. Nothing was wrong with the sum;
 the scroller had reached its maximum scroll and had no room below the last turn to scroll into.
 Every fix that touched the centring math would have failed. The fix adds the missing room, exactly
-the shortfall, as padding a jump lays down and takes back (ADR-148). Reproduce before you fix: the
+the shortfall, as padding a jump lays down and takes back (ADR-149). Reproduce before you fix: the
 bug was where the eye said it was, not where the code said it was.
 
 ### The server that would not die
@@ -1389,7 +1389,7 @@ stops at the first package and hides the rest.
 
 Widening the seam to carry events broke the worker in a place no test named: its reply loop
 concatenated every chunk with `+=`, and the lint step, not the typecheck, was what went red in CI.
-The loop now forwards words and passes over events until the protocol can carry them (ADR-146).
+The loop now forwards words and passes over events until the protocol can carry them (ADR-147).
 When a type widens, grep for every consumer that assumed the narrow one; the compiler only finds
 the ones that break loudly.
 
