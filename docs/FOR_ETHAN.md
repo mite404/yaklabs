@@ -541,6 +541,11 @@ The first entries are ideas from before any code existed; the rest are parts of 
 - **Beats wait on replies, except when they overlap.** A user beat after a reply waits for that
   reply to settle; one marked to overlap counts from the beat before it. Without the exception,
   the background scenario's Stop would wait for the very job it is meant to stop (ADR-147).
+- **One binder at a time.** The reading tools now show only in the thread that holds the focus,
+  so a canvas of lanes never grows a bar in every corner; the bookmark rests alone on a wash of
+  the paper and Search unfolds to its left, and the bar fills solid only once a tool is open. Axe
+  caught the side effect of testing two threads side by side: their "Messages" regions were one
+  landmark twice, so the region now carries the thread's name (ADR-143, amended).
 - **One clock for the script and the agent.** The player's keystrokes and the agent's word pauses
   wait on the same clock, so Pause is one flag and 2x one number, and the two can never drift.
 

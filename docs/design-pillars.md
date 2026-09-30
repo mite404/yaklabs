@@ -429,6 +429,8 @@ ADR-149).
 | Running status by the compose box | paper, `--hairline`, 8px corners, 13px on 20px, shown 48px or more above the end | derived (ADR-142) |
 | Child footnote | 12px `--soft-ink`; the Running pill in `--bubble-tint-strong` with `--bubble-line`, 11px 500 | Ethan (ADR-142) |
 | Work details header | 13px 500, its chevron first, its count in 12px `--soft-ink` beside the label | derived (ADR-143's float) |
+| Reading tools at rest | the bookmark alone on `--scrim` (paper at 72%), glyph opaque; shown only in the focused thread, 150ms fade | Ethan (ADR-143, amended) |
+| Reading tools open | `--paper`, solid, over 150ms on the strong ease-out; the list of requests on `--scrim` with an 8px blur | Ethan (ADR-143, amended) |
 
 ## Open questions
 

@@ -1866,6 +1866,19 @@ the first text-only fixture. The Menu primitive gained an item `id` (two request
 label), a quiet `detail` at the right, and a height capped at the viewport, past which it
 scrolls. The unmounted draft in `apps/web/src/demo/` is gone.
 
+Amended 2026-09-30 (Ethan: "swap the placement of the magnifying glass with the bookmark. when
+collapsed only the bookmark should show", "the bookmark should only show when that thread panel
+component has focus", and a translucent bar and popover that fill solid once opened, after a
+screenshot of Claude's own). The bar rests as the bookmark alone, at the right, and Search unfolds
+to its left. It shows only in the thread that holds the focus (its compose box, its turns or the
+bar itself, `:focus-within`), so across a canvas of lanes the reader sees one binder, the thread
+they are in; it fades in and out over 150ms on the strong ease-out, and hidden it takes no tab
+stop. At rest and under the pointer the bar is a wash of the paper (`--scrim`, the paper at 72%)
+with only its glyph opaque; open, with search or the list of requests up, it fills solid over the
+same 150ms. The list of requests is the same wash with an 8px blur behind it, so its rows stay
+legible over the turns. The turns' region is now named "Messages in <thread>", so two threads side
+by side are two landmarks, not one twice (axe caught it in the two-thread story).
+
 ## ADR-144 - The rail stays on the desktop, and the projects panel extends from its edge
 
 2026-09-29 - Accepted (Ethan: "the projects and their threads need to extend from the collapsed
