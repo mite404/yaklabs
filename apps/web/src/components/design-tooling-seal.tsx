@@ -15,7 +15,7 @@ const RING = 44;
 const TOP_ARC = { radius: 35, from: -140, to: -40 };
 const BOTTOM_ARC = { radius: 42, from: 150, to: 30 };
 const TOP_WORDS = "YAKLABS";
-const BOTTOM_WORDS = "SEAL OF EVIDENCE";
+const BOTTOM_WORDS = "SEAL OF QUALITY";
 
 const radians = (degrees: number): number => (degrees * Math.PI) / 180;
 
@@ -41,7 +41,7 @@ function arc({ radius, from, to }: { radius: number; from: number; to: number })
 }
 
 // The face's ring and the words along it: a hairline of the deep gold at the face's edge, a
-// glint inside it, "Yaklabs" over the top and "Seal of evidence" under the bottom.
+// glint inside it, "Yaklabs" over the top and "Seal of quality" under the bottom.
 function Ring({ top, bottom }: { top: string; bottom: string }) {
   return (
     <>
@@ -107,7 +107,7 @@ function Medal({ id }: { id: string }) {
 
 /**
  * The design tooling seal: a gold medal with a serrated edge, "Yaklabs" over the top of its
- * ring and "Seal of evidence" under the bottom, drawn in the seal's own tokens so it keeps one
+ * ring and "Seal of quality" under the bottom, drawn in the seal's own tokens so it keeps one
  * colour in either theme. A picture only, with no name of its own: the link or the heading
  * beside it says what it is.
  * @param size The seal's width and height in CSS pixels.
@@ -129,16 +129,17 @@ export function Seal({ size = 112, className }: { size?: number; className?: str
 }
 
 // The ribbon's words: the link's name, and what the ribbon carries in capitals.
-const RIBBON_WORDS = "Includes design tooling";
+const RIBBON_WORDS = "Now with design tooling!";
 
 // The welcome's seal in CSS pixels, as the HTML ribbon it replaces measured: a 112px medal
 // centred on a 230px ribbon, 27px deep (8px above and below 11px words), its ends notched 8px.
-// The words fill the 176px they took with the ribbon's 0.1em tracking, whatever the font's
-// metrics, and sit on a baseline that centres their capitals (Inter's cap height, 0.727em).
+// The words fill the 186px they take with the ribbon's 0.1em tracking (160.5px of Inter 600
+// capitals and 23 gaps of 1.1px), whatever the font's metrics, and sit on a baseline that
+// centres their capitals (Inter's cap height, 0.727em).
 const LINK = { width: 230, height: 112 };
 const MEDAL = { size: 112, x: (LINK.width - 112) / 2 };
 const RIBBON = { top: 42.5, depth: 27, notch: 8 };
-const WORDS = { size: 11, length: 176, baseline: 56 + (11 * 0.727) / 2 };
+const WORDS = { size: 11, length: 186, baseline: 56 + (11 * 0.727) / 2 };
 
 // The ribbon's outline: a band across the link's width with a notch cut into either end.
 const ribbonPoints = (): string => {
@@ -169,7 +170,7 @@ function Ribbon() {
 
 /**
  * The welcome's link to the tooling page (ADR-160): the seal with an ink ribbon across its
- * middle saying "Includes design tooling", which runs past the seal on either side. The ribbon's
+ * middle saying "Now with design tooling!", which runs past the seal on either side. The ribbon's
  * words are the link's name, so a screen reader hears what a sighted visitor reads. It fills
  * with moss on hover, as the site's button does. Medal, ribbon and words are one drawing, so
  * they grow and settle as one piece (Ethan): as HTML beside an SVG, the words snapped to whole

@@ -232,7 +232,7 @@ the vendored shadcn tooltip. P23 reads the rail's pills in both themes.
 ### 33. The design tooling seal is a gold medal with an ink ribbon
 
 The welcome's link to the design tooling page (ADR-160) is a seal: a serrated gold disc with
-"Yaklabs" over the top of its ring and "Seal of evidence" under the bottom, and an ink ribbon
+"Yaklabs" over the top of its ring and "Seal of quality" under the bottom, and an ink ribbon
 across its middle carrying the link's words, which runs past the seal on either side.
 Gold is a metal, so the seal keeps one colour in either theme; only the ribbon turns over with
 the ink. The words are on the ribbon, never on the gold, since they run off the seal onto the
@@ -248,14 +248,14 @@ landing at its own time.
 | Face | `--seal-gold` (`--yak-orange`, `#d19456`), lit from the top left to `--seal-gold-glint` | derived (Ethan's example seal) |
 | Edge | `--seal-gold-deep` (`--rust`, `#a86f36`): 3.5:1 on the light paper, 6.6:1 dark, so the silhouette clears 3:1 | derived |
 | Ring words | `--on-seal` (`--yak-brown-ink`, `#3b2612`): 5.5:1 on the face, the orange pill's pair | derived (rule 13) |
-| Ribbon | `--ink` with `--on-ink`, 230px × 27px across the 112px medal, notched 8px at both ends; 11px 600 upper case set to the 176px the 0.1em tracking gave, at geometric precision | derived (rule 28's pill) |
+| Ribbon | `--ink` with `--on-ink`, 230px × 27px across the 112px medal, notched 8px at both ends; 11px 600 upper case, "NOW WITH DESIGN TOOLING!", set to the 186px the 0.1em tracking gives, at geometric precision | derived (rule 28's pill) |
 | Ribbon hover | fills `--moss` with `--on-accent` over 150ms `ease`, as the outline button | css (rule 8) |
 | Size | 112px on the welcome, 200px on the page's hero; 36 teeth, 5 units deep in a 120-unit box | derived |
 | Place on the welcome | pinned above the greeting at the column's right: centre 30px above the mark's top, ribbon ending 24px inside the column's edge; tilted 25° with the left side up, as a medal on a lapel; in the column's flow, upright, under 641px | Ethan |
 | Focus | the site's ring, 2px `--focus` 3px off, on the link's 4px corners | derived |
-| Size on the welcome | 70% of the drawn 112px, by `scale`, so the words stay crisp | Ethan |
+| Size on the welcome | 73.5% of the drawn 112px, by `scale`, so the words stay crisp; 5% up from 70% so the ring's "Seal of quality" reads | Ethan |
 | Hop | every 4s: 6px up and back over 480ms, a 2px second hop, then still; on `transform` under the tilt, so it hops along its lean; none under reduced motion (rule 24) | Ethan |
-| Hover and focus | grows 10% (`scale` 0.7 to 0.77) over 150ms `ease`, the button's timing (rule 8), the hop held meanwhile; no growth under reduced motion | Ethan |
+| Hover and focus | grows 10% (`scale` 0.735 to 0.8085) over 150ms `ease`, the button's timing (rule 8), the hop held meanwhile; no growth under reduced motion | Ethan |
 
 ## Inputs
 

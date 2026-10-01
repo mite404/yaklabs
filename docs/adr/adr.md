@@ -2550,6 +2550,9 @@ link's name is its `aria-label`, the ribbon's words, so a screen reader still he
 eye reads. Alternatives weighed: `will-change` on the link, which in Chrome only moved the
 redraw to after the growth; and a moss copy of the ribbon fading over the ink one, which left
 a hairline of the ink at the moss's edges in the dark theme.
+Amended 2026-10-01 (Ethan): the ring's words read "Seal of quality" and the ribbon's "Now with
+design tooling!", which is also the link's name; on the welcome the seal grows 5%, to 73.5% of
+its drawn size, so the ring's smaller words read.
 
 ## ADR-161 - The site is light only
 

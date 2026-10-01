@@ -569,8 +569,8 @@ html[data-dragging="sidebar"] * {
   }
   /* On the welcome the seal is pinned above the greeting at the column's right, its centre
      30px above the mark's top and its ribbon ending 24px inside the column's edge, where Ethan
-     circled; tilted 25deg with its left side up, as a medal sits on a lapel, and at 70% of its
-     drawn size (Ethan). First in the column's DOM, since it is first on screen. On a narrow pane
+     circled; tilted 25deg with its left side up, as a medal sits on a lapel, and at 73.5% of its
+     drawn size, 5% up from 70% so the ring's smaller words read (Ethan). First in the column's DOM, since it is first on screen. On a narrow pane
      it has no room beside the greeting, so it stays in the column's flow, upright, where it was
      first placed.
      It says it can be pressed two ways (Ethan): a small hop every 4s, 6px up and back in 480ms
@@ -581,13 +581,13 @@ html[data-dragging="sidebar"] * {
      size (design pillars, rule 24). */
   .welcome-seal {
     rotate: 25deg;
-    scale: 0.7;
+    scale: 0.735;
     transition: scale 150ms ease;
     animation: seal-hop 4s ease-in-out infinite;
   }
   .welcome-seal:hover,
   .welcome-seal:focus-visible {
-    scale: 0.77;
+    scale: 0.8085;
     animation-play-state: paused;
   }
   @keyframes seal-hop {
@@ -621,7 +621,7 @@ html[data-dragging="sidebar"] * {
     }
     .welcome-seal:hover,
     .welcome-seal:focus-visible {
-      scale: 0.7;
+      scale: 0.735;
     }
   }
 
