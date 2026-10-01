@@ -27,7 +27,7 @@ function clamp(top: number, maxScrollTop: number): number {
 }
 
 // The union of several elements' spans, measured in the scroller's content coordinates.
-function contentSpan(scroller: HTMLElement, elements: HTMLElement[]): Span {
+function contentSpan(scroller: HTMLElement, elements: (Element | Range)[]): Span {
   const origin = scroller.getBoundingClientRect().top + scroller.clientTop - scroller.scrollTop;
   const rects = elements.map((element) => element.getBoundingClientRect());
   return {
@@ -216,11 +216,12 @@ export function nudgeInScroller(scroller: HTMLElement, elements: HTMLElement[]):
 }
 
 /**
- * Scrolls `scroller` so `element` lands centered in the visible band, adding a runway below the
+ * Scrolls `scroller` so `element` (a turn, or a run of words in one) lands centered in the
+ * visible band, adding a runway below the
  * thread's end when the element is too near it to center otherwise. The runway stays until the
  * reader scrolls it out of view or a new turn lands (`releaseRunway`).
  */
-export function centerInScroller(scroller: HTMLElement, element: HTMLElement): void {
+export function centerInScroller(scroller: HTMLElement, element: Element | Range): void {
   const target = contentSpan(scroller, [element]);
   const view = viewport(scroller);
   const runway = runwayFor(target, view); // → px

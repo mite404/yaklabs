@@ -26,37 +26,57 @@ export function requestsOf(messages: ThreadMessage[]): Request[] {
     .map(({ id, text, time }) => ({ id, label: bookmarkLabel(text), text, time }));
 }
 
+/** One place the search found its words: the turn, and which occurrence in it, from 0. */
+export type Match = { turnId: string; nth: number };
+
+const sameMatch = (a: Match, b: Match): boolean => a.turnId === b.turnId && a.nth === b.nth;
+
+// How many times `needle` occurs in `haystack`, side by side and never overlapping, as an
+// editor's find counts them.
+function occurrences(haystack: string, needle: string): number {
+  let count = 0;
+  for (
+    let at = haystack.indexOf(needle);
+    at !== -1;
+    at = haystack.indexOf(needle, at + needle.length)
+  )
+    count += 1;
+  return count;
+}
+
 /**
- * The ids of the turns whose text holds `query`, in thread order, ignoring case. A blank query
- * matches nothing. Only a turn's own words are searched, not the cards it carries.
+ * Every occurrence of `query` in the thread, in reading order, ignoring case: each turn's in
+ * the order they come. A blank query matches nothing. Only a turn's own words are searched,
+ * not the cards it carries.
  */
-export function matchesOf(messages: ThreadMessage[], query: string): string[] {
+export function matchesOf(messages: ThreadMessage[], query: string): Match[] {
   const needle = query.trim().toLocaleLowerCase();
   if (needle === "") return [];
-  return messages
-    .filter((message) => message.text.toLocaleLowerCase().includes(needle))
-    .map((message) => message.id);
+  return messages.flatMap((message) => {
+    const count = occurrences(message.text.toLocaleLowerCase(), needle); // → occurrences in the turn
+    return Array.from({ length: count }, (_, nth) => ({ turnId: message.id, nth }));
+  });
 }
 
 /**
  * The match one step from `current` in `direction`, wrapping at either end. With no current
- * match, forward lands on the first and back on the last.
+ * match, or one that is gone, forward lands on the first and back on the last.
  */
 export function stepMatch(
-  matches: string[],
-  current: string | undefined,
+  matches: Match[],
+  current: Match | undefined,
   direction: 1 | -1,
-): string | undefined {
+): Match | undefined {
   if (matches.length === 0) return undefined;
-  const at = current === undefined ? -1 : matches.indexOf(current); // → -1 when gone
+  const at = current === undefined ? -1 : matches.findIndex((m) => sameMatch(m, current)); // → -1 when gone
   if (at === -1) return direction === 1 ? matches[0] : matches.at(-1);
   return matches[(at + direction + matches.length) % matches.length];
 }
 
-/** What the search's counter says: how many turns match, and which one is showing. */
-export function matchStatus(matches: string[], current?: string): string {
+/** What the search's counter says: how many matches there are, and which one is showing. */
+export function matchStatus(matches: Match[], current?: Match): string {
   if (matches.length === 0) return "No matches";
-  const at = current === undefined ? -1 : matches.indexOf(current);
+  const at = current === undefined ? -1 : matches.findIndex((m) => sameMatch(m, current));
   if (at === -1) return matches.length === 1 ? "1 match" : `${matches.length} matches`;
   return `${at + 1} of ${matches.length}`;
 }

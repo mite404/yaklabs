@@ -325,6 +325,8 @@
    canvas behind it, so a row of lanes only panned from the bare ground between them. */
 .thread-scroll {
   container: thread / inline-size;
+  /* Positioned, so the search's rings (below) scroll with the turns. */
+  position: relative;
   overflow-x: hidden;
   overflow-y: auto;
   overflow-anchor: none;
@@ -1210,6 +1212,54 @@
   from {
     opacity: 0;
     transform: translateY(6px);
+  }
+}
+
+/* A thread's search (searchMarks.ts) marks the words it found as a text editor's find does:
+   every match tinted with the selection's blue, the one stepped to selected outright, as a
+   click and drag would select it (Ethan). */
+::highlight(thread-search) {
+  background-color: color-mix(in srgb, var(--blue) 40%, transparent);
+  color: var(--ink);
+}
+::highlight(thread-search-current) {
+  background-color: var(--blue);
+  color: var(--on-blue);
+}
+/* The layer the rings hang in: no box of its own, at the turns' origin, so each ring placed in
+   the turns' coordinates scrolls with them. */
+.search-rings {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+/* The ring around the match a step lands on, once, so the eye finds the words rather than the
+   turn they sit in: the selection's blue drawn tight around them, widening and fading out over
+   the 1.2s a jumped-to turn glows. */
+.search-ring {
+  position: absolute;
+  border-radius: 3px;
+  animation: search-ring 1.2s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+}
+@keyframes search-ring {
+  from {
+    box-shadow:
+      0 0 0 2px var(--blue),
+      0 0 0 5px color-mix(in srgb, var(--blue) 45%, transparent);
+  }
+  to {
+    box-shadow:
+      0 0 0 2px transparent,
+      0 0 0 10px transparent;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .search-ring {
+    animation: none;
+    box-shadow: 0 0 0 2px var(--blue);
   }
 }
 
