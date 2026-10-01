@@ -1694,6 +1694,25 @@ real records, but each one only knew its turn, and the turn was the whole answer
 also knows the step that recorded it, and the step's evidence is the same chart the reply shows
 between its paragraphs, so the jump finds that card by its contents and glows it alone.
 
+### The entrance nobody saw
+
+Ethan's note was that the agent tree's hand-off "isn't quite right". On paper it was perfect: the
+base's exit and the top branch's entry started on the same frame, ran the same 4px on the same
+curve, and met at the halfway mark, one pill half out, the other half in. On screen the base
+left first. The two actors did not start equally visible: the base is solid from its first
+frame, while the top branch starts clear and above the edge, under the clip, and an ease-in
+curve spends its first frames barely moving. So for the opening beat only the base was on
+camera, and the top branch read as an empty box filling in late.
+
+The fix was a cue, not a curve: the base now holds home for 8% of the loop (160ms) while the
+top branch gets a third of the way in, a quarter lit and 1px into the box, and only then rolls
+out. Ethan chose it from three versions played side by side in Storybook (together, this lead,
+and a longer one where the top had landed by the time the base was half gone). The loop stays
+2000ms; the base's solid beat simply grows from 600ms to 760ms. The browser test now checks the
+lead itself, base still home while the branch is visibly lit, and fails on the old timing.
+Lesson: equal on paper is not equal on screen. An actor who walks on from the dark needs an
+earlier cue than one already in the light.
+
 ## 5. Director's Commentary
 
 ### The agent only states intent; the design system does the rest
@@ -2639,12 +2658,12 @@ with six stops.
 
 The tree (Storybook: Motion/Agent tree) is a second glyph on the same clock and palette: Kay's
 three pills, a crest of green running down them, left then right, and the base holding solid for
-a beat. Then the base slides down under the icon's bottom edge, and as it is half clipped the top
-branch fades in over the same beat, on the same curve, one pill leaving as the other arrives. It
+a beat. Then the top branch starts fading in from above, and a moment later the base slides down
+under the icon's bottom edge on the same curve, one pill leaving as the other arrives. It
 borrows a trick from side-scrolling games and car shots on a
 soundstage: the car stays put and the background scrolls, so the eye reads motion the other way.
 It is also a cheat, the good kind: only the two lit pills move. The base scrolls out under the
-bottom edge while the top branch scrolls in over the top edge, both 4px on the same curve, so
+bottom edge just after the top branch starts in over the top edge, both 4px on the same curve, so
 they read as one strip of film passing the gate, and the eye supplies the rest of the tree.
 Equal distance matters: the base only needed 3px to leave, but at 3px against the branch's 4px
 the two would drift apart and the strip would tear. Once the base is out of frame it jumps
