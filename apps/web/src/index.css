@@ -789,9 +789,9 @@ html[data-dragging="sidebar"] * {
      shows at rest and only yields its middle to the grip on hover. The veil is the grip's hit
      area too: a press on it lands on the bar, never on the title under it. It is 86px, the
      46px it was and 20px more on either side (Ethan): the title turns from rename to grab 20px
-     sooner, and its solid middle (30% to 70%, 34px) leaves the faded letters some 10px of
-     paper either side of the 15px dots. The dots sit on the collapse's line, the title's
-     capitals, 2px above the bar's middle, rather than down on its baseline. */
+     sooner, and its solid middle, 47px, leaves the faded letters 16px of paper either side of
+     the 15px dots (Ethan), fading in over the 19.5px beyond. The dots sit on the collapse's
+     line, the title's capitals, 2px above the bar's middle, rather than down on its baseline. */
   [data-reorder="true"] .lane :is(.thread-header, .card-heading)::before,
   [data-reorder="true"] .lane :is(.thread-header, .card-heading)::after {
     content: "";
@@ -806,8 +806,8 @@ html[data-dragging="sidebar"] * {
     background: linear-gradient(
       to right,
       transparent,
-      var(--paper) 30%,
-      var(--paper) 70%,
+      var(--paper) calc(50% - 23.5px),
+      var(--paper) calc(50% + 23.5px),
       transparent
     );
   }
