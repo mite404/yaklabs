@@ -108,8 +108,8 @@ What would let Kay's team drop the lab into their TypeScript monorepo (see
 - **React as a peer dependency of the catalog.** It is `@yaklabs/catalog` in a pnpm workspace
   with an `exports` map now (ADR-087); a package Kay's monorepo installs would list React as a
   peer instead of a dependency.
-- **Platform-aware shortcuts.** Show Ctrl on Windows where the lab says ⌘; Kay ships on macOS and
-  Windows.
+- **Platform-aware shortcuts.** Show Ctrl on Windows where the lab says ⌘, for when Kay ships
+  on Windows (macOS only as of 2026-10-01).
 - **Tokens in a standard format** (DTCG JSON) alongside the CSS, for theming, plugins and the Figma
   sync.
 - **Catalog schemas as JSON Schema**, generated from the zod schemas, so a harness can use them as

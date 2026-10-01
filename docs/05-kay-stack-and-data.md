@@ -20,7 +20,7 @@ Legal pages change: re-read the sources before quoting them in the interview.
 | Layer | What they use | Evidence |
 | --- | --- | --- |
 | Codebase | One TypeScript monorepo: "a desktop app, a daemon, cloud services, and dozens of plugins" (pnpm or Turborepo style tooling) | Developer Experience post |
-| App UI | React and CSS; "data flow across process boundaries"; **macOS only today** ("Windows and Linux are not available yet"; Apple silicon and Intel builds), while the Frontend post asks for macOS and Windows experience, so Windows is coming | Frontend and Design Engineer: Infrastructure posts, Quickstart |
+| App UI | React and CSS; "data flow across process boundaries"; **macOS only** as of 2026-10-01 (the quickstart: "runs on macOS today. Windows and Linux are not available yet"; Apple silicon and Intel builds), while the Frontend post asks for macOS and Windows experience, so Windows may follow | Frontend and Design Engineer: Infrastructure posts, Quickstart |
 | Desktop shell | Electron, **inferred** and unconfirmed: a Node-heavy TypeScript stack with a daemon, and an app data folder named after the app (`~/Library/Application Support/Yak/`) | Privacy Policy §6, job posts |
 | Systems language | Rust or Go is a nice-to-have for the AI Harnesses role only ("Systems-language experience (Rust, Go) alongside TypeScript"); nothing says the backend uses it | AI Harnesses post |
 | Hosted services | "the API, the inference gateway", plus Cloudflare-hosted "OAuth broker, downloads, release operations, build cache, website, and careers" | DPA Annex III, Data Use |
@@ -133,10 +133,10 @@ and fail-closed catalog already follow Kay's "the agent proposes, the human gran
 
 ## Inferences worth stating carefully
 
-**Business model: Kay resells inference.** "No API keys, no model to pick, no setup file" plus the
-DPA's metered usage records ("computed cost ... metering usage for billing") and the Stripe
-sub-processor mean customers pay Kay directly and Kay pays the model providers (Fireworks by
-default); bringing your own key is the optional exception.
+**Business model: inference looks bundled (inferred).** "No API keys, no model to pick, no setup
+file", the DPA's metered usage records ("computed cost ... metering usage for billing") and the
+Stripe sub-processor suggest that customers pay Kay and Kay pays the model providers (Fireworks by
+default), with bringing your own key as the optional exception. Nothing published states pricing.
 
 **Voice.** "ElevenLabs is no longer a sub-processor. Until 11 August 2026 it provided our hosted
 speech-to-text ... Deepgram is the announced replacement" (Data Use page); on-device transcription
