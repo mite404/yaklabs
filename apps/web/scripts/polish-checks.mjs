@@ -1,5 +1,5 @@
-// The shell polish's scenarios (docs/reference/shell-polish/tasks.md, section 0.4), its
-// measurements (0.5), and the baseline it compares against (0.6).
+// The shell polish's scenarios, its measurements, and the baseline it compares against. The
+// task list they came from is in git history, at docs/reference/shell-polish/tasks.md.
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { ROOT } from "./harness.mjs";

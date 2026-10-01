@@ -1,6 +1,6 @@
-// The shell polish's acceptance predicates, one check per section of
-// docs/reference/shell-polish/tasks.md (A to K). Each returns { ok, detail } and runs in its
-// own contexts, so one failure never hides another.
+// The shell polish's acceptance predicates, one check per section (A to K) of its task list, which
+// is in git history at docs/reference/shell-polish/tasks.md. Each returns { ok, detail } and runs
+// in its own contexts, so one failure never hides another.
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";

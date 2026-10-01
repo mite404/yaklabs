@@ -2408,8 +2408,8 @@ starter thread on the thread pane, so the canvas stays hidden until the layout s
 first visit paints the abstract splash. `/new` is deleted. `/playground`,
 `/demo/weekly-brief[?script=]` and `/demo/weekly-brief/t/:id` redirect to `/t/:id` through one
 table (`apps/web/src/world/redirects.ts`) that carries only `?splash=`.
-Alternatives weighed (Door 1 in `docs/decisions/one-shell-plan.md`, and the trail in
-`docs/decisions/one-shell.tsv`): one in-memory world hosting both projects behind a
+Alternatives weighed (Door 1 in the session's plan, kept in git history at
+`docs/decisions/one-shell-plan.md`): one in-memory world hosting both projects behind a
 `VITE_WORLD` switch, the first recommendation, rejected once Ethan asked for the live thread to
 behave as production, since a reload would throw its turns away; seeding the Demo into the
 worker, which then stored text-only turns and would have reloaded the shows as plain text, when a

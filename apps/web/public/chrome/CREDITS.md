@@ -7,7 +7,7 @@
 - It follows the style of Ethan's mock
   (`docs/reference/shell-polish/mocks/oil-painting-title-bar.webp`)
   without copying its pixels, and stands in until Ethan names the painting he wants, where it is
-  from and under what licence (Q4 in `docs/reference/shell-polish/tasks.md`).
+  from and under what licence.
 - The script decodes the WebP it wrote and keeps lowering its clamp until no pixel of the file is
   brighter than luminance 0.10, so cream and the painted bar's soft ink, cream at 85%, stay above
   4.5:1 anywhere on the bar. `painting.json` records the decoded mean colour and brightest pixel.

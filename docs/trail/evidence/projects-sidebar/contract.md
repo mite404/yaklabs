@@ -1,7 +1,8 @@
 # Contract: projects, sub-threads, the shell, persistence, scenarios and the carry
 
 The synthesis of two architect arenas (core base: candidate D; shell base: candidate A) with grafts
-recorded in `docs/trail/projects-sidebar.tsv`. Every package worker builds against this file.
+recorded in the trail log, in git history at `docs/trail/projects-sidebar.tsv`. Every package
+worker builds against this file.
 Names in `code` are the contract; bodies are theirs. ADR-091 to ADR-096 carry the decisions.
 
 ## Build order and planned breakage
