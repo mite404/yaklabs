@@ -3,6 +3,7 @@ import type { ThreadSummary } from "@yaklabs/runtime";
 import { env } from "../env";
 import { BonsaiMark } from "../shell/rail-places";
 import type { PaneKind } from "../shell/state";
+import { DesignToolingSeal } from "./design-tooling-seal";
 import { WelcomeArt } from "./splash";
 import { SplashSwitch } from "./splash-switch";
 import { ACTION, Actions, Projects } from "./welcome-sections";
@@ -52,7 +53,8 @@ const GreetingLine = env.auth.kind === "workos" ? WorkOsGreeting : LocalGreeting
 
 /**
  * A new thread's welcome (ADR-136), after Kay's own new tab: the mark, the date, a greeting for
- * the theme's time of day, the projects, and the actions a thread can open with. It shows in the main
+ * the theme's time of day, the projects, the actions a thread can open with, and the seal that
+ * leads to the design tooling page (ADR-160). It shows in the main
  * pane while the thread has no turns, over the painting `<html data-splash>` names, and leaves
  * with the first turn. Open file and Open terminal are the desktop app's; here they wait.
  * @param pane The layout the thread is in. The switch for the painting shows only in the
@@ -72,6 +74,7 @@ export function Welcome({ thread, pane }: { thread: ThreadSummary; pane: PaneKin
         </div>
         <Projects />
         <Actions thread={thread} />
+        <DesignToolingSeal />
       </div>
       {/* The switch through the paintings, in every build, so a visitor can look through the
           design work (Ethan; amends ADR-156, which had kept it to development builds). */}
