@@ -103,7 +103,7 @@ async function shortWindow(browser) {
       look.labShown === true &&
       look.noBar === true &&
       look.foot <= FOOT_PX,
-    note: `${theme} ${SHORT.width}x${SHORT.height}: places scroll ${look.scrolls}, Lab in view on focus ${look.labShown}, no scrollbar ${look.noBar}, account ${look.foot}px off the foot`,
+    note: `${SHORT.width}x${SHORT.height}: places scroll ${look.scrolls}, Lab in view on focus ${look.labShown}, no scrollbar ${look.noBar}, account ${look.foot}px off the foot`,
   };
 }
 
