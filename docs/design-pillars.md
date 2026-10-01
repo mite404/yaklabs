@@ -245,6 +245,7 @@ takes its colours from tokens.
 | Ribbon | `--ink` with `--on-ink`, notched 8px at both ends, 11px 600 upper case at 0.1em, 8px × 26px padding | derived (rule 28's pill) |
 | Ribbon hover | fills `--moss` with `--on-accent` over 150ms `ease`, as the outline button | css (rule 8) |
 | Size | 112px on the welcome, 200px on the page's hero; 36 teeth, 5 units deep in a 120-unit box | derived |
+| Place on the welcome | pinned above the greeting at the column's right: centre 30px above the mark's top, ribbon ending 24px inside the column's edge; tilted 25° with the left side up, as a medal on a lapel; in the column's flow, upright, under 641px | Ethan |
 | Focus | the site's ring, 2px `--focus` 3px off, on the link's 4px corners | derived |
 
 ## Inputs

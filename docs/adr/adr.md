@@ -2489,3 +2489,6 @@ not where the words run off the seal onto the dark paper.
 Known gaps: the page is linked from the welcome and from nowhere else, and the review app's
 screenshots are from Ethan's Mac at 2x, so they will not match a later build of the tool pixel
 for pixel.
+Amended the same day (Ethan, circling the spot): the seal is pinned above the greeting at
+the column's right rather than closing the column, tilted 25° with its left side up, and the
+page's copy was cut to what a reader skimming it in three minutes keeps.
