@@ -239,7 +239,7 @@ export function openChildLane(
   if (lanes.some((lane) => lane.id === id)) return lanes;
   const rank = order.indexOf(threadId);
   const after = (lane: Lane) => lane.kind === "thread" && order.indexOf(lane.threadId) > rank;
-  const at = rank === -1 ? -1 : lanes.findIndex(after); // → the first lane listed after it
+  const at = rank === -1 ? -1 : lanes.findIndex((lane) => after(lane)); // → the first lane listed after it
   return insertLane(lanes, at === -1 ? lanes.length : at, threadLane(threadId));
 }
 
