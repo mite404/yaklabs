@@ -15,9 +15,9 @@ const labelOf = (style: string): string =>
   SPLASH_LOOKS.find((look) => look.id === style)?.label ?? "";
 
 /**
- * The debug button that picks the painting behind a new thread's welcome (ADR-136): the
- * landscape, the abstract strokes, Vitruvian's sheet, or Bonsai once its assets exist. The
- * welcome places it, since it shows there and nowhere else; it leaves with Ethan's choice.
+ * The button that picks the painting behind a new thread's welcome (ADR-136) for this visit: the
+ * landscape, the abstract strokes, Vitruvian's sheet, or Bonsai once its assets exist, so a
+ * visitor can look through each. The welcome places it, since it shows there and nowhere else.
  * Its menu opens from the button's corner in 150ms, and Esc closes it.
  */
 export function SplashSwitch({ className }: { className?: string }) {
