@@ -1264,8 +1264,8 @@
 }
 
 /* A jumped-to turn glows briefly so the eye finds it (ADR-022); an answer glows alone on its
-   surface. */
-:is(.turn, .answered-pair)[data-flash] {
+   surface, and a recap's outcome glows on its own card or step. */
+:is(.turn, .answered-pair, .card, .work-step)[data-flash] {
   border-radius: 12px;
   animation: turn-flash 1.2s ease-out;
 }
@@ -1282,7 +1282,7 @@
   .recap,
   .recap-chip,
   .awaiting,
-  :is(.turn, .answered-pair)[data-flash] {
+  :is(.turn, .answered-pair, .card, .work-step)[data-flash] {
     animation: none;
   }
   .bubble-more {
@@ -1292,7 +1292,7 @@
 /* Without the glow's fade, a jumped-to turn holds the glow's first frame until it clears, so the
    eye still finds it. */
 @media (prefers-reduced-motion: reduce) {
-  :is(.turn, .answered-pair)[data-flash] {
+  :is(.turn, .answered-pair, .card, .work-step)[data-flash] {
     box-shadow: 0 0 0 4px color-mix(in srgb, var(--focus) 25%, transparent);
   }
 }

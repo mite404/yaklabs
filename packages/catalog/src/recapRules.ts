@@ -7,6 +7,8 @@ export type RecapItem = {
   text: string;
   /** The thread turn that holds the evidence for this outcome. */
   turnId: string;
+  /** The step in that turn's work that recorded it, so a jump lands on its own evidence. */
+  stepId?: string;
 };
 
 /** Whether the agent has worked since the user last spoke, and when that was (ADR-027). */

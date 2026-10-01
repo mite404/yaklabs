@@ -95,11 +95,17 @@ function LimitationView({
   );
 }
 
-// A catalog card between paragraphs, at the thread's measure.
-function ProseCard(props: { payload: unknown; carries: boolean; shareable: boolean }) {
-  const { payload, carries, shareable } = props;
+// A catalog card between paragraphs, at the thread's measure, naming the step whose evidence it
+// is, if any, so a recap's outcome can land on it.
+function ProseCard(props: {
+  payload: unknown;
+  carries: boolean;
+  shareable: boolean;
+  step: string | undefined;
+}) {
+  const { payload, carries, shareable, step } = props;
   return (
-    <div className="prose-card">
+    <div className="prose-card" data-step={step}>
       <CatalogCard payload={payload} context="thread" draggable={carries} shareable={shareable} />
     </div>
   );
@@ -110,11 +116,13 @@ function BlockView({
   carries,
   shareable,
   recover,
+  stepOf,
 }: {
   block: Block;
   carries: boolean;
   shareable: boolean;
   recover: Recover | undefined;
+  stepOf: ((payload: unknown) => string | undefined) | undefined;
 }) {
   switch (block.kind) {
     case "paragraph":
@@ -141,7 +149,14 @@ function BlockView({
         </ul>
       );
     case "card":
-      return <ProseCard payload={block.payload} carries={carries} shareable={shareable} />;
+      return (
+        <ProseCard
+          payload={block.payload}
+          carries={carries}
+          shareable={shareable}
+          step={stepOf?.(block.payload)}
+        />
+      );
     case "limitation":
       return <LimitationView block={block} recover={recover} />;
     default: {
@@ -159,17 +174,20 @@ function BlockView({
  * @param cardsCarry Whether a card's header carries it out onto the canvas (ADR-089).
  * @param shareable Whether a card offers its own share link (ADR-064).
  * @param recover Sends a limitation's recovery; without it the prompt shows with no button.
+ * @param stepOf The step of the reply's work a card is the evidence of (`stepBacking`).
  */
 export function Prose({
   blocks,
   cardsCarry,
   shareable = true,
   recover,
+  stepOf,
 }: {
   blocks: Block[];
   cardsCarry?: boolean;
   shareable?: boolean;
   recover?: Recover;
+  stepOf?: (payload: unknown) => string | undefined;
 }) {
   return (
     <div className="quiet-prose">
@@ -180,6 +198,7 @@ export function Prose({
           carries={cardsCarry !== false}
           shareable={shareable}
           recover={recover}
+          stepOf={stepOf}
         />
       ))}
     </div>

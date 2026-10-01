@@ -57,6 +57,7 @@ import {
 } from "./transcript";
 import { stampOf } from "./turnTime";
 import { AgentTurn, AnsweredTurns, UserTurn } from "./Turns";
+import { REVEAL_STEP } from "./WorkDetails";
 import "./thread.css";
 
 /**
@@ -680,21 +681,60 @@ function clearFlash(turn: HTMLElement): void {
   delete turn.dataset.flash;
 }
 
-// Jump so the evidence lands vertically centered, every time (ADR-022 eye trace). Only the turn
+// Jump so the evidence lands vertically centered, every time (ADR-022 eye trace). Only what was
 // jumped to last glows: stepping through matches moves the glow rather than leaving a trail, and
-// a second jump to the same turn starts its glow over.
-function flashTurn(scroller: HTMLElement | null, turnId: string): void {
-  const turn = scroller?.querySelector<HTMLElement>(`[data-turn-id="${CSS.escape(turnId)}"]`);
-  if (!scroller || !turn) return;
-  centerInScroller(scroller, turn);
+// a second jump to the same place starts its glow over.
+function flashElement(scroller: HTMLElement, target: HTMLElement): void {
+  centerInScroller(scroller, target);
   scroller.querySelectorAll<HTMLElement>("[data-flash]").forEach(clearFlash);
-  void turn.offsetWidth; // a style flush, so the glow's animation starts over
-  turn.dataset.flash = "true";
+  void target.offsetWidth; // a style flush, so the glow's animation starts over
+  target.dataset.flash = "true";
   flashTimers.set(
-    turn,
+    target,
     window.setTimeout(() => {
-      clearFlash(turn);
+      clearFlash(target);
     }, FLASH_MS),
+  );
+}
+
+// The turn with this id on the page, or null while it is not there.
+function turnIn(scroller: HTMLElement | null, turnId: string): HTMLElement | null {
+  return scroller?.querySelector<HTMLElement>(`[data-turn-id="${CSS.escape(turnId)}"]`) ?? null;
+}
+
+function flashTurn(scroller: HTMLElement | null, turnId: string): void {
+  const turn = turnIn(scroller, turnId);
+  if (scroller && turn) flashElement(scroller, turn);
+}
+
+// A recap outcome's own evidence (ADR-018), rather than the whole reply it came from: the card in
+// the reply's words that backs its step, else the step's row in Work details, unfolded for it,
+// else the turn.
+function flashOutcome(scroller: HTMLElement | null, item: RecapItem): void {
+  const turn = turnIn(scroller, item.turnId);
+  if (!scroller || !turn) return;
+  if (item.stepId === undefined) {
+    flashElement(scroller, turn);
+    return;
+  }
+  const step = CSS.escape(item.stepId);
+  const card = turn.querySelector<HTMLElement>(`.prose-card[data-step="${step}"] .card`);
+  if (card) {
+    flashElement(scroller, card);
+    return;
+  }
+  const work = turn.querySelector(".work-details");
+  if (!work) {
+    flashElement(scroller, turn);
+    return;
+  }
+  work.dispatchEvent(new Event(REVEAL_STEP));
+  // Two frames: one for the disclosure to render its steps, one for them to lay out.
+  requestAnimationFrame(() =>
+    requestAnimationFrame(() => {
+      const row = turn.querySelector<HTMLElement>(`.work-step[data-step="${step}"]`);
+      flashElement(scroller, row ?? turn);
+    }),
   );
 }
 
@@ -1146,8 +1186,8 @@ export function ChatThreadPanel({
               collapsed={recap.collapsed}
               onExpand={recap.expand}
               onDismiss={recap.dismiss}
-              onJump={(turnId) => {
-                flashTurn(scroller.current, turnId);
+              onJump={(item) => {
+                flashOutcome(scroller.current, item);
               }}
             />
           </div>

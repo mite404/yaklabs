@@ -15,7 +15,8 @@ function RecapHeadline({ idleMs }: { idleMs: number }) {
 
 /**
  * "Previously on": an outcomes-first recap shown above the compose box after the user
- * has been away (ADR-018). Each item jumps to the turn that holds its evidence.
+ * has been away (ADR-018). Each item jumps to its evidence: the card or step that recorded it, or
+ * the turn that holds it.
  * It only reports what happened; questions for the user live in AwaitingInputCard (ADR-039).
  * When `collapsed`, it shrinks to a chip so it never competes with typing.
  */
@@ -32,7 +33,7 @@ export function Recap({
   collapsed: boolean;
   onExpand: () => void;
   onDismiss: () => void;
-  onJump: (turnId: string) => void;
+  onJump: (item: RecapItem) => void;
 }) {
   if (collapsed)
     return (
@@ -54,7 +55,7 @@ export function Recap({
           <li key={item.turnId + item.text}>
             <button
               onClick={() => {
-                onJump(item.turnId);
+                onJump(item);
               }}
             >
               <span className="recap-text">{item.text}</span>

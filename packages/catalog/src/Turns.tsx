@@ -12,7 +12,7 @@ import { ChartGlyph } from "./ComposeBox";
 import { InteractiveCard } from "./InteractiveCard";
 import type { CardAttachment } from "./interactive";
 import { Prose, type Recover } from "./QuietProse";
-import { blocksOf, workLabel, type Ended } from "./reply";
+import { blocksOf, stepBacking, workLabel, type Ended } from "./reply";
 import type { ThreadMessage } from "./thread";
 import type { AnsweredMessage } from "./transcript";
 import { WorkDetails } from "./WorkDetails";
@@ -191,7 +191,13 @@ function Words({
   if (blocks.length === 0) return narrates && <Waiting activity={activity} />;
   return (
     <>
-      <Prose blocks={blocks} cardsCarry={cardsCarry} shareable={shareable} recover={recover} />
+      <Prose
+        blocks={blocks}
+        cardsCarry={cardsCarry}
+        shareable={shareable}
+        recover={recover}
+        stepOf={stepBacking(message.work)}
+      />
       {narrates && activity !== undefined && <Activity activity={activity} />}
     </>
   );

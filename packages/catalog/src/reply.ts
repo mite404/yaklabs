@@ -385,6 +385,21 @@ function countOf(work: Work): string | undefined {
 }
 
 /**
+ * Which step of `work` a card in the reply's words is the evidence of, matched by its contents:
+ * a step's evidence and the card the reply shows for it are the same payload, though they may
+ * not be the same object once a stream has been stored and read back.
+ * @returns A lookup from a card's payload to its step's id, or undefined for a card no step backs.
+ */
+export function stepBacking(work: Work | undefined): (payload: unknown) => string | undefined {
+  const byContents = new Map(
+    (work?.steps ?? []).flatMap((step) =>
+      step.evidence === undefined ? [] : [[JSON.stringify(step.evidence), step.id] as const],
+    ),
+  ); // → payload JSON → step id
+  return (payload) => byContents.get(JSON.stringify(payload));
+}
+
+/**
  * What the one disclosure above a reply says (ADR-139, amended): while the reply streams, what
  * it is doing now, live, with the working glyph; once it settles, what the work amounted to in
  * the reply's own words, or "Work finished", "Work incomplete" or "Stopped" when it gave none;
