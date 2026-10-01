@@ -81,7 +81,7 @@ export function Hero() {
     <header className="land-hero">
       <div>
         <p className="land-kicker">Design engineering / tooling</p>
-        <h1 className="land-title">A design system agents can build with</h1>
+        <h1 className="land-title">Design tooling that allows humans to verify at scale</h1>
         <p className="land-lede">
           Agents and plugins can create new screens faster than a small team can review them. How
           does a system verify the product stays coherent as it grows?

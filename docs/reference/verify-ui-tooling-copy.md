@@ -129,3 +129,8 @@ than copy.
 - The lenses: Kay · Apple · Microsoft · Material
 - The footer: Internal use only · tools/verify-ui-drift · the README has the commands and the
   operating limits.
+
+## Ethan's copy, as it changed
+
+- Hero headline, first: A design system agents can build with
+- Hero headline, now: Design tooling that allows humans to verify at scale
