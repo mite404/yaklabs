@@ -103,7 +103,7 @@ than copy.
 
 ## Still on the page: the tool's own words and numbers
 
-- The bar: Yaklabs / Verify · Switch appearance · Back to Kay
+- The bar: Yaklabs / Verify · Back to Bonsai
 - The run's numbers: 3 rendering engines · 2 themes · 85 stories in the inventory · 0
   references CI can approve
 - The terminal: the run `pnpm verify-ui-drift run` as the CLI printed it, with its notice: "No
@@ -134,3 +134,5 @@ than copy.
 
 - Hero headline, first: A design system agents can build with
 - Hero headline, now: Design tooling that allows humans to verify at scale
+- Back to Kay, in the bar and at the close: now Back to Bonsai
+- Switch appearance, in the bar: gone; the page is light only

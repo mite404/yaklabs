@@ -2517,3 +2517,9 @@ across the three engines, fail loudly; the cells that stood there make a new row
 Amended once more (Ethan): on the welcome the seal is scaled to 70%, hops 6px every 4s to say
 it can be pressed, and grows 10% under the pointer over the button's 150ms; reduced motion keeps
 it still (design pillars, rule 33).
+Amended once more (Ethan): the hero reads "Design tooling that allows humans to verify at
+scale" with humans in Newsreader's own italic, whose cut tokens.css now loads beside the roman
+as ADR-140 loaded Inter's; the review app's header, from Ethan's screenshot, is the picture
+laid over the contrast table on the band, in place of the Material lens; the way back says
+Back to Bonsai; and the page is light only: it pins the light theme on the root while it is
+open and gives the visitor's choice back on leaving, and its appearance switch is gone.
