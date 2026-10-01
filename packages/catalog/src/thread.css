@@ -242,14 +242,14 @@
   border-bottom: 1px solid var(--hairline);
 }
 /* A host's control before the title (ADR-134), such as a lane's collapse: first in the bar's
-   row, --leading-space in from the lane's edge and the same again before the title, so its glyph
-   sits equally far from both (Ethan), as on a card lane's heading. The bar's 8px gap is part of
-   the second space, less the 1px the serif's capitals stand in from their side bearing, so the
-   glyph's ink measures 15px to the lane's edge and to the title's ink alike. */
+   row, --leading-space in from the lane's edge, as on the collapsed strip, and --leading-gap
+   before the title, the space between the bar's Share and Close icons (Ethan), as on a card
+   lane's heading. The bar's 8px gap is part of that space; measured ink to ink, the glyph sits
+   20px from the title's first letter, as the Share icon does from the Close. */
 .thread-header > .header-leading {
   display: flex;
   flex-shrink: 0;
-  margin: 0 calc(var(--leading-space) - 9px) 0 calc(var(--leading-space) - var(--thread-gutter));
+  margin: 0 calc(var(--leading-gap) - 8px) 0 calc(var(--leading-space) - var(--thread-gutter));
   /* Centred on the title's capitals, from their top to the baseline, rather than on its line
      box, which the serif's deep descent pulls 2px low (measured at 17px, the title's size). */
   translate: 0 -2px;
