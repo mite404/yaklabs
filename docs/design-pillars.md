@@ -248,7 +248,7 @@ landing at its own time.
 | Face | `--seal-gold` (`--yak-orange`, `#d19456`), lit from the top left to `--seal-gold-glint` | derived (Ethan's example seal) |
 | Edge | `--seal-gold-deep` (`--rust`, `#a86f36`): 3.5:1 on the light paper, 6.6:1 dark, so the silhouette clears 3:1 | derived |
 | Ring words | `--on-seal` (`--yak-brown-ink`, `#3b2612`): 5.5:1 on the face, the orange pill's pair | derived (rule 13) |
-| Ribbon | `--ink` with `--on-ink`, 230px × 27px across the 112px medal, notched 8px at both ends; 11px 600 upper case, "NOW WITH DESIGN TOOLING!", set to the 186px the 0.1em tracking gives, at geometric precision | derived (rule 28's pill) |
+| Ribbon | `--ink` with `--on-ink`, 230px × 27px across the 112px medal, notched 8px at both ends; 11px 600 upper case, "NOW WITH DESIGN TOOLING!", set to the 186px the 0.1em tracking gives, drawn as Inter outlines (`seal-words.ts`, from `scripts/seal-words.mjs`) rather than live text, so the words never shift against the ribbon when Chrome redraws the grown seal | derived (rule 28's pill), Ethan |
 | Ribbon hover | fills `--moss` with `--on-accent` over 150ms `ease`, as the outline button | css (rule 8) |
 | Size | 112px on the welcome, 200px on the page's hero; 36 teeth, 5 units deep in a 120-unit box | derived |
 | Place on the welcome | pinned above the greeting at the column's right, aligned optically: the ribbon's far tip in line with the ink of the projects' "+", 8px inside the column, and its lowest corner 4px below the mark's circle; worked out in CSS from the tilt, the size and the ribbon's corners, so it holds when either changes; tilted 25° with the left side up, as a medal on a lapel; in the column's flow under 641px | Ethan (mockup) |
