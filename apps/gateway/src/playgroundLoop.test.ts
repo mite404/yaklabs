@@ -9,6 +9,7 @@ import {
   round,
   say,
   sentMessages,
+  sentTools,
   shape,
   text,
   tool,
@@ -89,6 +90,58 @@ describe("the tool loop turns", () => {
     expect(results).toMatchObject({
       content: [{ is_error: true, content: "The input was not valid JSON." }],
     });
+  });
+});
+
+describe("the tool loop retires a tool that keeps failing", () => {
+  const bad = { cardId: "week", card: { ...BAR_CARD, component: "PieChart" } };
+
+  it("and no longer offers it from the next round on", async () => {
+    const { events, requests } = await eventsFor(
+      "Chart it.",
+      round("tool_use", tool(0, "show_card", bad)),
+      round("tool_use", tool(0, "show_card", bad)),
+      round("end_turn", text(0, "I cannot chart that.")),
+    );
+
+    expect(events.map(({ type }) => type)).toEqual(["text", "end"]);
+    expect(await sentTools(requests, 1)).toContain("show_card");
+    expect(await sentTools(requests, 2)).toEqual([
+      "update_work",
+      "ask_question",
+      "report_outcome",
+      "report_failure",
+    ]);
+  });
+
+  it("refuses a call to it anyway, flat, and the turn answers on", async () => {
+    const { events, requests } = await eventsFor(
+      "Chart it.",
+      round("tool_use", tool(0, "show_card", bad)),
+      round("tool_use", tool(0, "show_card", bad)),
+      // Rounds 3 and 4 were not offered show_card; the model hallucinates the call twice.
+      round("tool_use", tool(0, "show_card", { cardId: "week", card: BAR_CARD })),
+      round("tool_use", tool(0, "show_card", { cardId: "week", card: BAR_CARD })),
+      round("end_turn", text(0, "Here it is in words.")),
+    );
+
+    expect(events.map(({ type }) => type)).toEqual(["text", "end"]);
+    // Both hallucinated calls get the identical flat refusal, and round 5 still excludes the
+    // tool: the refusal counts nothing, so nothing escalates. The unit test pins the count.
+    const refusal = {
+      type: "tool_result",
+      content: "show_card is no longer available this turn.",
+      is_error: true,
+    };
+    expect((await sentMessages(requests, 3)).at(-1)).toEqual({
+      role: "user",
+      content: [{ ...refusal, tool_use_id: "t3_0" }],
+    });
+    expect((await sentMessages(requests, 4)).at(-1)).toEqual({
+      role: "user",
+      content: [{ ...refusal, tool_use_id: "t4_0" }],
+    });
+    expect(await sentTools(requests, 4)).not.toContain("show_card");
   });
 });
 
