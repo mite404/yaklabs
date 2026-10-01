@@ -1769,6 +1769,36 @@ inside it square. The 25px grab zone still lifts at 20px from the centre and not
 Lesson: a radius reshapes the set, a clip only frames it. Reach for the clip when the shape is
 about where things can be touched, not how they are built.
 
+### Sixteen levers waiting for a set that was struck
+
+The browser levers opened on `/` and waited for "Last week's sales", the Demo store's profit
+thread with its card. Every device used to be seeded with that thread. When the Live Playground
+became the device's seed (#35), and then Home began opening its blank thread (ADR-159), the set
+the levers were waiting for was gone, and sixteen of them timed out at their first line. The mock
+`?scenario=demo` has the thread, but its store lives in the worker's memory, and four levers
+reload to prove the device keeps lanes, tabs and panes. A reload of a scenario starts it over.
+
+The fix is a seed a dev build plants on the device when a lever asks:
+
+```js
+// lever.mjs: the lever asks before the page loads; the worker plants it beside the starter
+if (seed !== undefined) {
+  await page.addInitScript((name) => {
+    localStorage.setItem("kay.seed", name); // → runtime.tsx sends { kind: "device", seed }
+  }, seed);
+}
+```
+
+`runtime.tsx` sends the seed only when `import.meta.env.DEV` is true, and the worker loads
+`seedDemoStore` from the fixtures module by dynamic import, so a production build neither honours
+the key nor ships the fixture. The rest of the run turned up checks that had gone stale while the
+first line blocked them: a press at the far end of a lane's title bar that only the grip takes
+now, a 24px arrow step on an 18px grid, and two waits that read a menu before it had opened. The
+film version: when the standing set is struck, the crew does not reshoot every scene on a new
+one; it builds the old set again on a stage it controls, and checks each shot list against what
+changed while the camera was down. Lesson: a check that depends on what a fresh device holds
+breaks when the seed changes; give it a seed of its own.
+
 ## 5. Director's Commentary
 
 ### The agent only states intent; the design system does the rest
