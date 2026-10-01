@@ -6,43 +6,10 @@ import {
   type ThreadSummary,
   type Workspace,
 } from "@yaklabs/runtime";
-import {
-  coveredBy,
-  recast,
-  removal,
-  restored,
-  touched,
-  withThread,
-  type Edit,
-  type Slice,
-  type Tomb,
-} from "./edits";
+import { coveredBy, recast, removal, restored, type Edit, type Slice, type Tomb } from "./edits";
+import { leaseIn, type Lease, type LeaseDeps } from "./lease";
 
-/**
- * A writer's right to some threads' turns, reply counts and docked questions, until a reset of
- * any of them takes it back. The Stage has no other door to a thread's turns, so a reply still
- * unwinding after a Restart can never write into the take that replaced it. Once revoked, every
- * write does nothing.
- */
-export type Lease = {
-  /** True once a reset covered a thread the lease was taken for or wrote, or the stage stopped. */
-  revoked(): boolean;
-  /** Changes a thread's turns, and its summary with them. */
-  keep(id: string, change: Turned): void;
-  /** Changes a thread's turns without telling anyone yet: a streaming reply's next word. */
-  hold(id: string, change: Turned): void;
-  /** Adds a thread through `edit`, holding `turns`, in one commit. */
-  add(id: string, turns: ThreadMessage[], edit: Edit): void;
-  begin(id: string): void;
-  end(id: string): void;
-  /** Keeps the wording of the question just docked on `id`, for the answer that follows. */
-  asked(id: string, wording: string | undefined): void;
-  /** A workspace edit on behalf of the lease's threads, such as a note for the bell. */
-  commit(edit: Edit): void;
-};
-
-/** A change to one thread's turns, from what they are now. */
-export type Turned = (turns: ThreadMessage[]) => ThreadMessage[];
+export type { Lease, Turned } from "./lease";
 
 /** What a stage opens on: the workspace, every thread's turns, and the instants minted so far. */
 export type Seed = {
@@ -138,104 +105,12 @@ function commitIn(held: Held, edit: Edit = (ws) => ws): void {
   tell(held);
 }
 
-function tally(held: Held, id: string, by: number): void {
-  const left = (held.replying.get(id) ?? 0) + by;
-  if (left > 0) held.replying.set(id, left);
-  else held.replying.delete(id);
-  commitIn(held);
-}
-
-const epochOf = (held: Held, id: string): number => held.epochs.get(id) ?? 0;
-
-// A lease's guard: each thread's epoch as it joins the lease, which a reset moves on, so the
-// lease is revoked once any of them moved or the stage stopped.
-function guardOf(held: Held, taken: readonly string[]) {
-  const seen = new Map(taken.map((id) => [id, epochOf(held, id)] as const)); // → id → epoch
-  const revoked = () =>
-    held.state.kind !== "ready" || [...seen].some(([id, epoch]) => epochOf(held, id) !== epoch);
-  // Runs `write` for `id` unless the lease is revoked; `id` joins the lease as it writes.
-  const under = (id: string, write: () => void) => {
-    if (!seen.has(id)) seen.set(id, epochOf(held, id));
-    if (!revoked()) write();
-  };
-  return { revoked, under };
-}
-
-// A lease on `taken` (see `Lease`).
-function leaseIn(held: Held, taken: readonly string[]): Lease {
-  const { revoked, under } = guardOf(held, taken);
-  // Changes the turns of `id` and returns them.
-  const set = (id: string, change: Turned) => {
-    const turns = change(held.transcripts.get(id) ?? []);
-    held.transcripts.set(id, turns);
-    return turns;
-  };
-  return {
-    revoked,
-    keep: (id, change) => {
-      under(id, () => {
-        const turns = set(id, change);
-        commitIn(held, withThread(id, touched(turns, instantAt(++held.minted))));
-      });
-    },
-    hold: (id, change) => {
-      under(id, () => {
-        set(id, change);
-      });
-    },
-    add: (id, turns, edit) => {
-      under(id, () => {
-        set(id, () => turns);
-        commitIn(held, edit);
-      });
-    },
-    begin: (id) => {
-      under(id, () => {
-        tally(held, id, 1);
-      });
-    },
-    end: (id) => {
-      under(id, () => {
-        tally(held, id, -1);
-      });
-    },
-    asked: (id, wording) => {
-      under(id, () => {
-        if (wording === undefined) held.questions.delete(id);
-        else held.questions.set(id, wording);
-      });
-    },
-    commit: (edit) => {
-      if (!revoked()) commitIn(held, edit);
-    },
-  };
-}
-
-// Removes `id` and keeps its tomb, in one commit (see `Stage.bury`).
-function buryIn(held: Held, id: string): void {
-  if (held.state.kind !== "ready") return;
-  if (!held.state.workspace.threads.some((each) => each.id === id))
-    throw new Error(`There is no thread "${id}" in this demo`);
-  const { ws, tomb } = removal(held.state.workspace, id); // → the subtree out, its tomb aside
-  held.tombs.set(id, tomb);
-  commitIn(held, () => ws);
-}
-
-// Puts the tomb of `id` back, in one commit (see `Stage.exhume`).
-function exhumeIn(held: Held, id: string): void {
-  if (held.state.kind !== "ready") return;
-  const tomb = held.tombs.get(id);
-  if (tomb === undefined) throw new Error(`There is no deleted thread "${id}" to restore`);
-  held.tombs.delete(id);
-  commitIn(held, restored(tomb));
-}
-
 // Puts `slice` back as it opens, revoking every lease on what it covers (see `Stage.reset`).
 function resetIn(held: Held, slice: Slice): void {
   if (held.state.kind !== "ready") return;
   const covered = coveredBy(held.state.workspace, held.tombs, slice); // → thread ids
   for (const id of covered) {
-    held.epochs.set(id, epochOf(held, id) + 1); // → every lease on it is revoked from here on
+    held.epochs.set(id, (held.epochs.get(id) ?? 0) + 1); // → its leases are revoked from here on
     held.transcripts.delete(id);
     held.replying.delete(id);
     held.questions.delete(id);
@@ -273,6 +148,39 @@ function reads(held: Held): Pick<Stage, "workspace" | "thread" | "turnsOf" | "ow
   };
 }
 
+// The stage's guts as a lease writes through them (see `LeaseDeps`).
+function leaseDeps(held: Held): LeaseDeps {
+  return {
+    transcripts: held.transcripts,
+    replying: held.replying,
+    questions: held.questions,
+    epochs: held.epochs,
+    ready: () => held.state.kind === "ready",
+    commit: (edit) => {
+      commitIn(held, edit);
+    },
+    stamp: () => instantAt(++held.minted),
+  };
+}
+
+// Removes `id` and keeps its tomb, in one commit (see `Stage.bury`).
+function buryIn(held: Held, thread: (id: string) => ThreadSummary, id: string): void {
+  if (held.state.kind !== "ready") return;
+  thread(id); // throws for a thread the workspace lacks
+  const { ws, tomb } = removal(held.state.workspace, id); // → the subtree out, the tomb aside
+  held.tombs.set(id, tomb);
+  commitIn(held, () => ws);
+}
+
+// Puts the tomb of `id` back, in one commit (see `Stage.exhume`).
+function exhumeIn(held: Held, id: string): void {
+  if (held.state.kind !== "ready") return;
+  const tomb = held.tombs.get(id);
+  if (tomb === undefined) throw new Error(`There is no deleted thread "${id}" to restore`);
+  held.tombs.delete(id);
+  commitIn(held, restored(tomb));
+}
+
 /** A stage over `seed`, ready, with no replies in flight and no leases taken. */
 export function createStage(seed: Seed): Stage {
   const held: Held = {
@@ -286,8 +194,9 @@ export function createStage(seed: Seed): Stage {
     minted: seed.minted,
     made: 0,
   };
+  const read = reads(held);
   return {
-    ...reads(held),
+    ...read,
     state: () => held.state,
     subscribe: (listener) => {
       held.listeners.add(listener);
@@ -303,12 +212,12 @@ export function createStage(seed: Seed): Stage {
       commitIn(held, edit);
     },
     bury: (id) => {
-      buryIn(held, id);
+      buryIn(held, read.thread, id);
     },
     exhume: (id) => {
       exhumeIn(held, id);
     },
-    lease: (taken) => leaseIn(held, taken),
+    lease: (taken) => leaseIn(leaseDeps(held), taken),
     reset: (slice) => {
       resetIn(held, slice);
     },
