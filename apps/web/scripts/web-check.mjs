@@ -68,13 +68,6 @@ async function carryTo(from, to) {
 // The main threads a tab's sidebar lists, top to bottom.
 const mainTitles = (tab) => tab.locator('[data-thread="main"]').allTextContents();
 
-// The theme lives in the account menu, at the sidebar's foot.
-async function chooseTheme(name) {
-  await page.getByRole("button", { name: "Account" }).click();
-  await page.getByRole("menuitemradio", { name }).click();
-  await page.keyboard.press("Escape");
-}
-
 // A page of its own at `address` (a mock scenario's, ADR-096), with its console errors counted
 // among the rest, once a thread is on screen.
 async function pageAt(address) {
@@ -292,18 +285,15 @@ try {
       };
     });
   const light = await surface();
-  await chooseTheme("Dark");
-  await page.waitForFunction(() => document.documentElement.dataset.theme === "dark");
-  await page.waitForTimeout(300);
-  await shot("thread-dark");
-  const dark = await surface();
+  await page.getByRole("button", { name: "Account" }).click();
+  const themeChoices = await page.getByRole("menuitemradio", { name: /Light|Dark|System/ }).count();
+  await page.keyboard.press("Escape");
   record(
-    "dark mode changes the page, the paper and the ink",
-    light.page !== dark.page && light.paper !== dark.paper && light.ink !== dark.ink,
-    `paper ${light.paper} → ${dark.paper}`,
+    "the site is light only: the account menu offers no theme, and the root names none (ADR-161)",
+    themeChoices === 0 &&
+      (await page.evaluate(() => document.documentElement.dataset.theme)) === undefined,
+    `paper ${light.paper}; theme choices ${themeChoices}`,
   );
-  await chooseTheme("Light");
-  await page.waitForFunction(() => document.documentElement.dataset.theme === "light");
 
   const rail = railOf(page);
   const placesShown = [];
@@ -707,11 +697,6 @@ try {
   await page.getByText("Useful answers.").waitFor({ timeout: 10_000 });
   await shot("lab");
   record("lab route renders the workbench", true);
-  await chooseTheme("Dark");
-  await page.waitForFunction(() => document.documentElement.dataset.theme === "dark");
-  await page.waitForTimeout(300);
-  await shot("lab-dark");
-  await chooseTheme("Light");
 
   // The dev server serves the catalog's own modules, so the fragment comes from the real encoder.
   const fragment = await page.evaluate(async (root) => {
@@ -1416,7 +1401,6 @@ try {
       await own.locator('[data-slot="project-name"]').filter({ hasText: /\S/ }).waitFor({
         timeout: 15_000,
       });
-      const initialTheme = await own.evaluate(() => document.documentElement.dataset.theme);
       await own.getByRole("button", { name: "Toggle sidebar" }).click();
       await own.waitForTimeout(600);
       const drawer = own.getByRole("dialog");
@@ -1427,27 +1411,15 @@ try {
       await account.click();
       await own.getByRole("menu").waitFor();
       const within = await menuOnScreen(own, 390, 844);
-      await own.screenshot({ path: path.join(OUT, "account-menu-phone-light.png") });
-      await own.getByRole("menuitemradio", { name: "Dark" }).click();
-      const darkened = await own.evaluate(() => document.documentElement.dataset.theme);
-      await own.screenshot({ path: path.join(OUT, "account-menu-phone-dark.png") });
-      await own.getByRole("menuitemradio", { name: "System" }).click();
-      const restored = await own.evaluate(() => document.documentElement.dataset.theme);
+      await own.screenshot({ path: path.join(OUT, "account-menu-phone.png") });
       await own.keyboard.press("Escape");
       await own.waitForTimeout(200);
       const menuGone = (await own.getByRole("menu").count()) === 0;
       const drawerStillOpen = (await drawer.count()) === 1;
       return {
         ok:
-          onePage &&
-          inDrawer &&
-          footed === true &&
-          within === true &&
-          darkened === "dark" &&
-          restored === initialTheme &&
-          menuGone &&
-          drawerStillOpen,
-        detail: `one Account button on the page ${onePage}; in the drawer ${inDrawer}; low in it ${footed}; every item on screen ${within}; theme light→${darkened}→${restored}; Escape closed the menu ${menuGone}, left the drawer open ${drawerStillOpen}`,
+          onePage && inDrawer && footed === true && within === true && menuGone && drawerStillOpen,
+        detail: `one Account button on the page ${onePage}; in the drawer ${inDrawer}; low in it ${footed}; every item on screen ${within}; Escape closed the menu ${menuGone}, left the drawer open ${drawerStillOpen}`,
       };
     },
   );
@@ -1896,7 +1868,7 @@ try {
   );
 
   await onOwnPage(
-    "the browser's Simulated badge clears 4.5:1 on the address field, light and dark",
+    "the browser's Simulated badge clears 4.5:1 on the address field, and an OS in dark mode gets the same light page (ADR-161)",
     "/t/t-005?scenario=demo",
     {},
     async (own) => {
@@ -1942,8 +1914,8 @@ try {
       const onLight = await ratio("light");
       const onDark = await ratio("dark");
       return {
-        ok: onLight >= 4.5 && onDark >= 4.5,
-        detail: `light ${onLight}:1, dark ${onDark}:1`,
+        ok: onLight >= 4.5 && onDark === onLight,
+        detail: `OS light ${onLight}:1, OS dark ${onDark}:1`,
       };
     },
   );

@@ -1,32 +1,23 @@
 // oxlint-disable no-await-in-loop -- pictures are taken one step at a time, in order
-// The thread menu's pictures (ADR-126 to ADR-131), light and dark, a desktop and a 390px phone.
+// The thread menu's pictures (ADR-126 to ADR-131), a desktop and a 390px phone.
 // Each context first stages every mark the menu can leave: Refund audit archived, Last week's
 // sales pinned, the service desk review snoozed and then made public for a day, so the rows,
 // the title bar and the Share submenu all show them.
 import { mkdirSync } from "node:fs";
 import path from "node:path";
-import { BASE } from "./lever.mjs";
-import { serveShares } from "./share-checks.mjs";
+import { openSharing } from "./share-checks.mjs";
 import { menuButtonOf, openThread, pick } from "./thread-actions-checks.mjs";
 
-const THEMES = ["light", "dark"];
-const DESKTOP = { width: 1440, height: 900 };
+const THEMES = ["light"];
 const PHONE = { width: 390, height: 844 };
 const SERVICE_DESK = "Service desk weekly review";
 const PINNED = "Last week's sales";
 
-// A fresh context in a theme on the demo, with the share server stood in and the clipboard open.
-async function openThemed(browser, theme) {
-  const context = await browser.newContext({ viewport: DESKTOP, reducedMotion: "reduce" });
-  await context.addInitScript((chosen) => {
-    localStorage.setItem("theme", chosen);
-  }, theme);
-  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
-  await serveShares(context);
-  const page = await context.newPage();
-  await page.goto(`${BASE}/?scenario=demo`);
+// A fresh context on the demo, with the share server stood in and the clipboard open, once the
+// sidebar's rows and the page's fonts are in.
+async function openThemed(browser) {
+  const { context, page } = await openSharing(browser);
   await page.locator('[data-slot="sidebar"] [data-thread]').first().waitFor({ timeout: 20_000 });
-  await menuButtonOf(page).waitFor();
   await page.evaluate(() => document.fonts.ready);
   return { context, page };
 }
@@ -82,7 +73,7 @@ async function stage(page, card) {
 // The desktop: the snooze card, the window with every mark, the pinned thread's title bar, the
 // menu, the Share submenu while public, and the public page a reader opens.
 async function desktop(browser, theme, file) {
-  const { context, page } = await openThemed(browser, theme);
+  const { context, page } = await openThemed(browser);
   const link = await stage(page, file(`desktop-snooze-card-${theme}`));
   await page.screenshot({ path: file(`desktop-${theme}`) });
   await openShare(page);
@@ -110,7 +101,7 @@ async function desktop(browser, theme, file) {
 
 // The phone: its bar with the one "⋯", that menu open, and its sidebar with the marks.
 async function phone(browser, theme, file) {
-  const { context, page } = await openThemed(browser, theme);
+  const { context, page } = await openThemed(browser);
   await stage(page);
   await page.setViewportSize(PHONE);
   await page.waitForTimeout(400);
@@ -129,7 +120,7 @@ async function phone(browser, theme, file) {
   await context.close();
 }
 
-/** Saves the thread menu's pictures into `dir`, light and dark, desktop and phone. */
+/** Saves the thread menu's pictures into `dir`, desktop and phone. */
 export async function shots(browser, dir) {
   mkdirSync(dir, { recursive: true });
   const file = (name) => path.join(dir, `${name}.png`);

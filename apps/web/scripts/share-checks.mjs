@@ -69,18 +69,27 @@ async function openShare(page) {
   await page.getByRole("menuitem", { name: /^Share thread/ }).hover();
 }
 
+/**
+ * The demo at a desktop size in a context of its own, with the gateway's share stand-in and the
+ * clipboard open, once the thread menu's button is on screen.
+ */
+export async function openSharing(browser) {
+  const context = await browser.newContext({ viewport: DESKTOP, reducedMotion: "reduce" });
+  await context.grantPermissions(["clipboard-read", "clipboard-write"]);
+  await serveShares(context);
+  const page = await context.newPage();
+  await page.goto(`${BASE}/?scenario=demo`);
+  await menuButtonOf(page).waitFor();
+  return { context, page };
+}
+
 /** Share's checks, S1 to S4, each resolving to { ok, detail }. */
 export const shareChecks = {
   // A thread made public for an hour: the link is copied, says until when, opens read-only on
   // the share page with its end beneath; Stop sharing ends it for anyone with the link.
   async S1(browser) {
     // A context of its own, so the reader's tab shares the gateway's stand-in.
-    const context = await browser.newContext({ viewport: DESKTOP, reducedMotion: "reduce" });
-    await context.grantPermissions(["clipboard-read", "clipboard-write"]);
-    await serveShares(context);
-    const page = await context.newPage();
-    await page.goto(`${BASE}/?scenario=demo`);
-    await menuButtonOf(page).waitFor();
+    const { context, page } = await openSharing(browser);
     const title = await shownPanel(page).getAttribute("aria-label");
     await openShare(page);
     const privately = String(
@@ -161,12 +170,7 @@ export const shareChecks = {
   // Access "1 hour" makes the Private box public and "No access" takes it back, and Escape closes
   // it with focus back on the menu's button (ADR-131).
   async S4(browser) {
-    const context = await browser.newContext({ viewport: DESKTOP, reducedMotion: "reduce" });
-    await context.grantPermissions(["clipboard-read", "clipboard-write"]);
-    await serveShares(context);
-    const page = await context.newPage();
-    await page.goto(`${BASE}/?scenario=demo`);
-    await menuButtonOf(page).waitFor();
+    const { page } = await openSharing(browser);
     await openShare(page);
     const divided = (await page.getByRole("separator").count()) > 0;
     await page.getByRole("menuitem", { name: "Share permissions" }).click();

@@ -10,7 +10,7 @@ import { BASE, shotPath, sidebarDrawn } from "./lever.mjs";
 
 /** The looks that have their assets, in the switch's order; Bonsai is listed and waits. */
 export const LOOKS = ["landscape", "abstract", "vitruvian"];
-const THEMES = ["light", "dark"];
+const THEMES = ["light"];
 // WCAG AA for body text: the words against the worst pixel of the painting behind them.
 const AA = 4.5;
 
@@ -30,14 +30,7 @@ const labelOf = (look) => look[0].toUpperCase() + look.slice(1);
  */
 export async function openDemo(
   browser,
-  {
-    theme = "light",
-    query = "",
-    turn = null,
-    retired = null,
-    motion = "reduce",
-    prepare = async () => {},
-  } = {},
+  { query = "", turn = null, retired = null, motion = "reduce", prepare = async () => {} } = {},
 ) {
   const context = await browser.newContext({
     viewport: { width: 1440, height: 900 },
@@ -45,20 +38,19 @@ export async function openDemo(
   });
   await prepare(context);
   await context.addInitScript(
-    ([chosen, before, look]) => {
+    ([before, look]) => {
       // Runs in every frame, and a sandboxed one has no storage to write to. Only before the
       // first load: a reload must see what the app itself wrote.
       try {
         if (sessionStorage.getItem("lever.seeded") !== null) return;
         sessionStorage.setItem("lever.seeded", "1");
-        localStorage.setItem("theme", chosen);
         if (before !== null) localStorage.setItem("kay.splash.turn", String(before));
         if (look !== null) localStorage.setItem("kay.splash", look);
       } catch {
         // Nothing to seed there.
       }
     },
-    [theme, turn, retired],
+    [turn, retired],
   );
   const errors = [];
   context.on("weberror", (failure) => errors.push(String(failure.error())));

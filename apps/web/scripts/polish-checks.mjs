@@ -6,7 +6,7 @@ import { ROOT } from "./harness.mjs";
 import { BASE, sidebarDrawn } from "./lever.mjs";
 
 export const BASELINE = path.join(ROOT, ".artifacts/polish/baseline");
-export const THEMES = ["light", "dark"];
+export const THEMES = ["light"];
 export const WIDTHS = [
   { width: 1440, height: 900 },
   { width: 1280, height: 800 },
@@ -33,24 +33,13 @@ const addressOf = (scenario, query) =>
  */
 export async function openScenario(
   browser,
-  {
-    scenario = "demo",
-    theme = "light",
-    query,
-    viewport = WIDTHS[0],
-    motion = "reduce",
-    ready = true,
-    scale = 1,
-  },
+  { scenario = "demo", query, viewport = WIDTHS[0], motion = "reduce", ready = true, scale = 1 },
 ) {
   const context = await browser.newContext({
     viewport,
     reducedMotion: motion,
     deviceScaleFactor: scale,
   });
-  await context.addInitScript((chosen) => {
-    localStorage.setItem("theme", chosen);
-  }, theme);
   const page = await context.newPage();
   const errors = [];
   page.on("pageerror", (error) => errors.push(String(error)));
@@ -287,7 +276,7 @@ async function record(browser, theme) {
   return { out, files };
 }
 
-/** Writes the 0.6 baseline to `dir`: aria trees, boxes, and the region shots, light and dark. */
+/** Writes the 0.6 baseline to `dir`: aria trees, boxes, and the region shots. */
 export async function capture(browser, dir = BASELINE) {
   mkdirSync(dir, { recursive: true });
   const all = {};
