@@ -654,7 +654,8 @@ try {
   await page.keyboard.press("ControlOrMeta+a");
   await page.keyboard.type("Weekend margins");
   await page.keyboard.press("Enter");
-  await page.getByRole("tab", { name: "Last week's sales" }).dblclick();
+  // The main tab is in view, so one click on its words opens the field (Ethan).
+  await page.getByRole("tab", { name: "Last week's sales" }).locator("[data-tab-title]").click();
   await page.keyboard.press("ControlOrMeta+a");
   await page.keyboard.type("Sales, last week");
   await page.keyboard.press("Enter");

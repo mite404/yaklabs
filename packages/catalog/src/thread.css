@@ -272,17 +272,18 @@
   letter-spacing: 0;
 }
 /* A title that can be renamed (ADR-089) reads exactly like one that cannot until the pointer
-   rests on it; then a dotted rule and the text cursor say it is a field waiting to open. */
+   rests on it; then the text cursor alone says it is a field waiting to open (Ethan), with no
+   rule under it. A key arriving on it sees the site's own ring. */
 .thread-title {
   all: unset;
   cursor: text;
   font: inherit;
   color: inherit;
 }
-.thread-title:hover,
 .thread-title:focus-visible {
-  text-decoration: underline dotted var(--rule);
-  text-underline-offset: 4px;
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: 4px;
 }
 /* The host's actions at the bar's end (ADR-126): pushed there by their own margin, and pulled
    into the bar's padding, so a button taller than the title's line never makes the bar taller. */
