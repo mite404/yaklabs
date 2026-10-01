@@ -6,8 +6,17 @@ import path from "node:path";
 
 // The walkthrough's ceiling for one scenario at 1x (the interview's three minutes).
 const WALKTHROUGH_MS = 180_000;
-// A 2x run must take under this share of the 1x run's wall time.
+// What 2x controls is the show's clock: every pause and keystroke in a script waits on it. The
+// reply's words wait on it too, but folding each word into the thread (the store, React, layout)
+// is main-thread work the clock cannot scale, about 30ms a word in headless Chromium against a dev
+// server, and the brief has some 250 words. That fixed share is why the whole run at 2x lands at
+// 59-63% of 1x, not 50%, and why the machine decides which side of 60% it falls on (ADR-153
+// amendment: the reveal is not paced in real time; it is slowed by rendering, not by a timer).
+// So the strict bound is on the clock-driven stretch from the docked question to the player's
+// answer (the script's own 4.5s pause), and the whole run only has to beat this looser one,
+// which still fails if 2x did nothing.
 const FAST_SHARE = 0.6;
+const WHOLE_RUN_SHARE = 0.75;
 const REQUEST = "Can you prepare Monday's support brief?";
 const INTERRUPTED = "Interrupted · Incomplete answer";
 
@@ -159,12 +168,14 @@ async function questionDocks(page, run) {
     .getByText(/needs attention/i)
     .first()
     .waitFor({ timeout: 30_000 });
+  run.timing.asked = Date.now();
   await run.shot("04-decision");
 }
 
-async function playerAnswers(page) {
+async function playerAnswers(page, run) {
   const answers = mainOf(page).locator('[aria-label="Your answers"]');
   await answers.waitFor({ timeout: 30_000 });
+  run.timing.answerSpan = Date.now() - run.timing.asked; // → ms from the question to the answer
   assert.match(await answers.innerText(), /Oldest first/);
 }
 
@@ -219,11 +230,25 @@ async function restartFaster(page, run) {
   assert.equal(await fast.getAttribute("aria-pressed"), "true");
   const began = Date.now();
   await button(page, "Play").click();
-  await untilDone(page);
   const { timing } = run;
+  await mainOf(page)
+    .getByText(/needs attention/i)
+    .first()
+    .waitFor({ timeout: 30_000 });
+  const asked = Date.now();
+  await mainOf(page).locator('[aria-label="Your answers"]').waitFor({ timeout: 30_000 });
+  const answerSpan = Date.now() - asked; // → ms from the question to the answer at 2x
+  await untilDone(page);
   timing.fast = Date.now() - began;
-  assert.ok(timing.fast < timing.slow * FAST_SHARE, `${timing.fast}ms against ${timing.slow}ms`);
-  return `${timing.fast}ms at 2x against ${timing.slow}ms at 1x`;
+  assert.ok(
+    answerSpan < timing.answerSpan * FAST_SHARE,
+    `question to answer: ${answerSpan}ms against ${timing.answerSpan}ms`,
+  );
+  assert.ok(
+    timing.fast < timing.slow * WHOLE_RUN_SHARE,
+    `${timing.fast}ms against ${timing.slow}ms`,
+  );
+  return `${timing.fast}ms at 2x against ${timing.slow}ms at 1x; the pause before the answer ${answerSpan}ms against ${timing.answerSpan}ms`;
 }
 
 async function childOpensLane(page, run) {
@@ -329,7 +354,7 @@ export const briefSteps = [
     "the disclosure above the reply says what was checked; Technical details holds the logs",
     workDetails,
   ],
-  ["Restart with 2x plays the brief in under 60% of the 1x time", restartFaster],
+  ["Restart with 2x halves the clock-driven pauses and shortens the whole run", restartFaster],
   ["a child's row opens its lane on the canvas, under the demo's address", childOpensLane],
 ];
 
