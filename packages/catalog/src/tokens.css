@@ -30,6 +30,8 @@
      the sidebar's hover fill. 5.17:1 on paper, 4.67:1 on paper-deep. */
   --faint-ink: #64645e;
   --blue: #95aac8; /* text selection */
+  /* the words on --blue, in either theme: 8.0:1; the dark theme's light ink was 2.0:1 there */
+  --on-blue: var(--yak-night);
   --sage: #c7cfba; /* the user's bubble only (ADR-047) */
   --chalk: #e5e8d9;
   --moss: #263b30;
@@ -437,7 +439,7 @@ a {
 /* Text selection, as on yaklabs.ai. */
 ::selection {
   background: var(--blue);
-  color: var(--ink);
+  color: var(--on-blue);
 }
 p {
   line-height: 1.6;
