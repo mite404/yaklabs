@@ -70,8 +70,15 @@ const mainTitles = (tab) => tab.locator('[data-thread="main"]').allTextContents(
 
 // A page of its own at `address` (a mock scenario's, ADR-096), with its console errors counted
 // among the rest, once a thread is on screen.
-async function pageAt(address) {
+// A fresh page at `address`, ready once a thread shows; `seed` asks the dev build to seed its
+// device first, as the run's own page is.
+async function pageAt(address, { seed } = {}) {
   const opened = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  if (seed !== undefined) {
+    await opened.addInitScript((name) => {
+      localStorage.setItem("kay.seed", name);
+    }, seed);
+  }
   opened.on("console", (message) => {
     if (message.type() === "error") errors.push(message.text());
   });
@@ -202,8 +209,14 @@ const menuOnScreen = (own, width, height) =>
     [width, height],
   );
 
+// The dev build seeds this page's device with the Demo store's profit thread, which every device
+// held before Home opened on the Live Playground (ADR-159): the run starts there.
+await page.addInitScript(() => {
+  localStorage.setItem("kay.seed", "demo-store");
+});
+
 try {
-  await page.goto(`${BASE}/`, { waitUntil: "load" });
+  await page.goto(`${BASE}/t/profit`, { waitUntil: "load" });
   const title = page.getByRole("heading", { name: "Last week's profit by day" });
   await title.waitFor({ timeout: 15_000 });
   await shot("thread");
@@ -301,14 +314,20 @@ try {
     if (await rail.getByRole(role, { name, exact: true }).isVisible()) placesShown.push(name);
   }
   record(
-    "the rail shows its places, Kay to Lab",
+    "the rail shows its places, Home to Lab",
     placesShown.length === RAIL_PLACES.length,
     placesShown.join(", "),
   );
 
+  // A thread opens alone; the layout switch puts its canvas beside it.
+  await page
+    .getByRole("group", { name: "Layout" })
+    .getByRole("button", { name: "Canvas", exact: true })
+    .click();
   const canvas = page
     .locator('[role="tabpanel"]:not([inert])')
     .getByRole("region", { name: "Compose canvas" });
+  await canvas.waitFor();
   record(
     "the canvas opens empty and invites a drop",
     await canvas.getByText("Drag a text selection or UI card here").isVisible(),
@@ -804,31 +823,46 @@ try {
 
   // Leaving a thread never says it is gone while the next page loads; the notice is for an
   // address no thread has. Each way out starts on a fresh page, so its route is not loaded yet.
+  // Home leaves from the device's profit thread for the Live Playground's blank thread (ADR-159);
+  // a scenario has no Live Playground, so there Home stays on the tab it resumes.
+  const fromDemo = { from: "/t/t-001?scenario=demo" };
   const leaving = {
-    "the Lab link": (on) =>
-      railOf(on)
-        .getByRole("link", { name: "Lab", exact: true })
-        .click()
-        .then(() => on.getByText("Useful answers.").waitFor({ timeout: 10_000 })),
-    "the Home link": (on) =>
-      railOf(on)
-        .getByRole("link", { name: "Home", exact: true })
-        .click()
-        .then(() =>
-          on.locator('[data-slot="welcome-project"]').first().waitFor({ timeout: 10_000 }),
-        ),
-    "closing the last tab": async (on) => {
-      for (const closing of ["Service desk weekly review", "Last week's sales"]) {
-        // oxlint-disable-next-line no-await-in-loop -- each close changes the strip the next one reads
-        await on.getByRole("button", { name: `Close ${closing}`, exact: true }).click();
-      }
-      await on.getByText("Nothing open").waitFor({ timeout: 10_000 });
+    "the Lab link": {
+      ...fromDemo,
+      leave: (on) =>
+        railOf(on)
+          .getByRole("link", { name: "Lab", exact: true })
+          .click()
+          .then(() => on.getByText("Useful answers.").waitFor({ timeout: 10_000 })),
+    },
+    "the Home link": {
+      from: "/t/profit",
+      seed: "demo-store",
+      leave: (on) =>
+        railOf(on)
+          .getByRole("link", { name: "Home", exact: true })
+          .click()
+          .then(() =>
+            on
+              .locator('[role="tabpanel"]:not([inert]) [data-slot="welcome"]')
+              .waitFor({ timeout: 10_000 }),
+          ),
+    },
+    "closing the last tab": {
+      ...fromDemo,
+      leave: async (on) => {
+        for (const closing of ["Service desk weekly review", "Last week's sales"]) {
+          // oxlint-disable-next-line no-await-in-loop -- each close changes the strip the next one reads
+          await on.getByRole("button", { name: `Close ${closing}`, exact: true }).click();
+        }
+        await on.getByText("Nothing open").waitFor({ timeout: 10_000 });
+      },
     },
   };
   const falseNotices = [];
-  for (const [way, leave] of Object.entries(leaving)) {
+  for (const [way, { from, seed, leave }] of Object.entries(leaving)) {
     // oxlint-disable-next-line no-await-in-loop -- one fresh page at a time
-    const on = await pageAt("/t/t-001?scenario=demo");
+    const on = await pageAt(from, { seed });
     // oxlint-disable-next-line no-await-in-loop -- as above
     await on.evaluate(() => {
       window.goneFrames = 0;
@@ -2020,9 +2054,13 @@ try {
   }
   await firstTab.goto(`${BASE}/`, { waitUntil: "load" });
   await firstTab.locator(".thread-panel").first().waitFor({ timeout: 20_000 });
+  // The Demo's scripted shows list beside the device's own mains; New thread adds one more.
+  await firstTab.locator('[data-thread="main"][href="/t/playground"]').waitFor();
+  const mainsBefore = await firstTab.locator('[data-thread="main"]').count();
   await firstTab.getByRole("button", { name: "New thread", exact: true }).click();
   await firstTab.waitForFunction(
-    () => document.querySelectorAll('[data-thread="main"]').length === 2,
+    (count) => document.querySelectorAll('[data-thread="main"]').length === count,
+    mainsBefore + 1,
   );
   const kept = await mainTitles(firstTab);
   await secondTab.goto(`${BASE}/`, { waitUntil: "load" });

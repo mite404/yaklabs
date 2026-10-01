@@ -1,7 +1,7 @@
 // Checks for sub-threads, the project rows, persistence, the mock scenarios, the tabs, the
 // simulated browser, the title bar and the rail.
 import { writeFileSync } from "node:fs";
-import { canvasOf, carry, laneTitles, mainPanel, makeLane } from "./canvas-checks.mjs";
+import { canvasOf, carry, laneTitles, mainPanel, makeLane, openProfit } from "./canvas-checks.mjs";
 import { BASE, openApp, shotPath, sidebarDrawn } from "./lever.mjs";
 import { railOf, RAIL_PLACES, readPlaces } from "./rail-places.mjs";
 
@@ -119,6 +119,18 @@ async function onThreadPage(browser) {
   return opened;
 }
 
+// A thread's tab, by the thread's id.
+const tabOf = (page, id) =>
+  page.getByRole("tablist", { name: "Open threads" }).locator(`[role="tab"]#tab-${id}`);
+
+function selectedTabId(page) {
+  return page
+    .getByRole("tablist", { name: "Open threads" })
+    .getByRole("tab", { selected: true })
+    .getAttribute("id")
+    .catch(() => "");
+}
+
 function selectedTab(page) {
   return page
     .getByRole("tablist", { name: "Open threads" })
@@ -161,13 +173,20 @@ const EXPECT = {
 
 export const shellChecks = {
   async P4(browser) {
-    const { page } = await onThreadPage(browser);
+    const page = await openProfit(browser);
     const home = pathOf(page);
     const side = sidebarOf(page);
     await side.getByRole("button", { name: "Demo store", exact: true }).waitFor();
+    // The Demo's scripted shows list their children above, so rows are read under Demo store.
+    const project = side
+      .getByRole("listitem")
+      .filter({ has: page.getByRole("button", { name: "Demo store", exact: true }) });
+    const children = project.locator('[data-thread="child"]');
+    const before = await children.count();
     await canvasOf(page).getByRole("button", { name: "Create blank thread" }).click();
-    const child = side.locator('[data-thread="child"]').first();
-    await child.waitFor({ timeout: 10_000 });
+    // The new child, which the sidebar lists first, newest created first (ADR-125).
+    await children.nth(before).waitFor({ timeout: 10_000 });
+    const child = children.first();
     const childText = await child.innerText();
     const branch = await child.locator('[data-slot="child-icon"] svg').count();
     await child.click();
@@ -181,7 +200,7 @@ export const shellChecks = {
     const laneStill = await lane.isVisible();
     await side.getByRole("button", { name: "New thread in Demo store" }).click();
     await page.waitForURL((url) => ![home, childPath].includes(url.pathname), { timeout: 10_000 });
-    const mains = await side.locator('[data-thread="main"]').count();
+    const mains = await project.locator('[data-thread="main"]').count();
     await page.screenshot({ path: shotPath("P4-sidebar") });
     return {
       ok:
@@ -196,7 +215,7 @@ export const shellChecks = {
   },
 
   async P5(browser) {
-    const { page } = await onThreadPage(browser);
+    const page = await openProfit(browser);
     const project = sidebarOf(page).getByRole("button", { name: "Demo store", exact: true });
     const chevron = project.locator('[data-slot="fold-chevron"]');
     const plusVisible = async () =>
@@ -247,7 +266,7 @@ export const shellChecks = {
   },
 
   async P6(browser) {
-    const { page } = await onThreadPage(browser);
+    const page = await openProfit(browser);
     await makeLane(page, "Weekend margins");
     await makeLane(page, "Sunday");
     // Naming the second lane scrolls the row to it; the carry aims at the first lane's gap, as P3 does.
@@ -277,7 +296,11 @@ export const shellChecks = {
       );
     const before = { titles: await laneTitles(page), width: await width() };
     await page.reload({ waitUntil: "load" });
-    await canvasOf(page).locator(":scope > article").first().waitFor({ timeout: 20_000 });
+    // The lane the reload has to bring back, not any lane: under load the row can still be
+    // drawing its first one when a fixed wait runs out.
+    await canvasOf(page)
+      .locator(':scope > article[aria-label="Weekend margins"]')
+      .waitFor({ timeout: 20_000 });
     await page.waitForTimeout(500);
     const after = { titles: await laneTitles(page), width: await width() };
     const children = await sidebarOf(page).locator('[data-thread="child"]').allInnerTexts();
@@ -316,26 +339,30 @@ export const shellChecks = {
   },
 
   async P9(browser) {
-    const { page } = await onThreadPage(browser);
+    const page = await openProfit(browser);
+    // The device keeps the Live Playground's tab open too, so a tab is found by its thread.
+    const opened = await tabsOf(page).count();
     const compose = mainPanel(page).getByRole("textbox", { name: "Message" });
     await compose.fill("draft kept");
     await sidebarOf(page).getByRole("button", { name: "New thread in Demo store" }).click();
     await page.waitForFunction(() => location.pathname !== "/t/profit");
+    const fresh = pathOf(page).split("/").at(-1);
     await layoutButton(page, "Browser").click();
     const browserShown = await page.getByRole("region", { name: "Browser" }).isVisible();
-    await tabsOf(page).filter({ hasText: "Last week's sales" }).click();
+    await tabOf(page, "profit").click();
     const canvasBack = await canvasOf(page).isVisible();
     const draft = await mainPanel(page).getByRole("textbox", { name: "Message" }).inputValue();
-    await tabsOf(page).filter({ hasText: "New thread" }).click();
+    await tabOf(page, fresh).click();
     const browserBack = await page.getByRole("region", { name: "Browser" }).isVisible();
     await page.reload({ waitUntil: "load" });
     await tabsOf(page).first().waitFor({ timeout: 20_000 });
     const afterReload = {
       tabs: await tabsOf(page).count(),
       active: await selectedTab(page),
+      activeId: await selectedTabId(page),
       browser: await page.getByRole("region", { name: "Browser" }).isVisible(),
     };
-    await tabsOf(page).filter({ hasText: "Last week's sales" }).click();
+    await tabOf(page, "profit").click();
     const canvasAfter = await canvasOf(page).isVisible();
     await layoutButton(page, "Thread").click();
     await page.waitForTimeout(300);
@@ -352,8 +379,9 @@ export const shellChecks = {
         canvasBack &&
         draft === "draft kept" &&
         browserBack &&
-        afterReload.tabs === 2 &&
+        afterReload.tabs === opened + 1 &&
         afterReload.active.includes("New thread") &&
+        afterReload.activeId === `tab-${fresh}` &&
         afterReload.browser &&
         canvasAfter,
       detail: `browser ${browserShown}; back to canvas ${canvasBack} with draft ${JSON.stringify(draft)}; browser again ${browserBack}; after reload ${JSON.stringify(afterReload)}, canvas ${canvasAfter}; the thread alone fills ${alone}% of its tab`,
