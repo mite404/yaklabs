@@ -1,5 +1,6 @@
 import {
   useEffect,
+  useEffectEvent,
   useId,
   useRef,
   useState,
@@ -10,7 +11,15 @@ import {
 import { IconButton } from "./IconButton";
 import { BookmarkIcon, CloseIcon, SearchIcon, StepIcon } from "./icons";
 import { Menu, type MenuItem, type TriggerProps } from "./Menu";
-import { matchStatus, matchesOf, requestsOf, stepMatch, type Request } from "./threadReading";
+import type { Find } from "./searchMarks";
+import {
+  matchStatus,
+  matchesOf,
+  requestsOf,
+  stepMatch,
+  type Match,
+  type Request,
+} from "./threadReading";
 import type { ThreadMessage } from "./thread";
 import { timeLabel } from "./turnTime";
 
@@ -59,25 +68,33 @@ function focusOnMount(field: HTMLInputElement | null): void {
 
 // The open search: a field, the count, previous and next, and close. Enter in the field steps to
 // the next match and Shift+Enter to the previous one; Escape on any of its controls closes it.
+// It says what it shows as it changes, and that it shows nothing once it closes.
 function SearchBar({
   id,
   messages,
-  onJump,
+  onFind,
   onClose,
 }: {
   id: string;
   messages: ThreadMessage[];
-  onJump: (turnId: string) => void;
+  onFind: (find: Find | null) => void;
   onClose: () => void;
 }) {
   const [query, setQuery] = useState("");
-  const [current, setCurrent] = useState<string>();
-  const matches = matchesOf(messages, query); // → turn ids, thread order
+  const [current, setCurrent] = useState<Match>();
+  const matches = matchesOf(messages, query); // → Match[], reading order
+  const report = useEffectEvent(onFind);
+  useEffect(
+    () => () => {
+      report(null);
+    },
+    [],
+  );
 
   function step(direction: 1 | -1) {
-    const next = stepMatch(matches, current, direction); // → a turn id, or undefined
+    const next = stepMatch(matches, current, direction); // → a Match, or undefined
     setCurrent(next);
-    if (next !== undefined) onJump(next);
+    onFind({ query, current: next });
   }
 
   function keys(event: KeyboardEvent<HTMLElement>) {
@@ -104,6 +121,7 @@ function SearchBar({
         onChange={(event) => {
           setQuery(event.target.value);
           setCurrent(undefined);
+          onFind({ query: event.target.value, current: undefined });
         }}
       />
       <output className="reading-count">{query.trim() && matchStatus(matches, current)}</output>
@@ -177,19 +195,23 @@ function usePointerIn(bar: RefObject<HTMLElement | null>) {
  * compose box and back as it leaves the thread, so across a canvas of lanes one bar shows at a
  * time. At rest it is one bookmark on a translucent fill; with the pointer on it, a keyboard in
  * it, or either tool open, it unfolds leftward to show Search too, and open it fills solid and
- * stays. Search the thread's words and step through the turns that hold them, or jump back to any
- * request the user sent, listed by its first 15 characters and its time. An Alt-click on the
- * bookmark goes straight to the latest request. Where a jump lands, and how it shows, is the
- * host's.
+ * stays. Search the thread's words and step through each place they occur, as an editor's find
+ * does, or jump back to any request the user sent, listed by its first 15 characters and its
+ * time. An Alt-click on the bookmark goes straight to the latest request. Where a jump lands, and
+ * how a match shows, is the host's.
  * @param messages The thread's turns as they stand now, including ones sent since it opened.
  * @param onJump Brings the turn with this id into view.
+ * @param onFind Shows what the search finds: every match, and the one stepped to; null once the
+ * search closes.
  */
 export function ReadingTools({
   messages,
   onJump,
+  onFind,
 }: {
   messages: ThreadMessage[];
   onJump: (turnId: string) => void;
+  onFind: (find: Find | null) => void;
 }) {
   const [searching, setSearching] = useState(false);
   const bar = useRef<HTMLFieldSetElement>(null);
@@ -217,7 +239,7 @@ export function ReadingTools({
       <span className="reading-more">
         <span className="reading-fold">
           {searching && (
-            <SearchBar id={searchId} messages={messages} onJump={onJump} onClose={closeSearch} />
+            <SearchBar id={searchId} messages={messages} onFind={onFind} onClose={closeSearch} />
           )}
           <IconButton
             ref={searchButton}

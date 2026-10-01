@@ -55,7 +55,7 @@ const GreetingLine = env.auth.kind === "workos" ? WorkOsGreeting : LocalGreeting
  * the theme's time of day, the projects, and the actions a thread can open with. It shows in the main
  * pane while the thread has no turns, over the painting `<html data-splash>` names, and leaves
  * with the first turn. Open file and Open terminal are the desktop app's; here they wait.
- * @param pane The layout the thread is in. The debug switch for the painting shows only in the
+ * @param pane The layout the thread is in. The switch for the painting shows only in the
  * Thread layout, where the welcome has the window to itself, and never beside the canvas or the
  * browser.
  */
@@ -73,11 +73,9 @@ export function Welcome({ thread, pane }: { thread: ThreadSummary; pane: PaneKin
         <Projects />
         <Actions thread={thread} />
       </div>
-      {/* A developer's picker for the painting: development builds only, so the product's first
-          screen carries no debug control (ADR-156). */}
-      {import.meta.env.DEV && pane === "thread" && (
-        <SplashSwitch className={`${ACTION} absolute top-4 right-4 z-10`} />
-      )}
+      {/* The switch through the paintings, in every build, so a visitor can look through the
+          design work (Ethan; amends ADR-156, which had kept it to development builds). */}
+      {pane === "thread" && <SplashSwitch className={`${ACTION} absolute top-4 right-4 z-10`} />}
     </div>
   );
 }

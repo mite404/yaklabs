@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from "react";
 
-/** The painting behind a new thread's welcome (ADR-136), behind a debug switch while Ethan chooses. */
+/** The painting behind a new thread's welcome (ADR-136), with a switch to look through the others. */
 export type SplashStyle = "landscape" | "abstract" | "vitruvian" | "bonsai";
 
 // One row per look. A look with no assets yet is listed but cannot be chosen.
@@ -14,12 +14,19 @@ export const SPLASH_LOOKS: readonly SplashLook[] = [
   { id: "bonsai", label: "Bonsai", available: false },
 ];
 
-const KEY = "kay.splash";
+// Set once a welcome has been on screen, so the next visit knows the first is behind it.
+const SEEN_KEY = "kay.splash.seen";
+// Where the switch's choice was kept before the draw: read by nothing now, and cleared, so a
+// look picked once no longer stands in for every draw after it.
+const RETIRED_KEY = "kay.splash";
 const PARAM = "splash";
-const FALLBACK: SplashStyle = "abstract";
+// The first welcome a visitor ever sees, and the looks every visit after it draws from (Ethan:
+// abstract the first time, then "a randomized choice ... either the landscape or the
+// Vitruvian man").
+const FIRST: SplashStyle = "abstract";
+const RETURNING: readonly SplashStyle[] = ["landscape", "vitruvian"];
 
-// The choice for this visit, held above any remount, for when storage is refused. Null until the
-// first read decides it.
+// The choice for this visit, held above any remount. Null until the first read decides it.
 let current: SplashStyle | null = null;
 const listeners = new Set<() => void>();
 
@@ -27,30 +34,47 @@ const listeners = new Set<() => void>();
 export const splashStyleOf = (value: string | null): SplashStyle | null =>
   SPLASH_LOOKS.find((look) => look.available && look.id === value)?.id ?? null;
 
+/**
+ * The look a visit opens with: the one the address asks for, else the abstract painting until a
+ * welcome has been seen, then landscape or Vitruvian, drawn afresh each visit.
+ * @param random A number in [0, 1), as `Math.random` gives.
+ */
+export function lookForVisit(
+  asked: SplashStyle | null,
+  seen: boolean,
+  random: number,
+): SplashStyle {
+  if (asked !== null) return asked;
+  if (!seen) return FIRST;
+  return RETURNING[Math.min(RETURNING.length - 1, Math.floor(random * RETURNING.length))];
+}
+
 // The painting reaches the CSS as an attribute on <html>, the way the theme does: index.css
 // draws the landscape and the abstract strokes off `data-splash`.
 function apply(style: SplashStyle): void {
   document.documentElement.dataset.splash = style;
 }
 
-function save(style: SplashStyle): void {
+function wasSeen(): boolean {
   try {
-    localStorage.setItem(KEY, style);
+    localStorage.removeItem(RETIRED_KEY);
+    return localStorage.getItem(SEEN_KEY) !== null;
   } catch {
-    // Private windows may refuse storage; `current` keeps the choice for this visit.
+    return false; // storage refused, as in a private window: every visit is a first
   }
 }
 
-function stored(): SplashStyle | null {
+/** Records that a welcome has been on screen, so later visits draw their painting. */
+export function markSplashSeen(): void {
   try {
-    return splashStyleOf(localStorage.getItem(KEY)); // → SplashStyle | null
+    localStorage.setItem(SEEN_KEY, "1");
   } catch {
-    return null;
+    // Storage refused: the next visit opens on the abstract painting again.
   }
 }
 
 // A `?splash=` in the address, which a screenshot run passes, so the same page can be shot in
-// each look; it is kept as the choice, as a `?chrome=` is.
+// each look. It holds for the visit, as a choice from the switch does.
 function fromAddress(): SplashStyle | null {
   try {
     return splashStyleOf(new URL(location.href).searchParams.get(PARAM));
@@ -59,15 +83,8 @@ function fromAddress(): SplashStyle | null {
   }
 }
 
-// The address first, then the stored choice, then the abstract painting: a stale or unknown value of
-// either falls through to the next.
 function decide(): SplashStyle {
-  const asked = fromAddress();
-  if (asked !== null) {
-    save(asked);
-    return asked;
-  }
-  return stored() ?? FALLBACK;
+  return lookForVisit(fromAddress(), wasSeen(), Math.random());
 }
 
 // Decided on the first read, which is before the welcome's first paint, so the picture never
@@ -92,19 +109,20 @@ function subscribe(listener: () => void): () => void {
   };
 }
 
+// For this visit only: kept, the choice would stand in for every draw after it.
 function choose(next: SplashStyle): void {
   if (splashStyleOf(next) === null || next === current) return;
   current = next;
   apply(next);
-  save(next);
   for (const listener of listeners) listener();
 }
 
 /**
- * The welcome's painting and how to change it. Every caller reads the one store, so the welcome
- * and its switch agree with no prop between them. A look that is not available is never chosen.
+ * The welcome's painting and how to change it for this visit. Every caller reads the one store,
+ * so the welcome and its switch agree with no prop between them. A look that is not available is
+ * never chosen.
  */
 export function useSplash(): { style: SplashStyle; choose: (next: SplashStyle) => void } {
-  const style = useSyncExternalStore(subscribe, snapshot, () => FALLBACK); // → SplashStyle
+  const style = useSyncExternalStore(subscribe, snapshot, () => FIRST); // → SplashStyle
   return { style, choose };
 }

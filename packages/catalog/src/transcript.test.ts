@@ -140,8 +140,8 @@ describe("recapOf", () => {
       failure: { title: "Stopped", detail: "" },
     };
     expect(recapOf([ask("u1", "Go"), worked, broke, stopped])).toEqual([
-      { text: "84 matched.", turnId: "a1" },
-      { text: "The ledger was locked.", turnId: "a1" },
+      { text: "84 matched.", turnId: "a1", stepId: "n" },
+      { text: "The ledger was locked.", turnId: "a1", stepId: "c" },
       { text: "Reply interrupted", turnId: "a2" },
     ]);
   });

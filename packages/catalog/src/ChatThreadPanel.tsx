@@ -25,6 +25,7 @@ import { labAgent } from "./labAgent";
 import { attachmentLabel, resolveInteractive, type CardAttachment } from "./interactive";
 import type { Recover } from "./QuietProse";
 import { ReadingTools } from "./ReadingTools";
+import { markSearch, ringRange, type Find } from "./searchMarks";
 import { Recap } from "./Recap";
 import { shouldShowRecap, type RecapItem, type ThreadActivity } from "./recapRules";
 import {
@@ -56,6 +57,7 @@ import {
 } from "./transcript";
 import { stampOf } from "./turnTime";
 import { AgentTurn, AnsweredTurns, UserTurn } from "./Turns";
+import { REVEAL_STEP } from "./WorkDetails";
 import "./thread.css";
 
 /**
@@ -679,22 +681,112 @@ function clearFlash(turn: HTMLElement): void {
   delete turn.dataset.flash;
 }
 
-// Jump so the evidence lands vertically centered, every time (ADR-022 eye trace). Only the turn
+// Jump so the evidence lands vertically centered, every time (ADR-022 eye trace). Only what was
 // jumped to last glows: stepping through matches moves the glow rather than leaving a trail, and
-// a second jump to the same turn starts its glow over.
-function flashTurn(scroller: HTMLElement | null, turnId: string): void {
-  const turn = scroller?.querySelector<HTMLElement>(`[data-turn-id="${CSS.escape(turnId)}"]`);
-  if (!scroller || !turn) return;
-  centerInScroller(scroller, turn);
+// a second jump to the same place starts its glow over.
+function flashElement(scroller: HTMLElement, target: HTMLElement): void {
+  centerInScroller(scroller, target);
   scroller.querySelectorAll<HTMLElement>("[data-flash]").forEach(clearFlash);
-  void turn.offsetWidth; // a style flush, so the glow's animation starts over
-  turn.dataset.flash = "true";
+  void target.offsetWidth; // a style flush, so the glow's animation starts over
+  target.dataset.flash = "true";
   flashTimers.set(
-    turn,
+    target,
     window.setTimeout(() => {
-      clearFlash(turn);
+      clearFlash(target);
     }, FLASH_MS),
   );
+}
+
+// The turn with this id on the page, or null while it is not there.
+function turnIn(scroller: HTMLElement | null, turnId: string): HTMLElement | null {
+  return scroller?.querySelector<HTMLElement>(`[data-turn-id="${CSS.escape(turnId)}"]`) ?? null;
+}
+
+function flashTurn(scroller: HTMLElement | null, turnId: string): void {
+  const turn = turnIn(scroller, turnId);
+  if (scroller && turn) flashElement(scroller, turn);
+}
+
+// A recap outcome's own evidence (ADR-018), rather than the whole reply it came from: the card in
+// the reply's words that backs its step, else the step's row in Work details, unfolded for it,
+// else the turn.
+function flashOutcome(scroller: HTMLElement | null, item: RecapItem): void {
+  const turn = turnIn(scroller, item.turnId);
+  if (!scroller || !turn) return;
+  if (item.stepId === undefined) {
+    flashElement(scroller, turn);
+    return;
+  }
+  const step = CSS.escape(item.stepId);
+  const card = turn.querySelector<HTMLElement>(`.prose-card[data-step="${step}"] .card`);
+  if (card) {
+    flashElement(scroller, card);
+    return;
+  }
+  const work = turn.querySelector(".work-details");
+  if (!work) {
+    flashElement(scroller, turn);
+    return;
+  }
+  work.dispatchEvent(new Event(REVEAL_STEP));
+  // Two frames: one for the disclosure to render its steps, one for them to lay out.
+  requestAnimationFrame(() =>
+    requestAnimationFrame(() => {
+      const row = turn.querySelector<HTMLElement>(`.work-step[data-step="${step}"]`);
+      flashElement(scroller, row ?? turn);
+    }),
+  );
+}
+
+// Turns arrive and stream in while a search is open: their words are marked as they land.
+// Returns the function that stops watching.
+function remarkAsTurnsLand(scroller: HTMLElement, find: Find): () => void {
+  const again = new MutationObserver(() => {
+    markSearch(scroller, find);
+  });
+  again.observe(scroller, { childList: true, subtree: true, characterData: true });
+  return () => {
+    again.disconnect();
+  };
+}
+
+// A thread's search, marked on its turns: every match tinted and the one stepped to selected,
+// kept as turns arrive, and cleared as the search closes or the thread unmounts. A step brings
+// the match to the middle (ADR-022 eye trace) and rings its words once, rather than the turn
+// around them; a match the page cannot place glows its turn instead.
+function useSearchMarks(scroller: RefObject<HTMLDivElement | null>): {
+  setRings: (layer: HTMLDivElement | null) => void;
+  onFind: (find: Find | null) => void;
+} {
+  const [rings, setRings] = useState<HTMLDivElement | null>(null);
+  const [find, setFind] = useState<Find | null>(null);
+  useLayoutEffect(() => {
+    const el = scroller.current;
+    if (el !== null) markSearch(el, find);
+    return el === null || find === null ? undefined : remarkAsTurnsLand(el, find);
+  }, [scroller, find]);
+  useEffect(() => {
+    const el = scroller.current;
+    return () => {
+      if (el) markSearch(el, null);
+    };
+  }, [scroller]);
+  return {
+    setRings,
+    onFind: (next) => {
+      setFind(next);
+      const el = scroller.current;
+      const current = next?.current;
+      if (el === null || next === null || current === undefined) return;
+      const words = markSearch(el, next); // → the match's range, if the page holds it
+      if (words === undefined) {
+        flashTurn(el, current.turnId);
+        return;
+      }
+      centerInScroller(el, words);
+      if (rings) ringRange(rings, words);
+    },
+  };
 }
 
 // After a card or a modal hands back control, the caret returns to the compose box.
@@ -891,6 +983,7 @@ export function ChatThreadPanel({
   const recap = useRecap({ thread, messages, activity, clock, awaiting, draft });
   const stamped = latestReply(messages); // → the reply that carries the thread's one stamp
   const { scroller, setDockSlot } = useScroller();
+  const { setRings, onFind } = useSearchMarks(scroller);
   const away = useAwayFromEnd(scroller);
   const pointer = usePointerZone(); // → where the pointer is, for the reading tools (thread.css)
   const running = runningActivity(messages); // → the latest streaming reply's narration
@@ -1018,6 +1111,8 @@ export function ChatThreadPanel({
           tabIndex: 0,
         })}
       >
+        {/* The rings a search step draws around its match, scrolling with the turns. */}
+        <div ref={setRings} className="search-rings" aria-hidden="true" />
         {messages.length === 0 && empty}
         {groupAnswers(messages).map((item) =>
           item.kind === "answers" ? (
@@ -1051,6 +1146,9 @@ export function ChatThreadPanel({
               messages={messages}
               onJump={(turnId) => {
                 flashTurn(scroller.current, turnId);
+              }}
+              onFind={(find) => {
+                onFind(find);
               }}
             />
           </div>
@@ -1088,8 +1186,8 @@ export function ChatThreadPanel({
               collapsed={recap.collapsed}
               onExpand={recap.expand}
               onDismiss={recap.dismiss}
-              onJump={(turnId) => {
-                flashTurn(scroller.current, turnId);
+              onJump={(item) => {
+                flashOutcome(scroller.current, item);
               }}
             />
           </div>

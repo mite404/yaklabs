@@ -17,6 +17,7 @@ import { Link } from "react-router";
 import { usePaths, useRuntimeState } from "../runtime";
 import { useShell } from "./model";
 import { rowLook, type Mark, type RowLook } from "./row-marks";
+import { useLabelCut } from "./label-cut";
 import { isWorking } from "./working";
 
 // A row: the hover fill stays inside the sidebar's padding, with the site's 4px corners.
@@ -66,9 +67,10 @@ function Marks({ marks }: { marks: Mark[] }) {
 // How many threads a fold holds, as its button names them: "2 threads", "1 thread".
 const threadCount = (count: number): string => `${count} ${count === 1 ? "thread" : "threads"}`;
 
-// A row's own title, truncated to whatever room its row leaves it. `block` matters here: as a
-// flex item's child it would otherwise stay inline and ignore that width.
-const LABEL = "block truncate";
+// A row's own title, cut to whatever room its row leaves it and faded out at the cut (index.css,
+// `useLabelCut`). `block` matters here: as a flex item's child it would otherwise stay inline
+// and ignore that width.
+const LABEL = "block overflow-hidden whitespace-nowrap";
 
 // Whether the row's label is cut short, so its tooltip has something to add.
 function isCut(row: Element | undefined): boolean {
@@ -143,11 +145,12 @@ function useWorking(threadId: ThreadId): boolean {
 // reader hears them.
 function RowWords({ thread, look }: { thread: ThreadSummary; look: RowLook }): ReactElement {
   const working = useWorking(thread.id);
+  const label = useLabelCut();
   return (
     <>
       <Marks marks={look.marks} />
       {working && <AgentTree label={`${thread.title} is working`} />}
-      <span data-label="" className={LABEL}>
+      <span ref={label} data-label="" className={LABEL}>
         {thread.title}
       </span>
       <span className="sr-only">{look.spoken}</span>
@@ -338,6 +341,7 @@ export function ProjectButton({
   open: boolean;
   onToggle: () => void;
 }): ReactElement {
+  const label = useLabelCut();
   return (
     <Named
       name={name}
@@ -347,7 +351,7 @@ export function ProjectButton({
           className={`${ROW} group/fold text-ink`}
           onClick={onToggle}
         >
-          <span data-label="" className="min-w-0 truncate">
+          <span ref={label} data-label="" className="min-w-0 overflow-hidden whitespace-nowrap">
             {name}
           </span>
           <FoldChevron open={open} />

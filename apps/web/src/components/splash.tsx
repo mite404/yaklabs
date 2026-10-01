@@ -1,4 +1,5 @@
-import { useSplash } from "../splash";
+import { useEffect } from "react";
+import { markSplashSeen, useSplash } from "../splash";
 
 // The splash (ADR-113, ADR-136): the field's dots, a clearing of plain paper behind the words, a
 // sheet of construction lines and Atlas with his globe ringing the words, all drawn in
@@ -31,11 +32,13 @@ export function SplashDrawing({ where = "canvas" }: { where?: keyof typeof SLOTS
 }
 
 /**
- * The picture behind a new thread's welcome, in the look the visitor chose: Vitruvian's sheet, or
- * one of the paintings, which index.css draws off `<html data-splash>`.
+ * The picture behind a new thread's welcome, in this visit's look: Vitruvian's sheet, or one of
+ * the paintings, which index.css draws off `<html data-splash>`. Once it has been on screen, later
+ * visits draw their look rather than opening on the abstract one again.
  */
 export function WelcomeArt() {
   const { style } = useSplash();
+  useEffect(markSplashSeen, []);
   if (style === "vitruvian") return <SplashDrawing where="welcome" />;
   return <div className="welcome-art" aria-hidden="true" />;
 }

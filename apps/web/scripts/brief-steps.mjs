@@ -210,15 +210,18 @@ async function workDetails(page, run) {
   await run.shot("06-work-details");
 }
 
+// Restart plays the show again from its start, at the rate it was left at.
 async function restartFaster(page, run) {
-  await toolbarOf(page).getByRole("button", { name: "Restart" }).click();
-  await until(async () => (await statusOf(page).innerText()) === "Ready", "Ready after Restart");
-  await composeOf(page).waitFor();
   const fast = toolbarOf(page).getByRole("button", { name: "Fast forward, 2x" });
   await fast.click();
   assert.equal(await fast.getAttribute("aria-pressed"), "true");
   const began = Date.now();
-  await button(page, "Play").click();
+  await toolbarOf(page).getByRole("button", { name: "Restart" }).click();
+  await until(
+    async () => (await statusOf(page).innerText()).startsWith("Playing"),
+    "Playing after Restart",
+  );
+  await composeOf(page).waitFor();
   await untilDone(page);
   const { timing } = run;
   timing.fast = Date.now() - began;
@@ -271,12 +274,15 @@ async function opensOnRecap(page, run) {
   return (await recap.innerText()).replaceAll("\n", " · ");
 }
 
+// A recap item lands on its own evidence, not the whole reply: the step's card has no place in
+// the reply's words here, so Work details unfolds itself and the step's row glows.
 async function recapJumpsToEvidence(page, run) {
   const recap = mainOf(page).getByRole("region", { name: "Recap" });
   await recap.locator("li button").first().click();
   const turn = agentTurns(page).first();
-  await until(async () => (await turn.getAttribute("data-flash")) !== null, "the turn to glow");
-  await turn.locator(".work-details .disclosure-header").first().click();
+  const glowing = turn.locator(".work-step[data-flash]");
+  await until(async () => (await glowing.count()) === 1, "the step's row to glow");
+  assert.equal(await turn.getAttribute("data-flash"), null, "the reply itself does not glow");
   await turn.locator(".work-step").nth(2).waitFor();
   assert.equal(await turn.locator(".work-step .card").count(), 1, "the southern card backs it");
   await run.shot("11-evidence");
@@ -346,7 +352,7 @@ export const returnedSteps = [
     "opens on a recap of three outcomes, 25 min since the last message, three children",
     opensOnRecap,
   ],
-  ["a recap item jumps to its turn, and Work details holds the evidence", recapJumpsToEvidence],
+  ["a recap item jumps to its step, unfolding Work details to its evidence", recapJumpsToEvidence],
   [
     "the player steps the card to Difference, and the choice rides on the request",
     cardViewRidesAlong,

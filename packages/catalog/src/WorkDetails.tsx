@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AgentTree } from "./AgentTree";
 import { CatalogCard } from "./CatalogCard";
 import { Disclosure } from "./Disclosure";
@@ -20,7 +20,7 @@ const STATUS_WORDS: Record<StepStatus, string> = {
 function StepRow({ step, carries }: { step: WorkStep; carries: boolean }) {
   const word = STATUS_WORDS[step.status];
   return (
-    <li className="work-step" data-status={step.status}>
+    <li className="work-step" data-status={step.status} data-step={step.id}>
       <p className="work-step-status">
         {step.status === "running" ? (
           <>
@@ -99,13 +99,19 @@ function TechnicalDetails({ work }: { work: Work }) {
 }
 
 /**
+ * The event that asks a reply's Work details to unfold, sent to the disclosure's root, so a jump
+ * to one of its steps finds the step's row on the page.
+ */
+export const REVEAL_STEP = "work-reveal-step";
+
+/**
  * The one disclosure above a reply (ADR-139, amended): mounted when the work starts, so it never
  * appears over text someone is reading, its header says what the reply is doing now (live, with
  * the working glyph) and then what the work amounted to, with a count beside it (`workLabel`).
  * Folded under it: each step's state in a word, its label, its outcome in plain prose, the
  * lines that say how it was found, and the card that backs it. The superseded narration and the technical logs sit one disclosure deeper,
  * so a reader who only wants the answer never has to read them. Both start folded; each turn
- * keeps its own.
+ * keeps its own, and unfolds on `REVEAL_STEP`.
  * @param cardsCarry Whether an evidence card's header carries it out onto the canvas (ADR-089).
  */
 export function WorkDetails({
@@ -118,9 +124,18 @@ export function WorkDetails({
   cardsCarry?: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const root = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = root.current;
+    const reveal = () => {
+      setOpen(true);
+    };
+    el?.addEventListener(REVEAL_STEP, reveal);
+    return () => el?.removeEventListener(REVEAL_STEP, reveal);
+  }, []);
   const technical = work.logs.length > 0 || work.narration.length > 0;
   return (
-    <div className="work-details" data-live={label.live || undefined}>
+    <div ref={root} className="work-details" data-live={label.live || undefined}>
       <Disclosure
         summary={
           label.live ? (

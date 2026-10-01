@@ -242,13 +242,17 @@
   border-bottom: 1px solid var(--hairline);
 }
 /* A host's control before the title (ADR-134), such as a lane's collapse: first in the bar's
-   row, in the gutter, flush with the lane's edge and closing the row's gap, so the title's first
-   character starts on the text column, where the compose box's edge is (Ethan). The control is
-   20px, the gutter's width, so it fits the margin as a list's marker does. */
+   row, --leading-space in from the lane's edge and the same again before the title, so its glyph
+   sits equally far from both (Ethan), as on a card lane's heading. The bar's 8px gap is part of
+   the second space, less the 1px the serif's capitals stand in from their side bearing, so the
+   glyph's ink measures 15px to the lane's edge and to the title's ink alike. */
 .thread-header > .header-leading {
   display: flex;
   flex-shrink: 0;
-  margin: 0 -8px 0 calc(-1 * var(--thread-gutter));
+  margin: 0 calc(var(--leading-space) - 9px) 0 calc(var(--leading-space) - var(--thread-gutter));
+  /* Centred on the title's capitals, from their top to the baseline, rather than on its line
+     box, which the serif's deep descent pulls 2px low (measured at 17px, the title's size). */
+  translate: 0 -2px;
 }
 /* The thread title is a display moment: brand serif (Newsreader). It keeps its own width, so a
    lane's bar stays free around it to lift the lane by (ADR-089), and shrinks when crowded. */
@@ -315,12 +319,19 @@
 /* The scroll area is the size container for embedded cards (ADR-023).
    A stable scrollbar gutter keeps content from shifting when the bar appears (ADR-003).
    The thread steers its own scroll (threadReveal.ts), so the browser's scroll anchoring, which
-   would shift it to hold a paragraph in place as content sizes, stays off (ADR-103). */
+   would shift it to hold a paragraph in place as content sizes, stays off (ADR-103).
+   It scrolls up and down only. `overflow-y: auto` alone would make the x axis scrollable too,
+   and `contain` on both axes kept every sideways swipe over the thread from reaching the
+   canvas behind it, so a row of lanes only panned from the bare ground between them. */
 .thread-scroll {
   container: thread / inline-size;
+  /* Positioned, so the search's rings (below) scroll with the turns. */
+  position: relative;
+  overflow-x: hidden;
   overflow-y: auto;
   overflow-anchor: none;
-  overscroll-behavior: contain;
+  overscroll-behavior-x: auto;
+  overscroll-behavior-y: contain;
   scrollbar-gutter: stable;
   /* The bottom padding lands the last card --rest-gap above the compose box or the dock
      card: --dock-space is the dock card's height over the compose box (ADR-038). A jump to a
@@ -1204,9 +1215,57 @@
   }
 }
 
+/* A thread's search (searchMarks.ts) marks the words it found as a text editor's find does:
+   every match tinted with the selection's blue, the one stepped to selected outright, as a
+   click and drag would select it (Ethan). */
+::highlight(thread-search) {
+  background-color: color-mix(in srgb, var(--blue) 40%, transparent);
+  color: var(--ink);
+}
+::highlight(thread-search-current) {
+  background-color: var(--blue);
+  color: var(--on-blue);
+}
+/* The layer the rings hang in: no box of its own, at the turns' origin, so each ring placed in
+   the turns' coordinates scrolls with them. */
+.search-rings {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+/* The ring around the match a step lands on, once, so the eye finds the words rather than the
+   turn they sit in: the selection's blue drawn tight around them, widening and fading out over
+   the 1.2s a jumped-to turn glows. */
+.search-ring {
+  position: absolute;
+  border-radius: 3px;
+  animation: search-ring 1.2s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+}
+@keyframes search-ring {
+  from {
+    box-shadow:
+      0 0 0 2px var(--blue),
+      0 0 0 5px color-mix(in srgb, var(--blue) 45%, transparent);
+  }
+  to {
+    box-shadow:
+      0 0 0 2px transparent,
+      0 0 0 10px transparent;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .search-ring {
+    animation: none;
+    box-shadow: 0 0 0 2px var(--blue);
+  }
+}
+
 /* A jumped-to turn glows briefly so the eye finds it (ADR-022); an answer glows alone on its
-   surface. */
-:is(.turn, .answered-pair)[data-flash] {
+   surface, and a recap's outcome glows on its own card or step. */
+:is(.turn, .answered-pair, .card, .work-step)[data-flash] {
   border-radius: 12px;
   animation: turn-flash 1.2s ease-out;
 }
@@ -1223,7 +1282,7 @@
   .recap,
   .recap-chip,
   .awaiting,
-  :is(.turn, .answered-pair)[data-flash] {
+  :is(.turn, .answered-pair, .card, .work-step)[data-flash] {
     animation: none;
   }
   .bubble-more {
@@ -1233,7 +1292,7 @@
 /* Without the glow's fade, a jumped-to turn holds the glow's first frame until it clears, so the
    eye still finds it. */
 @media (prefers-reduced-motion: reduce) {
-  :is(.turn, .answered-pair)[data-flash] {
+  :is(.turn, .answered-pair, .card, .work-step)[data-flash] {
     box-shadow: 0 0 0 4px color-mix(in srgb, var(--focus) 25%, transparent);
   }
 }

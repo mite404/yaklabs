@@ -36,14 +36,30 @@ describe("requestsOf", () => {
       { id: "u3", role: "user", text: "North", question: "Which region?", time: "9:06" },
     ];
     expect(requestsOf(answered).map((request) => request.id)).toEqual(["u1", "u2"]);
-    expect(matchesOf(answered, "north")).toEqual(["u3"]);
+    expect(matchesOf(answered, "north")).toEqual([{ turnId: "u3", nth: 0 }]);
   });
 });
 
+// The matches a list of "turn#nth" names, for short expectations.
+const at = (...names: string[]) =>
+  names.map((name) => {
+    const [turnId, nth] = name.split("#");
+    return { turnId, nth: Number(nth) };
+  });
+
 describe("matchesOf", () => {
-  it("finds turns of either role, ignoring case", () => {
-    expect(matchesOf(messages, "PROFIT")).toEqual(["u1", "a1"]);
-    expect(matchesOf(messages, "revenue")).toEqual(["u2", "a2"]);
+  it("finds each occurrence in turns of either role, ignoring case", () => {
+    expect(matchesOf(messages, "PROFIT")).toEqual(at("u1#0", "a1#0"));
+    expect(matchesOf(messages, "revenue")).toEqual(at("u2#0", "a2#0"));
+  });
+
+  it("counts every occurrence in a turn, in reading order, never overlapping", () => {
+    const repeated: ThreadMessage[] = [
+      { id: "a1", role: "agent", text: "Refund one, refund two, REFUND three.", time: "9:02" },
+      { id: "a2", role: "agent", text: "aaaa", time: "9:03" },
+    ];
+    expect(matchesOf(repeated, "refund")).toEqual(at("a1#0", "a1#1", "a1#2"));
+    expect(matchesOf(repeated, "aa")).toEqual(at("a2#0", "a2#1"));
   });
 
   it("matches nothing for a blank query", () => {
@@ -52,29 +68,30 @@ describe("matchesOf", () => {
 });
 
 describe("stepMatch", () => {
-  const ids = ["u1", "a1", "u2"];
+  const matches = at("u1#0", "a1#0", "a1#1");
 
   it("starts at the first going forward and the last going back", () => {
-    expect(stepMatch(ids, undefined, 1)).toBe("u1");
-    expect(stepMatch(ids, undefined, -1)).toBe("u2");
+    expect(stepMatch(matches, undefined, 1)).toEqual(at("u1#0")[0]);
+    expect(stepMatch(matches, undefined, -1)).toEqual(at("a1#1")[0]);
   });
 
-  it("wraps at either end", () => {
-    expect(stepMatch(ids, "u2", 1)).toBe("u1");
-    expect(stepMatch(ids, "u1", -1)).toBe("u2");
+  it("steps occurrence by occurrence, within a turn too, and wraps at either end", () => {
+    expect(stepMatch(matches, at("a1#0")[0], 1)).toEqual(at("a1#1")[0]);
+    expect(stepMatch(matches, at("a1#1")[0], 1)).toEqual(at("u1#0")[0]);
+    expect(stepMatch(matches, at("u1#0")[0], -1)).toEqual(at("a1#1")[0]);
   });
 
   it("starts over when the current match no longer matches", () => {
-    expect(stepMatch(ids, "gone", 1)).toBe("u1");
-    expect(stepMatch([], "u1", 1)).toBeUndefined();
+    expect(stepMatch(matches, at("gone#0")[0], 1)).toEqual(at("u1#0")[0]);
+    expect(stepMatch([], at("u1#0")[0], 1)).toBeUndefined();
   });
 });
 
 describe("matchStatus", () => {
   it("counts matches until one is showing, then says which", () => {
     expect(matchStatus([])).toBe("No matches");
-    expect(matchStatus(["u1"])).toBe("1 match");
-    expect(matchStatus(["u1", "a1"])).toBe("2 matches");
-    expect(matchStatus(["u1", "a1"], "a1")).toBe("2 of 2");
+    expect(matchStatus(at("u1#0"))).toBe("1 match");
+    expect(matchStatus(at("u1#0", "a1#0"))).toBe("2 matches");
+    expect(matchStatus(at("u1#0", "a1#0"), at("a1#0")[0])).toBe("2 of 2");
   });
 });

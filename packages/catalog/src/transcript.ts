@@ -72,7 +72,8 @@ export function runningActivity(messages: ThreadMessage[]): string | undefined {
 }
 
 /**
- * The outcomes the thread's replies recorded, each pointing at its turn, for the recap
+ * The outcomes the thread's replies recorded, each pointing at its turn and the step that
+ * recorded it, for the recap
  * (ADR-005, ADR-027): every finished or failed step's outcome, and the title of a reply that
  * broke off. Nothing is written after the fact: the recap is a view over the record.
  */
@@ -82,7 +83,7 @@ export function recapOf(messages: ThreadMessage[]): RecapItem[] {
     const turnId = message.id;
     const outcomes = (message.work?.steps ?? []).flatMap((step) =>
       step.outcome !== undefined && (step.status === "done" || step.status === "failed")
-        ? [{ text: step.outcome, turnId }]
+        ? [{ text: step.outcome, turnId, stepId: step.id }]
         : [],
     );
     const broke =

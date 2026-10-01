@@ -59,10 +59,28 @@ function Named({ label, control }: { label: string; control: ReactElement }) {
   );
 }
 
-// Play, or Pause while playing; nothing to press once the take is done.
+// Plays the show again from its start, with a clear thread, and goes to its main thread, since
+// the children it had are gone.
+function useReplay(show: Show): () => void {
+  const shell = useShell();
+  return () => {
+    show.restart();
+    shell?.open(show.thread);
+    show.play();
+  };
+}
+
+// What the play button says it does: start or go on, hold, or, once the take is done, play the
+// show again from its start.
+function playLabel(status: PlayerStatus): string {
+  if (status === "playing") return "Pause";
+  return status === "done" ? "Play again" : "Play";
+}
+
+// Play, Pause while playing, and Play again once the take is done.
 function PlayButton({ show, state }: On) {
-  const playing = state.status === "playing";
-  const label = playing ? "Pause" : "Play";
+  const replay = useReplay(show);
+  const label = playLabel(state.status);
   return (
     <Named
       label={label}
@@ -72,13 +90,13 @@ function PlayButton({ show, state }: On) {
           size="icon-sm"
           className={GHOST}
           aria-label={label}
-          disabled={state.status === "done"}
           onClick={() => {
-            if (playing) show.pause();
+            if (state.status === "playing") show.pause();
+            else if (state.status === "done") replay();
             else show.play();
           }}
         >
-          {playing ? <Pause /> : <Play />}
+          {state.status === "playing" ? <Pause /> : <Play />}
         </Button>
       }
     />
@@ -107,15 +125,11 @@ function RateToggle({ show, state }: On) {
   );
 }
 
-// Play, 2x, Restart, and where the take stands. Restart plays this show again from its start
-// and goes to its main thread, since the children it had are gone.
+// Play, 2x, Restart, and where the take stands. Restart, at any point of the take, plays this
+// show again from its start with a clear thread.
 function Transport({ show, state }: On) {
-  const shell = useShell();
   useTicking(state.status === "playing");
-  const restart = () => {
-    show.restart();
-    shell?.open(show.thread);
-  };
+  const restart = useReplay(show);
   return (
     <div className="flex items-center gap-1">
       <PlayButton show={show} state={state} />
