@@ -184,6 +184,14 @@ describe("composeRuntime's state", () => {
     expect(runtime.state()).not.toBe(first);
   });
 
+  it("breaks, rather than list a record twice, when both sides hold an id", () => {
+    const place = { kind: "main", projectId: DEMO } as const;
+    const ws = { ...OVERLAY, threads: [thread(LIVE, place, "2026-09-29T09:00:03.000Z")] };
+    expect(() => composed(ready(WORKER, []), ready(ws, [])).runtime.state()).toThrow(
+      'The worker and the overlay both hold "playground"',
+    );
+  });
+
   it("is the worker's own while it starts or once it breaks", () => {
     const starting: RuntimeState = { kind: "starting", source: null };
     expect(composed(starting).runtime.state()).toBe(starting);

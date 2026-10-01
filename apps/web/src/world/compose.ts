@@ -29,9 +29,21 @@ function ownerOf(item: NewItem): string | null {
   }
 }
 
+// The contract the merge stands on: each id lives on exactly one side (see `composeRuntime`).
+function assertDisjoint(worker: Workspace, overlay: Workspace): void {
+  const held = new Set(
+    [...worker.projects, ...worker.threads, ...worker.shares].map((each) => each.id),
+  );
+  const twice = [...overlay.projects, ...overlay.threads, ...overlay.shares].find((each) =>
+    held.has(each.id),
+  );
+  if (twice !== undefined) throw new Error(`The worker and the overlay both hold "${twice.id}"`);
+}
+
 // The worker's workspace with the overlay's records after its own. The shell document is the
 // worker's alone; the overlay keeps none.
 function mergedWorkspace(worker: Workspace, overlay: Workspace): Workspace {
+  assertDisjoint(worker, overlay);
   return {
     ...worker,
     projects: [...worker.projects, ...overlay.projects],
