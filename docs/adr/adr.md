@@ -2492,3 +2492,14 @@ for pixel.
 Amended the same day (Ethan, circling the spot): the seal is pinned above the greeting at
 the column's right rather than closing the column, tilted 25° with its left side up, and the
 page's copy was cut to what a reader skimming it in three minutes keeps.
+Amended again the same day (Ethan: "make it look more like a landing page ... the screenshot
+of the cli tool in the hero ... more variation of blocks"): the page is a landing page now,
+after the product sites Ethan named. The run's terminal opens it, set as text from his
+screenshot with its prompt bar, turned a few degrees toward the words and printing its lines
+60ms apart, with the seal stamped on its corner; the verdicts roll by on an ink ticker; the
+three notes cascade down a twelve-column grid; a bento of six cells holds the pixels, the
+numeral, the camera proof's table, the approve command on ink, four measured bars and the
+five beats; the contrast table sits on a full-bleed band in the window chrome's green; the
+four roles stand under one label turned on its side; and the closing word sits by the seal.
+The terminal is text rather than the screenshot, which never arrived as a file, so it reads,
+copies, scales and themes; the comparator proof's picture gave way to its numbers.
