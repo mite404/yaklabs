@@ -87,8 +87,7 @@ export function liveNotice(state: {
  * speech service hears only the system's default input (the Web Speech API takes no device),
  * so a chosen input that is not it moves the waveform and turns no speech into text.
  */
-export const MIC_MATCH_WARNING =
-  "Microphone chosen here has to match your OS' chosen Default Audio Input for Speech to Text to work";
+export const DEFAULT_MIC_WARNING = "Speech to Text only offered via system's default microphone.";
 
 /**
  * What a live input does, under its name in the picker: the system's default turns speech into

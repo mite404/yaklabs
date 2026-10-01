@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent, type RefObject } from "react";
-import { formatElapsed, MIC_MATCH_WARNING, type AudioDevice } from "./dictation";
+import { formatElapsed, DEFAULT_MIC_WARNING, type AudioDevice } from "./dictation";
 import { useDictationView } from "./dictationSession";
 import { DevicePicker } from "./DevicePicker";
 import { Modal } from "./Modal";
@@ -182,7 +182,7 @@ export function DictationModal({
         devices={devices}
         deviceId={deviceId}
         live={live}
-        warning={note ?? (live ? MIC_MATCH_WARNING : undefined)}
+        warning={note ?? (live ? DEFAULT_MIC_WARNING : undefined)}
         picking={picking}
         onPicking={setPicking}
         onPick={setDeviceId}
