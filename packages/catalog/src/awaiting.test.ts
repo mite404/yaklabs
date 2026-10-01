@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { awaitingSchema, resolveAwaiting, rowForKey } from "./awaiting";
+import { awaitingSchema, resolveAwaiting, rowForKey, stagedRows } from "./awaiting";
 import { threads } from "./thread";
 
 // The thread's question, parsed once so each test can vary one field of a known-good card.
@@ -83,5 +83,35 @@ describe("rowForKey", () => {
     expect(rowForKey("0", 0, 3)).toBeUndefined();
     expect(rowForKey("Enter", 0, 3)).toBeUndefined();
     expect(rowForKey("a", 0, 3)).toBeUndefined();
+  });
+});
+
+describe("stagedRows", () => {
+  const labels = ["Hold them", "Pay what arrived"];
+
+  it("shows the user's own choice when nothing is staged", () => {
+    expect(stagedRows(labels, undefined, 1)).toEqual({ hovered: undefined, selected: 1 });
+  });
+
+  it("hovers a staged answer's tile, then selects it", () => {
+    expect(stagedRows(labels, { text: "Hold them", phase: "hover" }, 1)).toEqual({
+      hovered: 0,
+      selected: 1,
+    });
+    expect(stagedRows(labels, { text: "Hold them", phase: "selected" }, 1)).toEqual({
+      hovered: undefined,
+      selected: 0,
+    });
+    expect(stagedRows(labels, { text: "Hold them", phase: "pressed" }, 1)).toEqual({
+      hovered: undefined,
+      selected: 0,
+    });
+  });
+
+  it("leaves the user's choice alone for an answer no tile carries", () => {
+    expect(stagedRows(labels, { text: "Something else", phase: "selected" }, 1)).toEqual({
+      hovered: undefined,
+      selected: 1,
+    });
   });
 });

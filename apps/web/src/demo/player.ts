@@ -1,3 +1,4 @@
+import type { AnswerPhase } from "@yaklabs/catalog/awaiting";
 import type { ThreadHandle, ThreadMessage } from "@yaklabs/catalog/thread";
 import type { ThreadId } from "@yaklabs/runtime";
 import type { Clock, Rate } from "./clock";
@@ -67,6 +68,14 @@ type Stage = Omit<PlayerDeps, "now"> & { signal: AbortSignal };
 
 // A keystroke's pause at 1x: a quick, steady typist.
 const TYPE_MS = 18;
+// How long each step of answering the docked question shows at 1x, as a hand would give it:
+// the pointer resting on the tile, the tile selected, Submit held down (Ethan: "we need to see a
+// hover state and then the submit btn depressed and submitted").
+const ANSWER_STEPS: readonly (readonly [AnswerPhase, number])[] = [
+  ["hover", 700],
+  ["selected", 600],
+  ["pressed", 180],
+];
 // How often the player looks for the main thread's panel while it mounts.
 const LOOK_MS = 50;
 
@@ -146,6 +155,19 @@ async function request(stage: Stage, text: string): Promise<void> {
   (await handleOf(stage))?.send();
 }
 
+// Gives the answer through the docked card the way a hand would: each step of `ANSWER_STEPS`
+// shown for its pause on the show's clock, so Pause and 2x hold it too, then sent.
+async function answer(stage: Stage, text: string): Promise<void> {
+  for (const [phase, ms] of ANSWER_STEPS) {
+    // oxlint-disable-next-line no-await-in-loop -- each step shows before the next
+    (await handleOf(stage))?.stageAnswer(text, phase);
+    // oxlint-disable-next-line no-await-in-loop -- as above
+    await stage.clock.wait(ms, stage.signal);
+    if (stage.signal.aborted) return;
+  }
+  (await handleOf(stage))?.answer(text);
+}
+
 // Performs one beat through the main thread's handle. An answer the presenter already gave
 // (the user has more turns than `asked`) is not given again.
 async function perform(stage: Stage, beat: Cue["beat"], asked: number): Promise<void> {
@@ -155,7 +177,7 @@ async function perform(stage: Stage, beat: Cue["beat"], asked: number): Promise<
   }
   if (beat.kind === "answer") {
     if (userTurns(await stage.runtime.open(stage.runtime.main)) > asked) return;
-    (await handleOf(stage))?.answer(beat.text);
+    await answer(stage, beat.text);
     return;
   }
   const handle = await handleOf(stage);

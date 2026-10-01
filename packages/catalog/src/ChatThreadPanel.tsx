@@ -14,7 +14,7 @@ import {
 import type { Agent, AgentEvent } from "./agent";
 import { AgentTree } from "./AgentTree";
 import { AwaitingInputCard } from "./AwaitingInputCard";
-import { resolveAwaiting, type AwaitingInput } from "./awaiting";
+import { resolveAwaiting, type AnswerPhase, type AwaitingInput } from "./awaiting";
 import { ComposeBox } from "./ComposeBox";
 import { appendDictation } from "./dictation";
 import { markGrabbableHighlight } from "./grabbable";
@@ -977,6 +977,8 @@ export function ChatThreadPanel({
   const [dictating, setDictating] = useState(open);
   const outbox = useOutbox(thread.messages);
   const { awaiting, setAwaiting, ask } = useAwaiting(thread, replies.tell);
+  // An answer a host is giving on the user's behalf, shown on the card before it is sent.
+  const [staged, setStaged] = useState<{ text: string; phase: AnswerPhase }>();
   useLayoutEffect(() => {
     questions.current = ask;
   });
@@ -1071,7 +1073,11 @@ export function ChatThreadPanel({
       if (latest().trim() !== "" || outbox.attachments.length > 0) send();
     },
     answer: (text) => {
+      setStaged(undefined);
       if (awaiting !== undefined) answer(text);
+    },
+    stageAnswer: (text, phase) => {
+      setStaged(phase === null || awaiting === undefined ? undefined : { text, phase });
     },
     choose: (measure, turnId) => {
       const choice = choiceOf(messages, measure, turnId); // → the attachment, or none
@@ -1171,6 +1177,7 @@ export function ChatThreadPanel({
           <div className="dock-overlay" ref={setDockSlot}>
             <AwaitingInputCard
               question={awaiting}
+              staged={staged}
               onAnswer={answer}
               onElsewhere={() => {
                 setAwaiting(undefined);

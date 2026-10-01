@@ -83,6 +83,9 @@ function fakePanel(world: World, main: Played["main"]): { handle: ThreadHandle; 
       calls.push(`answer ${text}`);
       tell({ kind: "answer", text });
     },
+    stageAnswer: (text, phase) => {
+      calls.push(`${phase ?? "clear"} ${text}`);
+    },
     choose: (measure) => {
       calls.push(`choose ${measure}`);
     },
@@ -109,12 +112,14 @@ function finished(player: Player): Promise<void> {
   });
 }
 
-// What the fake panel notes for one user beat.
-function noted(beat: Beat): string {
-  if (beat.kind === "user" || beat.kind === "answer")
-    return `${beat.kind === "user" ? "send" : "answer"} ${beat.text}`;
-  if (beat.kind === "choose") return `choose ${beat.measure}`;
-  return beat.kind;
+// What the fake panel notes for one user beat: an answer shows on the card, hovered, selected
+// and pressed, before it is sent.
+function noted(beat: Beat): string[] {
+  if (beat.kind === "user") return [`send ${beat.text}`];
+  if (beat.kind === "answer")
+    return ["hover", "selected", "pressed", "answer"].map((step) => `${step} ${beat.text}`);
+  if (beat.kind === "choose") return [`choose ${beat.measure}`];
+  return [beat.kind];
 }
 
 // The presenter answering the docked question before the player's 777ms pause is over.
@@ -162,7 +167,7 @@ describe("the demo player", () => {
       expect(player.state().status).toBe("idle");
       player.play();
       await finished(player);
-      expect(panel.calls).toEqual(userBeats(script).map((beat) => noted(beat)));
+      expect(panel.calls).toEqual(userBeats(script).flatMap((beat) => noted(beat)));
       expect(played.progress().settled.size).toBe(played.progress().started);
     },
   );
