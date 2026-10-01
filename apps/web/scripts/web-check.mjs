@@ -300,8 +300,11 @@ try {
     });
   const light = await surface();
   await page.getByRole("button", { name: "Account" }).click();
+  const accountMenu = page.getByRole("menu");
+  await accountMenu.waitFor();
   const themeChoices = await page.getByRole("menuitemradio", { name: /Light|Dark|System/ }).count();
   await page.keyboard.press("Escape");
+  await accountMenu.waitFor({ state: "detached" });
   record(
     "the site is light only: the account menu offers no theme, and the root names none (ADR-161)",
     themeChoices === 0 &&

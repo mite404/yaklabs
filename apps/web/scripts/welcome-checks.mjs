@@ -353,6 +353,7 @@ export const welcomeChecks = {
     const { page, context } = await openDemo(browser);
     await startThread(page);
     await switchOf(page).click();
+    await menuOf(page).waitFor();
     const bonsai = page.getByRole("menuitemradio", { name: /^Bonsai/ });
     const listed = await page.getByRole("menuitemradio").allInnerTexts();
     const disabled = (await bonsai.getAttribute("aria-disabled")) === "true";
