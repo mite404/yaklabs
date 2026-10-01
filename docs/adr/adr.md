@@ -2422,12 +2422,18 @@ Known gaps: a collapsed card's strip uses the thread bar's rule, not the card he
 taller and varies with the card; the brief lever's 2x timing bound sits at 59 to 63% on main as
 well as here, because the on-screen reveal does not scale with the show's clock.
 
-## ADR-159 - Home is a hub, jumps frame by rule, the demo shows its hands
+## ADR-159 - Home is a blank live thread, jumps frame by rule, the demo shows its hands
 
 2026-10-01 - Accepted (Ethan, a second walkthrough). Amends ADR-022, ADR-038, ADR-089, ADR-125,
 ADR-134, ADR-136, ADR-156 and ADR-158.
-The rail's mark is named Home and opens the hub, the greeting and the projects with no thread
-under it, rather than the tab last on screen; a plain visit to "/" still resumes. Every device
+The rail's mark is named Home and opens a first visit's page whatever is open: the Live
+Playground's blank main, its welcome over the splash, so whatever is typed there goes to the
+live model. The starter while it is blank, else the newest blank main there, else a new one;
+Home never stacks a second blank thread. A plain visit to "/" still resumes the tab last on
+screen, and with none open it opens that page too, where it said "Nothing open"; only a
+scenario, which has no Live Playground, still says so. A thread started with nothing naming its
+project goes in the Live Playground, not the sidebar's first project, the scripted Demo, whose
+stand-in had answered it. Every device
 store gets the Live Playground: the seed ran only on an empty store, so a browser that held
 threads from before ADR-156 (its "Demo store", kept on the device, not the account) never had
 it. The splash takes the next look each visit, abstract, landscape, Vitruvian, then round again,
@@ -2436,8 +2442,8 @@ view does not move and only glows; a user's message out of view is centered; any
 of view comes just into view, its top never cut off. A press that opens something (Work details)
 keeps the pressed control in view, the thread rising only until it reaches the top of the band,
 where ADR-038 had shown the bottom of everything that opened. Work with no steps folds its
-technical lines straight into Work details, never into a second disclosure. A demo's Play rings
-once in the lane flash each time its thread opens and it is not playing, and the demo answers a
+technical lines straight into Work details, never into a second disclosure. A demo's Play pulses
+in the lane flash on a loop while it is not playing, and the demo answers a
 docked question as a hand would: the tile hovered, selected, Submit pressed, then sent, on the
 show's clock. A main's child lanes open where the sidebar lists the child (newest first, ADR-125),
 top to bottom being left to right; a lane the reader moves keeps its place, and the sidebar
@@ -2445,7 +2451,9 @@ never follows the canvas. A lane's collapse sits 7px inside the border, open or 
 14px before the title, the Share-to-Close spacing; a collapsed strip carries its close at the
 foot. The rail's fills take the site's 4px corners, and the resize hint holds 40px either side
 of the pointer, gone by 70px.
-Alternatives weighed: a separate Home route, which would have left "/" two meanings; resetting
+Alternatives weighed: a separate Home route, which would have left "/" two meanings; a hub
+with no thread under it, whose composer would have had to hand its first message to a thread
+made on send, where a blank live thread already is that page; resetting
 the device store to drop Demo store, which would delete the visitor's own threads; centering
 every jump, which is what moved a card already in view and cut tall ones off at the top; and
 ordering the sidebar's children oldest first to match the canvas, which ADR-125 had settled the

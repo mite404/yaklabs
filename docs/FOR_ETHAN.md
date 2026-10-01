@@ -1717,6 +1717,17 @@ its header went off the top. The fix is a rule with three outcomes: in view, sta
 user's message out of view, centre; anything else out of view, the smallest move that shows it,
 top first.
 
+### The new thread that walked onto the wrong set
+
+Typing `/playground` on Ethan's browser landed on "Nothing open", and "Start a thread" there got
+canned lab answers instead of the model. Two bugs stacked up. First, his browser held old
+threads, so the seed never added the Live Playground (the blooper above), and `/playground`
+pointed at a thread that wasn't there. Second, a thread started with nothing on screen went into
+"the first project in the sidebar". On this site that's the scripted Demo, and a thread in the
+Demo is answered by the stand-in. The fallback now names the Live Playground. Home was rebuilt
+around the same idea: the bonsai, or "/" with nothing open, goes to the Live Playground's blank
+thread (reusing one, else making one). That's the page a first visit sees, composer and all.
+
 ## 5. Director's Commentary
 
 ### The agent only states intent; the design system does the rest

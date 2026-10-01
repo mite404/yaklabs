@@ -9,7 +9,7 @@ The agent loop and the conversation store run in a Web Worker from `@yaklabs/run
 
 | Path                       | What it shows                                                        | Sign-in  |
 | -------------------------- | -------------------------------------------------------------------- | -------- |
-| `/`                        | The last thread shown, else the latest main, else "Nothing open"     | required |
+| `/`                        | The last tab shown, else a blank Live Playground thread              | required |
 | `/t/:threadId`             | That thread's tab: a main beside its canvas, or a child's lane in it | required |
 | `/lab`                     | The evaluation workbench: fixtures through the same validation       | required |
 | `/playground`              | Redirects to `/t/playground`, the Live Playground's thread           | required |
