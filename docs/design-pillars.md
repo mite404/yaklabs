@@ -344,6 +344,10 @@ wave's shade track, which runs a whole number of loops.
 When two shapes move as one (the tree's base leaving as its top branch arrives), give them equal
 distance, equal duration and the same easing; a 3px move beside a 4px one tears the illusion
 apart halfway (Ethan).
+When one of them enters clear and clipped, let it lead: start the leaving shape a third of the
+way into the entry (the tree's base waits 8% of the loop, 160ms), so the arrival is already
+visible when the other starts to go. Started on the same frame, the solid shape reads as leaving
+first and the arrival as late (Ethan, picked from three cues side by side).
 Use `cubic-bezier(0.4, 0, 0.6, 1)` (a symmetric ease-in-out) for moves, and `linear` for fades
 inside a loop.
 Write the curve out in each keyframe: `animation-timing-function` in a keyframe ignores `var()`

@@ -75,7 +75,7 @@ it("draws Kay's three pills on whole pixels: left branch, right branch, full bas
   flushSync(() => {
     root.render(<AgentTree />);
   });
-  seek(600); // 30% in: the scroll is over and every pill is home
+  seek(700); // 35% in: the scroll is over and every pill is home
 
   expect(pillBoxes()).toEqual([
     { x: 2, y: 1, width: 7, height: 3 },
@@ -89,23 +89,26 @@ it("scrolls the base fully under the bottom edge, and brings it home before it s
     root.render(<AgentTree duration={1000} />);
   });
 
-  expect(baseAt(0)).toEqual({ top: 9, opacity: 1 }); // home, solid: the beat's last frame
-  expect(baseAt(240)).toEqual({ top: 13, opacity: 1 }); // past the 12px edge, still solid
-  expect(baseAt(300)).toEqual({ top: 9, opacity: 0 }); // home again, clear
+  expect(baseAt(0)).toEqual({ top: 9, opacity: 1 }); // home, solid: the beat's last stretch
+  expect(baseAt(320)).toEqual({ top: 13, opacity: 1 }); // past the 12px edge, still solid
+  expect(baseAt(340)).toEqual({ top: 9, opacity: 0 }); // home again, clear
   expect(baseAt(900)).toEqual({ top: 9, opacity: 1 }); // faded back in for the beat
 });
 
-it("scrolls the top branch in from above as the base scrolls out, as one strip", () => {
+it("scrolls the top branch in first, and the base out once the branch is on its way", () => {
   flushSync(() => {
     root.render(<AgentTree duration={1000} />);
   });
 
   // before the move: the branch waits clear, fully above the top edge
   expect(scrollAt(0)).toEqual({ baseTop: 9, branchTop: -3, branchOpacity: 0 });
-  const half = scrollAt(120); // → the halfway frame of the scroll
-  expect(half.baseTop).toBeCloseTo(11); // both 2px down: one strip moving
-  expect(half.branchTop).toBeCloseTo(-1);
-  expect(half.branchOpacity).toBeCloseTo(0.5); // half faded up
-  // the base is past the bottom edge as the branch lands home, solid
-  expect(scrollAt(240)).toEqual({ baseTop: 13, branchTop: 1, branchOpacity: 1 });
+  const lead = scrollAt(80); // → the base's last frame home, a third into the branch's entry
+  expect(lead.baseTop).toBe(9);
+  expect(lead.branchTop).toBeGreaterThan(-3); // already peeking past the top edge
+  expect(lead.branchOpacity).toBeGreaterThan(0.2); // and visibly lit
+  const half = scrollAt(200); // → the halfway frame of the base's scroll
+  expect(half.baseTop).toBeCloseTo(11); // 2px down, half under the edge
+  expect(half.branchOpacity).toBeGreaterThan(0.9); // the branch nearly landed, nearly solid
+  // the base is past the bottom edge with the branch home
+  expect(scrollAt(320)).toMatchObject({ baseTop: 13, branchTop: 1 });
 });
