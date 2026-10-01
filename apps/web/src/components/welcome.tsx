@@ -53,8 +53,9 @@ const GreetingLine = env.auth.kind === "workos" ? WorkOsGreeting : LocalGreeting
 
 /**
  * A new thread's welcome (ADR-136), after Kay's own new tab: the mark, the date, a greeting for
- * the theme's time of day, the projects, the actions a thread can open with, and the seal that
- * leads to the design tooling page (ADR-160). It shows in the main
+ * the theme's time of day, the projects, and the actions a thread can open with, with the seal
+ * that leads to the design tooling page pinned above the greeting at the column's right, tilted
+ * like a medal on a lapel (ADR-160). It shows in the main
  * pane while the thread has no turns, over the painting `<html data-splash>` names, and leaves
  * with the first turn. Open file and Open terminal are the desktop app's; here they wait.
  * @param pane The layout the thread is in. The switch for the painting shows only in the
@@ -66,6 +67,7 @@ export function Welcome({ thread, pane }: { thread: ThreadSummary; pane: PaneKin
     <div className="welcome" data-slot="welcome">
       <WelcomeArt />
       <div className="welcome-words flex w-full max-w-sm flex-col gap-7">
+        <DesignToolingSeal className="welcome-seal" />
         <div className="flex flex-col gap-4">
           <span className="grid size-10 place-items-center rounded-full bg-paper-deep text-ink">
             <BonsaiMark className="size-5" />
@@ -74,7 +76,6 @@ export function Welcome({ thread, pane }: { thread: ThreadSummary; pane: PaneKin
         </div>
         <Projects />
         <Actions thread={thread} />
-        <DesignToolingSeal />
       </div>
       {/* The switch through the paintings, in every build, so a visitor can look through the
           design work (Ethan; amends ADR-156, which had kept it to development builds). */}

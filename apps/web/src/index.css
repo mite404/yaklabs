@@ -577,6 +577,22 @@ html[data-dragging="sidebar"] * {
       transition: none;
     }
   }
+  /* On the welcome the seal is pinned above the greeting at the column's right, its centre
+     30px above the mark's top and its ribbon ending 24px inside the column's edge, where Ethan
+     circled; tilted 25deg with its left side up, as a medal sits on a lapel. First in the
+     column's DOM, since it is first on screen. On a narrow pane it has no room beside the
+     greeting, so it stays in the column's flow, upright, where it was first placed. */
+  .welcome-seal {
+    rotate: 25deg;
+  }
+  @media (min-width: 641px) {
+    .welcome-seal {
+      position: absolute;
+      top: -30px;
+      right: 24px;
+      translate: 0 -50%;
+    }
+  }
 
   /* The canvas is a dotted field (ADR-089): open ground that invites something to be put down. */
   .canvas {
