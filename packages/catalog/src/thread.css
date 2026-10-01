@@ -1332,6 +1332,12 @@
   margin-bottom: 12px;
   align-items: center;
 }
+/* A heading that carries a host's collapse (a card lane, ADR-134) starts --leading-space in, the
+   collapse's fill on that line (tokens.css), as a thread lane's. Later than the context's
+   padding above, so it wins at the same weight. */
+.card .card-heading:has(> .header-leading) {
+  padding-left: var(--leading-space);
+}
 .card[data-context="thread"] .card-heading .eyebrow,
 .card[data-context="thread"] .card-heading .badge {
   display: none;

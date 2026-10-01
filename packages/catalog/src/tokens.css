@@ -676,10 +676,11 @@ h1 span {
 }
 /* In a heading, --leading-space from the card's edge to the fill and --leading-gap from the
    fill to the title, as in a thread's title bar, so a card lane and a thread lane put their
-   collapse and their title in the same place. */
+   collapse and their title in the same place. The heading's own start padding becomes the
+   space, whatever padding its context gives it (a card in a thread or a lane has 16px, a page's
+   card 24px or 18px), so the collapse never rests on a guess of it. */
 .card-heading > .header-leading {
-  --heading-pad: 24px;
-  margin-left: calc(var(--leading-space) - var(--heading-pad));
+  margin-left: 0;
   margin-right: calc(var(--leading-gap) - 14px);
 }
 /* The host's control at the far end (a lane's close): a card with no header carries it at its
@@ -969,9 +970,6 @@ thead {
   }
   .card-heading {
     padding: 18px;
-  }
-  .card-heading > .header-leading {
-    --heading-pad: 18px;
   }
   .card-heading h2 {
     font-size: 18px;
