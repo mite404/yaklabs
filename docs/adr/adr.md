@@ -2503,3 +2503,11 @@ five beats; the contrast table sits on a full-bleed band in the window chrome's 
 four roles stand under one label turned on its side; and the closing word sits by the seal.
 The terminal is text rather than the screenshot, which never arrived as a file, so it reads,
 copies, scales and themes; the comparator proof's picture gave way to its numbers.
+Amended once more (Ethan: "version 2 is the winner ... these need to be the text on the
+page ... rip out, but save into an .md"): the landing page carries Ethan's copy and nothing
+else of its own: his headline and question in the hero, his question over the bento, his
+second headline on the band. Every other line of copy left the page for
+`docs/reference/verify-ui-tooling-copy.md`, to cross-check later; what stays beside his words
+is the tool's own evidence, the terminal, the verdicts, the cells' names from the review app's
+tabs, the counts, the pairs and the beats' names. The notes, the roles and the closing word are
+gone with their copy.
