@@ -3733,3 +3733,39 @@ ribbon runs off the seal onto the paper and brown ink on the dark paper fails 4.
 link's accessible name is the ribbon's text, so what a screen reader hears is what the eye reads.
 Senior-engineer takeaway: when an asset has to live in two themes and several sizes, ask whether
 it can be a function of the tokens before you ask which file format to save it in.
+
+### One slate, two takes: a record that rides on the write it records
+
+Ethan wanted the snooze toast kept in the bell. The tempting build is two calls: snooze the
+thread, then add a note. Two calls can split: the snooze is refused (a time already past) and
+the note lands anyway, or the note fails and the snooze stands with no record. So the note rides
+on the snooze itself, and the store writes both inside one transaction.
+
+```ts
+// sqliteStore.ts: one transaction, so a refused snooze leaves no note and a refused note no snooze
+mark: (id, change, now, note) => {
+  db.transaction(() => {
+    markThread(db, id, change, now, note); // → snooze row updated, then the note inserted
+  });
+},
+```
+
+```mermaid
+sequenceDiagram
+  participant P as Page (thread-verbs.ts)
+  participant W as Worker store
+  participant B as Bell
+  P->>P: words the note as the toast ("Snoozed ... until Thursday 1 October at 21:36")
+  P->>B: shows the snooze and the note at once (the optimistic edit)
+  P->>W: mark { snoozedUntil, note }
+  W->>W: one transaction: snooze + note, or neither
+  W-->>B: the confirmed workspace, the note in it
+```
+
+The page words the note, not the worker, because only the page knows the viewer's clock and
+time zone, so the bell says exactly what the toast said. The page also names the note, which
+lets it count the note as read at once: the person who would read it is the one who just
+snoozed, so the badge stays quiet. The film version: the clapperboard is written by the camera
+team at the moment of the take, on the same slate, so a take never exists without its label.
+Senior-engineer takeaway: when one action must leave a record, make the record part of the
+action's write, not a second call that can succeed or fail on its own.
