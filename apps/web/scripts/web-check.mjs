@@ -504,12 +504,18 @@ try {
   });
   const titleBar = canvas.locator("article").first().locator(".thread-header");
   const titleBox = await titleBar.boundingBox();
-  const grabHand = await titleBar.evaluate((el) => getComputedStyle(el).cursor);
   const laneBox = await canvas.locator("article").first().boundingBox();
-  const grip = titleBox.x + titleBox.width * 0.6;
-  await page.mouse.move(grip, titleBox.y + titleBox.height / 2);
+  // The grip, the one place on the bar that shows the hand and takes the lane (grip-zone.ts).
+  const grip = { x: titleBox.x + titleBox.width / 2, y: titleBox.y + titleBox.height / 2 - 2 };
+  await page.mouse.move(grip.x, grip.y);
+  await page.waitForTimeout(250);
+  // The hand is the grip's own (its ::after, clipped to its circle), there once the bar marks
+  // the pointer near it.
+  const grabHand = await titleBar.evaluate((el) =>
+    el.dataset.gripNear === undefined ? "none" : getComputedStyle(el, "::after").cursor,
+  );
   await page.mouse.down();
-  await page.mouse.move(grip + 300, titleBox.y + 30, { steps: 6 });
+  await page.mouse.move(grip.x + 300, titleBox.y + 30, { steps: 6 });
   await page.waitForTimeout(250);
   const lift = await page.evaluate(
     ([expectedLeft, laneWidth]) => {
@@ -532,7 +538,7 @@ try {
   );
   await shot("canvas-reorder");
   record(
-    "a lane's title bar shows a hand, and lifting it floats a copy under the pointer while the lane waits dimmed",
+    "a lane's grip shows a hand, and lifting it floats a copy under the pointer while the lane waits dimmed",
     grabHand === "grab" &&
       lift.ghost &&
       lift.lifted &&
@@ -544,7 +550,7 @@ try {
       lift.inPlace,
     `cursor ${grabHand}; ${JSON.stringify(lift)}`,
   );
-  await page.mouse.move(grip + laneWidths[0] + LANE_GAP_PX + 60, titleBox.y + 30, { steps: 6 });
+  await page.mouse.move(grip.x + laneWidths[0] + LANE_GAP_PX + 60, titleBox.y + 30, { steps: 6 });
   await page.waitForTimeout(250);
   const slid = await page.evaluate(
     (expected) =>
@@ -559,7 +565,7 @@ try {
     slid,
     `expected a slide of ${Math.round(laneWidths[1] + LANE_GAP_PX)}px`,
   );
-  await page.mouse.move(grip + laneWidths[0] + laneWidths[1] + 32 + 60, titleBox.y + 30, {
+  await page.mouse.move(grip.x + laneWidths[0] + laneWidths[1] + 32 + 60, titleBox.y + 30, {
     steps: 6,
   });
   await page.mouse.up();
@@ -1062,7 +1068,7 @@ try {
 
   // A thread that cannot be opened keeps the frame an open one has: a lane its paper, border and
   // title bar, the main pane its bare pane (ADR-138), with the reason and Try again inside it.
-  // The title bar is what takes hold of a lane, so the failed lane still moves along the row.
+  // The title bar's grip is what takes hold of a lane, so the failed lane still moves along the row.
   const fails = await openScenario("/t/t-002?scenario=thread-fails", 'button:text-is("Try again")');
   const failedTab = fails.locator('[role="tabpanel"]:not([inert])');
   const frames = await failedTab.evaluate((tab) =>
@@ -1088,12 +1094,15 @@ try {
   const failedBar = failedCanvas.locator("article .thread-header").last();
   const failedBox = (await failedBar.count()) === 0 ? null : await failedBar.boundingBox();
   if (failedBox !== null) {
-    await fails.mouse.move(failedBox.x + failedBox.width - 16, failedBox.y + failedBox.height / 2);
+    // The grip, the one place on the bar that takes the lane (grip-zone.ts).
+    const failedGrip = {
+      x: failedBox.x + failedBox.width / 2,
+      y: failedBox.y + failedBox.height / 2 - 2,
+    };
+    await fails.mouse.move(failedGrip.x, failedGrip.y);
     await fails.mouse.down();
-    await fails.mouse.move(failedBox.x + failedBox.width - 40, failedBox.y + failedBox.height / 2, {
-      steps: 4,
-    });
-    await fails.mouse.move(failedBox.x - 400, failedBox.y + failedBox.height / 2, { steps: 12 });
+    await fails.mouse.move(failedGrip.x - 24, failedGrip.y, { steps: 4 });
+    await fails.mouse.move(failedBox.x - 400, failedGrip.y, { steps: 12 });
     await fails.mouse.up();
     await fails.waitForTimeout(400);
   }
