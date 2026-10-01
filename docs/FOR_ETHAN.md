@@ -1799,6 +1799,24 @@ one; it builds the old set again on a stage it controls, and checks each shot li
 changed while the camera was down. Lesson: a check that depends on what a fresh device holds
 breaks when the seed changes; give it a seed of its own.
 
+### The mic that was live and the words that never came
+
+On the Live Playground the dictation waveform moved with Ethan's voice, yet Done left the
+compose box empty. The waveform and the words are two different crews: the waveform reads the
+microphone directly, while the words come from the browser's speech service, a separate (and in
+Chrome, remote) recognizer. The code listened only for that service's results. When it failed
+(blocked, unreachable, switched off, or simply silent, as it is in a headless browser), or when
+Chrome ended its session after a pause, nothing said so: the meter kept dancing and the
+transcript stayed on "Start speaking...".
+
+The fix listens for the rest of the service's events. An error names itself in the modal's
+notice ("could not be reached", "is turned off"), a service that never answers within 4s says
+so, and a session Chrome ends after a pause starts again, keeping the words already heard. A
+stand-in recognizer in the browser proved the words now reach the compose box across a pause.
+The same pass caught Chrome's habit of starting each later result with a space, which left
+double spaces in the text. Lesson: a level meter proves the cable, not the transcriber. Every
+stage in a signal chain needs its own light.
+
 ## 5. Director's Commentary
 
 ### The agent only states intent; the design system does the rest
