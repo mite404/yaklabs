@@ -1,8 +1,8 @@
 import { useId } from "react";
 import { Link } from "react-router";
 
-/** The page about the verify-ui-drift tooling (ADR-160), which the seal leads to. */
-export const TOOLING_PATH = "/verify-ui-tooling";
+// The page about the verify-ui-drift tooling (ADR-160), which the seal leads to.
+const TOOLING_PATH = "/verify-ui-tooling";
 
 // The seal's drawing, in a 120-unit box about its centre: the serrated edge, the face, the
 // ring the words sit in, and the two arcs the words follow.
