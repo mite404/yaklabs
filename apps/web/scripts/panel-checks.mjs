@@ -20,7 +20,7 @@ const HIDDEN_ON_CLOSE = [
 const LEAVE_FALLBACK_MS = 400;
 // The most a peek takes to go once the pointer leaves: the grace, the slide back, its fallback.
 const GONE_MS = CLOSE_MS + SLIDE_MS + LEAVE_FALLBACK_MS;
-const [KAY] = RAIL_PLACES;
+const [HOME] = RAIL_PLACES;
 const LAB = RAIL_PLACES.at(-1);
 // The panel's thread rows (the second opens a thread other than the demo's first), and the
 // name of the project row above them.
@@ -64,12 +64,12 @@ async function closeFrom(browser, theme, place) {
   };
 }
 
-// P28's first case: keyboard focus on Kay, the pointer rests on the rail until the panel peeks,
+// P28's first case: keyboard focus on Home, the pointer rests on the rail until the panel peeks,
 // then leaves: the peek goes as it would with no focus anywhere.
 async function railFocusReleases(browser, theme) {
   const { context, page } = await openDesk(browser, { theme });
   await page.mouse.move(900, 500);
-  await tabOnto(page, placeOf(page, KAY));
+  await tabOnto(page, placeOf(page, HOME));
   const visible = await page.evaluate(() => document.activeElement.matches(":focus-visible"));
   await peek(page);
   const left = Date.now();
@@ -87,8 +87,8 @@ async function railFocusReleases(browser, theme) {
   const still = await page.evaluate(focusedNow);
   await context.close();
   return {
-    ok: visible === true && gone !== null && still === "a Kay",
-    note: `${theme} focus on Kay (visible ${visible}): the peek ${gone === null ? `held past ${GONE_MS}ms` : `went ${gone}ms after the pointer left`}, focus still on ${still}`,
+    ok: visible === true && gone !== null && still === `a ${HOME.name}`,
+    note: `${theme} focus on ${HOME.name} (visible ${visible}): the peek ${gone === null ? `held past ${GONE_MS}ms` : `went ${gone}ms after the pointer left`}, focus still on ${still}`,
   };
 }
 
