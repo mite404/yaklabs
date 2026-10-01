@@ -385,6 +385,20 @@ function countOf(work: Work): string | undefined {
 }
 
 /**
+ * Whether the turn holds work worth unfolding: its steps, its technical lines, or the narration
+ * it moved past. The one place this is decided: a turn mounts its disclosure on this, and the
+ * disclosure's technical section counts the same, so a turn whose only record is narration
+ * still opens.
+ */
+export function hasWork(message: AgentMessage): message is AgentMessage & { work: Work } {
+  const work = message.work;
+  return (
+    work !== undefined &&
+    (work.steps.length > 0 || work.logs.length > 0 || work.narration.length > 0)
+  );
+}
+
+/**
  * What the one disclosure above a reply says (ADR-139, amended): while the reply streams, what
  * it is doing now, live, with the working glyph; once it settles, what the work amounted to in
  * the reply's own words, or "Work finished", "Work incomplete" or "Stopped" when it gave none;
