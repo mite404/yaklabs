@@ -84,6 +84,10 @@
      edge shadow's -12px spread would swallow; the strong shadow, since the box below it hides
      most of what falls. */
   --float-shadow: 2px 8px 14px -6px var(--shadow-strong);
+  /* What floats over the whole page, a menu, a dialog or a toast: an even fall below with none
+     above, the catalog Menu's own (primitives.css), which the shadcn menu took up, named so the
+     toast can't drift from them (Ethan). */
+  --popup-shadow: 0 8px 24px var(--shadow-strong);
   --scrim: color-mix(in srgb, var(--paper) 72%, transparent);
   --warn-bg: #f4ecd9; /* derived: warm notice, harmonised with the paper */
   --warn-ink: #66511f; /* derived */

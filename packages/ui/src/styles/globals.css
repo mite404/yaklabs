@@ -99,3 +99,14 @@
     @apply font-sans;
   }
 }
+
+/* A toast floats as a menu does, so it casts the menu's shadow, and speaks in the site's Inter
+   (design pillars, rule 7). Sonner's own sheet sets both, a system font stack and a lighter
+   shadow, outside any layer, where no utility can reach them, so each rule here carries one
+   more class to win. */
+[data-sonner-toaster].toaster {
+  font-family: var(--font-sans);
+}
+[data-sonner-toast][data-styled="true"].cn-toast {
+  box-shadow: var(--popup-shadow);
+}

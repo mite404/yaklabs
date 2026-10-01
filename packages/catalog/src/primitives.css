@@ -41,7 +41,7 @@
   background: var(--compose-bg);
   border: 1px solid var(--hairline);
   border-radius: 8px;
-  box-shadow: 0 8px 24px var(--shadow-strong);
+  box-shadow: var(--popup-shadow);
   overflow-y: auto; /* past its max-height (Menu.tsx) */
   animation: menu-in 120ms ease-out;
 }
