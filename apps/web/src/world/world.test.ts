@@ -1,4 +1,4 @@
-import { latestMain, sidebarTree } from "@yaklabs/runtime";
+import { childrenOf, latestMain, sidebarTree } from "@yaklabs/runtime";
 import { describe, expect, it } from "vitest";
 import { brief } from "../demo/scenarios/brief";
 import { at, type Script } from "../demo/script";
@@ -145,11 +145,15 @@ describe("the Demo world's children", () => {
       [],
     ]);
     const ws = workspaceOf(world.state());
+    // Left to right as the sidebar lists them top to bottom: newest first.
     expect(ws.lanes[BRIEF]?.map((lane) => lane.id)).toEqual([
-      `l-${workload}`,
-      `l-${issues}`,
       `l-${response}`,
+      `l-${issues}`,
+      `l-${workload}`,
     ]);
+    expect(childrenOf(ws, BRIEF).map((child) => `l-${child.id}`)).toEqual(
+      ws.lanes[BRIEF]?.map((lane) => lane.id),
+    );
     expect(lastTurn(await world.open(workload))).toMatchObject({
       text: "Backlog fell from 46 cases Monday to 18 by Friday.",
       streaming: false,

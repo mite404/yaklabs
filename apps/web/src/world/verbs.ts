@@ -2,7 +2,7 @@ import {
   applyMark,
   insertLane,
   lanesOf,
-  reopenLane,
+  threadLane,
   type NewItem,
   type Runtime,
   type Workspace,
@@ -37,7 +37,7 @@ function createThread(stage: Stage, item: Exclude<NewItem, { kind: "project" }>)
     throw new Error(`"${item.parentId}" is not a main thread, so it takes no children`);
   const place = { kind: "child", parentId: item.parentId } as const;
   const made = summary({ id, title: item.title, place, draft: item.draft, at });
-  const [lane] = reopenLane([], id); // → the child's lane, the only one
+  const lane = threadLane(id); // → the child's lane, where the reader put it
   const lanes = (ws: Workspace) => insertLane(lanesOf(ws, item.parentId), item.at, lane);
   stage.commit((ws) => withLanes(item.parentId, lanes(ws))(withNewThread(made)(ws)));
   return id;

@@ -27,10 +27,13 @@ export {
   moveLane,
   newCardLaneId,
   quoteFor,
-  reopenLane,
+  openChildLane,
+  childrenOf,
+  inSidebarOrder,
   resizeLane,
   sidebarTree,
   threadIdSchema,
+  threadLane,
   titleFor,
 } from "./workspace";
 export type {

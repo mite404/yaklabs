@@ -13,7 +13,7 @@ import {
   newCardLaneId,
   projectIdSchema,
   quoteFor,
-  reopenLane,
+  openChildLane,
   resizeLane,
   sidebarTree,
   threadIdSchema,
@@ -187,8 +187,31 @@ describe("lane edits are idempotent list edits", () => {
     ["move a missing lane", (list) => moveLane(list, lane("x"), 0), ["l-a", "l-b", "l-c"]],
     ["close", (list) => closeLane(list, lane("b")), ["l-a", "l-c"]],
     ["close a missing lane", (list) => closeLane(list, lane("x")), ["l-a", "l-b", "l-c"]],
-    ["reopen a closed thread", (list) => reopenLane(list, t("x")), ["l-a", "l-b", "l-c", "l-x"]],
-    ["reopen an open thread", (list) => reopenLane(list, t("a")), ["l-a", "l-b", "l-c"]],
+    [
+      "open a child the sidebar lists after the open ones",
+      (list) => openChildLane(list, t("x"), [t("a"), t("b"), t("c"), t("x")]),
+      ["l-a", "l-b", "l-c", "l-x"],
+    ],
+    [
+      "open a child where the sidebar lists it among the open ones",
+      (list) => openChildLane(list, t("x"), [t("a"), t("x"), t("b"), t("c")]),
+      ["l-a", "l-x", "l-b", "l-c"],
+    ],
+    [
+      "open the newest child first, as the sidebar lists it",
+      (list) => openChildLane(list, t("x"), [t("x"), t("a"), t("b"), t("c")]),
+      ["l-x", "l-a", "l-b", "l-c"],
+    ],
+    [
+      "open a child the order does not name at the end",
+      (list) => openChildLane(list, t("x"), []),
+      ["l-a", "l-b", "l-c", "l-x"],
+    ],
+    [
+      "keep an open child where the reader left it",
+      (list) => openChildLane(list, t("a"), [t("c"), t("b"), t("a")]),
+      ["l-a", "l-b", "l-c"],
+    ],
   ])("%s", (_, edit, expected) => {
     const once = edit(lanes);
     expect(ids(once)).toEqual(expected);
@@ -231,7 +254,7 @@ describe("collapsing lanes (ADR-133)", () => {
 
   it("opens a new or reopened lane expanded", () => {
     expect(threadLane(t("x")).collapsed).toBe(false);
-    expect(reopenLane(lanes, t("x")).at(-1)?.collapsed).toBe(false);
+    expect(openChildLane(lanes, t("x"), []).at(-1)?.collapsed).toBe(false);
   });
 });
 
