@@ -113,8 +113,12 @@ export const orderQuestion = {
   elsewhere: "Skip the draft for now",
 } satisfies AwaitingInput;
 
-const bySite = (values: number[]) =>
-  ["Northern", "Southern", "Central"].map((label, i) => ({ label, value: values[i] }));
+// One number a site: Northern, Southern, Central, in that order.
+const bySite = ([northern, southern, central]: [number, number, number]) => [
+  { label: "Northern", value: northern },
+  { label: "Southern", value: southern },
+  { label: "Central", value: central },
+];
 
 /**
  * September's invoices by site at three depths (ADR-029): billed, delivered, and the difference
