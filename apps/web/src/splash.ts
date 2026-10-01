@@ -6,28 +6,31 @@ export type SplashStyle = "landscape" | "abstract" | "vitruvian" | "bonsai";
 // One row per look. A look with no assets yet is listed but cannot be chosen.
 type SplashLook = { id: SplashStyle; label: string; available: boolean };
 
-/** The looks the switch offers, in its order. Bonsai waits for its assets. */
+/** The looks the switch offers, in its order: the visit cycle's, then Bonsai, which waits for its assets. */
 export const SPLASH_LOOKS: readonly SplashLook[] = [
-  { id: "landscape", label: "Landscape", available: true },
   { id: "abstract", label: "Abstract", available: true },
+  { id: "landscape", label: "Landscape", available: true },
   { id: "vitruvian", label: "Vitruvian", available: true },
   { id: "bonsai", label: "Bonsai", available: false },
 ];
 
-// Set once a welcome has been on screen, so the next visit knows the first is behind it.
-const SEEN_KEY = "kay.splash.seen";
-// Where the switch's choice was kept before the draw: read by nothing now, and cleared, so a
-// look picked once no longer stands in for every draw after it.
-const RETIRED_KEY = "kay.splash";
+// The looks visits take in turn, from a visitor's first (Ethan: "abstract first, painting,
+// vitruvian man"), then round again.
+const CYCLE: readonly SplashStyle[] = SPLASH_LOOKS.filter((look) => look.available).map(
+  (look) => look.id,
+);
+// Where the cycle stands: the place in CYCLE of the look the next visit opens with.
+const TURN_KEY = "kay.splash.turn";
+// Keys earlier builds kept, read by nothing now and cleared: the switch's last pick, and the
+// mark of a first welcome seen.
+const RETIRED_KEYS = ["kay.splash", "kay.splash.seen"];
 const PARAM = "splash";
-// The first welcome a visitor ever sees, and the looks every visit after it draws from (Ethan:
-// abstract the first time, then "a randomized choice ... either the landscape or the
-// Vitruvian man").
-const FIRST: SplashStyle = "abstract";
-const RETURNING: readonly SplashStyle[] = ["landscape", "vitruvian"];
 
 // The choice for this visit, held above any remount. Null until the first read decides it.
 let current: SplashStyle | null = null;
+// This visit's place in the cycle, and whether a welcome has moved the cycle on yet.
+let turn = 0;
+let advanced = false;
 const listeners = new Set<() => void>();
 
 /** The look a string names, or null for anything else: unknown, or listed but not available yet. */
@@ -35,18 +38,15 @@ export const splashStyleOf = (value: string | null): SplashStyle | null =>
   SPLASH_LOOKS.find((look) => look.available && look.id === value)?.id ?? null;
 
 /**
- * The look a visit opens with: the one the address asks for, else the abstract painting until a
- * welcome has been seen, then landscape or Vitruvian, drawn afresh each visit.
- * @param random A number in [0, 1), as `Math.random` gives.
+ * The look a visit opens with: the one the address asks for, else the cycle's look at `visits`
+ * (abstract, landscape, Vitruvian, then round again).
+ * @param visits How many visits have shown a welcome before this one; any whole number.
  */
-export function lookForVisit(
-  asked: SplashStyle | null,
-  seen: boolean,
-  random: number,
-): SplashStyle {
+export function lookForVisit(asked: SplashStyle | null, visits: number): SplashStyle {
   if (asked !== null) return asked;
-  if (!seen) return FIRST;
-  return RETURNING[Math.min(RETURNING.length - 1, Math.floor(random * RETURNING.length))];
+  const n = CYCLE.length;
+  const at = Number.isInteger(visits) ? ((visits % n) + n) % n : 0;
+  return CYCLE[at];
 }
 
 // The painting reaches the CSS as an attribute on <html>, the way the theme does: index.css
@@ -55,21 +55,28 @@ function apply(style: SplashStyle): void {
   document.documentElement.dataset.splash = style;
 }
 
-function wasSeen(): boolean {
+// The cycle's place for this visit, from the last visit's; 0 for a first visit or when storage
+// is refused, as in a private window.
+function storedTurn(): number {
   try {
-    localStorage.removeItem(RETIRED_KEY);
-    return localStorage.getItem(SEEN_KEY) !== null;
+    for (const key of RETIRED_KEYS) localStorage.removeItem(key);
+    return Number(localStorage.getItem(TURN_KEY) ?? 0) || 0;
   } catch {
-    return false; // storage refused, as in a private window: every visit is a first
+    return 0;
   }
 }
 
-/** Records that a welcome has been on screen, so later visits draw their painting. */
+/**
+ * Moves the cycle on once a welcome has been on screen, once a visit, so the next visit opens
+ * on the look after this one's.
+ */
 export function markSplashSeen(): void {
+  if (advanced) return;
+  advanced = true;
   try {
-    localStorage.setItem(SEEN_KEY, "1");
+    localStorage.setItem(TURN_KEY, String((turn + 1) % CYCLE.length));
   } catch {
-    // Storage refused: the next visit opens on the abstract painting again.
+    // Storage refused: the next visit opens on the cycle's first look again.
   }
 }
 
@@ -84,7 +91,8 @@ function fromAddress(): SplashStyle | null {
 }
 
 function decide(): SplashStyle {
-  return lookForVisit(fromAddress(), wasSeen(), Math.random());
+  turn = storedTurn();
+  return lookForVisit(fromAddress(), turn);
 }
 
 // Decided on the first read, which is before the welcome's first paint, so the picture never
@@ -123,6 +131,6 @@ function choose(next: SplashStyle): void {
  * never chosen.
  */
 export function useSplash(): { style: SplashStyle; choose: (next: SplashStyle) => void } {
-  const style = useSyncExternalStore(subscribe, snapshot, () => FIRST); // → SplashStyle
+  const style = useSyncExternalStore(subscribe, snapshot, () => CYCLE[0]); // → SplashStyle
   return { style, choose };
 }
