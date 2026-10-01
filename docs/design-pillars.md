@@ -247,6 +247,9 @@ takes its colours from tokens.
 | Size | 112px on the welcome, 200px on the page's hero; 36 teeth, 5 units deep in a 120-unit box | derived |
 | Place on the welcome | pinned above the greeting at the column's right: centre 30px above the mark's top, ribbon ending 24px inside the column's edge; tilted 25° with the left side up, as a medal on a lapel; in the column's flow, upright, under 641px | Ethan |
 | Focus | the site's ring, 2px `--focus` 3px off, on the link's 4px corners | derived |
+| Size on the welcome | 70% of the drawn 112px, by `scale`, so the words stay crisp | Ethan |
+| Hop | every 4s: 6px up and back over 480ms, a 2px second hop, then still; on `transform` under the tilt, so it hops along its lean; none under reduced motion (rule 24) | Ethan |
+| Hover and focus | grows 10% (`scale` 0.7 to 0.77) over 150ms `ease`, the button's timing (rule 8), the hop held meanwhile; no growth under reduced motion | Ethan |
 
 ## Inputs
 
@@ -289,6 +292,8 @@ behind each rule below is told in `docs/FOR_ETHAN.md`.
 | A loading thread's "Opening ..." line | shown after 100ms | none, steps in | derived (rule 9) |
 | The empty canvas's splash, arriving | 150ms fade in | `ease-out` | derived (ADR-113) |
 | A new thread's welcome picture | none, arrives with its words | none | derived (the paintings) |
+| The welcome's seal, hopping (rule 33) | 480ms of a 4s cycle, 6px then 2px | `ease-in-out` | Ethan |
+| The welcome's seal, growing under the pointer (rule 33) | 150ms, 10% | `ease` | Ethan (rule 8) |
 | Agent working glyph (wave, orbit) | 2000ms loop | `linear` fades | Ethan |
 | Agent tree glyph | 2000ms loop | `linear` fades, `cubic-bezier(0.4, 0, 0.6, 1)` scroll | Ethan |
 | Sidebar peek slide, out and back (rule 26) | 220ms | `cubic-bezier(0.17, 1.02, 0.58, 1)` (`--panel-ease`) | Ethan |

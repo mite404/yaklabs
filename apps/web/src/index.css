@@ -579,11 +579,42 @@ html[data-dragging="sidebar"] * {
   }
   /* On the welcome the seal is pinned above the greeting at the column's right, its centre
      30px above the mark's top and its ribbon ending 24px inside the column's edge, where Ethan
-     circled; tilted 25deg with its left side up, as a medal sits on a lapel. First in the
-     column's DOM, since it is first on screen. On a narrow pane it has no room beside the
-     greeting, so it stays in the column's flow, upright, where it was first placed. */
+     circled; tilted 25deg with its left side up, as a medal sits on a lapel, and at 70% of its
+     drawn size (Ethan). First in the column's DOM, since it is first on screen. On a narrow pane
+     it has no room beside the greeting, so it stays in the column's flow, upright, where it was
+     first placed.
+     It says it can be pressed two ways (Ethan): a small hop every 4s, 6px up and back in 480ms
+     with a 2px second hop, then still for the rest of the cycle; and under the pointer or a
+     keyboard's focus it grows 10% over the button's 150ms ease, the hop held while it does.
+     The hop rides `transform`, under the tilt, so the seal hops along its own lean; the size
+     is its own `scale`, so the two never fight. Reduced motion keeps it still and the same
+     size (design pillars, rule 24). */
   .welcome-seal {
     rotate: 25deg;
+    scale: 0.7;
+    transition: scale 150ms ease;
+    animation: seal-hop 4s ease-in-out infinite;
+  }
+  .welcome-seal:hover,
+  .welcome-seal:focus-visible {
+    scale: 0.77;
+    animation-play-state: paused;
+  }
+  @keyframes seal-hop {
+    0%,
+    12%,
+    100% {
+      transform: translateY(0);
+    }
+    6% {
+      transform: translateY(-6px);
+    }
+    16% {
+      transform: translateY(-2px);
+    }
+    20% {
+      transform: translateY(0);
+    }
   }
   @media (min-width: 641px) {
     .welcome-seal {
@@ -591,6 +622,16 @@ html[data-dragging="sidebar"] * {
       top: -30px;
       right: 24px;
       translate: 0 -50%;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .welcome-seal {
+      animation: none;
+      transition: none;
+    }
+    .welcome-seal:hover,
+    .welcome-seal:focus-visible {
+      scale: 0.7;
     }
   }
 

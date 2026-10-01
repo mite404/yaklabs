@@ -2514,3 +2514,6 @@ gone with their copy.
 Amended once more (Ethan): how the tool works stands beside the Pixels picture in four large
 numbered points, capture in batch, compare pixel by pixel, check contrast and accessibility
 across the three engines, fail loudly; the cells that stood there make a new row below.
+Amended once more (Ethan): on the welcome the seal is scaled to 70%, hops 6px every 4s to say
+it can be pressed, and grows 10% under the pointer over the button's 150ms; reduced motion keeps
+it still (design pillars, rule 33).
