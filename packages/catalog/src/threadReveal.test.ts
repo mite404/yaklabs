@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   centerScrollTop,
+  jumpPlan,
   nudgeScrollTop,
   restedAtEnd,
   runwayFor,
@@ -135,5 +136,31 @@ describe("restedAtEnd", () => {
   it("follows a thread whose view got shorter as the compose box grew", () => {
     // The view lost 24px, so the reach went 463 → 487 with the scroll still at 463.
     expect(restedAtEnd({ reach: 487, scrollTop: 463 }, 24)).toBe(true);
+  });
+});
+
+describe("jumpPlan", () => {
+  // The band runs 420 to 980 at a scrollTop of 400.
+  it("leaves a target already wholly in view where it is, for its highlight to point at", () => {
+    expect(jumpPlan({ top: 500, bottom: 700 }, view, true)).toBe("stay");
+    expect(jumpPlan({ top: 500, bottom: 700 }, view, false)).toBe("stay");
+  });
+
+  it("centers a user's message out of view", () => {
+    expect(jumpPlan({ top: 2000, bottom: 2100 }, view, true)).toBe("center");
+    expect(jumpPlan({ top: 100, bottom: 200 }, view, true)).toBe("center");
+  });
+
+  it("brings anything else below the view up just far enough to show it", () => {
+    // Its bottom rests at the band's bottom: 1100 - 600 + 20.
+    expect(jumpPlan({ top: 900, bottom: 1100 }, view, false)).toBe(520);
+  });
+
+  it("brings anything else above the view down to the band's top", () => {
+    expect(jumpPlan({ top: 200, bottom: 300 }, view, false)).toBe(180);
+  });
+
+  it("never cuts off the top of a target taller than the band", () => {
+    expect(jumpPlan({ top: 1200, bottom: 2400 }, view, false)).toBe(1180);
   });
 });

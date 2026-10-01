@@ -252,6 +252,50 @@ export function centerInScroller(scroller: HTMLElement, element: Element | Range
   scroller.scrollTo({ top, behavior: prefersReducedMotion() ? "auto" : "smooth" });
 }
 
+/**
+ * How a jump frames its target (Ethan, ADR-159): a target already wholly in the visible band
+ * stays where it is, and only its highlight says where it is ("stay"); a user's message out of
+ * view is centered ("center", ADR-022); anything else out of view scrolls just far enough to
+ * show it, and never so far that its top is cut off (a scrollTop).
+ */
+export function jumpPlan(
+  target: Span,
+  view: Viewport,
+  center: boolean,
+): "stay" | "center" | number {
+  const bandTop = view.scrollTop + view.insetTop;
+  const bandBottom = view.scrollTop + view.height - view.insetBottom;
+  if (target.top >= bandTop && target.bottom <= bandBottom) return "stay";
+  if (center) return "center";
+  const topInView = target.top - view.insetTop; // → the scroll that shows its top first
+  if (target.top < bandTop) return clamp(topInView, view.maxScrollTop);
+  const bottomInView = target.bottom - view.height + view.insetBottom;
+  return clamp(Math.min(bottomInView, topInView), view.maxScrollTop);
+}
+
+// Whether a jump's target is a user's message, or words in one: the only target a jump centers.
+function inUserMessage(target: Element | Range): boolean {
+  const node = target instanceof Range ? target.commonAncestorContainer : target;
+  const element = node instanceof Element ? node : node.parentElement;
+  return (element?.closest(".turn-user") ?? null) !== null;
+}
+
+/**
+ * Brings a jump's target into view by `jumpPlan`: a user's message out of view lands centered
+ * (`centerInScroller`), anything else out of view scrolls just into view, and a target already
+ * in view does not move.
+ */
+export function jumpInScroller(scroller: HTMLElement, target: Element | Range): void {
+  const plan = jumpPlan(contentSpan(scroller, [target]), viewport(scroller), inUserMessage(target));
+  if (plan === "stay") return;
+  if (plan === "center") {
+    centerInScroller(scroller, target);
+    return;
+  }
+  releaseRunway(scroller);
+  scroller.scrollTo({ top: plan, behavior: prefersReducedMotion() ? "auto" : "smooth" });
+}
+
 /** Where a thread's scroll stands: `reach` is the furthest `scrollTop` it can scroll to. */
 export type ScrollStand = { reach: number; scrollTop: number };
 

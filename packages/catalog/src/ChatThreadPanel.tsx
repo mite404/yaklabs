@@ -40,7 +40,7 @@ import {
 } from "./reply";
 import type { Thread, ThreadHandle, ThreadMessage } from "./thread";
 import {
-  centerInScroller,
+  jumpInScroller,
   keepExpansionsInView,
   releaseRunway,
   scrollToEnd,
@@ -681,11 +681,12 @@ function clearFlash(turn: HTMLElement): void {
   delete turn.dataset.flash;
 }
 
-// Jump so the evidence lands vertically centered, every time (ADR-022 eye trace). Only what was
-// jumped to last glows: stepping through matches moves the glow rather than leaving a trail, and
-// a second jump to the same place starts its glow over.
+// Jump to the evidence and glow it (`jumpInScroller`): a user's message out of view lands
+// centered (ADR-022 eye trace), anything else just comes into view, and what is already in view
+// only glows. Only what was jumped to last glows: stepping through matches moves the glow rather
+// than leaving a trail, and a second jump to the same place starts its glow over.
 function flashElement(scroller: HTMLElement, target: HTMLElement): void {
-  centerInScroller(scroller, target);
+  jumpInScroller(scroller, target);
   scroller.querySelectorAll<HTMLElement>("[data-flash]").forEach(clearFlash);
   void target.offsetWidth; // a style flush, so the glow's animation starts over
   target.dataset.flash = "true";
@@ -752,8 +753,8 @@ function remarkAsTurnsLand(scroller: HTMLElement, find: Find): () => void {
 
 // A thread's search, marked on its turns: every match tinted and the one stepped to selected,
 // kept as turns arrive, and cleared as the search closes or the thread unmounts. A step brings
-// the match to the middle (ADR-022 eye trace) and rings its words once, rather than the turn
-// around them; a match the page cannot place glows its turn instead.
+// the match into view as any jump does (`jumpInScroller`) and rings its words once, rather than
+// the turn around them; a match the page cannot place glows its turn instead.
 function useSearchMarks(scroller: RefObject<HTMLDivElement | null>): {
   setRings: (layer: HTMLDivElement | null) => void;
   onFind: (find: Find | null) => void;
@@ -783,7 +784,7 @@ function useSearchMarks(scroller: RefObject<HTMLDivElement | null>): {
         flashTurn(el, current.turnId);
         return;
       }
-      centerInScroller(el, words);
+      jumpInScroller(el, words);
       if (rings) ringRange(rings, words);
     },
   };
