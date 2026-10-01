@@ -198,8 +198,8 @@
 
 /* Agent tree: Kay's three-pill glyph (left, right, full-width base), climbed. Green runs down
    the branches, top then middle; the base fills in and holds solid, darkest, for a beat; then
-   the base scrolls down out of the box as the top branch scrolls in from above it, fading up,
-   so the tree seems to move down past us as we climb.
+   the top branch scrolls in from above, fading up, and a beat later the base scrolls down out
+   of the box behind it, so the tree seems to move down past us as we climb.
    Only those two move: they are the only pills lit during the scroll, so moving them alone
    reads as the whole tree scrolling. Once the base is out of sight it jumps back, clear, and
    later fades in where it started. Geometry on whole pixels: 3px pills, 1px gaps, a 12px box
@@ -236,13 +236,17 @@
   grid-column: 1 / span 12; /* x 0-12: the base */
   animation-name: agent-tree-base;
 }
-/* The scroll: the base leaves by the bottom edge while the top branch enters by the top one,
-   both 4px down over the same 0-24% on the same ease-in-out curve (written out in each, since a
-   keyframe's timing function cannot read a custom property: var() there silently falls back
-   to "ease"). Equal distance, equal curve: they move as one strip of film, so the eye reads a
-   camera tilting up the tree. 4px is what the top branch needs to start fully hidden (it sits
-   1px below the edge and is 3px tall); the base, which needs 3px, travels the same 4px so
-   neither outruns the other. The top branch fades up as it comes, clear to solid. */
+/* The scroll: the top branch enters by the top edge over 0-24%, and the base leaves by the
+   bottom one over 8-32%, both 4px down on the same ease-in-out curve (written out in each,
+   since a keyframe's timing function cannot read a custom property: var() there silently falls
+   back to "ease"). Equal distance, equal curve: they move as one strip of film, so the eye
+   reads a camera tilting up the tree. 4px is what the top branch needs to start fully hidden
+   (it sits 1px below the edge and is 3px tall); the base, which needs 3px, travels the same 4px
+   so neither outruns the other. The top branch fades up as it comes, clear to solid.
+   The base waits a third of the top's entry (8%, 160ms at the default speed) because the top
+   arrives clear and clipped: started on the same frame, the base read as leaving first and the
+   top as filling an empty box after it. With the lead, the top is already a quarter lit and 1px
+   into the box when the base starts to roll (Ethan picked it from three cues side by side). */
 @keyframes agent-tree-top {
   0% {
     opacity: 0;
@@ -288,26 +292,28 @@
     background: var(--working-soft);
   }
 }
-/* Base: scrolls 4px down, solid, until it is fully under the edge (0-24%); turns clear and jumps
-   home out of sight (24-26%); fades in where it started as the middle branch leaves (52-70%);
-   holds solid for the beat (70-100%, 600ms at the default speed). */
+/* Base: holds home while the top branch starts in (0-8%); scrolls 4px down, solid, until it is
+   fully under the edge (8-32%); turns clear and jumps home out of sight (32-34%); fades in where
+   it started as the middle branch leaves (52-70%); holds solid for the beat (70-108%, wrapping
+   into the next loop: 760ms at the default speed). */
 @keyframes agent-tree-base {
-  0% {
+  0%,
+  8% {
     opacity: 1;
     background: var(--working-strong);
     transform: none;
     animation-timing-function: cubic-bezier(0.4, 0, 0.6, 1); /* same curve in both */
   }
-  24% {
+  32% {
     opacity: 1;
     background: var(--working-strong);
     transform: translateY(4px);
   }
-  25% {
+  33% {
     opacity: 0;
     transform: translateY(4px);
   }
-  26%,
+  34%,
   52% {
     opacity: 0;
     background: var(--working-soft);
