@@ -63,8 +63,33 @@ function StepRow({ step, carries }: { step: WorkStep; carries: boolean }) {
   );
 }
 
-// The narration the reply moved past and its technical lines, one level deeper, for a reader
-// who wants to check the work rather than read it.
+// The narration the reply moved past and its technical lines.
+function TechnicalLines({ work }: { work: Work }) {
+  return (
+    <div className="work-technical">
+      {work.narration.length > 0 && (
+        <section aria-label="Earlier progress narration">
+          <p className="work-technical-title">Earlier progress narration</p>
+          <ul className="work-narration">
+            {work.narration.map((line, i) => (
+              // Narration is only ever appended, so a line's place is its identity.
+              // oxlint-disable-next-line react/no-array-index-key -- see above
+              <li key={i}>{line}</li>
+            ))}
+          </ul>
+        </section>
+      )}
+      {work.logs.length > 0 && (
+        <pre className="work-logs">
+          <code>{work.logs.join("\n")}</code>
+        </pre>
+      )}
+    </div>
+  );
+}
+
+// The technical lines one level deeper, under the steps, for a reader who wants to check the
+// work rather than read it.
 function TechnicalDetails({ work }: { work: Work }) {
   const [open, setOpen] = useState(false);
   return (
@@ -75,26 +100,26 @@ function TechnicalDetails({ work }: { work: Work }) {
         setOpen(!open);
       }}
     >
-      <div className="work-technical">
-        {work.narration.length > 0 && (
-          <section aria-label="Earlier progress narration">
-            <p className="work-technical-title">Earlier progress narration</p>
-            <ul className="work-narration">
-              {work.narration.map((line, i) => (
-                // Narration is only ever appended, so a line's place is its identity.
-                // oxlint-disable-next-line react/no-array-index-key -- see above
-                <li key={i}>{line}</li>
-              ))}
-            </ul>
-          </section>
-        )}
-        {work.logs.length > 0 && (
-          <pre className="work-logs">
-            <code>{work.logs.join("\n")}</code>
-          </pre>
-        )}
-      </div>
+      <TechnicalLines work={work} />
     </Disclosure>
+  );
+}
+
+// What Work details folds: the steps, with the technical lines a disclosure deeper; or, for work
+// with no steps, the technical lines themselves, since a disclosure holding only another
+// disclosure is one fold too many (Ethan).
+function WorkBody({ work, carries }: { work: Work; carries: boolean }) {
+  const technical = work.logs.length > 0 || work.narration.length > 0;
+  if (work.steps.length === 0) return technical && <TechnicalLines work={work} />;
+  return (
+    <>
+      <ol className="work-list">
+        {work.steps.map((step) => (
+          <StepRow key={step.id} step={step} carries={carries} />
+        ))}
+      </ol>
+      {technical && <TechnicalDetails work={work} />}
+    </>
   );
 }
 
@@ -109,9 +134,10 @@ export const REVEAL_STEP = "work-reveal-step";
  * appears over text someone is reading, its header says what the reply is doing now (live, with
  * the working glyph) and then what the work amounted to, with a count beside it (`workLabel`).
  * Folded under it: each step's state in a word, its label, its outcome in plain prose, the
- * lines that say how it was found, and the card that backs it. The superseded narration and the technical logs sit one disclosure deeper,
- * so a reader who only wants the answer never has to read them. Both start folded; each turn
- * keeps its own, and unfolds on `REVEAL_STEP`.
+ * lines that say how it was found, and the card that backs it. The superseded narration and the
+ * technical logs sit one disclosure deeper, so a reader who only wants the answer never has to
+ * read them; with no steps they are all it folds, so they sit in it directly. Both start folded;
+ * each turn keeps its own, and unfolds on `REVEAL_STEP`.
  * @param cardsCarry Whether an evidence card's header carries it out onto the canvas (ADR-089).
  */
 export function WorkDetails({
@@ -133,7 +159,6 @@ export function WorkDetails({
     el?.addEventListener(REVEAL_STEP, reveal);
     return () => el?.removeEventListener(REVEAL_STEP, reveal);
   }, []);
-  const technical = work.logs.length > 0 || work.narration.length > 0;
   return (
     <div ref={root} className="work-details" data-live={label.live || undefined}>
       <Disclosure
@@ -154,14 +179,7 @@ export function WorkDetails({
           setOpen(!open);
         }}
       >
-        {work.steps.length > 0 && (
-          <ol className="work-list">
-            {work.steps.map((step) => (
-              <StepRow key={step.id} step={step} carries={cardsCarry !== false} />
-            ))}
-          </ol>
-        )}
-        {technical && <TechnicalDetails work={work} />}
+        <WorkBody work={work} carries={cardsCarry !== false} />
       </Disclosure>
     </div>
   );

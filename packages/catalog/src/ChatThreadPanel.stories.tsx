@@ -887,6 +887,39 @@ export const WorkDetailsOpen: Story = {
   },
 };
 
+/**
+ * Work with no steps, only its technical lines: they sit straight inside Work details, with no
+ * second Technical details disclosure inside the first.
+ */
+export const WorkDetailsWithoutSteps: Story = {
+  args: {
+    thread: {
+      title: "Held invoices",
+      messages: [
+        { id: "u1", role: "user", time: "9:02", text: "Hold both invoices for review." },
+        {
+          id: "a1",
+          role: "agent",
+          time: "9:02",
+          text: "Both are marked for review.",
+          work: {
+            steps: [],
+            logs: ["hold:south S-1187 S-1203 status=review"],
+            narration: [],
+            summary: "Held both invoices for review",
+          },
+        },
+      ],
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(canvas.getByRole("button", { name: /Held both invoices for review/ }));
+    await expect(canvas.getByText("hold:south S-1187 S-1203 status=review")).toBeVisible();
+    await expect(canvas.queryByRole("button", { name: "Technical details" })).toBeNull();
+  },
+};
+
 /** A long pasted request folds past eight lines behind a fade; Show more opens it whole. */
 export const TallRequest: Story = {
   args: { thread: threads["long-request"] },
