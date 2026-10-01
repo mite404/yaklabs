@@ -42,6 +42,21 @@ describe("nudgeScrollTop", () => {
   it("never scrolls past the end of the thread", () => {
     expect(nudgeScrollTop({ top: 600, bottom: 1011 }, { ...view, maxScrollTop: 420 })).toBe(420);
   });
+
+  it("stops once the pressed control reaches the top of the band, to read on right under it", () => {
+    // Work details pressed at 900, low in the band, opens a reply that now ends at 2400: showing
+    // that bottom edge would scroll to 1820 and leave the header far above; it stops at 880,
+    // where the header sits 20px under the band's top with what it opened below it.
+    expect(nudgeScrollTop({ top: 700, bottom: 2400 }, view, 900)).toBe(880);
+  });
+
+  it("still rises only as far as the bottom edge needs when that comes first", () => {
+    expect(nudgeScrollTop({ top: 600, bottom: 1011 }, view, 900)).toBe(431);
+  });
+
+  it("never scrolls up for a control already above the band's top", () => {
+    expect(nudgeScrollTop({ top: 300, bottom: 1500 }, view, 350)).toBe(400);
+  });
 });
 
 describe("centerScrollTop", () => {

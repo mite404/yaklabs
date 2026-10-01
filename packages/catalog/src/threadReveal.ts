@@ -73,6 +73,12 @@ function prefersReducedMotion(): boolean {
   return window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
 }
 
+// The control the user pressed, which a reveal keeps in view: the button, summary or link the
+// press landed in, else what it landed on.
+const pressedControl = (interaction: Interaction): HTMLElement =>
+  interaction.target.closest<HTMLElement>("button, summary, a, [role='button']") ??
+  interaction.target;
+
 // What to reveal when `turn` grew: the card the user just clicked or keyed inside, when the
 // growth came soon enough to be that interaction's result; undefined when nobody asked for it.
 function askedToReveal(
@@ -89,14 +95,19 @@ function askedToReveal(
  * The smallest scroll that keeps `target` clear of the compose box (ADR-038, ADR-071). A target
  * that is not clipped at the bottom stays put; a clipped one rises until its bottom edge rests
  * `insetBottom` above the compose box (or the card docked over it), like the last card in the
- * thread, even when that takes its top out of view: seeing the bottom edge is how the user
- * knows the whole card has been shown. Since it only reveals what is below, the thread never
- * scrolls up, which would move away from the click.
+ * thread: seeing the bottom edge is how the user knows the whole card has been shown. Since it
+ * only reveals what is below, the thread never scrolls up, which would move away from the click.
+ * @param anchorTop Where the control the user pressed starts, in content coordinates: the rise
+ * stops once that control reaches the top of the band, so what it opened reads on from right
+ * under it rather than from somewhere further down (Ethan, ADR-159).
  */
-export function nudgeScrollTop(target: Span, view: Viewport): number {
+export function nudgeScrollTop(target: Span, view: Viewport, anchorTop?: number): number {
   const bandBottom = view.scrollTop + view.height - view.insetBottom;
   if (target.bottom <= bandBottom) return view.scrollTop;
-  return clamp(target.bottom - view.height + view.insetBottom, view.maxScrollTop);
+  const shown = target.bottom - view.height + view.insetBottom; // → the bottom edge in view
+  const held =
+    anchorTop === undefined ? shown : Math.max(view.scrollTop, anchorTop - view.insetTop);
+  return clamp(Math.min(shown, held), view.maxScrollTop);
 }
 
 /**
@@ -206,11 +217,19 @@ export function scrollToEnd(scroller: HTMLElement): void {
   });
 }
 
-/** Scrolls `scroller` by the smallest amount that keeps `elements` clear of the compose box. */
-export function nudgeInScroller(scroller: HTMLElement, elements: HTMLElement[]): void {
+/**
+ * Scrolls `scroller` by the smallest amount that keeps `elements` clear of the compose box, and
+ * never so far that `anchor`, the control that opened them, leaves the top of the band.
+ */
+export function nudgeInScroller(
+  scroller: HTMLElement,
+  elements: HTMLElement[],
+  anchor?: HTMLElement,
+): void {
   if (elements.length === 0) return;
   const view = viewport(scroller);
-  const top = nudgeScrollTop(contentSpan(scroller, elements), view);
+  const anchorTop = anchor === undefined ? undefined : contentSpan(scroller, [anchor]).top;
+  const top = nudgeScrollTop(contentSpan(scroller, elements), view, anchorTop);
   if (top !== view.scrollTop)
     scroller.scrollTo({ top, behavior: prefersReducedMotion() ? "auto" : "smooth" });
 }
@@ -301,7 +320,8 @@ export function keepExpansionsInView(scroller: HTMLElement): () => void {
     const asked = grown
       .map((turn) => askedToReveal(turn, interaction, now)) // → (HTMLElement | undefined)[]
       .filter((card) => card !== undefined); // → HTMLElement[]
-    if (asked.length > 0) nudgeInScroller(scroller, asked);
+    if (asked.length > 0 && interaction !== undefined)
+      nudgeInScroller(scroller, asked, pressedControl(interaction));
     else if (moved > 0 && restedAtEnd(standOf(scroller), moved))
       scroller.scrollTop = scroller.scrollHeight;
   });
