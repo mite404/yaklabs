@@ -2,6 +2,7 @@ import type { Anthropic } from "@anthropic-ai/sdk";
 import { resolveAwaiting } from "@yaklabs/catalog/awaiting";
 import { resolve } from "@yaklabs/catalog/catalog";
 import {
+  playgroundTools,
   reportFailureInputSchema,
   reportOutcomeInputSchema,
   showCardInputSchema,
@@ -19,8 +20,8 @@ export type EventDraft = Unstamped<PlaygroundEvent>;
 /**
  * Everything one turn counts, carried from event to event so every limit is checked against
  * the same numbers: the next `seq`, rounds opened, tool calls made, the distinct cards shown
- * and validation failures per tool name. `shown` is whether text, a card, an outcome, a
- * failure or a question reached the page.
+ * and validation failures per tool name (a tool that reaches its limit is retired). `shown`
+ * is whether text, a card, an outcome, a failure or a question reached the page.
  */
 export type TurnState = Readonly<{
   seq: number;
@@ -64,13 +65,46 @@ const MAX_TOOL_CALLS = 16;
 const MAX_CARDS = 6;
 const RECOVERY_LABEL = "Send this";
 
+// Validation failures that retire a tool for the rest of the turn: the failure that reaches
+// the limit returns the last error that tool answers this turn, and the next round no longer
+// offers it. The table is also the roster: HANDLERS below must answer for every name here,
+// and a handler added without a limit fails the build.
+const REMOVE_AFTER = {
+  update_work: 2,
+  show_card: 2,
+  ask_question: 2,
+  report_outcome: 2,
+  report_failure: 2,
+};
+
+// A tool the turn offers, as the policy table names it.
+type ToolName = keyof typeof REMOVE_AFTER;
+
+// The table as a lookup: Map.get finds nothing inherited and needs no cast for a plain string.
+const REMOVAL_LIMITS: ReadonlyMap<string, number> = new Map(Object.entries(REMOVE_AFTER));
+
+// The failures that retire `name`, or undefined for a name the roster does not know.
+const removalLimit = (name: string): number | undefined => REMOVAL_LIMITS.get(name);
+
+// Whether `name`'s failures have retired it: no longer offered, and refused flat if called.
+const isRemoved = (state: TurnState, name: string): boolean => {
+  const limit = removalLimit(name); // → number | undefined
+  return limit !== undefined && (state.failures[name] ?? 0) >= limit;
+};
+
+/** The tools the next round offers: the catalog's five, minus the ones failures retired. */
+export function toolsFor(state: TurnState): Anthropic.Tool[] {
+  return playgroundTools.filter((tool) => !isRemoved(state, tool.name));
+}
+
 // A handler's verdict. "invalid" counts toward the tool's validation failures; "refused" is a
-// limit, not a mistake in the input.
+// limit, not a mistake in the input; "removed" is a retired tool called anyway.
 type Verdict =
   | { kind: "shown"; state: TurnState; drafts: EventDraft[]; reply: string }
   | { kind: "asked"; drafts: EventDraft[] }
   | { kind: "invalid"; reason: string }
-  | { kind: "refused"; reason: string };
+  | { kind: "refused"; reason: string }
+  | { kind: "removed"; reason: string };
 
 type Handler = (state: TurnState, input: unknown, id: string) => Verdict;
 
@@ -145,15 +179,21 @@ const reportFailure: Handler = (state, input) => {
   return { kind: "shown", state, drafts, reply: "ok" };
 };
 
-// The tools the prompt offers, by name. A name missing here is an unknown tool; a Map, so a
-// name like "constructor" finds nothing inherited.
-const HANDLERS: ReadonlyMap<string, Handler> = new Map([
-  ["update_work", updateWork],
-  ["show_card", showCard],
-  ["ask_question", askQuestion],
-  ["report_outcome", reportOutcome],
-  ["report_failure", reportFailure],
-]);
+// What one call to each tool becomes, keyed by every name in REMOVE_AFTER: a handler added
+// without a limit there, or a limit without a handler here, fails the build.
+const HANDLERS: Readonly<Record<ToolName, Handler>> = {
+  update_work: updateWork,
+  show_card: showCard,
+  ask_question: askQuestion,
+  report_outcome: reportOutcome,
+  report_failure: reportFailure,
+};
+
+// The roster as a lookup: a name like "constructor" finds nothing inherited.
+const HANDLERS_BY_NAME: ReadonlyMap<string, Handler> = new Map(Object.entries(HANDLERS));
+
+// The tool's handler, or undefined for a name the roster does not know.
+const handlerOf = (name: string): Handler | undefined => HANDLERS_BY_NAME.get(name);
 
 const toolResult = (
   id: string,
@@ -164,28 +204,40 @@ const toolResult = (
     ? { type: "tool_result", tool_use_id: id, content, is_error: true }
     : { type: "tool_result", tool_use_id: id, content };
 
-// The handler's verdict for a call, before any counting.
+// The unknown-tool error names what is still on offer, or prose when failures retired all.
+const unknownTool = (state: TurnState, name: string): string => {
+  const names = toolsFor(state)
+    .map((tool) => tool.name)
+    .join(", ");
+  return names === ""
+    ? `Unknown tool ${name}. Answer in prose.`
+    : `Unknown tool ${name}. Use one of: ${names}.`;
+};
+
+// The handler's verdict for a call, before any counting. A retired tool is refused first: the
+// round no longer offers it, but the model can hallucinate the call anyway.
 const judge = (state: TurnState, { id, name, input }: ToolCall): Verdict => {
-  const handler = HANDLERS.get(name);
-  if (handler === undefined)
-    return {
-      kind: "invalid",
-      reason: `Unknown tool ${name}. Use one of: ${[...HANDLERS.keys()].join(", ")}.`,
-    };
+  if (isRemoved(state, name))
+    return { kind: "removed", reason: `${name} is no longer available this turn.` };
+  const handler = handlerOf(name);
+  if (handler === undefined) return { kind: "invalid", reason: unknownTool(state, name) };
   if (!input.ok) return { kind: "invalid", reason: "The input was not valid JSON." };
   return handler(state, input.value, id);
 };
 
-// A failed call: an input mistake counts toward "answer in prose" on its second time.
+// A failed call. A limit, or a retired tool called anyway, goes back flat and counts nowhere;
+// an input mistake counts toward retiring its tool, and the failure that reaches the limit
+// asks for prose - the last error that tool returns this turn.
 const rejectCall = (
   state: TurnState,
   call: ToolCall,
   verdict: Verdict & { reason: string },
 ): Translation => {
-  if (verdict.kind === "refused")
+  if (verdict.kind === "refused" || verdict.kind === "removed")
     return { state, events: [], result: toolResult(call.id, verdict.reason, true) };
   const count = (state.failures[call.name] ?? 0) + 1;
-  const reason = count >= 2 ? `${verdict.reason} Answer in prose instead.` : verdict.reason;
+  const limit = removalLimit(call.name) ?? 2; // an unknown name has no offer to lose
+  const reason = count >= limit ? `${verdict.reason} Answer in prose instead.` : verdict.reason;
   const next = { ...state, failures: { ...state.failures, [call.name]: count } };
   return { state: next, events: [], result: toolResult(call.id, reason, true) };
 };
@@ -224,7 +276,8 @@ export function stamp(
 /**
  * Checks one tool call with the catalog's own validators and translates it into page events
  * plus the tool_result the model reads. Invalid input never reaches the page; its reason goes
- * back to the model as an error, and a tool's second failure in a turn asks for prose instead.
+ * back to the model as an error, and a tool's second failure in a turn asks for prose instead
+ * and retires the tool: later rounds do not offer it, and a call to it anyway is refused flat.
  */
 export function translateToolUse(state: TurnState, call: ToolCall): Translation {
   const counted = { ...state, toolCalls: state.toolCalls + 1 };
@@ -234,7 +287,7 @@ export function translateToolUse(state: TurnState, call: ToolCall): Translation 
       events: [],
       result: toolResult(call.id, "Tool call limit reached. Answer in prose now.", true),
     };
-  const verdict = judge(counted, call); // → shown | asked | invalid | refused
+  const verdict = judge(counted, call); // → shown | asked | invalid | refused | removed
   switch (verdict.kind) {
     case "shown": {
       const stamped = stamp(verdict.state, verdict.drafts);
@@ -244,6 +297,7 @@ export function translateToolUse(state: TurnState, call: ToolCall): Translation 
       return { ...stamp(counted, verdict.drafts), result: "asked" };
     case "invalid":
     case "refused":
+    case "removed":
       return rejectCall(counted, call, verdict);
     default: {
       const unhandled: never = verdict;
