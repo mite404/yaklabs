@@ -44,7 +44,6 @@ side for anything outside the polish. Check at the start of each work unit.
 | R8 | `earlier/window-in-browser.png` 1189x119 | Window inside the browser; bell then avatar at far right; light bar |
 | R3-5 | `earlier/conductor-project-*.png` | Conductor project rows (already built, ADR-093) |
 | N-L | `as-built/demo-light.png` 1440x900 | The app as built, light |
-| N-D | `as-built/demo-dark.png` | The app as built, dark |
 | N-C | `as-built/collapsed.png` | Sidebar collapsed to the rail |
 | N-H | `as-built/sidebar-hover.png` | Sidebar with a project row hovered |
 
