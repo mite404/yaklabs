@@ -4,10 +4,10 @@
    page's own blocks, in the components layer so a utility on an element still wins. Every rule
    is scoped under .tooling or a land- class: a route's stylesheet stays loaded once the visitor
    goes back into the app, so nothing here may reach a bare element.
-   The blocks, top to bottom: the hero with the run's terminal in a little perspective and the
-   seal stamped on its corner; a ticker of the four verdicts; the claim, with three notes in a
-   cascade; a bento of six cells; a full-bleed band in the window chrome's green for the
-   contrast table; the four roles under one rotated label; and the closing word by the seal. */
+   The blocks, top to bottom: the hero with Ethan's headline, the run's terminal in a little
+   perspective and the seal stamped on its corner; a ticker of the four verdicts; his question;
+   a bento of six cells of the tool's own evidence; a full-bleed band in the window chrome's
+   green with his second headline and the contrast table; and the seal with the way back. */
 @layer components {
   .tooling {
     --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
@@ -286,8 +286,7 @@
     }
   }
 
-  /* The claim: a kicker that holds at the left while the statement and its three notes pass,
-     the notes cascading down the grid rather than lined up in a row. */
+  /* The question: a kicker at the left, the statement beside it, over the evidence below. */
   .land-claim {
     display: grid;
     grid-template-columns: 160px minmax(0, 1fr);
@@ -300,50 +299,13 @@
     align-self: start;
   }
   .land-claim h2 {
-    max-width: 16ch;
-    margin: 0 0 16px;
+    max-width: 18ch;
+    margin: 0;
     font-family: var(--font-display);
     font-size: clamp(32px, 4vw, 52px);
     font-weight: 500;
     line-height: 1.08;
     letter-spacing: -0.02em;
-  }
-  .land-claim > div > p {
-    max-width: 56ch;
-    font-size: 16px;
-  }
-  .land-cascade {
-    display: grid;
-    grid-template-columns: repeat(12, minmax(0, 1fr));
-    gap: 16px;
-    margin-top: 32px;
-  }
-  .land-cascade > div:nth-child(1) {
-    grid-column: 1 / span 5;
-  }
-  .land-cascade > div:nth-child(2) {
-    grid-column: 7 / span 5;
-    margin-top: 64px;
-  }
-  .land-cascade > div:nth-child(3) {
-    grid-column: 3 / span 6;
-    margin-top: -16px;
-  }
-  .land-note {
-    padding: 20px 22px;
-    border: 1px solid var(--hairline);
-    border-radius: var(--radius-card);
-    background: var(--paper);
-    box-shadow: var(--edge-shadow);
-  }
-  .land-note h3 {
-    margin: 0 0 6px;
-    font-size: 15px;
-    font-weight: 600;
-  }
-  .land-note p {
-    margin: 0;
-    font-size: 14px;
   }
 
   /* The bento: six cells on twelve columns, the picture the biggest, a numeral, a table, an
@@ -648,43 +610,7 @@
     border-radius: 10px;
   }
 
-  /* The roles: one label turned on its side, then four columns under hairline rules, their
-     numerals in the display face. */
-  .land-roles {
-    display: grid;
-    grid-template-columns: 48px repeat(4, minmax(0, 1fr));
-    gap: 24px;
-    padding: 88px 0 24px;
-  }
-  .land-roles-label {
-    justify-self: center;
-    writing-mode: vertical-rl;
-    rotate: 180deg;
-  }
-  .land-role {
-    padding-left: 18px;
-    border-left: 1px solid var(--rule);
-  }
-  .land-role i {
-    display: block;
-    margin-bottom: 14px;
-    font-family: var(--font-display);
-    font-size: 40px;
-    font-style: normal;
-    line-height: 1;
-    color: var(--soft-ink);
-  }
-  .land-role h3 {
-    margin: 0 0 8px;
-    font-size: 15px;
-    font-weight: 600;
-  }
-  .land-role p {
-    margin: 0;
-    font-size: 14px;
-  }
-
-  /* The closing word beside the seal, then the footer. */
+  /* The seal and the way back, then the footer. */
   .land-close {
     display: grid;
     grid-template-columns: auto minmax(0, 1fr);
@@ -694,18 +620,8 @@
     padding: 64px 0 24px;
     border-top: 1px solid var(--hairline);
   }
-  .land-close blockquote {
-    margin: 0;
-    font-family: var(--font-display);
-    font-size: clamp(28px, 3.2vw, 40px);
-    font-weight: 500;
-    line-height: 1.15;
-    letter-spacing: -0.02em;
-  }
-  .land-close p {
-    max-width: 58ch;
-    margin: 14px 0 0;
-    font-size: 15px;
+  .land-close .land-cta {
+    margin-top: 0;
   }
   .tooling footer {
     margin-top: 56px;
@@ -749,10 +665,6 @@
     .land-claim .land-kicker {
       position: static;
     }
-    .land-cascade > div:nth-child(n) {
-      grid-column: 1 / -1;
-      margin-top: 0;
-    }
     .land-bento > .land-cell {
       grid-column: span 12;
     }
@@ -767,15 +679,6 @@
     .land-band {
       padding-bottom: 88px;
     }
-    .land-roles {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-    .land-roles-label {
-      grid-column: 1 / -1;
-      justify-self: start;
-      writing-mode: horizontal-tb;
-      rotate: 0deg;
-    }
     .land-close {
       grid-template-columns: 1fr;
       gap: 24px;
@@ -784,9 +687,6 @@
   @media (max-width: 600px) {
     .land-shot-front {
       display: none;
-    }
-    .land-roles {
-      grid-template-columns: 1fr;
     }
   }
 }

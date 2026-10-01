@@ -75,29 +75,17 @@ function Terminal() {
   );
 }
 
-/** The hero: the claim, the pitch, two ways in and the run's numbers, beside the run itself. */
+/** The hero: Ethan's headline and question, the run's numbers, and the run itself beside them. */
 export function Hero() {
   return (
     <header className="land-hero">
       <div>
         <p className="land-kicker">Design engineering / tooling</p>
-        <h1 className="land-title">
-          UI drift is the default. <span>Evidence is the fix.</span>
-        </h1>
+        <h1 className="land-title">A design system agents can build with</h1>
         <p className="land-lede">
-          People and agents edit Kay’s interface in the same afternoon.{" "}
-          <span className="whitespace-nowrap">verify-ui-drift</span> captures every visual change,
-          compares it with an approved reference, checks tokens and contrast, and keeps the
-          evidence. A new baseline needs a person. Nothing passes by looking fine.
+          Agents and plugins can create new screens faster than a small team can review them. How
+          does a system verify the product stays coherent as it grows?
         </p>
-        <div className="land-cta">
-          <a className="btn" href="#pixels">
-            See the pixels
-          </a>
-          <a className="btn" href="#claim">
-            Why it exists
-          </a>
-        </div>
         <ul className="land-proof">
           {STATS.map((stat) => (
             <li key={stat.label}>

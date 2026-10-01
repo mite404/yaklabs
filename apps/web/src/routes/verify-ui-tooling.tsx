@@ -1,5 +1,5 @@
 import { useOutletContext } from "react-router";
-import { Band, Bento, Claim, Closing, Roles } from "../components/landing-blocks";
+import { Band, Bento, Closing, Question } from "../components/landing-blocks";
 import { Bar, Hero, Ticker } from "../components/landing-hero";
 import type { ThemeChoice } from "../theme";
 import "../verify-ui-tooling.css";
@@ -9,10 +9,10 @@ export function meta() {
 }
 
 /**
- * The design tooling page (ADR-160): a landing page for `tools/verify-ui-drift`, told for a
- * visitor who has not seen the tool. The run's own terminal opens it, then the verdicts roll
- * by, the claim, a bento of what a run gives, the contrast band, the four roles and the
- * closing word. Public, outside the shell, and reached from the welcome's seal.
+ * The design tooling page (ADR-160): a landing page for `tools/verify-ui-drift` carrying
+ * Ethan's copy over the tool's own evidence. The run's terminal opens it under the headline,
+ * then the verdicts roll by, the question, a bento of what a run gives, the band with the
+ * second headline, and the seal. Public, outside the shell, and reached from the welcome's seal.
  */
 export default function VerifyUiToolingPage() {
   const theme = useOutletContext<ThemeChoice>();
@@ -21,10 +21,9 @@ export default function VerifyUiToolingPage() {
       <Bar theme={theme} />
       <Hero />
       <Ticker />
-      <Claim />
+      <Question />
       <Bento />
       <Band />
-      <Roles />
       <Closing />
       <footer>
         <span>
