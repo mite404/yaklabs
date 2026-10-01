@@ -23,7 +23,8 @@ export function Question() {
   );
 }
 
-// The biggest cell: the Pixels workbench, with its count on a chip.
+// The biggest cell: the whole Pixels workbench, scaled to the cell, with its name and its count
+// in a row beneath.
 function PixelsCell() {
   return (
     <div className="land-cell land-cell-pixels" id="pixels">
@@ -35,9 +36,9 @@ function PixelsCell() {
         loading="lazy"
         decoding="async"
       />
-      <span className="land-chip">3,776 changed pixels · 0.154%</span>
       <div className="land-cell-words">
         <h3>Pixels</h3>
+        <span className="land-chip">3,776 changed pixels · 0.154%</span>
       </div>
     </div>
   );
