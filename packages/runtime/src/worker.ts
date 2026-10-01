@@ -5,6 +5,9 @@ import type { LegacyCanvas, Notice, RuntimeData, ScenarioName, Source } from "./
 import { openSqliteStore, StorageUnavailableError } from "./sqliteStore";
 import { ensureStarter, type Store } from "./store";
 
+// What the page asks of the device's store.
+type DeviceData = Extract<RuntimeData, { kind: "device" }>;
+
 // This file only ever runs as the dedicated worker `startRuntime` creates (ADR-083).
 declare const self: DedicatedWorkerGlobalScope;
 
@@ -63,21 +66,24 @@ async function openDeviceStore(
   }
 }
 
-async function openDevice(legacy: LegacyCanvas | undefined): Promise<Opened> {
+// The fixtures load only when a scenario or a seed asks for them, so the device never ships them.
+const fixtures = () => import("./scenarios");
+
+async function openDevice({ legacy, seed }: DeviceData): Promise<Opened> {
   const mint = liveMint();
   const { store, source } = await openDeviceStore(legacy);
-  ensureStarter(store, mint.now().toISOString());
+  const at = mint.now().toISOString();
+  ensureStarter(store, at);
+  if (seed === "demo-store") (await fixtures()).seedDemoStore(store, at);
   return { store, source, mint, faults: {} };
 }
 
-// A scenario's fixtures load only when one is asked for, so the device never ships them.
 async function openScenario(name: ScenarioName): Promise<Opened> {
-  const scenarios = await import("./scenarios");
-  return scenarios.openScenario(name);
+  return (await fixtures()).openScenario(name);
 }
 
 function open(data: RuntimeData): Promise<Opened> {
-  return data.kind === "device" ? openDevice(data.legacy) : openScenario(data.name);
+  return data.kind === "device" ? openDevice(data) : openScenario(data.name);
 }
 
 const handle = createAgentLoop({ post, open });

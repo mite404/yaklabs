@@ -107,9 +107,15 @@ const sourceSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("scenario"), name: scenarioNameSchema }),
 ]);
 
-// What the page asks the worker to open.
+// What the page asks the worker to open. A dev build may ask for `seed`: the browser levers'
+// device, the Demo store and its profit thread that every device held before the Live
+// Playground (`seedDemoStore`), written beside whatever the store holds.
 const runtimeDataSchema = z.discriminatedUnion("kind", [
-  z.object({ kind: z.literal("device"), legacy: legacyCanvasSchema.optional() }),
+  z.object({
+    kind: z.literal("device"),
+    legacy: legacyCanvasSchema.optional(),
+    seed: z.literal("demo-store").optional(),
+  }),
   z.object({ kind: z.literal("scenario"), name: scenarioNameSchema }),
 ]);
 

@@ -64,6 +64,11 @@ nine children, a 120-turn thread), `loading` (a start that never finishes), `fai
 that fails) and `thread-fails` (every open and send fails). An unknown name is refused with the
 list of the valid ones.
 
+A dev build can also seed the device itself, for the browser levers that need a thread with a
+card on a store that survives a reload: with `localStorage["kay.seed"] = "demo-store"` set
+before the page loads, the worker adds the Demo store and its `profit` thread ("Last week's
+sales", at `/t/profit`) beside the Live Playground. A production build ignores the key.
+
 "Required" applies only when the build has sign-in turned on (below).
 
 ## Settings
