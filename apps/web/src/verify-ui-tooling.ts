@@ -16,15 +16,15 @@ export const STATS = [
 export const PROBLEMS = [
   {
     title: "Looks fine is not a test",
-    body: "A reviewer’s eye compares a screenshot with a memory of last week’s build. Memory is the weakest reference in the building, and it gets weaker with every component.",
+    body: "A reviewer’s eye compares a screenshot with a memory of last week’s build. Memory is the weakest reference in the building.",
   },
   {
     title: "Agents move faster than review",
-    body: "When an agent writes and revises UI in minutes, the check has to run at the same speed, and it has to be the same check every time, on every engine and theme.",
+    body: "An agent revises UI in minutes. The check has to run at that speed, and be the same check every time, on every engine and theme.",
   },
   {
     title: "Consistency at scale is a records problem",
-    body: "Every approved look needs to be findable, dated and tied to the commit that approved it. Otherwise the standard is whoever was in the room when the question came up.",
+    body: "Every approved look has to be findable, dated and tied to its commit. Otherwise the standard is whoever was in the room.",
   },
 ];
 
@@ -32,11 +32,11 @@ export const PROBLEMS = [
 export const STEPS = [
   {
     title: "Capture",
-    body: "The CLI builds the current Storybook and photographs the production components through their own stories, in three engines and both themes. Add the app shell for the wide shot.",
+    body: "The CLI builds the current Storybook and photographs the production components through their own stories, in three engines and both themes.",
   },
   {
     title: "Prove the camera",
-    body: "Before any comparison counts, the tool recaptures an untouched Button, then a wrong colour and a wrong padding. The control must match; both mistakes must differ.",
+    body: "Before any comparison counts, the tool recaptures an untouched Button, then a wrong colour and a wrong padding. The control must match. Both mistakes must differ.",
   },
   {
     title: "Compare",
@@ -48,7 +48,7 @@ export const STEPS = [
   },
   {
     title: "Decide and keep",
-    body: "A verdict with its reasons, a report and the comparison images are saved for the run. Only a person, naming the captures and the count expected, can approve a new reference.",
+    body: "A verdict with its reasons, a report and the comparison images are saved for the run. Only a person can approve a new reference.",
   },
 ];
 
@@ -125,8 +125,8 @@ export const MISSING = [
 
 /** What approval is, and what the CLI refuses. */
 export const APPROVAL = [
-  "A person names the captures to approve and how many are expected. The command fails if the count is off.",
-  "Approval writes the PNG and an approved.json beside the code, and they are committed together, so the reference carries the commit that chose it.",
+  "A person names the captures to approve and how many to expect. The command fails if the count is off.",
+  "Approval writes the PNG and an approved.json beside the code. They are committed together, so the reference carries the commit that chose it.",
   "The CLI rejects stale or incomplete evidence, a failed camera proof, an altered image and any selected capture with an axe violation.",
   "CI cannot approve. It can only compare, and attach its evidence to the pull request for a person to open.",
 ];
@@ -135,11 +135,11 @@ export const APPROVAL = [
 export const ROLES = [
   {
     role: "Design engineering",
-    body: "The components are production code and Storybook is their contract. Corners, tokens and contrast are checked where they live, in the rendered CSS, against Kay’s own minimums.",
+    body: "The components are production code and Storybook is their contract. Corners, tokens and contrast are checked in the rendered CSS, against Kay’s own minimums.",
   },
   {
     role: "Design engineering infrastructure",
-    body: "A CLI with four verdicts and four exit codes, references kept per machine, a CI artifact a reviewer opens locally, and a camera that proves itself before a comparison counts.",
+    body: "Four verdicts, four exit codes, references kept per machine, a CI artifact a reviewer opens locally, and a camera that proves itself before a comparison counts.",
   },
   {
     role: "Frontend engineering",
@@ -147,6 +147,6 @@ export const ROLES = [
   },
   {
     role: "Forward deployed engineering",
-    body: "Every run leaves evidence a non-engineer can read: a verdict, the reason, and what to do next. The question is never whether the tool ran, only what it found.",
+    body: "Every run leaves evidence a non-engineer can read: a verdict, the reason, and what to do next.",
   },
 ];

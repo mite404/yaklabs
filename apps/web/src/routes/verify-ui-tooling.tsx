@@ -43,9 +43,8 @@ function Problem() {
       <h2 id="problem">Two kinds of editors, one surface</h2>
       <p>
         A person nudges a corner radius. An agent restyles a button while fixing something else.
-        Both diffs read fine in review, and both are invisible until someone sees the product beside
-        last week’s. Drift is not a bug anyone wrote. It is the sum of small decisions nobody
-        compared.
+        Both diffs read fine in review. Drift is not a bug anyone wrote. It is the sum of small
+        decisions nobody compared.
       </p>
       <div className="tooling-cards">
         {PROBLEMS.map((problem) => (
@@ -64,9 +63,9 @@ function Run() {
     <section id="run" className="tooling-section" aria-labelledby="run-heading">
       <h2 id="run-heading">How a run works</h2>
       <p>
-        One command from the repository root. The default run captures five foundation stories in
-        both themes across three engines, thirty captures, and ends with a verdict, the report’s
-        path and plain lines saying why and what to do next.
+        One command from the repository root. The default run makes thirty captures, five stories in
+        two themes across three engines, and ends with a verdict, the report’s path and plain lines
+        saying why and what to do next.
       </p>
       <ol className="tooling-steps">
         {STEPS.map((step) => (
@@ -86,10 +85,9 @@ function Run() {
         {RUN.rest.join("\n")}
       </pre>
       <p>
-        This run is on a Mac. The approved references were made on CI’s Debian image, and browsers
-        draw text a little differently on each OS, so the tool says so before it captures anything,
-        records the captures, and ends INCOMPLETE rather than PASS. The camera proof still runs, and
-        the counts for each engine are printed.
+        This run is on a Mac and the approved references were made on CI’s Debian image, so the tool
+        says so before it captures anything and ends INCOMPLETE rather than PASS. The camera proof
+        still runs, and every count is printed.
       </p>
       <Table
         headings={["Verdict", "Exit", "Meaning", "Trust it?"]}
@@ -108,9 +106,8 @@ function Pixels() {
       <h2 id="pixels-heading">Pixels: locate, then judge</h2>
       <p>
         The results list says which capture changed and by how much. The wipe shows before and after
-        on one coordinate plane, so a narrower baseline stays narrower and nothing is aligned away.
-        The inspector enlarges the same region of both images at 4x with no smoothing. All three
-        share one selected capture.
+        on one coordinate plane, so nothing is aligned away. The inspector enlarges the same region
+        of both images at 4x with no smoothing.
       </p>
       <Figure
         src="pixels-workbench.webp"
@@ -118,9 +115,9 @@ function Pixels() {
         height={1551}
         alt="The Pixels workbench: a results list with Button / Default marked changed, a before and after wipe over the button’s four states, and a pixel inspector showing the baseline’s square corner beside the current rounder one."
       >
-        Button / Default, changed by 3,776 pixels, 0.154% of the image. The button’s corner went
-        from 4px to 12px. The difference view says where, and the inspector shows the two corners
-        side by side at the same point.
+        Button / Default, changed by 3,776 pixels, 0.154% of the image. The corner went from 4px to
+        12px. The difference view says where, and the inspector shows both corners at the same
+        point.
       </Figure>
       <Table
         headings={["Component / state", "Engine", "Theme", "Pixels", "Axe violations"]}
@@ -141,9 +138,8 @@ function Pixels() {
         }))}
       />
       <p>
-        A capture with no approved reference for this machine, engine and theme is listed as
-        missing, never as passing. Changes and axe findings are still listed when a run is
-        INCOMPLETE, so a verdict never hides them.
+        A capture with no approved reference is listed as missing, never as passing. Changes and axe
+        findings are still listed when a run is INCOMPLETE, so a verdict never hides them.
       </p>
     </section>
   );
@@ -156,9 +152,8 @@ function Proof() {
       <p>
         A passing comparison earns trust only if a deliberate mistake makes it fail. Every run
         recaptures the real Button story unchanged, then with a wrong text colour, then with a wrong
-        padding, in an isolated page. The unchanged pair must give zero changed pixels and both
-        mutations must differ, in every engine, or the run is INCOMPLETE and nothing can be approved
-        on it.
+        padding. The unchanged pair must match and both mutations must differ, in every engine, or
+        nothing can be approved on the run.
       </p>
       <Figure
         src="comparator-proof.webp"
@@ -167,9 +162,7 @@ function Proof() {
         alt="Comparator proof: a table of changed pixel counts for Chromium, Firefox and WebKit, and below it the unchanged control beside the colour and geometry mutation differences drawn in red."
       >
         Zero changed pixels on the untouched recapture, thousands on each mutation, in all three
-        engines. Red marks the deliberately changed pixels; grayscale is unchanged context. The
-        workbench uses green for component differences, and saved reports keep their original
-        overlay colours.
+        engines. Red marks the deliberately changed pixels; grayscale is unchanged context.
       </Figure>
     </section>
   );
@@ -180,11 +173,10 @@ function Contrast() {
     <section className="tooling-section" aria-labelledby="contrast-heading">
       <h2 id="contrast-heading">Contrast is measured, never judged by eye</h2>
       <p>
-        Kay’s theme is a small set of semantic tokens, two inks and two lines. The Accessibility tab
-        measures every declared pair in both themes against Kay’s minimums: 4.5:1 for text, 3:1 for
-        essential marks. The Apple, Microsoft and Material lenses read the same table against those
-        platforms’ recommendations. They are review lenses. They do not rewrite the theme or certify
-        compliance.
+        Kay’s theme is two inks and two lines. The Accessibility tab measures every declared pair in
+        both themes against Kay’s minimums: 4.5:1 for text, 3:1 for essential marks. The Apple,
+        Microsoft and Material lenses read the same table against those platforms’ recommendations.
+        They are review lenses, not a new palette.
       </p>
       <Figure
         src="contrast-kay.webp"
@@ -193,8 +185,7 @@ function Contrast() {
         alt="Contrast in context under the Kay lens: a table of foreground and background token pairs with their measured ratio, Kay’s minimum and the result, in light and dark appearance, every row meeting its minimum."
       >
         Sixteen declared pairs, light and dark. The lowest is the focus ring at 3.01:1 on the light
-        paper, exactly where a 3:1 mark is allowed to sit, and that is a measurement, not an
-        opinion.
+        paper, exactly where a 3:1 mark may sit. That is a measurement, not an opinion.
       </Figure>
       <Figure
         src="contrast-material.webp"
@@ -215,9 +206,8 @@ function Approval() {
       <h2 id="approval-heading">What approval means</h2>
       <p>
         Approval accepts one screenshot as the reference for one component state in one rendering
-        environment. It does not fix code and it does not certify accessibility. Keyboard and screen
-        reader checks still need a person. After inspecting a capture, the reviewer copies its
-        command from the review app:
+        environment. It does not fix code and it does not certify accessibility. After inspecting a
+        capture, the reviewer copies its command from the review app:
       </p>
       <pre className="tooling-code">
         {
@@ -236,10 +226,10 @@ function Approval() {
 function Why() {
   return (
     <section className="tooling-section" aria-labelledby="why-heading">
-      <h2 id="why-heading">Where it lands</h2>
+      <h2 id="why-heading">One tool, four roles</h2>
       <p>
-        One tool, built on the production catalog with no second set of components, that touches
-        each of the roles a design engineering team needs filled.
+        Built on the production catalog, with no second set of components, and touching each of the
+        roles a design engineering team needs filled.
       </p>
       <div className="tooling-cards">
         {ROLES.map((entry) => (
@@ -250,10 +240,9 @@ function Why() {
         ))}
       </div>
       <p className="tooling-close">
-        I built it before anyone asked, because the first week of people and agents sharing a
-        codebase is when drift starts. The decisions it encodes, that a missing reference is not a
-        pass, that CI cannot approve, that evidence outlives the run, are the decisions a team needs
-        made once, by someone, and then kept.
+        I built it before anyone asked, because drift starts the first week people and agents share
+        a codebase. Its rules are the ones a team needs settled once and kept: a missing reference
+        is not a pass, CI cannot approve, and evidence outlives the run.
       </p>
     </section>
   );

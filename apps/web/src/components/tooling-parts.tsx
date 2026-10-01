@@ -69,11 +69,10 @@ export function Hero() {
           UI drift is the default. <span>Evidence is the fix.</span>
         </h1>
         <p className="tooling-lede">
-          Kay’s interface is edited by people and by agents, often in the same afternoon.{" "}
-          <span className="whitespace-nowrap">verify-ui-drift</span> is the CLI and review app I
-          built so that every visual change is captured, compared with an approved reference,
-          checked for tokens and contrast, and kept as evidence. A new baseline needs a person.
-          Nothing passes by looking fine.
+          People and agents edit Kay’s interface in the same afternoon.{" "}
+          <span className="whitespace-nowrap">verify-ui-drift</span> captures every visual change,
+          compares it with an approved reference, checks tokens and contrast, and keeps the
+          evidence. A new baseline needs a person. Nothing passes by looking fine.
         </p>
         <div className="tooling-cta">
           <a className="btn" href="#pixels">
