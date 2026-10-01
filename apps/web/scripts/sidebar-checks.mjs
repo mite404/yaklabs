@@ -363,7 +363,7 @@ async function peekHolds(page) {
 // however long the pointer stays.
 async function placesStayQuiet(page) {
   const seen = [];
-  for (const name of ["Kay", "Lab"]) {
+  for (const name of ["Home", "Lab"]) {
     await page.mouse.move(900, 500);
     await page.waitForTimeout(CLOSE_MS + SLIDE_MS);
     const box = await page

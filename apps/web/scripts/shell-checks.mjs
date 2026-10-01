@@ -5,9 +5,9 @@ import { canvasOf, carry, laneTitles, mainPanel, makeLane } from "./canvas-check
 import { BASE, openApp, shotPath, sidebarDrawn } from "./lever.mjs";
 import { railOf, RAIL_PLACES, readPlaces } from "./rail-places.mjs";
 
-// The polygon meetkay.ai declares for its mark (ADR-095), as the rail must draw it.
-const KAY_POINTS =
-  "52.4 39.26 78.59 78.54 26.16 78.54 52.34 39.32 26.25 39.26 .03 78.45 0 .02 26.19 .02 26.25 39.08 52.39 0 78.55 .06 52.4 39.26";
+// Kay's mark, the bonsai (ADR-094, amended): three pills of the working glyph on a 12-unit grid,
+// as x, y, width, height and corner radius.
+const BONSAI_PILLS = "2 1 7 3 1.5|5 5 7 3 1.5|0 9 12 3 1.5";
 const SCENARIOS = ["demo", "long", "empty", "loading", "failure", "thread-fails"];
 
 const sidebarOf = (page) => page.locator('[data-slot="sidebar"]');
@@ -490,15 +490,21 @@ export const shellChecks = {
     };
   },
 
-  // The rail's places, top to bottom, by name, role and glyph (ADR-094, amended): Kay's mark
-  // as its site declares it (ADR-095), the places not built yet, the documentation link, and
-  // the Lab last, each one below the one before.
+  // The rail's places, top to bottom, by name, role and glyph (ADR-094, amended): Home with
+  // Kay's bonsai mark, the places not built yet, the documentation link, and the Lab last, each
+  // one below the one before.
   async P12(browser) {
     const { page } = await onThreadPage(browser);
-    const kay = page.getByRole("link", { name: "Kay", exact: true });
-    const points = await kay.locator("svg polygon").getAttribute("points");
+    const home = page.getByRole("link", { name: "Home", exact: true });
+    const pills = await home
+      .locator("svg rect")
+      .evaluateAll((rects) =>
+        rects.map((r) =>
+          ["x", "y", "width", "height", "rx"].map((a) => r.getAttribute(a)).join(" "),
+        ),
+      );
     const places = await railOf(page).locator('[data-sidebar="header"]').evaluate(readPlaces);
-    const exact = points?.replaceAll(/\s+/g, " ").trim() === KAY_POINTS;
+    const exact = pills.join("|") === BONSAI_PILLS;
     const want = RAIL_PLACES.map(({ name, role, icon }) => [name, role, icon]);
     const got = places.map(({ name, role, icon }) => [name, role, icon]);
     const inOrder = JSON.stringify(got) === JSON.stringify(want);
@@ -506,7 +512,7 @@ export const shellChecks = {
     await page.locator('[data-slot="sidebar-header"]').screenshot({ path: shotPath("P12-rail") });
     return {
       ok: exact && inOrder && stacked,
-      detail: `mark polygon ${points === null ? "missing" : "present"}${exact ? " and exact" : ""}; places ${inOrder ? "in order" : JSON.stringify(got)}; each below the last ${stacked}`,
+      detail: `mark ${pills.length} pills${exact ? ", exact" : ` ${JSON.stringify(pills)}`}; places ${inOrder ? "in order" : JSON.stringify(got)}; each below the last ${stacked}`,
     };
   },
 

@@ -1,8 +1,10 @@
 import { useEffect, useRef } from "react";
 import { Navigate } from "react-router";
 import { QuietButton } from "../components/quiet-button";
+import { Welcome } from "../components/welcome";
 import { focusThreadIn } from "../components/thread-pane";
 import { usePaths } from "../runtime";
+import { useHubAsked } from "../shell/home-hub";
 import { useShell } from "../shell/model";
 import { Notice, RuntimePending } from "../shell/pending";
 
@@ -29,12 +31,17 @@ function useHandOn(): () => void {
   };
 }
 
-/** Home: the tab last on screen, else the open tab with the newest activity, else nothing. */
+/**
+ * Home: the hub, the greeting and the projects, when the rail's Home asked for it; otherwise the
+ * tab last on screen, else the open tab with the newest activity, else nothing.
+ */
 export default function Home() {
   const shell = useShell();
   const { pathTo } = usePaths();
   const handOn = useHandOn();
+  const hub = useHubAsked();
   if (shell === null) return <RuntimePending />;
+  if (hub) return <Welcome thread={null} pane="thread" />;
   if (shell.resumeTo !== null) return <Navigate replace to={pathTo(shell.resumeTo)} />;
   return (
     <Notice title="Nothing open">

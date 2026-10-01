@@ -822,11 +822,13 @@ try {
         .getByRole("link", { name: "Lab", exact: true })
         .click()
         .then(() => on.getByText("Useful answers.").waitFor({ timeout: 10_000 })),
-    "the Kay link": (on) =>
+    "the Home link": (on) =>
       railOf(on)
-        .getByRole("link", { name: "Kay", exact: true })
+        .getByRole("link", { name: "Home", exact: true })
         .click()
-        .then(() => shownPanel(on).locator(".thread-panel").first().waitFor({ timeout: 10_000 })),
+        .then(() =>
+          on.locator('[data-slot="welcome-project"]').first().waitFor({ timeout: 10_000 }),
+        ),
     "closing the last tab": async (on) => {
       for (const closing of ["Service desk weekly review", "Last week's sales"]) {
         // oxlint-disable-next-line no-await-in-loop -- each close changes the strip the next one reads
