@@ -226,6 +226,31 @@ the vendored shadcn tooltip. P23 reads the rail's pills in both themes.
 | Motion | in over 125ms, `cubic-bezier(0.23, 1, 0.32, 1)`, scale 0.97 and fade; out in 100ms | derived |
 | Reduced motion | fades only, no scale | derived |
 
+### 33. The design tooling seal is a gold medal with an ink ribbon
+
+The welcome's link to the design tooling page (ADR-160) is a seal: a serrated gold disc with
+"Yaklabs" over the top of its ring and "Seal of evidence" under the bottom, and an ink ribbon
+across its middle carrying the link's words, which runs past the seal on either side.
+Gold is a metal, so the seal keeps one colour in either theme; only the ribbon turns over with
+the ink. The words are on the ribbon, never on the gold, since they run off the seal onto the
+paper, where the brown ink fails in the dark theme.
+The seal is drawn (`design-tooling-seal.tsx`), never a picture, so it scales to any size and
+takes its colours from tokens.
+
+| Property | Value | Source |
+| --- | --- | --- |
+| Face | `--seal-gold` (`--yak-orange`, `#d19456`), lit from the top left to `--seal-gold-glint` | derived (Ethan's example seal) |
+| Edge | `--seal-gold-deep` (`--rust`, `#a86f36`): 3.5:1 on the light paper, 6.6:1 dark, so the silhouette clears 3:1 | derived |
+| Ring words | `--on-seal` (`--yak-brown-ink`, `#3b2612`): 5.5:1 on the face, the orange pill's pair | derived (rule 13) |
+| Ribbon | `--ink` with `--on-ink`, notched 8px at both ends, 11px 600 upper case at 0.1em, 8px × 26px padding | derived (rule 28's pill) |
+| Ribbon hover | fills `--moss` with `--on-accent` over 150ms `ease`, as the outline button | css (rule 8) |
+| Size | 112px on the welcome, 200px on the page's hero; 36 teeth, 5 units deep in a 120-unit box | derived |
+| Place on the welcome | pinned above the greeting at the column's right: centre 30px above the mark's top, ribbon ending 24px inside the column's edge; tilted 25° with the left side up, as a medal on a lapel; in the column's flow, upright, under 641px | Ethan |
+| Focus | the site's ring, 2px `--focus` 3px off, on the link's 4px corners | derived |
+| Size on the welcome | 70% of the drawn 112px, by `scale`, so the words stay crisp | Ethan |
+| Hop | every 4s: 6px up and back over 480ms, a 2px second hop, then still; on `transform` under the tilt, so it hops along its lean; none under reduced motion (rule 24) | Ethan |
+| Hover and focus | grows 10% (`scale` 0.7 to 0.77) over 150ms `ease`, the button's timing (rule 8), the hop held meanwhile; no growth under reduced motion | Ethan |
+
 ## Inputs
 
 ### 14. A place to type is outlined, and its prompt is greyer
@@ -267,6 +292,8 @@ behind each rule below is told in `docs/FOR_ETHAN.md`.
 | A loading thread's "Opening ..." line | shown after 100ms | none, steps in | derived (rule 9) |
 | The empty canvas's splash, arriving | 150ms fade in | `ease-out` | derived (ADR-113) |
 | A new thread's welcome picture | none, arrives with its words | none | derived (the paintings) |
+| The welcome's seal, hopping (rule 33) | 480ms of a 4s cycle, 6px then 2px | `ease-in-out` | Ethan |
+| The welcome's seal, growing under the pointer (rule 33) | 150ms, 10% | `ease` | Ethan (rule 8) |
 | Agent working glyph (wave, orbit) | 2000ms loop | `linear` fades | Ethan |
 | Agent tree glyph | 2000ms loop | `linear` fades, `cubic-bezier(0.4, 0, 0.6, 1)` scroll | Ethan |
 | Sidebar peek slide, out and back (rule 26) | 220ms | `cubic-bezier(0.17, 1.02, 0.58, 1)` (`--panel-ease`) | Ethan |

@@ -16,6 +16,7 @@ The agent loop and the conversation store run in a Web Worker from `@yaklabs/run
 | `/demo/weekly-brief`       | Redirects to `/t/demo-<script>` (`?script=`, else the brief)         | required |
 | `/demo/weekly-brief/t/:id` | Redirects to `/t/:id`                                                | required |
 | `/share.html`              | One shared card from the link's fragment (ADR-064)                   | public   |
+| `/verify-ui-tooling`       | The design tooling page: what `verify-ui-drift` is for (ADR-160)     | public   |
 | `/callback`                | Where WorkOS sends visitors back; the provider finishes sign-in      | public   |
 
 Any signed-in route takes `?scenario=` (below), and every link inside the app keeps it. The

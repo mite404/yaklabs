@@ -2462,3 +2462,66 @@ ordering the sidebar's children oldest first to match the canvas, which ADR-125 
 other way at Ethan's word.
 Known gaps: Demo store stays on a device that has it, beside Demo and Live Playground; removing
 it is Ethan's call. The brief lever's 2x timing bound still sits at 59 to 63% on main as here.
+
+## ADR-160 - A public page tells the design tooling's story, sealed on the welcome
+
+2026-10-01 - Accepted (Ethan: "a static site on a new route called /verify-ui-tooling ... on
+the splash screen i want a graphic link w/a gold seal as the bg and copy that says Includes
+Design Tooling"). Amends ADR-136 and ADR-156.
+`/verify-ui-tooling` is a page of Kay's paper outside the signed-in shell, beside `/share.html`,
+that says what `tools/verify-ui-drift` is for and shows it: why a check has to be a tool when
+people and agents edit one surface, the five beats of a run, the run's own transcript, the four
+verdicts, the Pixels workbench, the comparator proof, the contrast table under its lenses, what
+approval means, and where the work lands by role. Its pictures are Ethan's screenshots of the
+review app (`apps/web/public/verify-ui-tooling/`); the transcript and the two results tables
+are set as text, since a terminal and a table read better as what they are. The words live in
+`apps/web/src/verify-ui-tooling.ts` apart from the page, so the copy reads as one piece.
+A new thread's welcome ends with the way there: a gold seal, "Yaklabs" over the top of its ring
+and "Seal of evidence" under the bottom, with an ink ribbon across its middle saying "Includes
+design tooling" that runs past the seal on either side. The ribbon is the link's only words,
+so a screen reader hears what a sighted visitor reads, and it fills with moss on hover as the
+site's button does. The seal is drawn, not a picture: one SVG in `design-tooling-seal.tsx`,
+coloured by four new tokens derived from the caution orange and the rust, since a metal keeps
+one colour in either theme (design pillars, rule 33). The page's hero shows the same seal.
+Alternatives weighed: a page inside the shell, which would have put sign-in and the runtime
+in front of a visitor who only wants to read; the seal as a WebP after the example Ethan
+sent, which would have needed a second file for dark mode and could not carry live words; and
+the ribbon's words on the gold itself, where the brown ink clears 4.5:1 on the orange but
+not where the words run off the seal onto the dark paper.
+Known gaps: the page is linked from the welcome and from nowhere else, and the review app's
+screenshots are from Ethan's Mac at 2x, so they will not match a later build of the tool pixel
+for pixel.
+Amended the same day (Ethan, circling the spot): the seal is pinned above the greeting at
+the column's right rather than closing the column, tilted 25° with its left side up, and the
+page's copy was cut to what a reader skimming it in three minutes keeps.
+Amended again the same day (Ethan: "make it look more like a landing page ... the screenshot
+of the cli tool in the hero ... more variation of blocks"): the page is a landing page now,
+after the product sites Ethan named. The run's terminal opens it, set as text from his
+screenshot with its prompt bar, turned a few degrees toward the words and printing its lines
+60ms apart, with the seal stamped on its corner; the verdicts roll by on an ink ticker; the
+three notes cascade down a twelve-column grid; a bento of six cells holds the pixels, the
+numeral, the camera proof's table, the approve command on ink, four measured bars and the
+five beats; the contrast table sits on a full-bleed band in the window chrome's green; the
+four roles stand under one label turned on its side; and the closing word sits by the seal.
+The terminal is text rather than the screenshot, which never arrived as a file, so it reads,
+copies, scales and themes; the comparator proof's picture gave way to its numbers.
+Amended once more (Ethan: "version 2 is the winner ... these need to be the text on the
+page ... rip out, but save into an .md"): the landing page carries Ethan's copy and nothing
+else of its own: his headline and question in the hero, his question over the bento, his
+second headline on the band. Every other line of copy left the page for
+`docs/reference/verify-ui-tooling-copy.md`, to cross-check later; what stays beside his words
+is the tool's own evidence, the terminal, the verdicts, the cells' names from the review app's
+tabs, the counts, the pairs and the beats' names. The notes, the roles and the closing word are
+gone with their copy.
+Amended once more (Ethan): how the tool works stands beside the Pixels picture in four large
+numbered points, capture in batch, compare pixel by pixel, check contrast and accessibility
+across the three engines, fail loudly; the cells that stood there make a new row below.
+Amended once more (Ethan): on the welcome the seal is scaled to 70%, hops 6px every 4s to say
+it can be pressed, and grows 10% under the pointer over the button's 150ms; reduced motion keeps
+it still (design pillars, rule 33).
+Amended once more (Ethan): the hero reads "Design tooling that allows humans to verify at
+scale" with humans in Newsreader's own italic, whose cut tokens.css now loads beside the roman
+as ADR-140 loaded Inter's; the review app's header, from Ethan's screenshot, is the picture
+laid over the contrast table on the band, in place of the Material lens; the way back says
+Back to Bonsai; and the page is light only: it pins the light theme on the root while it is
+open and gives the visitor's choice back on leaving, and its appearance switch is gone.

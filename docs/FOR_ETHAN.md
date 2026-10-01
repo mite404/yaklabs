@@ -225,6 +225,13 @@ picks an answer, let the audience see the hand. Home became a hub you can return
 Play button learned to call for attention, child lanes now line up with the sidebar, and the
 splash steps through its three looks one visit at a time.
 
+Then the tooling got its own trailer (ADR-160). `/verify-ui-tooling` is a public page that tells
+an interviewer what `verify-ui-drift` is for before they have seen it run: the problem of two
+kinds of editors on one surface, the five beats of a run, the transcript, the verdicts, the
+pixels, the comparator proof, the contrast lenses, and what approval means. The welcome now ends
+with a gold seal that says "Includes design tooling" on an ink ribbon, drawn in SVG from four new
+tokens so it is one medal in both themes.
+
 ## 2. Cast & Crew
 
 The first entries are ideas from before any code existed; the rest are parts of the running app.
@@ -3660,3 +3667,35 @@ crops a head to centre a body. Senior-engineer takeaway: when one behaviour keep
 right", list the situations it runs in and write the decision as a pure function with one test
 per situation. The edge cases stop being bugs and become rows in a table.
 
+### Draw the prop, don't photograph it: a seal that themes itself
+
+The example seal arrived as a photo. Pasting it in would have worked for one theme at one size,
+and the words would have been pixels. The seal is instead a small program: the serrated edge is
+one closed path computed from three numbers, and every colour is a token.
+
+```tsx
+// design-tooling-seal.tsx: the edge from three numbers, no hand-drawn points
+function starburst(teeth: number, outer: number, inner: number): string {
+  const step = 180 / teeth; // → degrees between a point and the notch after it
+  const points = Array.from({ length: teeth * 2 }, (_, i) =>
+    pointAt(i % 2 === 0 ? outer : inner, i * step - 90),
+  ); // → "x y"[]
+  return `M${points.join("L")}Z`;
+}
+```
+
+```mermaid
+flowchart LR
+  T["tokens.css<br/>--seal-gold, --seal-gold-deep,<br/>--seal-gold-glint, --on-seal"] --> S["Seal (SVG)<br/>starburst + ring + words on arcs"]
+  S --> W["welcome: 112px<br/>+ ink ribbon = the link"]
+  S --> H["tooling page hero: 200px<br/>no ribbon, no link"]
+  W -- "same medal" --> D["dark theme: ribbon flips to cream,<br/>the gold stays"]
+```
+
+The film version: a prop built by the art department is one object you can light any way you
+like; a photo of a prop is a flat card that only matches the lighting it was shot in. Two
+decisions followed from drawing it. The words went on the ribbon, not the gold, because the
+ribbon runs off the seal onto the paper and brown ink on the dark paper fails 4.5:1. And the
+link's accessible name is the ribbon's text, so what a screen reader hears is what the eye reads.
+Senior-engineer takeaway: when an asset has to live in two themes and several sizes, ask whether
+it can be a function of the tokens before you ask which file format to save it in.
