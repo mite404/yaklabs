@@ -378,13 +378,15 @@ try {
     el.scrollLeft = 0;
   });
 
-  // The grip fades up in the middle of a lane's title bar, and stays away over the title.
+  // The grip fades up within its circle in the middle of a lane's title bar, and stays away at
+  // the bar's edge and over the title.
   const firstHeader = canvas.locator("article").first().locator(".thread-header");
   const firstHeaderBox = await firstHeader.boundingBox();
-  await page.mouse.move(
-    firstHeaderBox.x + firstHeaderBox.width * 0.6,
-    firstHeaderBox.y + firstHeaderBox.height / 2,
-  );
+  const barMiddle = firstHeaderBox.y + firstHeaderBox.height / 2;
+  await page.mouse.move(firstHeaderBox.x + firstHeaderBox.width * 0.85, barMiddle);
+  await page.waitForTimeout(250);
+  const gripAtEdge = await firstHeader.evaluate((el) => getComputedStyle(el, "::after").opacity);
+  await page.mouse.move(firstHeaderBox.x + firstHeaderBox.width / 2 + 10, barMiddle);
   await page.waitForTimeout(250);
   const gripShown = await firstHeader.evaluate((el) => getComputedStyle(el, "::after").opacity);
   const titleButton = canvas.locator("article").first().locator(".thread-title");
@@ -393,9 +395,9 @@ try {
   const gripHidden = await firstHeader.evaluate((el) => getComputedStyle(el, "::after").opacity);
   const titleCursor = await titleButton.evaluate((el) => getComputedStyle(el).cursor);
   record(
-    "the grip fades up in the middle of the title bar, and not over the title, which is for renaming",
-    gripShown === "1" && gripHidden === "0" && titleCursor === "text",
-    `grip ${gripShown} in the middle, ${gripHidden} over the title; title cursor ${titleCursor}`,
+    "the grip fades up only within its circle, not at the bar's edge or over the title",
+    gripShown === "1" && gripAtEdge === "0" && gripHidden === "0" && titleCursor === "text",
+    `grip ${gripShown} in the middle, ${gripAtEdge} at the edge, ${gripHidden} over the title; title cursor ${titleCursor}`,
   );
   await page.mouse.move(10, 10);
 

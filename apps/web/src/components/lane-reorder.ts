@@ -33,6 +33,7 @@ export type LaneHandlers = {
   onPointerDownCapture: (event: PointerEvent<HTMLElement>) => void;
   onPointerDown: (event: PointerEvent<HTMLElement>) => void;
   onPointerMove: (event: PointerEvent<HTMLElement>) => void;
+  onPointerLeave: (event: PointerEvent<HTMLElement>) => void;
   onPointerUp: () => void;
   onPointerCancel: () => void;
 };
@@ -147,6 +148,35 @@ function liftedOf(drag: Drag | null): [Lift | null, Move | null] {
   return drag?.move ? [drag.lift, drag.move] : [null, null];
 }
 
+// The open lane's title bar whose grip the pointer is over, by the same measure a press takes
+// hold by; null anywhere else.
+function gripUnder(event: PointerEvent<HTMLElement>): HTMLElement | null {
+  const bar = barOf(event.target);
+  if (!(bar instanceof HTMLElement)) return null;
+  return inGripZone(bar.getBoundingClientRect(), event.clientX, event.clientY) ? bar : null;
+}
+
+// Marks the one bar in `lane` whose grip the pointer is over, so its dots show only where the
+// hand does and a press would take hold (Ethan); null clears them all.
+function markGrip(lane: HTMLElement, bar: HTMLElement | null): void {
+  for (const marked of lane.querySelectorAll<HTMLElement>("[data-grip-near]")) {
+    if (marked !== bar) delete marked.dataset.gripNear;
+  }
+  if (bar !== null) bar.dataset.gripNear = "";
+}
+
+// Follows the pointer over a lane, marking the grip it is over while the reorder is on.
+const trackGrip =
+  (enabled: boolean) =>
+  (event: PointerEvent<HTMLElement>): void => {
+    if (enabled) markGrip(event.currentTarget, gripUnder(event));
+  };
+
+// Clears a lane's grip as the pointer leaves it.
+const leaveGrip = (event: PointerEvent<HTMLElement>): void => {
+  markGrip(event.currentTarget, null);
+};
+
 // Whether a press takes hold of its lane: the primary button on a grip, unclaimed. A press
 // something nearer already claimed is theirs: a card's header inside a thread lane arms a
 // carry, which claims its press (preventDefault) rather than stopping it.
@@ -179,6 +209,21 @@ function liftAt(event: PointerEvent<HTMLElement>, id: LaneId, index: number): Li
   };
 }
 
+// Escape puts a lifted lane back where it was; the pointer letting go then moves nothing.
+function usePutBack(lifted: boolean, setDrag: (drag: Drag | null) => void): void {
+  useEffect(() => {
+    const putBack = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      event.preventDefault();
+      setDrag(null);
+    };
+    if (lifted) window.addEventListener("keydown", putBack);
+    return () => {
+      window.removeEventListener("keydown", putBack);
+    };
+  }, [lifted, setDrag]);
+}
+
 /**
  * Reordering by a lane's grip (ADR-089): past a small dead zone the lane lifts, a copy of it
  * rides the pointer, the lane itself waits dimmed in the slot it would take and the lanes it
@@ -197,19 +242,7 @@ export function useReorder(
   const [lift, move] = liftedOf(drag);
   useFloatingCopy(lift, move);
 
-  // Escape puts a lifted lane back where it was; the pointer letting go then moves nothing.
-  const lifted = move !== null;
-  useEffect(() => {
-    const putBack = (event: KeyboardEvent) => {
-      if (event.key !== "Escape") return;
-      event.preventDefault();
-      setDrag(null);
-    };
-    if (lifted) window.addEventListener("keydown", putBack);
-    return () => {
-      window.removeEventListener("keydown", putBack);
-    };
-  }, [lifted]);
+  usePutBack(move !== null, setDrag);
 
   const laneFor = (id: LaneId, index: number): LaneHandlers => ({
     onPointerDownCapture: holdOffGrip(enabled),
@@ -222,9 +255,11 @@ export function useReorder(
       pressed.lane.setPointerCapture(event.pointerId);
     },
     onPointerMove: (event) => {
+      trackGrip(enabled)(event);
       const { clientX, clientY } = event;
       setDrag((current) => current && dragTo(current, clientX, clientY));
     },
+    onPointerLeave: leaveGrip,
     onPointerUp: () => {
       if (drag?.move && drag.move.to !== drag.move.from) onMove(drag.move.id, drag.move.to);
       setDrag(null);

@@ -786,16 +786,18 @@ html[data-dragging="sidebar"] * {
   :is([data-reorder="true"] .lane, .lane-ghost) :is(.thread-header, .card-heading) {
     position: relative;
   }
-  /* The grip: six dots that fade up in the middle of the bar while the pointer is on it, and
-     stay away while it is on the title, which renames. Beneath the dots a veil in the bar's own
-     paper fades out the stretch of title they sit on, so the whole title shows at rest and only
-     yields its middle to the grip on hover: 86px, solid for its middle 47px, so the faded
-     letters stop 16px either side of the 15px dots (Ethan). The dots sit on the collapse's line,
-     the title's capitals, 2px above the bar's middle, rather than down on its baseline.
-     The grip is the only place that takes the lane (Ethan): a 50px circle about the dots, 25px
-     every way from their centre (grip-zone.ts holds the same radius for the press), shows the
-     hand and takes the press; the veil only paints. The floating copy of a lane in flight
-     (lane-reorder.ts) keeps the grip up the whole way, so the hand still holds what it took. */
+  /* The grip: six dots that fade up in the middle of the bar only while the pointer is within
+     its circle, where the hand shows and a press takes the lane (lane-reorder.ts marks the bar
+     data-grip-near), so the dots never wake at the bar's edges or on the title (Ethan).
+     Beneath the dots a veil in the bar's own paper fades out the stretch of title they sit on,
+     so the whole title shows at rest and only yields its middle to the grip: 86px, solid for
+     its middle 47px, so the faded letters stop 16px either side of the 15px dots (Ethan). The
+     dots sit on the collapse's line, the title's capitals, 2px above the bar's middle, rather
+     than down on its baseline. The grip is the only place that takes the lane (Ethan): a 50px
+     circle about the dots, 25px every way from their centre (grip-zone.ts holds the same
+     radius for the press and the mark), shows the hand and takes the press; the veil only
+     paints. The floating copy of a lane in flight (lane-reorder.ts) keeps the grip up the
+     whole way, so the hand still holds what it took. */
   :is([data-reorder="true"] .lane, .lane-ghost) :is(.thread-header, .card-heading)::before,
   :is([data-reorder="true"] .lane, .lane-ghost) :is(.thread-header, .card-heading)::after {
     content: "";
@@ -832,23 +834,11 @@ html[data-dragging="sidebar"] * {
     background-clip: content-box;
     cursor: grab;
   }
-  [data-reorder="true"] .lane :is(.thread-header, .card-heading):hover::before,
-  [data-reorder="true"] .lane :is(.thread-header, .card-heading):hover::after,
+  [data-reorder="true"] .lane :is(.thread-header, .card-heading)[data-grip-near]::before,
+  [data-reorder="true"] .lane :is(.thread-header, .card-heading)[data-grip-near]::after,
   .lane.lane-ghost :is(.thread-header, .card-heading)::before,
   .lane.lane-ghost :is(.thread-header, .card-heading)::after {
     opacity: 1;
-  }
-  [data-reorder="true"]
-    .lane
-    :is(.thread-header, .card-heading):has(
-      :is(h2, .card-heading-text, .thread-rename):hover
-    )::before,
-  [data-reorder="true"]
-    .lane
-    :is(.thread-header, .card-heading):has(
-      :is(h2, .card-heading-text, .thread-rename):hover
-    )::after {
-    opacity: 0;
   }
   /* The title hugs its text so the whole thing shows at rest; it only clips with an ellipsis
      once it outgrows the bar itself (the rename button's own clip is at the top of this file). */
