@@ -227,11 +227,11 @@ export function Band() {
 /** The seal and the way back, closing the page. */
 export function Closing() {
   return (
-    <section className="land-close" aria-label="Back to Kay">
+    <section className="land-close" aria-label="Back to Bonsai">
       <Seal size={168} />
       <div className="land-cta">
         <Link to="/" className="btn">
-          Back to Kay
+          Back to Bonsai
         </Link>
       </div>
     </section>
