@@ -787,7 +787,11 @@ html[data-dragging="sidebar"] * {
      of it that drags, and stay away while it is on the title, which renames. Beneath the dots a
      veil in the bar's own paper fades out the stretch of title they sit on, so the whole title
      shows at rest and only yields its middle to the grip on hover. The veil is the grip's hit
-     area too: a press on it lands on the bar, never on the title under it. */
+     area too: a press on it lands on the bar, never on the title under it. It is 86px, the
+     46px it was and 20px more on either side (Ethan): the title turns from rename to grab 20px
+     sooner, and its solid middle (30% to 70%, 34px) leaves the faded letters some 10px of
+     paper either side of the 15px dots. The dots sit on the collapse's line, the title's
+     capitals, 2px above the bar's middle, rather than down on its baseline. */
   [data-reorder="true"] .lane :is(.thread-header, .card-heading)::before,
   [data-reorder="true"] .lane :is(.thread-header, .card-heading)::after {
     content: "";
@@ -797,7 +801,7 @@ html[data-dragging="sidebar"] * {
   }
   [data-reorder="true"] .lane :is(.thread-header, .card-heading)::before {
     inset: 0 auto 0 50%;
-    width: 46px;
+    width: 86px;
     transform: translateX(-50%);
     background: linear-gradient(
       to right,
@@ -808,7 +812,7 @@ html[data-dragging="sidebar"] * {
     );
   }
   [data-reorder="true"] .lane :is(.thread-header, .card-heading)::after {
-    top: 50%;
+    top: calc(50% - 2px);
     left: 50%;
     width: 15px;
     height: 10px;
