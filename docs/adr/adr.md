@@ -2541,3 +2541,23 @@ link's name is its `aria-label`, the ribbon's words, so a screen reader still he
 eye reads. Alternatives weighed: `will-change` on the link, which in Chrome only moved the
 redraw to after the growth; and a moss copy of the ribbon fading over the ink one, which left
 a hairline of the ink at the moss's edges in the dark theme.
+
+## ADR-161 - The site is light only
+
+2026-10-01 - Accepted (Ethan: "i never tweaked dark mode. let's delete it ... i don't want
+someone to view something i didn't finesse"). Amends ADR-046 and ADR-090, whose dark mode
+for every surface now stays in the catalog.
+The app shows the light theme to every visitor, whatever the OS or the browser prefers. The
+account menu's Theme choice is gone, with the hook that followed the OS, the script that set
+the theme before React loaded and the remembered choice; nothing in the app sets
+`data-theme="dark"`, so the catalog's dark tokens never apply. The root declares
+`color-scheme: only light`, so scrollbars and form fields stay light and a browser that darkens
+pages on its own leaves this one alone. The app's own dark-only rules and `dark:` utilities
+went with it, the welcome always says good morning, and the design tooling page no longer pins
+the light theme, having nothing to pin against. Its hero lost the "Themes 2" figure.
+The catalog keeps its dark theme (Ethan: "you can leave dark mode in the catalogue"): its
+tokens, Storybook's theme switch and verify-ui-drift's dark captures and baselines are as they
+were, and so are the landing page's pictures and rows that show dark.
+Alternatives weighed: deleting dark from the catalog as well, which would have taken the
+tooling's dark captures and baselines with it; and keeping the code behind a switch that is
+never offered, which leaves untested paths a visitor's browser could still reach.

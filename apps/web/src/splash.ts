@@ -49,7 +49,7 @@ export function lookForVisit(asked: SplashStyle | null, visits: number): SplashS
   return CYCLE[at];
 }
 
-// The painting reaches the CSS as an attribute on <html>, the way the theme does: index.css
+// The painting reaches the CSS as an attribute on <html>, as the title bar's look does: index.css
 // draws the landscape and the abstract strokes off `data-splash`.
 function apply(style: SplashStyle): void {
   document.documentElement.dataset.splash = style;

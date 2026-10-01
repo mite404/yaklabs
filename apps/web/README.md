@@ -33,7 +33,8 @@ title bar while one of them is on screen. Nothing of the Demo is kept; a reload 
 The app draws itself as a desktop window (ADR-094): rounded on the page's ground, full-bleed
 below 768px. The title bar runs its whole width: decorative traffic lights, the sidebar toggle,
 the open threads as tabs with "New thread", then the data marker (where threads are kept), the
-layout switch (Thread, Browser, Canvas), the bell and the account, which holds the theme. Below
+layout switch (Thread, Browser, Canvas), the bell and the account, which holds the title bar's look.
+Below
 it the sidebar (shadcn's `sidebar-16` pattern) opens to Kay, Documentation, Lab and the project
 tree, and collapses to a 56px rail of places. A project row folds its main threads, a main's
 count ("^ 2") folds its children, and the "+" starts a main in that project.
@@ -104,8 +105,9 @@ pnpm --filter web build      # build/client, served by the gateway Worker as sta
 `catalog` cascade layer between Tailwind's preflight and its utilities, so the catalog keeps
 its element styles while a class on a shadcn primitive still wins (ADR-082). Where the catalog
 styles a bare `button` or `a`, the components layer puts preflight back for any element shadcn
-renders (it carries a `data-slot`), so a shadcn control shows only its own classes. The theme is
-the root's `data-theme`, set by `src/theme.ts` and booted from the prerendered shell.
+renders (it carries a `data-slot`), so a shadcn control shows only its own classes. The site is
+light only (ADR-161): nothing sets the root's `data-theme`, and the root declares
+`color-scheme: only light`.
 
 ## Prove it in a browser
 

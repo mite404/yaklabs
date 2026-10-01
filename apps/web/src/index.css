@@ -20,11 +20,6 @@
   outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
-/* shadcn's ghost button hovers at half strength in dark mode (dark:hover:bg-muted/50). The bar
-   is the same in either theme (ADR-110), so its hover is the full fill there too. */
-:root[data-theme="dark"] .chrome-surface .dark\:hover\:bg-muted\/50:hover {
-  background-color: var(--muted);
-}
 /* The empty canvas's raised surface (ADR-136) draws a solid edge; the open space's own
    `border-dashed` utility would win over a layered rule, so this one is unlayered too. */
 .open-space:has(> .splash) {
@@ -92,6 +87,12 @@
   --panel-pin: 250ms;
   /* The rows' fade as the panel closes: at 0 by the curve's 75% mark, 27% of the peek's 220ms. */
   --rows-leave: 60ms;
+}
+/* The site is light only (ADR-161): the catalog's dark tokens wait behind data-theme="dark",
+   which nothing here sets, and `only light` keeps the browser's own surfaces (scrollbars, form
+   fields) light and stops a browser that darkens pages itself from doing so. */
+:root {
+  color-scheme: only light;
 }
 /* The pin and the unpin by the toggle: the gap that pushes the workspace and the panel sliding
    behind the rail move on one clock with the title bar's lead that carries the tabs
@@ -465,9 +466,7 @@ html[data-dragging="sidebar"] * {
      landscape or the abstract strokes by <html data-splash> (splash.ts), under the same paper
      wash and the same clearing of plain paper behind the words, fading out in every direction,
      so the two read as one treatment with a different picture. A third look, Vitruvian, draws
-     the empty canvas's sheet instead (below). The greeting names the morning in the light theme
-     and the evening in the dark one, both in the DOM, one shown. The scroll area drops its
-     gutters for it (thread.css, data-empty), and the welcome fills it to centre the words. */
+     the empty canvas's sheet instead (below). The scroll area drops its gutters for it (thread.css, data-empty), and the welcome fills it to centre the words. */
   .welcome {
     --clearing: var(--paper);
     position: relative;
@@ -489,10 +488,6 @@ html[data-dragging="sidebar"] * {
     background:
       linear-gradient(var(--splash-wash), var(--splash-wash)),
       url("/splash/abstract.webp") center / cover no-repeat;
-  }
-  html[data-theme="dark"] .welcome [data-part="morning"],
-  html:not([data-theme="dark"]) .welcome [data-part="evening"] {
-    display: none;
   }
   .welcome-art::after {
     content: "";
@@ -737,13 +732,9 @@ html[data-dragging="sidebar"] * {
       box-shadow: 0 0 0 3px var(--olive);
     }
   }
-  /* Which demo is on, in the title bar's own green (Ethan); the dark theme's paper is too dark
-     for that green, so there it takes the green lifted toward the cream. */
+  /* Which demo is on, in the title bar's own green (Ethan). */
   .demo-title {
     color: var(--chrome);
-  }
-  html[data-theme="dark"] .demo-title {
-    color: color-mix(in srgb, var(--chrome) 35%, var(--yak-cream));
   }
 
   /* A divider that drags shows a hint of a line while the pointer is on it (ADR-089): full ink

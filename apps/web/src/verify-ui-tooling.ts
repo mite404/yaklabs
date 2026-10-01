@@ -8,7 +8,6 @@ export const PICTURES = "/verify-ui-tooling";
 /** A run's shape in numbers, as the review app's summary row puts it. */
 export const STATS = [
   { label: "Rendering engines", value: "3" },
-  { label: "Themes", value: "2" },
   { label: "Stories in the inventory", value: "85" },
   { label: "References CI can approve", value: "0" },
 ];

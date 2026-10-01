@@ -1,10 +1,9 @@
-import { Outlet, useOutletContext } from "react-router";
+import { Outlet } from "react-router";
 import { RuntimeProvider } from "../runtime";
 import { RequireSession } from "../session";
 import { Deck } from "../shell/deck";
 import { ShellProvider, useShell } from "../shell/model";
 import { Window } from "../shell/window";
-import type { ThemeChoice } from "../theme";
 import { DemoOverlay } from "../world/provider";
 import { ShowBar } from "../world/ShowBar";
 
@@ -24,13 +23,12 @@ function Page() {
  * on screen. A show's controls take the banner row while one of its threads is on screen.
  */
 export default function Protected() {
-  const theme = useOutletContext<ThemeChoice>();
   return (
     <RequireSession>
       <RuntimeProvider>
         <DemoOverlay>
           <ShellProvider>
-            <Window theme={theme} banner={<ShowBar />}>
+            <Window banner={<ShowBar />}>
               <Deck />
               <Page />
             </Window>

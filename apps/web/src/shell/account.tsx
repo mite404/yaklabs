@@ -16,16 +16,10 @@ import { UserRound } from "lucide-react";
 import type { ReactNode } from "react";
 import { env } from "../env";
 import type { ChromeChoice, ChromeStyle } from "../chrome";
-import type { ThemeChoice, ThemePreference } from "../theme";
 
-// What the account menu lets the visitor change: the theme and the title bar's look.
-export type Looks = { theme: ThemeChoice; chrome: ChromeChoice };
-
-const THEMES: { value: ThemePreference; label: string }[] = [
-  { value: "light", label: "Light" },
-  { value: "dark", label: "Dark" },
-  { value: "system", label: "System" },
-];
+// What the account menu lets the visitor change: the title bar's look. The site is light only
+// (ADR-161), so there is no theme to choose.
+export type Looks = { chrome: ChromeChoice };
 
 const CHROMES: { value: ChromeStyle; label: string }[] = [
   { value: "solid", label: "Solid" },
@@ -51,28 +45,6 @@ function ChromeChoices({ chrome }: { chrome: ChromeChoice }) {
         }}
       >
         {CHROMES.map(({ value, label }) => (
-          <DropdownMenuRadioItem key={value} value={value}>
-            {label}
-          </DropdownMenuRadioItem>
-        ))}
-      </DropdownMenuRadioGroup>
-    </DropdownMenuGroup>
-  );
-}
-
-// The light, dark or system look (ADR-090), which every account menu carries.
-function ThemeChoices({ theme }: { theme: ThemeChoice }) {
-  return (
-    <DropdownMenuGroup>
-      <DropdownMenuLabel>Theme</DropdownMenuLabel>
-      <DropdownMenuRadioGroup
-        value={theme.preference}
-        onValueChange={(value) => {
-          const chosen = THEMES.find((each) => each.value === value);
-          if (chosen) theme.choose(chosen.value);
-        }}
-      >
-        {THEMES.map(({ value, label }) => (
           <DropdownMenuRadioItem key={value} value={value}>
             {label}
           </DropdownMenuRadioItem>
@@ -108,9 +80,8 @@ function AccountMenu({
           />
         }
       >
-        {/* The ring keeps the avatar's own blend: it darkens on the sidebar's paper in light
-            and lightens in dark, and a blend is also what keeps the page's text on greyscale
-            smoothing (ADR-110). */}
+        {/* The ring keeps the avatar's own blend: it darkens on the sidebar's paper, and a
+            blend is also what keeps the page's text on greyscale smoothing (ADR-110). */}
         <Avatar>{face}</Avatar>
       </DropdownMenuTrigger>
       <DropdownMenuContent side={side} align={align} className="w-56">
@@ -121,7 +92,7 @@ function AccountMenu({
 }
 
 // Signed in with WorkOS (ADR-084): the picture or initials, the email, and the way out.
-function WorkOsAccount({ theme, chrome, side, align }: Looks & Placement) {
+function WorkOsAccount({ chrome, side, align }: Looks & Placement) {
   const { user, signOut } = useAuth();
   if (user === null) return null;
   const face = (
@@ -146,8 +117,6 @@ function WorkOsAccount({ theme, chrome, side, align }: Looks & Placement) {
         </DropdownMenuItem>
       </DropdownMenuGroup>
       <DropdownMenuSeparator />
-      <ThemeChoices theme={theme} />
-      <DropdownMenuSeparator />
       <ChromeChoices chrome={chrome} />
     </AccountMenu>
   );
@@ -155,7 +124,7 @@ function WorkOsAccount({ theme, chrome, side, align }: Looks & Placement) {
 
 // A build without sign-in: Kay's face, the one person who is always there (ADR-114), and a
 // menu that says sign-in is off. A signed-in account keeps its own face.
-function LocalAccount({ theme, chrome, side, align }: Looks & Placement) {
+function LocalAccount({ chrome, side, align }: Looks & Placement) {
   const face = (
     <>
       <AvatarImage src="/kay/kay-face.webp" alt="" />
@@ -172,15 +141,13 @@ function LocalAccount({ theme, chrome, side, align }: Looks & Placement) {
         </DropdownMenuLabel>
       </DropdownMenuGroup>
       <DropdownMenuSeparator />
-      <ThemeChoices theme={theme} />
-      <DropdownMenuSeparator />
       <ChromeChoices chrome={chrome} />
     </AccountMenu>
   );
 }
 
 /**
- * The account, with the theme and the bar's look; WorkOS's user when the build signs in. The
+ * The account, with the bar's look; WorkOS's user when the build signs in. The
  * sidebar places it at its foot, opening upward so its menu stays on screen (ADR-121).
  * @param side Which side of the trigger the menu opens on.
  * @param align Which end of the trigger the menu aligns to.

@@ -8,18 +8,12 @@ import { WelcomeArt } from "./splash";
 import { SplashSwitch } from "./splash-switch";
 import { ACTION, Actions, Projects } from "./welcome-sections";
 
-// The part of the day the greeting names: the morning in the light theme, the evening in the
-// dark one (Ethan), rather than the clock. Both are in the DOM; index.css shows the theme's.
-type Part = "morning" | "evening";
-const PARTS: readonly Part[] = ["morning", "evening"];
-
 const DATE = new Intl.DateTimeFormat("en-US", { weekday: "long", month: "long", day: "numeric" });
 
-// "Good morning, Ethan", or "Good morning" for a build with no sign-in.
-const greetingFor = (part: Part, name: string | null): string =>
-  `Good ${part}${name === null ? "" : `, ${name}`}`;
-
-const lineFor = (part: Part): string => `Spend your ${part} on the thing that matters.`;
+// "Good morning, Ethan", or "Good morning" for a build with no sign-in: the morning always
+// (Ethan), rather than the clock.
+const greetingFor = (name: string | null): string =>
+  `Good morning${name === null ? "" : `, ${name}`}`;
 
 function Greeting({ name }: { name: string | null }) {
   return (
@@ -27,14 +21,10 @@ function Greeting({ name }: { name: string | null }) {
       <p className="text-xs font-medium tracking-[0.08em] text-soft-ink uppercase">
         {DATE.format(new Date())}
       </p>
-      {PARTS.map((part) => (
-        <div key={part} data-part={part}>
-          <h1 className="mt-1 font-sans text-2xl font-semibold tracking-tight text-ink">
-            {greetingFor(part, name)}
-          </h1>
-          <p className="mt-1 text-soft-ink">{lineFor(part)}</p>
-        </div>
-      ))}
+      <h1 className="mt-1 font-sans text-2xl font-semibold tracking-tight text-ink">
+        {greetingFor(name)}
+      </h1>
+      <p className="mt-1 text-soft-ink">Spend your morning on the thing that matters.</p>
     </div>
   );
 }
@@ -53,7 +43,7 @@ const GreetingLine = env.auth.kind === "workos" ? WorkOsGreeting : LocalGreeting
 
 /**
  * A new thread's welcome (ADR-136), after Kay's own new tab: the mark, the date, a greeting for
- * the theme's time of day, the projects, and the actions a thread can open with, with the seal
+ * the morning, the projects, and the actions a thread can open with, with the seal
  * that leads to the design tooling page pinned above the greeting at the column's right, tilted
  * like a medal on a lapel (ADR-160). It shows in the main
  * pane while the thread has no turns, over the painting `<html data-splash>` names, and leaves

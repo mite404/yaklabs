@@ -181,7 +181,7 @@ function TabButton({
       id={tabId(thread.id)}
       aria-controls={panelId(thread.id)}
       data-hovered={hover.hovered === thread.id || undefined}
-      className="tab h-[30px] w-full min-w-0 flex-none justify-start gap-2 rounded-[var(--radius)] bg-transparent px-2.5 text-xs font-normal text-soft-ink data-hovered:pr-7 data-hovered:text-ink data-hovered:not-data-active:bg-paper-deep data-active:bg-[var(--chrome-pill)] data-active:pr-13 data-active:text-ink dark:text-soft-ink dark:data-hovered:text-ink dark:data-active:border-transparent dark:data-active:bg-[var(--chrome-pill)] dark:data-active:text-ink"
+      className="tab h-[30px] w-full min-w-0 flex-none justify-start gap-2 rounded-[var(--radius)] bg-transparent px-2.5 text-xs font-normal text-soft-ink data-hovered:pr-7 data-hovered:text-ink data-hovered:not-data-active:bg-paper-deep data-active:bg-[var(--chrome-pill)] data-active:pr-13 data-active:text-ink"
       {...hover.handlers(thread.id)}
       onDoubleClick={onRename}
       onAuxClick={(event) => {

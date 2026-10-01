@@ -44,12 +44,11 @@ export type SidebarWidth = { width: number; onWidth: (px: number) => void };
  * workspace aside, and its right edge resizes it. Closed on a desktop it peeks: it slides out
  * from behind the rail's edge over the workspace (sidebar-peek.tsx), and the stage around it
  * clips it at that edge, so it never covers the rail. On a phone it is the drawer that pushes
- * the page aside (ADR-121), listing the places as rows above the tree, with the account and the
- * theme at its foot, outside the landmark.
+ * the page aside (ADR-121), listing the places as rows above the tree, with the account at its
+ * foot, outside the landmark.
  * @param rail The desktop's rail, where the pointer may rest for the panel to peek.
  */
 export function AppSidebar({
-  theme,
   chrome,
   width,
   onWidth,
@@ -83,7 +82,7 @@ export function AppSidebar({
         </div>
         <PhoneOnly>
           <SidebarFooter>
-            <Account theme={theme} chrome={chrome} side="top" align="start" />
+            <Account chrome={chrome} side="top" align="start" />
           </SidebarFooter>
         </PhoneOnly>
         <SidebarResizeHandle width={width} onWidth={onWidth} controls={SIDEBAR_ID} />

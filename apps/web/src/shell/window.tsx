@@ -2,7 +2,6 @@ import { SidebarProvider, useSidebar } from "@yaklabs/ui/components/sidebar";
 import { useRef, type ReactNode } from "react";
 import { useChrome } from "../chrome";
 import { useMatch } from "react-router";
-import type { ThemeChoice } from "../theme";
 import { Rail } from "./rail";
 import { SharePermissions } from "./share-permissions";
 import { AppSidebar } from "./sidebar";
@@ -38,15 +37,7 @@ function Workspace({ children }: { children: ReactNode }) {
  * @param banner A full-width row between the title bar and the body, such as a scripted demo's
  * controls; nothing by default.
  */
-export function Window({
-  theme,
-  banner,
-  children,
-}: {
-  theme: ThemeChoice;
-  banner?: ReactNode;
-  children: ReactNode;
-}) {
+export function Window({ banner, children }: { banner?: ReactNode; children: ReactNode }) {
   const choice = useSidebarOpen();
   const sized = useSidebarWidth();
   const chrome = useChrome();
@@ -64,10 +55,10 @@ export function Window({
           className="min-h-0 flex-1 flex-col transition-transform duration-300 ease-out motion-reduce:transition-none max-md:data-mobile-open:translate-x-(--sidebar-width-mobile)"
           style={sidebarVars(sized.width)}
         >
-          <TitleBar theme={theme} chrome={chrome} />
+          <TitleBar chrome={chrome} />
           {banner}
           <div data-slot="window-body" className="relative flex min-h-0 flex-1">
-            <Rail ref={rail} theme={theme} chrome={chrome} />
+            <Rail ref={rail} chrome={chrome} />
             {/* The stage: the panel's containing block, beside the workspace it sits over. It
                 clips, never hides (overflow: clip is no scroll container, so nothing a focus
                 or a scroll into view does can scroll it), and only on a desktop: the phone's
@@ -76,7 +67,7 @@ export function Window({
               data-slot="stage"
               className="relative flex min-h-0 min-w-0 flex-1 md:overflow-clip"
             >
-              <AppSidebar theme={theme} chrome={chrome} rail={rail} {...sized} />
+              <AppSidebar chrome={chrome} rail={rail} {...sized} />
               <Workspace>{children}</Workspace>
             </div>
           </div>

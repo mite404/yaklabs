@@ -12,6 +12,9 @@ Decisions behind these rules live in `docs/adr/adr.md` (ADR-033 to ADR-035); tok
 
 ## Colour
 
+The site is light only (ADR-161). The dark values in these rules belong to the catalog, whose
+dark theme stays for its stories and the design tooling.
+
 ### 1. There is no black: neutrals are olive-tinted
 
 Headings, body copy, and the "Apply for this role" button all share one olive-yellow hue (about
