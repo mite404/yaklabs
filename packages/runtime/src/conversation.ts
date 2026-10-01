@@ -90,8 +90,8 @@ export function settleReply(turn: AgentMessage, stopped: boolean): AgentMessage 
 
 /**
  * The transcript with the agent's settled turn added at `at`, as the reply folded it, under the
- * next free `a<n>` id: minted here, not when the reply began, since another reply on the thread
- * may have been saved meanwhile.
+ * next free `a<n>` id: minted as it is saved, since the id the reply started with is the
+ * request's, and the loop runs a thread's replies one at a time, so the next id is its own.
  */
 export function withAgentTurn(transcript: Transcript, turn: AgentMessage, at: string): Transcript {
   const saved: AgentMessage = { ...turn, id: nextId(transcript.messages, "a") };

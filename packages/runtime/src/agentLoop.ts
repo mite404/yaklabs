@@ -49,6 +49,7 @@ type Loop = {
   host: Required<LoopHost>;
   session?: Promise<Session>;
   replies: Map<string, { stop: AbortController; threadId: ThreadId }>; // requestId → live reply
+  queues: Map<ThreadId, Promise<void>>; // threadId → the reply it waits out
   lastState?: string;
 };
 
@@ -159,9 +160,15 @@ async function send(loop: Loop, command: CommandOf<"send">): Promise<void> {
   await meet(session.faults.send);
   const stop = new AbortController();
   loop.replies.set(requestId, { stop, threadId });
+  // One reply per thread: a send waits out the replies ahead of it, failed or not, so the
+  // transcript keeps every exchange whole and in the order it was asked.
+  const answer = () => reply(loop, session, command, stop.signal);
+  const queued = (loop.queues.get(threadId) ?? Promise.resolve()).then(answer, answer);
+  loop.queues.set(threadId, queued);
   try {
-    await reply(loop, session, command, stop.signal);
+    await queued;
   } finally {
+    if (loop.queues.get(threadId) === queued) loop.queues.delete(threadId);
     loop.replies.delete(requestId);
     pushState(loop, session);
   }
@@ -279,6 +286,7 @@ export function createAgentLoop(host: LoopHost): (data: unknown) => Promise<void
       schedule: host.schedule ?? timeoutSchedule,
     },
     replies: new Map(),
+    queues: new Map(),
   };
 
   return (data) => {
