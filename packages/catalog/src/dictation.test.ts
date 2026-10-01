@@ -2,6 +2,7 @@ import { expect, it } from "vitest";
 import {
   appendDictation,
   DEFAULT_ONLY_NOTICE,
+  deviceHint,
   liveNotice,
   NO_SPEECH_NOTICE,
   SILENT_DEFAULT_NOTICE,
@@ -64,4 +65,11 @@ it("tells the live modal's user the most pressing thing first, and nothing while
   expect(liveNotice({ ...well, deviceId: "usb", silent: true })).toBe(DEFAULT_ONLY_NOTICE);
   expect(liveNotice({ ...well, silent: true })).toBe(SILENT_DEFAULT_NOTICE);
   expect(liveNotice({ ...well, silent: true, heard: true })).toBeUndefined();
+});
+
+it("says under a live input what it does, and nothing for a simulated one", () => {
+  expect(deviceHint("default", true)).toBe("Turns speech into text");
+  expect(deviceHint("usb", true)).toBe("Waveform only");
+  expect(deviceHint("default", false)).toBeUndefined();
+  expect(deviceHint("usb", false)).toBeUndefined();
 });

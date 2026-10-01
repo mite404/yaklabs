@@ -88,3 +88,17 @@ export function liveNotice(state: {
   if (state.deviceId !== "default") return DEFAULT_ONLY_NOTICE;
   return state.silent && !state.heard ? SILENT_DEFAULT_NOTICE : undefined;
 }
+
+/** The live picker's note: only the system's default input turns speech into words. */
+export const DEFAULT_ONLY_NOTE =
+  "Only System Default turns your speech into text for the compose box. Other inputs show the waveform only.";
+
+/**
+ * What a live input does, under its name in the picker: the system's default turns speech into
+ * text, every other input only draws the waveform (the Web Speech API takes no device). A
+ * simulated recording transcribes whichever is picked, so it says nothing.
+ */
+export function deviceHint(id: string, live: boolean): string | undefined {
+  if (!live) return undefined;
+  return id === "default" ? "Turns speech into text" : "Waveform only";
+}

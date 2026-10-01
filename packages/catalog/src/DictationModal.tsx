@@ -7,6 +7,7 @@ import {
   simulatedTranscript,
   type AudioDevice,
 } from "./dictation";
+import { DevicePicker } from "./DevicePicker";
 import { listenToMicrophone, speechRecognizer, transcribe } from "./liveDictation";
 import { Modal } from "./Modal";
 import { Waveform } from "./Waveform";
@@ -123,55 +124,6 @@ function keyAction(
   return undefined;
 }
 
-// The microphone list: a button naming the current device, and a listbox while it is open.
-function DevicePicker({
-  devices,
-  deviceId,
-  open,
-  onToggle,
-  onPick,
-}: {
-  devices: AudioDevice[];
-  deviceId: string;
-  open: boolean;
-  onToggle: () => void;
-  onPick: (id: string) => void;
-}) {
-  const device = devices.find((item) => item.id === deviceId) ?? {
-    id: "default",
-    label: "System Default",
-  };
-  return (
-    <div className="device-picker">
-      <span className="device-label">Input:</span>
-      <button aria-haspopup="listbox" aria-expanded={open} onClick={onToggle}>
-        {device.label} <span aria-hidden="true">▾</span>
-      </button>
-      {open && (
-        // Options sit directly in the listbox: an <li> there fails axe's listitem rule.
-        // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- a <select> cannot draw these radio-dot rows; this is the ARIA listbox pattern
-        <div className="device-list" role="listbox" aria-label="Choose microphone">
-          {devices.map((item) => (
-            <button
-              key={item.id}
-              className="device-option"
-              // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- <option> is valid only inside a <select>, which this list cannot be
-              role="option"
-              aria-selected={item.id === deviceId}
-              onClick={() => {
-                onPick(item.id);
-              }}
-            >
-              <span className="radio" aria-hidden="true" />
-              {item.label}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
 /**
  * Full-attention dictation: a modal over the thread that makes clear typing is paused
  * while recording, with a large center-playhead waveform, a live transcript preview,
@@ -239,6 +191,7 @@ export function DictationModal({
         <DevicePicker
           devices={devices}
           deviceId={deviceId}
+          live={live}
           open={picking}
           onToggle={() => {
             setPicking(!picking);

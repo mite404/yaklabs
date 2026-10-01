@@ -11,7 +11,7 @@
   align-items: center;
   gap: 12px;
 }
-.dictation-header p {
+.dictation-header > p {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -77,6 +77,34 @@
   background: transparent;
   text-align: left;
   font-size: 13px;
+}
+/* With a live microphone each input says under its name what it does, and a note closes the
+   list: only the system's default turns speech into text (Ethan). Secondary words in the guide's
+   12px soft ink; the note sits under a hairline, inset as the options are. The radio stays on
+   the name's line. */
+.device-picker .device-option:has(.device-hint) {
+  align-items: flex-start;
+}
+.device-picker .device-option:has(.device-hint) .radio {
+  margin-top: 2px;
+}
+.device-name {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.device-hint {
+  font-size: 12px;
+  color: var(--soft-ink);
+}
+.device-note {
+  margin: 6px 0 0;
+  padding: 8px 10px 4px;
+  max-width: 250px;
+  border-top: 1px solid var(--hairline);
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--soft-ink);
 }
 .device-picker .device-option:hover,
 .device-picker .device-option[aria-selected="true"] {
