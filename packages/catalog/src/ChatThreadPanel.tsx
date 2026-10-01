@@ -27,6 +27,7 @@ import type { Recover } from "./QuietProse";
 import { ReadingTools } from "./ReadingTools";
 import { markSearch, ringRange, type Find } from "./searchMarks";
 import { Recap } from "./Recap";
+import { ThreadRenameContext } from "./threadRename";
 import { shouldShowRecap, type RecapItem, type ThreadActivity } from "./recapRules";
 import {
   applyChunk,
@@ -162,7 +163,8 @@ function RenameField({
 // The title bar. With `onRename` the title is a button that becomes a field on click: Enter or
 // leaving the field keeps the new name, Escape or an empty name keeps the old one (ADR-089).
 // Every way out goes through the field's blur, so the field is never torn down inside the key
-// event that closed it. The host's `actions` sit at the bar's end (ADR-126).
+// event that closed it. The host's `actions` sit at the bar's end (ADR-126), and can open the
+// title as a field themselves (useThreadRename), as the thread menu's Rename does.
 function ThreadHeader({
   title,
   leading,
@@ -184,6 +186,9 @@ function ThreadHeader({
     if (next !== "" && next !== title) onRename?.(next);
     setEditing(false);
   };
+  const startEditing = () => {
+    setEditing(true);
+  };
   return (
     <header className="thread-header">
       {leading !== undefined && <div className="header-leading">{leading}</div>}
@@ -196,9 +201,7 @@ function ThreadHeader({
               type="button"
               className="thread-title"
               title="Rename this thread"
-              onClick={() => {
-                setEditing(true);
-              }}
+              onClick={startEditing}
             >
               {title}
             </button>
@@ -207,7 +210,11 @@ function ThreadHeader({
           )}
         </h2>
       )}
-      {actions !== undefined && <div className="thread-header-actions">{actions}</div>}
+      {actions !== undefined && (
+        <ThreadRenameContext value={onRename === undefined ? undefined : startEditing}>
+          <div className="thread-header-actions">{actions}</div>
+        </ThreadRenameContext>
+      )}
     </header>
   );
 }

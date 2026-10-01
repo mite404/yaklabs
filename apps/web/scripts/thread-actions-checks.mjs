@@ -4,10 +4,12 @@
 import { BASE, openApp } from "./lever.mjs";
 import { gutterHolds, rowGutters } from "./thread-row-gutter.mjs";
 
-// The menu's items, in Ethan's order (ADR-126).
+// The menu's items, in Ethan's order (ADR-126), as a phone's bar shows them, with no title to
+// rename.
 const ITEMS = ["Copy thread URL", "Share thread", "Pin thread", "Snooze", "Archive", "Delete"];
-// A tab's menu leads with Rename (ADR-138).
-const TAB_ITEMS = ["Rename", ...ITEMS];
+// A tab's menu, and a lane's, which is the same menu (Ethan): Rename heads the group after
+// sharing.
+const TAB_ITEMS = ["Copy thread URL", "Share thread", "Rename", ...ITEMS.slice(2)];
 const DEMO = `${BASE}/?scenario=demo`;
 
 /** The thread panel on screen: a main thread has no title bar, so its name is the panel's label. */
@@ -98,7 +100,7 @@ async function pinOrSnoozeChild(page, title, item) {
 
 /** The checks, keyed A1 to A9, each resolving to { ok, detail }; Share's are in share-checks.mjs. */
 export const threadActionChecks = {
-  // The active tab carries the "⋯" with Rename and the six items, and the main thread has no
+  // The active tab carries the "⋯" with the six items and Rename, and the main thread has no
   // title bar of its own (ADR-138).
   async A1(browser) {
     const page = await openDemo(browser);

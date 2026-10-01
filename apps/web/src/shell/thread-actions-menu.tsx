@@ -1,4 +1,4 @@
-import { LinkIcon } from "@yaklabs/catalog/icons";
+import { LinkIcon, useThreadRename } from "@yaklabs/catalog";
 import type { ThreadSummary } from "@yaklabs/runtime";
 import { Button } from "@yaklabs/ui/components/button";
 import {
@@ -53,12 +53,13 @@ function ArchiveItem({ shell, thread }: ItemProps) {
 }
 
 /**
- * The thread menu's items (ADR-126), in Ethan's order: Copy thread URL, Share thread, Pin,
- * Snooze, Archive, then Delete apart. Pin and Archive name what they would do now. Delete keeps
- * ink for its words, which the red does not clear on a dark menu (ADR-065); its icon is red.
+ * The thread menu's items (ADR-126), in Ethan's order and the same for a main thread's tab and a
+ * lane's title bar: Copy thread URL and Share thread; then Rename, Pin, Snooze and Archive; then
+ * Delete apart. Pin and Archive name what they would do now. Delete keeps ink for its words,
+ * which the red does not clear on a dark menu (ADR-065); its icon is red.
  * @param beforeSnooze Runs before the snooze card opens, to bring the thread into view.
- * @param onRename When set, Rename leads the menu and calls this; a tab uses it to open its
- * title as a field.
+ * @param onRename Opens the thread's title as a field, in its tab or its title bar; without it
+ * the menu has no Rename, as on a phone's bar, which shows no title to rename.
  */
 export function ThreadActionsContent({
   shell,
@@ -73,12 +74,6 @@ export function ThreadActionsContent({
   return (
     <DropdownMenuContent align="end" className="w-64" {...props}>
       <DropdownMenuGroup>
-        {onRename !== undefined && (
-          <DropdownMenuItem onClick={onRename}>
-            <Pencil aria-hidden="true" />
-            Rename
-          </DropdownMenuItem>
-        )}
         <DropdownMenuItem
           onClick={() => {
             shell.copyUrl(thread.id);
@@ -88,6 +83,15 @@ export function ThreadActionsContent({
           Copy thread URL
         </DropdownMenuItem>
         <ShareItem shell={shell} thread={thread} />
+      </DropdownMenuGroup>
+      <DropdownMenuSeparator />
+      <DropdownMenuGroup>
+        {onRename !== undefined && (
+          <DropdownMenuItem onClick={onRename}>
+            <Pencil aria-hidden="true" />
+            Rename
+          </DropdownMenuItem>
+        )}
         <PinItem shell={shell} thread={thread} />
         <SnoozeItem shell={shell} thread={thread} before={beforeSnooze} />
         <ArchiveItem shell={shell} thread={thread} />
@@ -107,8 +111,10 @@ export function ThreadActionsContent({
 
 // The "⋯" in a lane thread's own title bar, on a desktop. It shows while the bar is hovered or
 // holds focus, and while its menu is open (index.css keys on data-thread-menu); it is only
-// faded out, so it stays in the tab order and the accessibility tree.
+// faded out, so it stays in the tab order and the accessibility tree. Its Rename opens the
+// bar's title as a field, as a tab's Rename opens the tab's.
 function ThreadMenuButton({ shell, thread }: { shell: Shell; thread: ThreadSummary }) {
+  const rename = useThreadRename(); // → the bar's own rename, or undefined
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
@@ -124,7 +130,7 @@ function ThreadMenuButton({ shell, thread }: { shell: Shell; thread: ThreadSumma
       >
         <Ellipsis aria-hidden="true" />
       </DropdownMenuTrigger>
-      <ThreadActionsContent shell={shell} thread={thread} />
+      <ThreadActionsContent shell={shell} thread={thread} onRename={rename} />
     </DropdownMenu>
   );
 }
