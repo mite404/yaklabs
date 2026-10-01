@@ -70,6 +70,14 @@ type Tell = { changed: () => void; subscribe: (listener: () => void) => () => vo
 const repliesOf = (script: Script): Timed[][] =>
   script.beats.flatMap((beat) => (beat.kind === "reply" ? [beat.events] : []));
 
+// Adds `listener` to `listeners` and returns how to take it back.
+function hear(listeners: Set<() => void>, listener: () => void): () => void {
+  listeners.add(listener);
+  return () => {
+    listeners.delete(listener);
+  };
+}
+
 // Take `number` of `script`, idle, at `rate`: a fresh clock, the script's replies still to come,
 // a player that performs its user beats, and a lease on the show's main.
 function seat(script: Script, deps: ShowDeps, number: number, rate: Rate, tell: Tell): Take {
@@ -107,20 +115,18 @@ export function createShow(script: Script, deps: ShowDeps): Show {
   const listeners = new Set<() => void>();
   let rate: Rate = 1;
   const stateOf = (of: Take): ShowState => ({ ...of.player.state(), rate, take: of.number });
+  // Seated after `tell`, whose `changed` reads them; declared first so an early fire is safe.
+  let take: Take;
+  let current: ShowState;
   const tell: Tell = {
     changed: () => {
       current = stateOf(take);
       for (const listener of listeners) listener();
     },
-    subscribe: (listener) => {
-      listeners.add(listener);
-      return () => {
-        listeners.delete(listener);
-      };
-    },
+    subscribe: (listener) => hear(listeners, listener),
   };
-  let take = seat(script, deps, 1, rate, tell);
-  let current = stateOf(take);
+  take = seat(script, deps, 1, rate, tell);
+  current = stateOf(take);
   return {
     thread: main,
     script,

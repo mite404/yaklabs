@@ -90,45 +90,31 @@ const responseFinding = stream(
   400,
 );
 
-const briefDraft = (order: "oldest" | "billing"): Timed[] =>
-  stream(
-    [
-      heading([text("Monday support brief (draft)")]),
-      order === "oldest"
-        ? paragraph([
-            text("Leading with the "),
-            strong("longest-open cases"),
-            text(", as you asked, rather than the largest category."),
-          ])
-        : paragraph([
-            text("Leading with "),
-            strong("billing"),
-            text(", the largest open category, as you asked."),
-          ]),
-      list(
-        order === "oldest"
-          ? [
-              [strong("Access"), text(": 2 open, median 9 days. Both wait on the identity team.")],
-              [strong("Product"), text(": 4 open, median 6 days.")],
-              [strong("Billing"), text(": 12 open, median 2 days. Recent, not stuck.")],
-            ]
-          : [
-              [strong("Billing"), text(": 12 open, median 2 days. Recent, not stuck.")],
-              [strong("Product"), text(": 4 open, median 6 days.")],
-              [strong("Access"), text(": 2 open, median 9 days. Both wait on the identity team.")],
-            ],
+// The draft the reply writes for the answer the script gives: oldest first.
+const briefDraft: Timed[] = stream(
+  [
+    heading([text("Monday support brief (draft)")]),
+    paragraph([
+      text("Leading with the "),
+      strong("longest-open cases"),
+      text(", as you asked, rather than the largest category."),
+    ]),
+    list([
+      [strong("Access"), text(": 2 open, median 9 days. Both wait on the identity team.")],
+      [strong("Product"), text(": 4 open, median 6 days.")],
+      [strong("Billing"), text(": 12 open, median 2 days. Recent, not stuck.")],
+    ]),
+    card(issuesChart),
+    paragraph([
+      text(
+        "Nothing was sent. The draft is yours to edit, and the evidence behind each line is in ",
       ),
-      card(issuesChart),
-      paragraph([
-        text(
-          "Nothing was sent. The draft is yours to edit, and the evidence behind each line is in ",
-        ),
-        strong("Work details"),
-        text(" above."),
-      ]),
-    ],
-    400,
-  );
+      strong("Work details"),
+      text(" above."),
+    ]),
+  ],
+  400,
+);
 
 /** Scenario 1: the whole arc. */
 export const brief: Script = {
@@ -228,7 +214,7 @@ export const brief: Script = {
     { kind: "answer", after: 4500, text: "Oldest first" },
     {
       kind: "reply",
-      events: [activity(500, "Drafting the brief, oldest first."), ...briefDraft("oldest")],
+      events: [activity(500, "Drafting the brief, oldest first."), ...briefDraft],
     },
   ],
 };

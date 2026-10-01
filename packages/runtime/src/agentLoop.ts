@@ -43,12 +43,12 @@ export type LoopHost = {
 type CommandOf<K extends Command["kind"]> = Extract<Command, { kind: K }>;
 type Session = Opened & { agent: AgentSpec; settler: Settler };
 
-// Everything the handlers share: the host, the session `init` started, the live replies, and
-// the last state pushed, so an unchanged one is not pushed again.
+// Shared handler state: the host, the session `init` started, live replies, the last state pushed.
 type Loop = {
   host: Required<LoopHost>;
   session?: Promise<Session>;
   replies: Map<string, { stop: AbortController; threadId: ThreadId }>; // requestId → live reply
+  queues: Map<ThreadId, Promise<void>>; // threadId → the reply it waits out
   lastState?: string;
 };
 
@@ -102,8 +102,7 @@ function pushState(loop: Loop, { store, source }: Session): void {
   loop.host.post(notice);
 }
 
-// Runs one write, then pushes the state it left before answering, so an id the answer names
-// is already in the page's snapshot.
+// Runs one write, then pushes the state it left before answering, so the page has its ids.
 async function write(
   loop: Loop,
   apply: (session: Session) => Extract<Notice, { kind: "created" | "done" }>,
@@ -124,9 +123,8 @@ async function open(loop: Loop, { requestId, threadId }: CommandOf<"open">): Pro
 }
 
 // The user's turn is saved before the agent runs, so it survives a failed reply. Each chunk the
-// agent yields is folded into the agent's turn and forwarded as it came (ADR-147); a failure
-// ends the turn, and nothing after it belongs there. The turn is saved settled once the stream
-// ends or is stopped, unless it showed nothing; a stream that throws saves none.
+// agent yields is folded into its turn and forwarded as it came (ADR-147); a failure ends the
+// turn. The settled turn is saved at the end or on stop; an empty or thrown stream saves none.
 async function reply(
   loop: Loop,
   session: Session,
@@ -159,9 +157,15 @@ async function send(loop: Loop, command: CommandOf<"send">): Promise<void> {
   await meet(session.faults.send);
   const stop = new AbortController();
   loop.replies.set(requestId, { stop, threadId });
+  // One reply per thread: a send waits out the replies ahead of it, failed or not, so the
+  // transcript keeps every exchange whole and in the order it was asked.
+  const answer = () => reply(loop, session, command, stop.signal);
+  const queued = (loop.queues.get(threadId) ?? Promise.resolve()).then(answer, answer);
+  loop.queues.set(threadId, queued);
   try {
-    await reply(loop, session, command, stop.signal);
+    await queued;
   } finally {
+    if (loop.queues.get(threadId) === queued) loop.queues.delete(threadId);
     loop.replies.delete(requestId);
     pushState(loop, session);
   }
@@ -279,6 +283,7 @@ export function createAgentLoop(host: LoopHost): (data: unknown) => Promise<void
       schedule: host.schedule ?? timeoutSchedule,
     },
     replies: new Map(),
+    queues: new Map(),
   };
 
   return (data) => {
@@ -286,11 +291,10 @@ export function createAgentLoop(host: LoopHost): (data: unknown) => Promise<void
     if (parsed.success) return handle(loop, parsed.data);
     const reason = `Unknown command: ${z.prettifyError(parsed.error)}`;
     const named = requestIdSchema.safeParse(data);
-    host.post(
-      named.success
-        ? { kind: "failed", requestId: named.data.requestId, reason }
-        : { kind: "broken", reason },
-    );
+    const notice: Notice = named.success
+      ? { kind: "failed", requestId: named.data.requestId, reason }
+      : { kind: "broken", reason };
+    host.post(notice);
     return Promise.resolve();
   };
 }

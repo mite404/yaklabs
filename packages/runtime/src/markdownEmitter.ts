@@ -74,13 +74,20 @@ function blockChunks(block: Block): ReplyChunk[] {
   }
 }
 
+// The words `after` adds to a run already shown: a settled run only ever grows, so anything
+// but a prefix breaks the emitter's contract and the reply fails rather than corrupt.
+function restOf(after: string, before: string): string {
+  if (!after.startsWith(before))
+    throw new Error(`A run already shown changed: "${before}" became "${after}"`);
+  return after.slice(before.length);
+}
+
 // The chunks that grow inline content `before` into `after`: the rest of the last run, then
 // every segment after it.
 function contentGrowth(before: readonly Inline[], after: readonly Inline[]): ReplyChunk[] {
   const last = before.at(-1);
   const next = after.at(before.length - 1);
-  const rest =
-    last?.kind === "run" && next?.kind === "run" ? next.text.slice(last.text.length) : "";
+  const rest = last?.kind === "run" && next?.kind === "run" ? restOf(next.text, last.text) : "";
   const head = next === undefined || rest === "" ? [] : [inlineChunk({ ...next, text: rest })];
   return [...head, ...contentChunks(after.slice(before.length))];
 }

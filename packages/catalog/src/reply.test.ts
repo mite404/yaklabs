@@ -5,11 +5,13 @@ import {
   cancelReply,
   completeReply,
   failReply,
+  hasWork,
   isEmptyReply,
   startReply,
   workLabel,
   type AgentMessage,
   type ReplyChunk,
+  type Work,
 } from "./reply";
 
 const fold = (chunks: ReplyChunk[]): AgentMessage =>
@@ -273,6 +275,25 @@ const worked = (summary?: string): AgentMessage => ({
     narration: [],
     summary,
   },
+});
+
+// A settled reply holding `work`, if any.
+const settled = (work?: Work): AgentMessage => ({
+  ...startReply("a1", "9:02"),
+  streaming: false,
+  work,
+});
+
+describe("hasWork", () => {
+  it("counts steps, technical lines and kept narration, and nothing else", () => {
+    const bare: Work = { steps: [], logs: [], narration: [] };
+    const step: Work["steps"][number] = { id: "a", label: "A", status: "done" };
+    expect(hasWork(settled())).toBe(false);
+    expect(hasWork(settled(bare))).toBe(false);
+    expect(hasWork(settled({ ...bare, steps: [step] }))).toBe(true);
+    expect(hasWork(settled({ ...bare, logs: ["hold:south"] }))).toBe(true);
+    expect(hasWork(settled({ ...bare, narration: ["Checking the vault."] }))).toBe(true);
+  });
 });
 
 describe("workLabel", () => {

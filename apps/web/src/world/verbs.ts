@@ -7,16 +7,7 @@ import {
   type Runtime,
   type Workspace,
 } from "@yaklabs/runtime";
-import {
-  removal,
-  renamed,
-  restored,
-  shared,
-  summary,
-  withLanes,
-  withNewThread,
-  withThread,
-} from "./edits";
+import { renamed, shared, summary, withLanes, withNewThread, withThread } from "./edits";
 import { ids } from "./ids";
 import type { Stage } from "./stage";
 
@@ -99,16 +90,11 @@ export function menuVerbs(
       }),
     delete: (id) =>
       promised(() => {
-        stage.thread(id);
-        const { ws, tomb } = removal(stage.workspace(), id);
-        stage.bury(id, tomb);
-        stage.commit(() => ws);
+        stage.bury(id);
       }),
     restore: (id) =>
       promised(() => {
-        const tomb = stage.exhume(id);
-        if (tomb === undefined) throw new Error(`There is no deleted thread "${id}" to restore`);
-        stage.commit(restored(tomb));
+        stage.exhume(id);
       }),
     share: (share) =>
       promised(() => {

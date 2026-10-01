@@ -57,10 +57,14 @@ export function useTurns(thread: ThreadSummary): {
     setTurns(LOADING);
   };
   // What shows stays until the new turns are here.
+  const reads = useRef(0);
   const reread = useCallback(() => {
+    const mine = ++reads.current;
     const load = async () => {
       try {
         const messages = await runtime.open(id);
+        // A read resolving after a newer one started drops its older turns.
+        if (mine !== reads.current) return;
         setTurns({ kind: "open", messages });
         setRevision((n) => n + 1);
       } catch {

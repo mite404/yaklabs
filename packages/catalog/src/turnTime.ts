@@ -40,5 +40,8 @@ export function stampOf(time: string, now: number): string {
 export function timeLabel(time: string): string {
   const at = instantOf(time);
   if (at === undefined) return time;
+  // No locale and no zone named: the ambient ones, which are the reader's own. The app is a
+  // static page (ADR-083), so this runs only in the reader's browser, and a turn's stamp
+  // reading on the reader's clock is the point; a zone pinned here would lie to everyone else.
   return new Date(at).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
 }

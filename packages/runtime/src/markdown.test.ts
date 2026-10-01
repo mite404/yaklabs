@@ -2,7 +2,7 @@ import { code, em, heading, link, list, paragraph, strong, text } from "@yaklabs
 import { applyChunk, startReply, type ReplyChunk } from "@yaklabs/catalog/reply";
 import { describe, expect, it } from "vitest";
 import { parseQuietProse } from "./markdown";
-import { closeMarkdown, newEmitter, writeMarkdown } from "./markdownEmitter";
+import { closeMarkdown, newEmitter, writeMarkdown, type MarkdownEmitter } from "./markdownEmitter";
 
 describe("parseQuietProse: blocks", () => {
   it("reads every heading level as one heading", () => {
@@ -172,5 +172,25 @@ describe("the markdown emitter streams what is settled", () => {
       heading([text("Brief")]),
       list([[text("one ")]]),
     ]);
+  });
+});
+
+// An emitter whose shown run is not what its source parses to, as a parser change could leave.
+const rewritten: MarkdownEmitter = {
+  source: "alpha beta",
+  shown: [paragraph([text("alpha gamma")])],
+};
+
+describe("the markdown emitter never rewrites a run already shown", () => {
+  it("breaks on the next write, rather than stream the wrong words", () => {
+    expect(() => writeMarkdown(rewritten, "")).toThrow(
+      'A run already shown changed: "alpha gamma" became "alpha "',
+    );
+  });
+
+  it("breaks on close, rather than fill in the wrong words", () => {
+    expect(() => closeMarkdown(rewritten)).toThrow(
+      'A run already shown changed: "alpha gamma" became "alpha beta"',
+    );
   });
 });
