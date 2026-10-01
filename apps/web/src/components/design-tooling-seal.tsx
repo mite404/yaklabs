@@ -76,27 +76,14 @@ function Ring({ top, bottom }: { top: string; bottom: string }) {
   );
 }
 
-/**
- * The design tooling seal: a gold medal with a serrated edge, "Yaklabs" over the top of its
- * ring and "Seal of evidence" under the bottom, drawn in the seal's own tokens so it keeps one
- * colour in either theme. A picture only, with no name of its own: the link or the heading
- * beside it says what it is.
- * @param size The seal's width and height in CSS pixels.
- */
-export function Seal({ size = 112, className }: { size?: number; className?: string }) {
-  const id = useId(); // → unique per instance, so two seals on a page never share a gradient
+// The medal's drawing, in its 120-unit box: the gradient and the arcs its words follow, the
+// serrated edge, and the ring. `id` keeps one medal's gradient and arcs from another's.
+function Medal({ id }: { id: string }) {
   const face = `${id}-face`;
   const top = `${id}-top`;
   const bottom = `${id}-bottom`;
   return (
-    <svg
-      viewBox="0 0 120 120"
-      width={size}
-      height={size}
-      aria-hidden="true"
-      focusable="false"
-      className={className}
-    >
+    <>
       <defs>
         <radialGradient id={face} cx="32%" cy="28%" r="78%">
           <stop offset="0" stopColor="var(--seal-gold-glint)" />
@@ -114,25 +101,102 @@ export function Seal({ size = 112, className }: { size?: number; className?: str
         strokeLinejoin="round"
       />
       <Ring top={top} bottom={bottom} />
+    </>
+  );
+}
+
+/**
+ * The design tooling seal: a gold medal with a serrated edge, "Yaklabs" over the top of its
+ * ring and "Seal of evidence" under the bottom, drawn in the seal's own tokens so it keeps one
+ * colour in either theme. A picture only, with no name of its own: the link or the heading
+ * beside it says what it is.
+ * @param size The seal's width and height in CSS pixels.
+ */
+export function Seal({ size = 112, className }: { size?: number; className?: string }) {
+  const id = useId(); // → unique per instance, so two seals on a page never share a gradient
+  return (
+    <svg
+      viewBox="0 0 120 120"
+      width={size}
+      height={size}
+      aria-hidden="true"
+      focusable="false"
+      className={className}
+    >
+      <Medal id={id} />
     </svg>
+  );
+}
+
+// The ribbon's words: the link's name, and what the ribbon carries in capitals.
+const RIBBON_WORDS = "Includes design tooling";
+
+// The welcome's seal in CSS pixels, as the HTML ribbon it replaces measured: a 112px medal
+// centred on a 230px ribbon, 27px deep (8px above and below 11px words), its ends notched 8px.
+// The words fill the 176px they took with the ribbon's 0.1em tracking, whatever the font's
+// metrics, and sit on a baseline that centres their capitals (Inter's cap height, 0.727em).
+const LINK = { width: 230, height: 112 };
+const MEDAL = { size: 112, x: (LINK.width - 112) / 2 };
+const RIBBON = { top: 42.5, depth: 27, notch: 8 };
+const WORDS = { size: 11, length: 176, baseline: 56 + (11 * 0.727) / 2 };
+
+// The ribbon's outline: a band across the link's width with a notch cut into either end.
+const ribbonPoints = (): string => {
+  const { top, depth, notch } = RIBBON;
+  const [right, bottom, middle] = [LINK.width, top + depth, top + depth / 2];
+  return `0,${top} ${right},${top} ${right - notch},${middle} ${right},${bottom} 0,${bottom} ${notch},${middle}`;
+};
+
+// The ribbon and its words.
+function Ribbon() {
+  return (
+    <g className="seal-ribbon">
+      <polygon points={ribbonPoints()} />
+      <text
+        x={LINK.width / 2}
+        y={WORDS.baseline}
+        fontSize={WORDS.size}
+        textAnchor="middle"
+        textLength={WORDS.length}
+        lengthAdjust="spacing"
+        textRendering="geometricPrecision"
+      >
+        {RIBBON_WORDS.toUpperCase()}
+      </text>
+    </g>
   );
 }
 
 /**
  * The welcome's link to the tooling page (ADR-160): the seal with an ink ribbon across its
- * middle saying "Includes design tooling", which runs past the seal on either side. The ribbon
- * is the link's name and its only words, so a screen reader hears what a sighted visitor reads.
- * It fills with moss on hover, as the site's button does.
+ * middle saying "Includes design tooling", which runs past the seal on either side. The ribbon's
+ * words are the link's name, so a screen reader hears what a sighted visitor reads. It fills
+ * with moss on hover, as the site's button does. Medal, ribbon and words are one drawing, so
+ * they grow and settle as one piece (Ethan): as HTML beside an SVG, the words snapped to whole
+ * font sizes and the ribbon to whole pixels while the medal scaled smoothly, each on its own
+ * frame.
  */
 export function DesignToolingSeal({ className }: { className?: string }) {
+  const id = useId();
   return (
     <Link
       to={TOOLING_PATH}
+      aria-label={RIBBON_WORDS}
       data-slot="design-tooling-seal"
       className={`seal-link ${className ?? ""}`}
     >
-      <Seal />
-      <span className="seal-ribbon">Includes design tooling</span>
+      <svg
+        viewBox={`0 0 ${LINK.width} ${LINK.height}`}
+        width={LINK.width}
+        height={LINK.height}
+        aria-hidden="true"
+        focusable="false"
+      >
+        <g transform={`translate(${MEDAL.x} 0) scale(${MEDAL.size / 120})`}>
+          <Medal id={id} />
+        </g>
+        <Ribbon />
+      </svg>
     </Link>
   );
 }

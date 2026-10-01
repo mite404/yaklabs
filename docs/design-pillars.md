@@ -235,14 +235,17 @@ Gold is a metal, so the seal keeps one colour in either theme; only the ribbon t
 the ink. The words are on the ribbon, never on the gold, since they run off the seal onto the
 paper, where the brown ink fails in the dark theme.
 The seal is drawn (`design-tooling-seal.tsx`), never a picture, so it scales to any size and
-takes its colours from tokens.
+takes its colours from tokens. On the welcome the medal, the ribbon and its words are one SVG,
+so they grow and settle as one piece (Ethan): an HTML ribbon beside the SVG medal snapped its
+words to whole font sizes and its edges to whole pixels on every frame of the hover, each part
+landing at its own time.
 
 | Property | Value | Source |
 | --- | --- | --- |
 | Face | `--seal-gold` (`--yak-orange`, `#d19456`), lit from the top left to `--seal-gold-glint` | derived (Ethan's example seal) |
 | Edge | `--seal-gold-deep` (`--rust`, `#a86f36`): 3.5:1 on the light paper, 6.6:1 dark, so the silhouette clears 3:1 | derived |
 | Ring words | `--on-seal` (`--yak-brown-ink`, `#3b2612`): 5.5:1 on the face, the orange pill's pair | derived (rule 13) |
-| Ribbon | `--ink` with `--on-ink`, notched 8px at both ends, 11px 600 upper case at 0.1em, 8px × 26px padding | derived (rule 28's pill) |
+| Ribbon | `--ink` with `--on-ink`, 230px × 27px across the 112px medal, notched 8px at both ends; 11px 600 upper case set to the 176px the 0.1em tracking gave, at geometric precision | derived (rule 28's pill) |
 | Ribbon hover | fills `--moss` with `--on-accent` over 150ms `ease`, as the outline button | css (rule 8) |
 | Size | 112px on the welcome, 200px on the page's hero; 36 teeth, 5 units deep in a 120-unit box | derived |
 | Place on the welcome | pinned above the greeting at the column's right: centre 30px above the mark's top, ribbon ending 24px inside the column's edge; tilted 25° with the left side up, as a medal on a lapel; in the column's flow, upright, under 641px | Ethan |

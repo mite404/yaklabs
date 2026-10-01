@@ -2525,3 +2525,14 @@ as ADR-140 loaded Inter's; the review app's header, from Ethan's screenshot, is 
 laid over the contrast table on the band, in place of the Material lens; the way back says
 Back to Bonsai; and the page is light only: it pins the light theme on the root while it is
 open and gives the visitor's choice back on leaving, and its appearance switch is gone.
+Amended once more (Ethan: "the text, the ribbon and the seal all seem to scale at different
+times ... scale as if 'one asset'"): on the welcome the medal, the ribbon and its words are
+one SVG. As an HTML ribbon laid over the SVG medal, the hover's growth repainted the three
+apart: the words snapped to whole font sizes and jumped 42% of the way on the first frame of
+his recording, the ribbon's box snapped to whole pixels and finished by the eighth, and the
+medal scaled smoothly to the twelfth. Drawn as one picture they scale as one, the words set
+to a fixed length at geometric precision, so no font's metrics or hinting move them. The
+link's name is its `aria-label`, the ribbon's words, so a screen reader still hears what the
+eye reads. Alternatives weighed: `will-change` on the link, which in Chrome only moved the
+redraw to after the growth; and a moss copy of the ribbon fading over the ink one, which left
+a hairline of the ink at the moss's edges in the dark theme.
