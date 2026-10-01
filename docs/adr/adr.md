@@ -2460,3 +2460,32 @@ ordering the sidebar's children oldest first to match the canvas, which ADR-125 
 other way at Ethan's word.
 Known gaps: Demo store stays on a device that has it, beside Demo and Live Playground; removing
 it is Ethan's call. The brief lever's 2x timing bound still sits at 59 to 63% on main as here.
+
+## ADR-160 - A public page tells the design tooling's story, sealed on the welcome
+
+2026-10-01 - Accepted (Ethan: "a static site on a new route called /verify-ui-tooling ... on
+the splash screen i want a graphic link w/a gold seal as the bg and copy that says Includes
+Design Tooling"). Amends ADR-136 and ADR-156.
+`/verify-ui-tooling` is a page of Kay's paper outside the signed-in shell, beside `/share.html`,
+that says what `tools/verify-ui-drift` is for and shows it: why a check has to be a tool when
+people and agents edit one surface, the five beats of a run, the run's own transcript, the four
+verdicts, the Pixels workbench, the comparator proof, the contrast table under its lenses, what
+approval means, and where the work lands by role. Its pictures are Ethan's screenshots of the
+review app (`apps/web/public/verify-ui-tooling/`); the transcript and the two results tables
+are set as text, since a terminal and a table read better as what they are. The words live in
+`apps/web/src/verify-ui-tooling.ts` apart from the page, so the copy reads as one piece.
+A new thread's welcome ends with the way there: a gold seal, "Yaklabs" over the top of its ring
+and "Seal of evidence" under the bottom, with an ink ribbon across its middle saying "Includes
+design tooling" that runs past the seal on either side. The ribbon is the link's only words,
+so a screen reader hears what a sighted visitor reads, and it fills with moss on hover as the
+site's button does. The seal is drawn, not a picture: one SVG in `design-tooling-seal.tsx`,
+coloured by four new tokens derived from the caution orange and the rust, since a metal keeps
+one colour in either theme (design pillars, rule 33). The page's hero shows the same seal.
+Alternatives weighed: a page inside the shell, which would have put sign-in and the runtime
+in front of a visitor who only wants to read; the seal as a WebP after the example Ethan
+sent, which would have needed a second file for dark mode and could not carry live words; and
+the ribbon's words on the gold itself, where the brown ink clears 4.5:1 on the orange but
+not where the words run off the seal onto the dark paper.
+Known gaps: the page is linked from the welcome and from nowhere else, and the review app's
+screenshots are from Ethan's Mac at 2x, so they will not match a later build of the tool pixel
+for pixel.

@@ -226,6 +226,27 @@ the vendored shadcn tooltip. P23 reads the rail's pills in both themes.
 | Motion | in over 125ms, `cubic-bezier(0.23, 1, 0.32, 1)`, scale 0.97 and fade; out in 100ms | derived |
 | Reduced motion | fades only, no scale | derived |
 
+### 33. The design tooling seal is a gold medal with an ink ribbon
+
+The welcome's link to the design tooling page (ADR-160) is a seal: a serrated gold disc with
+"Yaklabs" over the top of its ring and "Seal of evidence" under the bottom, and an ink ribbon
+across its middle carrying the link's words, which runs past the seal on either side.
+Gold is a metal, so the seal keeps one colour in either theme; only the ribbon turns over with
+the ink. The words are on the ribbon, never on the gold, since they run off the seal onto the
+paper, where the brown ink fails in the dark theme.
+The seal is drawn (`design-tooling-seal.tsx`), never a picture, so it scales to any size and
+takes its colours from tokens.
+
+| Property | Value | Source |
+| --- | --- | --- |
+| Face | `--seal-gold` (`--yak-orange`, `#d19456`), lit from the top left to `--seal-gold-glint` | derived (Ethan's example seal) |
+| Edge | `--seal-gold-deep` (`--rust`, `#a86f36`): 3.5:1 on the light paper, 6.6:1 dark, so the silhouette clears 3:1 | derived |
+| Ring words | `--on-seal` (`--yak-brown-ink`, `#3b2612`): 5.5:1 on the face, the orange pill's pair | derived (rule 13) |
+| Ribbon | `--ink` with `--on-ink`, notched 8px at both ends, 11px 600 upper case at 0.1em, 8px × 26px padding | derived (rule 28's pill) |
+| Ribbon hover | fills `--moss` with `--on-accent` over 150ms `ease`, as the outline button | css (rule 8) |
+| Size | 112px on the welcome, 200px on the page's hero; 36 teeth, 5 units deep in a 120-unit box | derived |
+| Focus | the site's ring, 2px `--focus` 3px off, on the link's 4px corners | derived |
+
 ## Inputs
 
 ### 14. A place to type is outlined, and its prompt is greyer
