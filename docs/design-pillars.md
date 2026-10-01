@@ -251,7 +251,7 @@ landing at its own time.
 | Ribbon | `--ink` with `--on-ink`, 230px × 27px across the 112px medal, notched 8px at both ends; 11px 600 upper case, "NOW WITH DESIGN TOOLING!", set to the 186px the 0.1em tracking gives, at geometric precision | derived (rule 28's pill) |
 | Ribbon hover | fills `--moss` with `--on-accent` over 150ms `ease`, as the outline button | css (rule 8) |
 | Size | 112px on the welcome, 200px on the page's hero; 36 teeth, 5 units deep in a 120-unit box | derived |
-| Place on the welcome | pinned above the greeting at the column's right: centre 30px above the mark's top, ribbon ending 24px inside the column's edge; tilted 25° with the left side up, as a medal on a lapel; in the column's flow, upright, under 641px | Ethan |
+| Place on the welcome | pinned above the greeting at the column's right, aligned optically: the ribbon's far tip in line with the ink of the projects' "+", 8px inside the column, and its lowest corner 4px below the mark's circle; worked out in CSS from the tilt, the size and the ribbon's corners, so it holds when either changes; tilted 25° with the left side up, as a medal on a lapel; in the column's flow under 641px | Ethan (mockup) |
 | Focus | the site's ring, 2px `--focus` 3px off, on the link's 4px corners | derived |
 | Size on the welcome | 73.5% of the drawn 112px, by `scale`, so the words stay crisp; 5% up from 70% so the ring's "Seal of quality" reads | Ethan |
 | Hop | every 4s: 6px up and back over 480ms, a 2px second hop, then still; on `transform` under the tilt, so it hops along its lean; none under reduced motion (rule 24) | Ethan |
