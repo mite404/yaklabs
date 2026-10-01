@@ -726,11 +726,19 @@ html[data-dragging="sidebar"] * {
   .lane[data-collapsed="true"] {
     width: calc(var(--canvas-grid) * 2);
   }
+  /* The strip's title starts where an open lane's title bar ends: its first letter's ink just
+     under the bar's rule, 55.5px down, so the eye reads one line across open lanes and strips
+     alike (Ethan). Between the expand's glyph and that letter the grip sits with equal paper
+     either side, about 13.5px of ink to ink (Ethan: "equal distance b/t the toggle, drag dots and
+     ... name"): the strip's 8px gap less 2px above the dots, plus 4px below them. Measured from
+     ink at the thread bar's 17px serif title; a new bar height moves the rule, and these with it. */
   .lane-strip-grip {
     display: none;
     flex-shrink: 0;
     width: 15px;
     height: 10px;
+    margin-top: -2px;
+    margin-bottom: 4px;
     background: radial-gradient(circle, var(--soft-ink) 1.25px, transparent 1.75px) 0 0 / 5px 5px;
   }
   /* The floating copy of a lifted strip hangs off the body, outside the row, and keeps its grip:
