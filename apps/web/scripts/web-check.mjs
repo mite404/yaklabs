@@ -555,8 +555,8 @@ try {
   const threadLanes = canvas.locator("article").filter({ has: page.locator(".thread-header") });
   await threadLanes.first().scrollIntoViewIfNeeded();
   const firstBar = await threadLanes.first().locator(".thread-header").boundingBox();
-  // The bar's far end, past any title however long.
-  const firstGrip = { x: firstBar.x + firstBar.width - 12, y: firstBar.y + firstBar.height / 2 };
+  // The grip, the one place on the bar that takes the lane (grip-zone.ts).
+  const firstGrip = { x: firstBar.x + firstBar.width / 2, y: firstBar.y + firstBar.height / 2 - 2 };
   await page.mouse.move(firstGrip.x, firstGrip.y);
   await page.mouse.down();
   await page.mouse.move(firstGrip.x - 200, firstGrip.y + 30, { steps: 8 });

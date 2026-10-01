@@ -1,6 +1,7 @@
 import type { LaneId } from "@yaklabs/runtime";
 import { useEffect, useRef, useState, type PointerEvent } from "react";
 import { landingIndex, shiftFor, slotLeft, type Slot } from "../canvas";
+import { inGripZone } from "./grip-zone";
 
 // How far a grip travels before its lane lifts, so a click stays a click.
 const LIFT_PX = 6;
@@ -29,22 +30,42 @@ type Drag = { lift: Lift; move: Move | null };
 
 /** What a lane's element listens with while the reorder can take hold of it. */
 export type LaneHandlers = {
+  onPointerDownCapture: (event: PointerEvent<HTMLElement>) => void;
   onPointerDown: (event: PointerEvent<HTMLElement>) => void;
   onPointerMove: (event: PointerEvent<HTMLElement>) => void;
   onPointerUp: () => void;
   onPointerCancel: () => void;
 };
 
-// What takes hold of a lane: the title bar of what it shows, the same bar that drags a card
-// out of a thread, or the whole of a collapsed lane (ADR-133), its strip's title included. The
-// title of an open lane is for renaming, and any button keeps its job.
-const GRIP = '.thread-header, .card-heading, [data-collapsed="true"]';
-const NOT_GRIP = "h2, .card-heading-text, input, button";
+// What takes hold of a lane: the grip on the title bar of what it shows, within GRIP_RADIUS of
+// its centre (Ethan), or the whole of a collapsed lane (ADR-133), its strip's title included.
+// The title of an open lane is for renaming, and any button keeps its job.
+const BAR = ".thread-header, .card-heading";
+const NOT_GRIP = "h2, .card-heading-text, input, button, [role='menu']";
 
-function isGrip(target: EventTarget | null): boolean {
-  return (
-    target instanceof Element && target.closest(GRIP) !== null && target.closest(NOT_GRIP) === null
-  );
+// The open lane's own title bar a press landed on, outside its title and its buttons; null for
+// a press anywhere else, a card's header inside a thread lane's turns included, which carries
+// that card on its own.
+function barOf(target: EventTarget | null): Element | null {
+  if (!(target instanceof Element) || target.closest(NOT_GRIP) !== null) return null;
+  if (target.closest(".thread-scroll") !== null) return null;
+  return target.closest(BAR);
+}
+
+function isGrip(event: PointerEvent<HTMLElement>): boolean {
+  const { target, clientX, clientY } = event;
+  if (target instanceof Element && target.closest('[data-collapsed="true"]') !== null) {
+    return target.closest("button") === null;
+  }
+  const bar = barOf(target);
+  return bar !== null && inGripZone(bar.getBoundingClientRect(), clientX, clientY);
+}
+
+// A press on an open lane's title bar off its grip: it takes nothing, so neither the lane nor
+// the card in it (CardHeader's carry) lifts where the hand does not show.
+function offGrip(event: PointerEvent<HTMLElement>): boolean {
+  const bar = barOf(event.target);
+  return bar !== null && !inGripZone(bar.getBoundingClientRect(), event.clientX, event.clientY);
 }
 
 // Every lane's slot along the row, in the row's own coordinates (its scroll included).
@@ -130,8 +151,16 @@ function liftedOf(drag: Drag | null): [Lift | null, Move | null] {
 // something nearer already claimed is theirs: a card's header inside a thread lane arms a
 // carry, which claims its press (preventDefault) rather than stopping it.
 function takesLane(event: PointerEvent<HTMLElement>): boolean {
-  return event.button === 0 && !event.isDefaultPrevented() && isGrip(event.target);
+  return event.button === 0 && !event.isDefaultPrevented() && isGrip(event);
 }
+
+// Stops a press on an open lane's title bar off its grip before the lane's lift or a card's
+// carry hears it, while the reorder is on.
+const holdOffGrip =
+  (enabled: boolean) =>
+  (event: PointerEvent<HTMLElement>): void => {
+    if (enabled && offGrip(event)) event.stopPropagation();
+  };
 
 // What a press on a lane measured, or nothing when it does not take hold of the lane.
 function liftAt(event: PointerEvent<HTMLElement>, id: LaneId, index: number): Lift | null {
@@ -183,6 +212,7 @@ export function useReorder(
   }, [lifted]);
 
   const laneFor = (id: LaneId, index: number): LaneHandlers => ({
+    onPointerDownCapture: holdOffGrip(enabled),
     onPointerDown: (event) => {
       if (!enabled) return;
       const pressed = liftAt(event, id, index);
