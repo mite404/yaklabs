@@ -79,6 +79,11 @@
      the offset moves it down, the negative spread pulls its blur in from the sides, and the
      long blur gives the slow fall-off. Both themes read the same --shadow token. */
   --edge-shadow: 2px 13px 22px -12px var(--shadow);
+  /* derived from --edge-shadow for a small floating control, such as the reading tools' bar: the
+     same fall down and to the right, none above, scaled to a 34px bar, whose 22px blur the
+     edge shadow's -12px spread would swallow; the strong shadow, since the box below it hides
+     most of what falls. */
+  --float-shadow: 2px 8px 14px -6px var(--shadow-strong);
   --scrim: color-mix(in srgb, var(--paper) 72%, transparent);
   --warn-bg: #f4ecd9; /* derived: warm notice, harmonised with the paper */
   --warn-ink: #66511f; /* derived */

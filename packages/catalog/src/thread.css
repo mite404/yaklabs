@@ -60,19 +60,25 @@
    out as the compose row is (the same gutter, the same reserved scrollbar) puts the bar's right
    edge on the compose box's. It stands 8px clear of the box, its own 4px and the compose row's
    4px inset, and with a card docked (--dock-space, set by the panel) 8px clear of the card
-   instead. Its corners and gaps are the menu's (8px) and the title bar's actions' (2px). */
+   instead. Its corners and gaps are the menu's (8px) and the title bar's actions' (2px).
+   The bar floats beside the compose box at its height, so it casts a shadow down and to the
+   right as the box does (--float-shadow, Ethan). The dock clips sideways (overflow keeps the
+   scrollbar gutter that lines the bar up), so it reaches 16px further down to hold that shadow,
+   its 8px drop plus its 14px blur less its 6px spread, and sits 16px lower to keep the bar where
+   it was. */
 .reading-dock {
+  --shadow-room: 16px;
   position: absolute;
   left: 0;
   right: 0;
-  bottom: calc(100% + var(--dock-space, 0px));
+  bottom: calc(100% + var(--dock-space, 0px) - var(--shadow-room));
   z-index: 1;
   display: flex;
   justify-content: flex-end;
   gap: 8px;
   overflow: hidden;
   scrollbar-gutter: stable;
-  padding: 4px var(--thread-gutter);
+  padding: 4px var(--thread-gutter) calc(4px + var(--shadow-room));
   pointer-events: none;
 }
 /* At rest and under the pointer the bar is a translucent wash of the paper (--scrim, the paper at
@@ -88,6 +94,7 @@
   background: var(--scrim);
   border: 1px solid var(--hairline);
   border-radius: 8px;
+  box-shadow: var(--float-shadow);
   pointer-events: auto;
   transition:
     background-color 150ms cubic-bezier(0.23, 1, 0.32, 1),
@@ -721,8 +728,12 @@
 
 /* Fixed-height compose box: typing never resizes or moves it (ADR-003).
    Resets the lab's global textarea rule, which is sized for the JSON editor. */
-/* No divider: the compose box floats directly under the conversation. */
+/* No divider: the compose box floats directly under the conversation. It stands over the
+   reading dock, so the shadow the bar above it casts passes under the box, the two at one
+   height, rather than across it. */
 .thread-compose {
+  position: relative;
+  z-index: 2;
   padding: var(--compose-inset) var(--thread-gutter) 16px;
 }
 /* A footnote under the box (who controls the thread, ADR-141) takes half the box's bottom room. */

@@ -510,6 +510,7 @@ ADR-150).
 | Kay's mark | the bonsai's three pills on a 12-unit grid, `currentColor`, in the rail's 20px box | Ethan (ADR-094, amended) |
 | Reading tools at rest | the bookmark alone on `--scrim` (paper at 72%), glyph opaque; clear until the pointer is over the thread's turns, up over 300ms on the strong ease-out; Search unfolds over 220ms on the panel ease, the drawer's slide | Ethan (ADR-143, amended) |
 | Reading tools open | `--paper`, solid, over 150ms on the strong ease-out; the list of requests on `--scrim` with an 8px blur | Ethan (ADR-143, amended) |
+| Reading tools shadow | `--float-shadow` (`2px 8px 14px -6px` of `--shadow-strong`): down and to the right as the compose box's `--edge-shadow`, none above (ADR-069), scaled to the 34px bar; it passes under the compose box, which stands over the dock | derived (`--edge-shadow`), Ethan |
 | Reply stamp | 11px on 16px `--soft-ink`, tabular figures, under the latest settled reply only: "just now", then 20-minute steps; no time on a user's turn | Ethan (ADR-152) |
 
 ## Open questions
