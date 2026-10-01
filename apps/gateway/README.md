@@ -25,7 +25,9 @@ one allowed origin in WorkOS (ADR-086).
   - the prompt and the tool loop live here, never in the browser (`src/playground.ts`); the
     five tool definitions are shared schema from `@yaklabs/catalog/playground`;
   - each round's tool calls are checked with the catalog's own validators; a bad call goes back
-    to the model as an error result and never reaches the page (`src/playgroundTools.ts`);
+    to the model as an error result and never reaches the page (`src/playgroundTools.ts`). A
+    tool whose input fails twice is retired for the rest of the turn: the next round no longer
+    offers it, and a call to it anyway is refused flat (ADR-157);
   - the reply streams as `application/x-ndjson`, one `PlaygroundEvent` per line, from `start`
     to `end`, with `seq` counting up without a gap;
   - text is prose from its first delta and is never relabelled; progress reaches the page only

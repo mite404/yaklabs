@@ -12,7 +12,7 @@ import { ChartGlyph } from "./ComposeBox";
 import { InteractiveCard } from "./InteractiveCard";
 import type { CardAttachment } from "./interactive";
 import { Prose, type Recover } from "./QuietProse";
-import { blocksOf, stepBacking, workLabel, type Ended } from "./reply";
+import { blocksOf, hasWork, stepBacking, workLabel, type Ended } from "./reply";
 import type { ThreadMessage } from "./thread";
 import type { AnsweredMessage } from "./transcript";
 import { WorkDetails } from "./WorkDetails";
@@ -270,8 +270,8 @@ export function AgentTurn({
   ref?: Ref<HTMLElement>;
 }) {
   const carries = cardsCarry !== false;
-  const { work, ended } = message;
-  const worked = work !== undefined && (work.steps.length > 0 || work.logs.length > 0);
+  const { ended } = message;
+  const worked = hasWork(message);
   return (
     <article
       ref={ref}
@@ -280,7 +280,9 @@ export function AgentTurn({
       aria-label="Agent"
       aria-busy={message.streaming === true ? true : undefined}
     >
-      {worked && <WorkDetails work={work} label={workLabel(message)} cardsCarry={cardsCarry} />}
+      {worked && (
+        <WorkDetails work={message.work} label={workLabel(message)} cardsCarry={cardsCarry} />
+      )}
       <Words
         message={message}
         cardsCarry={cardsCarry}

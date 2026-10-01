@@ -12,7 +12,8 @@ storybook-static/
 .env.*
 !.env.example
 *.tsbuildinfo
-.amp/
+.amp/*
+!.amp/services.yaml
 .rumdl_cache
 .fallow/
 .claude/worktrees/

@@ -123,12 +123,43 @@ describe("the stage's reset", () => {
 
   it("brings a deleted main back and forgets its tomb", () => {
     const stage = staged();
-    const tomb = { threads: [SLICE.threads[0]], notifications: [], shares: [] };
-    stage.bury(MAIN, tomb);
-    stage.commit((ws) => ({ ...ws, threads: ws.threads.filter((each) => each.id !== MAIN) }));
+    stage.bury(MAIN);
     stage.reset(SLICE);
     expect(workspaceOf(stage.state()).threads.map((each) => each.id)).toContain(MAIN);
-    expect(stage.exhume(MAIN)).toBeUndefined();
+    expect(() => {
+      stage.exhume(MAIN);
+    }).toThrow('There is no deleted thread "demo-brief" to restore');
+  });
+});
+
+describe("the stage's delete and restore", () => {
+  it("remove a thread and its children in one commit, and put them back as they were", () => {
+    const stage = staged();
+    stage.bury(MAIN);
+    expect(workspaceOf(stage.state()).threads.map((each) => each.id)).toEqual([OTHER]);
+    expect(stage.owns(MAIN)).toBe(true); // the tomb is still the stage's
+    stage.exhume(MAIN);
+    expect(workspaceOf(stage.state()).threads.map((each) => each.id)).toEqual([MAIN, CHILD, OTHER]);
+    expect(stage.turnsOf(MAIN)).toEqual([said("brief")]);
+  });
+
+  it("refuse a thread the workspace lacks and a tomb nothing filled", () => {
+    const stage = staged();
+    expect(() => {
+      stage.bury("demo-none");
+    }).toThrow('There is no thread "demo-none" in this demo');
+    expect(() => {
+      stage.exhume(MAIN);
+    }).toThrow('There is no deleted thread "demo-brief" to restore');
+  });
+
+  it("move neither the workspace nor a tomb once broken", () => {
+    const stage = staged();
+    stage.dispose("closed");
+    const broken = stage.state();
+    stage.bury(MAIN);
+    stage.exhume(MAIN);
+    expect(stage.state()).toBe(broken);
   });
 });
 

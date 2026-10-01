@@ -216,6 +216,12 @@ const upstreamBodySchema = z.object({ messages: z.array(z.unknown()) });
 export const sentMessages = async (requests: readonly Request[], n: number): Promise<unknown[]> =>
   upstreamBodySchema.parse(await requests[n]?.clone().json()).messages;
 
+const upstreamToolsSchema = z.object({ tools: z.array(z.object({ name: z.string() })) });
+
+/** The names of the tools the gateway offered upstream in request `n`. */
+export const sentTools = async (requests: readonly Request[], n: number): Promise<string[]> =>
+  upstreamToolsSchema.parse(await requests[n]?.clone().json()).tools.map(({ name }) => name);
+
 /** The events after `start`, without their seq, for readable expectations. */
 export const shape = async (response: Response): Promise<Record<string, unknown>[]> =>
   (await readEvents(response))

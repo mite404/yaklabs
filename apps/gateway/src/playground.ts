@@ -1,7 +1,6 @@
 import { APIError, type Anthropic } from "@anthropic-ai/sdk";
 import {
   PLAYGROUND_PROTOCOL,
-  playgroundTools,
   type PlaygroundEvent,
   type PlaygroundRequest,
 } from "@yaklabs/catalog/playground";
@@ -10,6 +9,7 @@ import { assistantContent, newRound, readEvent, type Round } from "./playgroundR
 import {
   initialTurn,
   stamp,
+  toolsFor,
   translateToolUse,
   type EventDraft,
   type TurnState,
@@ -61,7 +61,6 @@ that does not restate the limitation. No tables and no headings.`;
 
 // Rounds one turn may take; Kimi was seen making one tool call per round.
 const MAX_ROUNDS = 8;
-const TOOLS: Anthropic.Tool[] = [...playgroundTools];
 const CUT_SHORT = "I stopped before finishing this reply.";
 const NO_RESPONSE = "The model stopped responding.";
 const NO_ANSWER = "I finished without an answer.";
@@ -99,10 +98,12 @@ const decide = (
   return { kind: "continue", messages: next };
 };
 
-// Sends one round upstream; resolves once the upstream accepts it, or throws its APIError.
+// Sends one round upstream with the tools the turn still offers; resolves once the upstream
+// accepts it, or throws its APIError.
 const openRound = (
   upstream: PlaygroundUpstream,
   messages: Messages,
+  state: TurnState,
   signal: AbortSignal,
 ): Promise<UpstreamEvents> =>
   upstream.client.messages.create(
@@ -110,7 +111,7 @@ const openRound = (
       model: upstream.model,
       max_tokens: upstream.maxTokens,
       system: SYSTEM_PROMPT,
-      tools: TOOLS,
+      tools: toolsFor(state), // → the catalog's tools, minus the ones failures retired
       messages,
       stream: true,
     },
@@ -175,10 +176,11 @@ async function* streamRound(
 const tryOpenRound = async (
   upstream: PlaygroundUpstream,
   messages: Messages,
+  state: TurnState,
   signal: AbortSignal,
 ): Promise<UpstreamEvents | undefined> => {
   try {
-    return await openRound(upstream, messages, signal);
+    return await openRound(upstream, messages, state, signal);
   } catch (error) {
     noteFailure(error);
     return undefined;
@@ -196,7 +198,8 @@ async function* playgroundEvents(
   signal: AbortSignal,
 ): AsyncGenerator<PlaygroundEvent, void> {
   let messages = toUpstreamMessages(request); // → MessageParam[]
-  let events: UpstreamEvents | undefined = await openRound(upstream, messages, signal);
+  // The first round opens before the turn has failed anything, so it offers every tool.
+  let events: UpstreamEvents | undefined = await openRound(upstream, messages, initialTurn, signal);
   const opened = stamp(initialTurn, [{ type: "start", v: PLAYGROUND_PROTOCOL }]);
   let state = opened.state;
   yield* opened.events;
@@ -211,7 +214,7 @@ async function* playgroundEvents(
     state = end.state;
     messages = decision.messages;
     // oxlint-disable-next-line no-await-in-loop -- each round needs the last round's tool results
-    events = await tryOpenRound(upstream, messages, signal);
+    events = await tryOpenRound(upstream, messages, state, signal);
   }
   if (signal.aborted) return;
   yield* stamp(state, [{ type: "end", reason: "upstream", line: NO_RESPONSE }]).events;

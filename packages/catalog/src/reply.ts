@@ -167,6 +167,10 @@ function appendRun(content: Inline[], run: Extract<Inline, { kind: "run" }>): In
   return [...content, run];
 }
 
+function appendTo(content: Inline[], inline: Inline): Inline[] {
+  return inline.kind === "run" ? appendRun(content, inline) : [...content, inline];
+}
+
 // Appends an inline to the open block: the last item of an open list, the content of an open
 // paragraph or heading, or a new paragraph after a card, a limitation or at the start.
 function appendInline(blocks: Block[], inline: Inline): Block[] {
@@ -179,10 +183,6 @@ function appendInline(blocks: Block[], inline: Inline): Block[] {
     return withLast(blocks, { ...open, items });
   }
   return withLast(blocks, { ...open, content: appendTo(open.content, inline) });
-}
-
-function appendTo(content: Inline[], inline: Inline): Inline[] {
-  return inline.kind === "run" ? appendRun(content, inline) : [...content, inline];
 }
 
 // Places a card where the earlier card of its id stands, else after the prose so far.
@@ -382,6 +382,20 @@ function countOf(work: Work): string | undefined {
   const parts = [plural(steps, "check", "checks")];
   if (short > 0) parts.push(short === 1 ? "1 needs attention" : `${short} need attention`);
   return parts.join(" · ");
+}
+
+/**
+ * Whether the turn holds work worth unfolding: its steps, its technical lines, or the narration
+ * it moved past. The one place this is decided: a turn mounts its disclosure on this, and the
+ * disclosure's technical section counts the same, so a turn whose only record is narration
+ * still opens.
+ */
+export function hasWork(message: AgentMessage): message is AgentMessage & { work: Work } {
+  const work = message.work;
+  return (
+    work !== undefined &&
+    (work.steps.length > 0 || work.logs.length > 0 || work.narration.length > 0)
+  );
 }
 
 /**
