@@ -1,5 +1,6 @@
 import type { Agent, AgentEvent } from "@yaklabs/catalog/agent";
 import { describe, expect, it, vi } from "vitest";
+import type { LoopHost } from "./agentLoop";
 import {
   beats,
   child,
@@ -82,6 +83,73 @@ describe("the agent loop replies", () => {
     const rejected: AgentEvent = { kind: "question-rejected", reason: "too long", question: {} };
     await run({ ...sendAsk, event: rejected });
     expect(turnIds(store)).toEqual(["u1", "a1", "a2"]);
+  });
+});
+
+// An agent that answers at once: a real reply never streams synchronously.
+const quickWords: Agent = {
+  async *respond() {
+    await Promise.resolve();
+    yield "second words";
+  },
+};
+
+// Two replies on one thread: the first holds until the macrotask fires, by which every
+// microtask-only flow has run, so without serialization the second settles ahead of it.
+function heldPair(): LoopHost["createAgent"] {
+  const gate = Promise.withResolvers<void>();
+  setTimeout(gate.resolve, 0);
+  const slow: Agent = {
+    async *respond() {
+      await gate.promise;
+      yield "first words";
+    },
+  };
+  const agents = [slow, quickWords];
+  return () => agents.shift() ?? quickWords;
+}
+
+// A reply that fails at once, then one that answers: the queue behind a failed reply moves on.
+function failedPair(): LoopHost["createAgent"] {
+  const agents = [failsAfter(["Half a"], "The gateway replied 502")];
+  return () => agents.shift() ?? quickWords;
+}
+
+// The turns after the seed's two, as `id:text`.
+function turnsAfterSeed(store: Store, id: ThreadId = profit): string[] | undefined {
+  return store
+    .transcript(id)
+    ?.messages.slice(2)
+    .map(({ id: turn, text }) => `${turn}:${text}`);
+}
+
+describe("the agent loop serializes a thread's replies", () => {
+  it("settles them in the order they were asked, each exchange whole", async () => {
+    const { store, run } = await startLoop(heldPair());
+    await run(init);
+    const one = run({ ...sendAsk, requestId: "r1" });
+    const two = run({ ...sendAsk, requestId: "r2" });
+    await Promise.all([one, two]);
+    expect(turnsAfterSeed(store)).toEqual([
+      "u2:Why is Saturday high?",
+      "a2:first words",
+      "u3:Why is Saturday high?",
+      "a3:second words",
+    ]);
+  });
+
+  it("answers a queued reply even when the one ahead of it fails", async () => {
+    const { notices, store, run } = await startLoop(failedPair());
+    await run(init);
+    const one = run({ ...sendAsk, requestId: "r1" });
+    const two = run({ ...sendAsk, requestId: "r2" });
+    await Promise.all([one, two]);
+    expect(notices.at(-1)).toEqual({ kind: "done", requestId: "r2" });
+    expect(turnsAfterSeed(store)).toEqual([
+      "u2:Why is Saturday high?",
+      "u3:Why is Saturday high?",
+      "a2:second words",
+    ]);
   });
 });
 
