@@ -2462,6 +2462,11 @@ ordering the sidebar's children oldest first to match the canvas, which ADR-125 
 other way at Ethan's word.
 Known gaps: Demo store stays on a device that has it, beside Demo and Live Playground; removing
 it is Ethan's call. The brief lever's 2x timing bound still sits at 59 to 63% on main as here.
+Amended the same day (Ethan: "the live playground voice input component needs to be the
+dictation live microphone"): dictation in the device's own threads, the Live Playground's,
+listens to the visitor's microphone and the browser's speech service (ADR-028's live source);
+the Demo's threads and a scenario's keep the simulated recording, so a scripted take and a
+fixture sound the same every time.
 
 ## ADR-160 - A public page tells the design tooling's story, sealed on the welcome
 

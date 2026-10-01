@@ -5,6 +5,7 @@ import { useEffect, useRef, type FocusEvent, type ReactNode, type RefObject } fr
 import { inBackground, useRuntime } from "../runtime";
 import { useSession } from "../session";
 import { useSnoozeCard } from "../shell/snooze-card";
+import { useDictation } from "../world/dictation";
 import { ThreadHeaderActions } from "../shell/thread-actions-menu";
 import { ChildFootnote } from "./child-footnote";
 import { noting, useOutsideWork, usePanelRef, useTurns } from "./pane-turns";
@@ -174,6 +175,12 @@ function barActions(thread: ThreadSummary, trailing: ReactNode, bare: boolean): 
   );
 }
 
+// What the page lends a thread's panel: the snooze card, when its menu asked for it, and the
+// audio its dictation hears.
+function useHosting(thread: ThreadSummary) {
+  return { hostAsk: useSnoozeCard(thread), dictation: useDictation(thread.id) };
+}
+
 /**
  * One thread in the catalog's panel, its turns loaded from the worker; one the snapshot says
  * holds none opens empty at once, with nothing to wait for. While they come, and when they
@@ -216,8 +223,8 @@ export function ThreadPane({
   const panelRef = usePanelRef(thread.id);
   const host = useRef<HTMLDivElement>(null);
   const follow = useFocusFollows(host, turns);
-  const snooze = useSnoozeCard(thread);
-  useFocusCard(host, snooze !== undefined);
+  const hosting = useHosting(thread); // → the snooze card's ask and how dictation hears
+  useFocusCard(host, hosting.hostAsk !== undefined);
   const actions = barActions(thread, trailing, bare); // → the bar's end, or undefined when bare
   return (
     <div ref={host} className="contents" data-thread-pane="" {...follow}>
@@ -231,7 +238,7 @@ export function ThreadPane({
           onRename={renamer(runtime, thread, bare)}
           cardsCarry={!isMobile}
           headerActions={actions}
-          hostAsk={snooze}
+          {...hosting}
           leading={leading}
           empty={welcome}
           bare={bare}

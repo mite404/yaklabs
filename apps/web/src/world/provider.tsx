@@ -82,3 +82,8 @@ export function useShow(main: string | null): { show: Show; state: ShowState } |
   const state = useSyncExternalStore(subscribe, snapshot);
   return show === undefined || state === null ? null : { show, state };
 }
+
+/** Whether the Demo holds the thread `id`: a show, one of its children, or one made in it. */
+export function useScripted(id: string): boolean {
+  return useContext(WorldContext)?.owns(id) === true;
+}
