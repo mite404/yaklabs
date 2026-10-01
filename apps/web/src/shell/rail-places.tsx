@@ -26,10 +26,12 @@ const DOCS_URL = "https://docs.meetkay.ai";
 
 // A place's two looks, its glyph soft in both until the pointer is on it or its place is open:
 // a 40px square in the desktop's rail, 10px of padding centring the 20px glyph, that names its
-// place in a pill; and a labelled row in the phone's drawer, the glyph the same 10px in.
+// place in a pill; and a labelled row in the phone's drawer, the glyph the same 10px in. Its
+// hover and open fill takes the site's 4px button corners (--radius), as a sidebar row's does.
 const LOOKS = {
-  square: "size-10 p-2.5 text-soft-ink hover:text-ink data-active:text-ink [&_svg]:size-5",
-  row: "h-10 gap-3 px-2.5 text-sm text-soft-ink hover:text-ink data-active:text-ink [&_svg]:size-5",
+  square:
+    "size-10 rounded-[var(--radius)] p-2.5 text-soft-ink hover:text-ink data-active:text-ink [&_svg]:size-5",
+  row: "h-10 gap-3 rounded-[var(--radius)] px-2.5 text-sm text-soft-ink hover:text-ink data-active:text-ink [&_svg]:size-5",
 } as const;
 type Look = keyof typeof LOOKS;
 
