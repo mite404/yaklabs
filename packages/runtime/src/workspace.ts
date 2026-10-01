@@ -12,6 +12,17 @@ export const threadIdSchema = idSchema.brand<"ThreadId">();
 /** A lane's id: `l-<threadId>` for a thread lane, `c-...` for a card lane. */
 export const laneIdSchema = idSchema.brand<"LaneId">();
 
+/**
+ * What every device holds (`ensureStarter`): the Live Playground project and its one main
+ * thread, with no turns and the title an untitled main gets (`storeWrites.ts`), so the first
+ * visit opens on an empty thread. Their ids never change, so an address to either holds on
+ * every device, and the page finds the project its live threads go in by it.
+ */
+export const STARTER = {
+  project: { id: projectIdSchema.parse("live-playground"), name: "Live Playground" },
+  thread: { id: threadIdSchema.parse("playground"), title: "New thread" },
+} as const;
+
 /** A project's id, branded so it never stands in for a thread's. */
 export type ProjectId = z.infer<typeof projectIdSchema>;
 /** A thread's id, branded so it never stands in for a project's or a lane's. */

@@ -5,7 +5,8 @@ import { z } from "zod";
 import { threadMessageSchema } from "./protocol";
 import { migrate, migrationSteps } from "./schema";
 import { openDatabase, openSqliteStore } from "./sqliteStore";
-import { ensureStarter, STARTER } from "./store";
+import { ensureStarter } from "./store";
+import { STARTER } from "./workspace";
 import { dumpDatabase, v1Legacy, writeV1 } from "./testing";
 
 // Started only by sqliteStore.browser.test.ts: OPFS's fast mode exists only inside a Worker.

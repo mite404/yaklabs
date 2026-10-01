@@ -32,6 +32,7 @@ export {
   inSidebarOrder,
   resizeLane,
   sidebarTree,
+  STARTER,
   threadIdSchema,
   threadLane,
   titleFor,

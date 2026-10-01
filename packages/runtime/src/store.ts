@@ -3,8 +3,7 @@ import type { Transcript } from "./conversation";
 import type { ThreadMark } from "./marks";
 import type { RenameTarget } from "./protocol";
 import {
-  projectIdSchema,
-  threadIdSchema,
+  STARTER,
   type Lane,
   type Notification,
   type Place,
@@ -108,16 +107,6 @@ export function seedThread(name: string): Thread {
   if (thread === undefined) throw new Error(`The catalog has no seed thread named ${name}`);
   return thread;
 }
-
-/**
- * What an empty device starts with: the Live Playground project and its one main thread, with
- * no turns and the title an untitled main gets (`storeWrites.ts`), so the first visit opens on
- * an empty thread. Their ids never change, so an address to either holds on every device.
- */
-export const STARTER = {
-  project: { id: projectIdSchema.parse("live-playground"), name: "Live Playground" },
-  thread: { id: threadIdSchema.parse("playground"), title: "New thread" },
-} as const;
 
 /**
  * Gives a device store the starter wherever it lacks it: the Live Playground project and its
