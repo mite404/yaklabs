@@ -97,6 +97,12 @@
    behind the rail move on one clock with the title bar's lead that carries the tabs
    (title-bar.tsx), so their edges meet on every frame. Only the duration and the curve: a key, a
    drag and reduced motion still turn the transition off (transition-property, the utilities'). */
+/* A sidebar title too long for its row fades out over its last 24px (--space) rather than ending
+   in an ellipsis, so it reads as running on under the panel's edge (Ethan). Only a cut title
+   fades (`data-cut`, label-cut.ts): a short one keeps every letter at full ink. */
+[data-slot="sidebar"] [data-label][data-cut] {
+  mask-image: linear-gradient(to right, #000 calc(100% - var(--space)), transparent);
+}
 [data-slot="sidebar-gap"],
 [data-slot="sidebar-container"] {
   transition-duration: var(--panel-pin);
