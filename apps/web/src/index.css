@@ -823,7 +823,9 @@ html[data-dragging="sidebar"] * {
     width: 50px;
     height: 50px;
     padding: 20px 17.5px; /* the 15px by 10px of dots, centred in the circle */
-    border-radius: 50%;
+    /* A clip, not a radius: a radius also rounds the dots' own box (25px less the padding) and
+       shaves the corner dots, where a clip cuts only the circle, for the eye and the hit alike. */
+    clip-path: circle(50%);
     transform: translate(-50%, -50%);
     background: radial-gradient(circle, var(--soft-ink) 1.25px, transparent 1.75px) 0 0 / 5px 5px;
     background-origin: content-box;

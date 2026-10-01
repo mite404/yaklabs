@@ -1754,6 +1754,21 @@ lead itself, base still home while the branch is visibly lit, and fails on the o
 Lesson: equal on paper is not equal on screen. An actor who walks on from the dark needs an
 earlier cue than one already in the light.
 
+### The matte that rounded the prop
+
+The lane grip's six dots showed with the left pair shaved into half moons. The dots are a
+15px by 10px patch painted inside a 50px circle, the circle being the only place the hand
+shows. The circle came from `border-radius: 50%`, and the dots were painted only in the
+middle of the circle with `background-clip: content-box`. A radius does not just round the
+outer edge: it rounds every inner box too, by 25px less the padding, so the little dots box
+became a 15px by 10px ellipse and the corner dots fell outside it.
+
+The fix swapped the radius for `clip-path: circle(50%)`. A clip is a matte laid over the
+finished frame: it cuts the circle for the eye and for the pointer alike, and leaves the boxes
+inside it square. The 25px grab zone still lifts at 20px from the centre and not at 35px.
+Lesson: a radius reshapes the set, a clip only frames it. Reach for the clip when the shape is
+about where things can be touched, not how they are built.
+
 ## 5. Director's Commentary
 
 ### The agent only states intent; the design system does the rest
