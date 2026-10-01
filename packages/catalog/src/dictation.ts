@@ -64,22 +64,18 @@ export function appendDictation(draft: string, transcript: string): string {
 /** Shown when the browser has no speech service. */
 export const NO_SPEECH_NOTICE =
   "The waveform is live, but this browser has no speech service, so no text will appear.";
-/** Shown once the speech service has heard no speech and no words have come. */
-export const SILENT_DEFAULT_NOTICE =
-  "No speech heard from your system's default microphone. Words come from that one, whatever the input above; check it in your system's sound settings.";
-
-/** What the live modal tells the user, most pressing first, or nothing while all is well. */
+/**
+ * Why the live modal can turn no speech into text, most pressing first, or nothing while it
+ * can. It takes the standing warning's place at the top while it lasts (Ethan).
+ */
 export function liveNotice(state: {
   microphoneError: string | undefined;
   supported: boolean;
   failure: string | undefined;
-  silent: boolean;
-  heard: boolean;
 }): string | undefined {
   if (state.microphoneError !== undefined) return state.microphoneError;
   if (!state.supported) return NO_SPEECH_NOTICE;
-  if (state.failure !== undefined) return state.failure;
-  return state.silent && !state.heard ? SILENT_DEFAULT_NOTICE : undefined;
+  return state.failure;
 }
 
 /**

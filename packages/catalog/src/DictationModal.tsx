@@ -32,16 +32,13 @@ const keyHandler =
     else finish();
   };
 
-// The transcript so far, or the prompt to speak, and the notice when part of it cannot come.
-function Transcript({ transcript, notice }: { transcript: string; notice: string | undefined }) {
+// The transcript so far, or the prompt to speak.
+function Transcript({ transcript }: { transcript: string }) {
   const heard = transcript !== "";
   return (
-    <>
-      <p className={heard ? "dictation-text" : "dictation-text muted"} aria-live="polite">
-        {heard ? transcript : "Start speaking…"}
-      </p>
-      {notice !== undefined && <p className="dictation-notice">{notice}</p>}
-    </>
+    <p className={heard ? "dictation-text" : "dictation-text muted"} aria-live="polite">
+      {heard ? transcript : "Start speaking…"}
+    </p>
   );
 }
 
@@ -145,9 +142,10 @@ function DictationFooter({
 /**
  * Full-attention dictation: a modal over the thread that makes clear typing is paused
  * while recording, with a large center-playhead waveform, a live transcript preview,
- * and a microphone picker. A standing warning sits under the header: with the live microphone,
- * that the picked input must be the system's default for speech to become text (Ethan). Esc
- * cancels; Enter (or Done) inserts the text.
+ * and a microphone picker. One warning sits under the header, the only one it shows (Ethan):
+ * why no speech can become text, while that lasts; else with the live microphone, that only
+ * the system's default input turns speech into text. Esc cancels; Enter (or Done) inserts the
+ * text.
  * @param note The host's standing warning in place of the live one, such as the Demo's pointer
  *   to where speech can really be tested; none and a simulated source shows no warning.
  */
@@ -182,13 +180,13 @@ export function DictationModal({
         devices={devices}
         deviceId={deviceId}
         live={live}
-        warning={note ?? (live ? DEFAULT_MIC_WARNING : undefined)}
+        warning={notice ?? note ?? (live ? DEFAULT_MIC_WARNING : undefined)}
         picking={picking}
         onPicking={setPicking}
         onPick={setDeviceId}
       />
       <Waveform read={read} />
-      <Transcript transcript={transcript} notice={notice} />
+      <Transcript transcript={transcript} />
       <DictationFooter
         doneButton={doneButton}
         onCancel={onCancel}

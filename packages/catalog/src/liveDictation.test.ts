@@ -46,7 +46,6 @@ function fakeService() {
 function listen(service: ReturnType<typeof fakeService>) {
   const heard: string[] = [];
   const failures: string[] = [];
-  const silences = { count: 0 };
   const stop = transcribe(service.Recognizer, {
     onText: (text) => {
       heard.push(text);
@@ -54,11 +53,8 @@ function listen(service: ReturnType<typeof fakeService>) {
     onFailure: (message) => {
       failures.push(message);
     },
-    onSilence: () => {
-      silences.count += 1;
-    },
   });
-  return { heard, failures, silences, stop };
+  return { heard, failures, stop };
 }
 
 beforeEach(() => {
@@ -84,10 +80,9 @@ describe("transcribe keeps listening through the speech service's pauses", () =>
 
   it("gets over a stretch of silence, and stops when asked without restarting", () => {
     const service = fakeService();
-    const { failures, silences, stop } = listen(service);
+    const { failures, stop } = listen(service);
     service.emit("start");
     service.emit("error", { error: "no-speech" });
-    expect(silences.count).toBe(1);
     stop();
     service.emit("error", { error: "aborted" });
     service.emit("end");

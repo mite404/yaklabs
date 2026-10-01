@@ -29,12 +29,10 @@ type MicrophoneSink = {
   onError: (message: string) => void;
 };
 
-// Where the speech service reports to while it listens: the words, a failure that ends it, and
-// a stretch it heard no speech in, which it gets over.
+// Where the speech service reports to while it listens: the words, and a failure that ends it.
 type SpeechSink = {
   onText: (text: string) => void;
   onFailure: (message: string) => void;
-  onSilence: () => void;
 };
 
 // How long the speech service has to answer a start before the user hears it is not coming.
@@ -221,7 +219,6 @@ export function transcribe(Recognizer: SpeechRecognizerClass, sink: SpeechSink):
     sink.onText(heardSoFar(kept, session));
   });
   recognizer.addEventListener("error", (event) => {
-    if (event.error === "no-speech") sink.onSilence();
     const message = speechFailure(event.error); // → string | undefined
     if (message !== undefined) fail(message);
   });

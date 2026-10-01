@@ -43,25 +43,18 @@ function useMicrophone(enabled: boolean, deviceId: string) {
 function useSpeechTranscript(enabled: boolean) {
   const [text, setText] = useState("");
   const [failure, setFailure] = useState<string>();
-  const [silent, setSilent] = useState(false);
   const Recognizer = speechRecognizer();
   const supported = Recognizer !== undefined;
 
   useEffect(() => {
-    const sink = {
-      onText: setText,
-      onFailure: setFailure,
-      onSilence: () => {
-        setSilent(true);
-      },
-    };
+    const sink = { onText: setText, onFailure: setFailure };
     const stop = enabled && Recognizer ? transcribe(Recognizer, sink) : undefined;
     return () => {
       stop?.();
     };
   }, [enabled, Recognizer]);
 
-  return { text, supported, failure, silent };
+  return { text, supported, failure };
 }
 
 type Microphone = ReturnType<typeof useMicrophone>;
@@ -99,8 +92,6 @@ function viewFor(
       microphoneError: microphone.error,
       supported: speech.supported,
       failure: speech.failure,
-      silent: speech.silent,
-      heard: speech.text !== "",
     }),
   };
 }
