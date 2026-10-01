@@ -219,6 +219,12 @@ splash switch had vanished from production. None was a big bug. Each was a place
 pointed at a wide shot when the viewer asked for a close-up, and the fixes all point closer: at the
 word, at the card, at the grid step.
 
+The second walkthrough asked the app to behave like a good camera operator (ADR-159): don't pan
+to something already in frame, don't crop the top of a subject, and when the presenter's hand
+picks an answer, let the audience see the hand. Home became a hub you can return to, the demo's
+Play button learned to call for attention, child lanes now line up with the sidebar, and the
+splash steps through its three looks one visit at a time.
+
 ## 2. Cast & Crew
 
 The first entries are ideas from before any code existed; the rest are parts of the running app.
@@ -1693,6 +1699,23 @@ The weekly brief's recap had three lines, and all three glowed the same reply. T
 real records, but each one only knew its turn, and the turn was the whole answer. Now each line
 also knows the step that recorded it, and the step's evidence is the same chart the reply shows
 between its paragraphs, so the jump finds that card by its contents and glows it alone.
+
+### The project that never arrived
+
+Ethan's sidebar showed Demo and a mystery "Demo store", but no Live Playground. Demo store was his
+own browser's data from builds before ADR-156, migrated into a project of that name, and it held
+the clue: the seed that adds the Live Playground ran only on an empty store. Every browser that
+had ever been used kept its old threads and never got the new project. The seed now asks the
+question it meant to ask, "is the Live Playground thread here?", and adds it beside whatever the
+store already holds.
+
+### The camera that panned to the actor already on screen
+
+Every jump centred its target, whatever it was and wherever it stood. A recap card already in
+view slid to the middle anyway, and a card taller than half the view was centred so far down that
+its header went off the top. The fix is a rule with three outcomes: in view, stay and glow; a
+user's message out of view, centre; anything else out of view, the smallest move that shows it,
+top first.
 
 ## 5. Director's Commentary
 
@@ -3596,4 +3619,33 @@ skips what the data leaves out (cards, Work details, buttons).
 
 Senior-engineer takeaway: when a library owns the nodes, do not decorate them. Find an overlay that
 names what you want, a highlight, a ring layer, a data attribute, and let the owner keep its film.
+
+### Frame by rule, not by habit: three outcomes for every jump
+
+A jump used to have one move, "centre it". Most of the complaints were about the cases where that
+move was wrong. The fix is to make the decision explicit as data first, then let a thin layer act
+on it.
+
+```ts
+// packages/catalog/src/threadReveal.ts: the decision, with no DOM in sight
+export function jumpPlan(target: Span, view: Viewport, center: boolean): "stay" | "center" | number {
+  if (target.top >= bandTop && target.bottom <= bandBottom) return "stay"; // → glow only
+  if (center) return "center"; // → a user's message: the eye goes to the middle
+  return clamp(Math.min(bottomInView, topInView), view.maxScrollTop); // → just into view
+}
+```
+
+```mermaid
+flowchart TD
+  J["jump to a target"] --> V{"wholly in view?"}
+  V -- yes --> S["stay: glow only"]
+  V -- no --> U{"a user's message?"}
+  U -- yes --> C["centre it (runway if near the end)"]
+  U -- no --> N["smallest scroll that shows it, top never cut"]
+```
+
+The film version: a good operator doesn't reframe a shot the subject is already in, and never
+crops a head to centre a body. Senior-engineer takeaway: when one behaviour keeps being "almost
+right", list the situations it runs in and write the decision as a pure function with one test
+per situation. The edge cases stop being bugs and become rows in a table.
 
