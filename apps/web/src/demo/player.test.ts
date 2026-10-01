@@ -21,15 +21,17 @@ const userBeats = (script: Script): Beat[] => script.beats.filter((beat) => beat
 
 // A clock on which every wait is over after one turn of the event loop; `before` sees each.
 function clockThat(before: (ms: number) => void = () => {}): Clock {
+  const over = async (ms: number) => {
+    before(ms);
+    await new Promise((resolve) => {
+      setTimeout(resolve, 0);
+    });
+  };
   return {
     state: () => ({ rate: 1, paused: false }),
     subscribe: () => () => {},
-    wait: async (ms) => {
-      before(ms);
-      await new Promise((resolve) => {
-        setTimeout(resolve, 0);
-      });
-    },
+    wait: over,
+    hold: over,
     setRate: () => {},
     pause: () => {},
     resume: () => {},

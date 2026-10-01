@@ -127,7 +127,7 @@ async function handleOf(stage: Stage): Promise<ThreadHandle | undefined> {
   let found = panels.get(runtime.main);
   while (found === undefined && !signal.aborted) {
     // oxlint-disable-next-line no-await-in-loop -- it looks again only after a pause
-    await clock.wait(LOOK_MS, signal);
+    await clock.hold(LOOK_MS, signal);
     found = panels.get(runtime.main);
   }
   return found;
@@ -140,7 +140,7 @@ async function request(stage: Stage, text: string): Promise<void> {
     // oxlint-disable-next-line no-await-in-loop -- each keystroke lands before the next
     (await handleOf(stage))?.setDraft(characters.slice(0, typed).join(""));
     // oxlint-disable-next-line no-await-in-loop -- as above
-    await stage.clock.wait(TYPE_MS, stage.signal);
+    await stage.clock.hold(TYPE_MS, stage.signal);
     if (stage.signal.aborted) return;
   }
   (await handleOf(stage))?.send();
@@ -188,7 +188,7 @@ async function playThrough(stage: Stage, onBeat: (at: number) => void): Promise<
     // oxlint-disable-next-line no-await-in-loop -- the user's turns as the wait begins
     const asked = userTurns(await runtime.open(runtime.main));
     // oxlint-disable-next-line no-await-in-loop -- then the beat's own pause
-    await clock.wait(cue.beat.after, signal);
+    await clock.hold(cue.beat.after, signal);
     if (signal.aborted) return;
     // oxlint-disable-next-line no-await-in-loop -- beats happen one after another
     await perform(stage, cue.beat, asked);

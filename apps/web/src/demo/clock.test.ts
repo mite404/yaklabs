@@ -93,3 +93,37 @@ describe("the demo clock, paused, stopped and watched", () => {
     expect(told.state()).not.toBe(before);
   });
 });
+
+describe("the demo clock, holding a pause at its own pace", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("holds a pause for the script's time at 2x", async () => {
+    const fast = clock();
+    fast.setRate(2);
+    const hold = watch(fast.hold(200));
+    await vi.advanceTimersByTimeAsync(199);
+    expect(hold.done()).toBe(false);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(hold.done()).toBe(true);
+  });
+
+  it("holds a hold while paused, too", async () => {
+    const held = clock();
+    held.setRate(2);
+    const hold = watch(held.hold(200));
+    await vi.advanceTimersByTimeAsync(100);
+    held.pause();
+    await vi.advanceTimersByTimeAsync(5_000);
+    expect(hold.done()).toBe(false);
+    held.resume();
+    await vi.advanceTimersByTimeAsync(149);
+    expect(hold.done()).toBe(false);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(hold.done()).toBe(true);
+  });
+});

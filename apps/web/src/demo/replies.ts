@@ -44,7 +44,9 @@ function held(words: ReplyChunk[], chunk: ReplyChunk): ReplyChunk[] {
 }
 
 /**
- * A reply's chunks, each once its pause has passed on the clock. With `reduce`, a block's words
+ * A reply's chunks, each once its pause has passed on the clock. The pause before a word is the
+ * text stream's and follows the rate; the pause before anything else (a block, a card, a step)
+ * runs at 1x. With `reduce`, a block's words
  * wait for the block's end and land together, so the page changes once per block rather than
  * once per word. A stop ends it where it is.
  */
@@ -57,7 +59,7 @@ export async function* play(
   let words: ReplyChunk[] = [];
   for (const { after, chunk } of events) {
     // oxlint-disable-next-line no-await-in-loop -- a stream waits between its chunks
-    await clock.wait(after, signal);
+    await (isInline(chunk) ? clock.wait(after, signal) : clock.hold(after, signal));
     if (signal.aborted) return;
     if (reduce && isInline(chunk)) {
       words = held(words, chunk);

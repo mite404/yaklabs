@@ -14,6 +14,7 @@ const instant: Clock = {
   state: () => ({ rate: 1, paused: false }),
   subscribe: () => () => {},
   wait: () => Promise.resolve(),
+  hold: () => Promise.resolve(),
   setRate: () => {},
   pause: () => {},
   resume: () => {},
