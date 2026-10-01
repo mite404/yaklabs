@@ -315,12 +315,17 @@
 /* The scroll area is the size container for embedded cards (ADR-023).
    A stable scrollbar gutter keeps content from shifting when the bar appears (ADR-003).
    The thread steers its own scroll (threadReveal.ts), so the browser's scroll anchoring, which
-   would shift it to hold a paragraph in place as content sizes, stays off (ADR-103). */
+   would shift it to hold a paragraph in place as content sizes, stays off (ADR-103).
+   It scrolls up and down only. `overflow-y: auto` alone would make the x axis scrollable too,
+   and `contain` on both axes kept every sideways swipe over the thread from reaching the
+   canvas behind it, so a row of lanes only panned from the bare ground between them. */
 .thread-scroll {
   container: thread / inline-size;
+  overflow-x: hidden;
   overflow-y: auto;
   overflow-anchor: none;
-  overscroll-behavior: contain;
+  overscroll-behavior-x: auto;
+  overscroll-behavior-y: contain;
   scrollbar-gutter: stable;
   /* The bottom padding lands the last card --rest-gap above the compose box or the dock
      card: --dock-space is the dock card's height over the compose box (ADR-038). A jump to a

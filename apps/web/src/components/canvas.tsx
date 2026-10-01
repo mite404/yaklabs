@@ -3,7 +3,7 @@ import type { LaneId } from "@yaklabs/runtime";
 import { Fragment, useEffect, useRef, useState, type RefObject } from "react";
 import { useLanding, type Landing } from "./canvas-carry";
 import { CanvasCard } from "./canvas-card";
-import { panRow, usePan } from "./canvas-pan";
+import { panByWheel, usePan } from "./canvas-pan";
 import { Lane, type LaneReports, type LaneView } from "./lane";
 
 export type { LaneView } from "./lane";
@@ -233,6 +233,7 @@ export function Canvas({
   const pan = usePan();
   const landing = useLanding(row, onCarry);
   useFocusedLane(row, focus, visit, lanes);
+  useEffect(() => (row.current === null ? undefined : panByWheel(row.current)), []);
   const onClose = (id: LaneId) => {
     if (row.current !== null) handOnFocus(row.current, lanes, id);
     actions.onClose(id);
@@ -245,7 +246,6 @@ export function Canvas({
       data-drop={landing === null ? undefined : ""}
       data-reorder={reorderable}
       className="canvas relative flex h-full overflow-x-auto px-(--canvas-grid) py-4"
-      onWheel={panRow}
       onPointerDown={pan.onPointerDown}
       onPointerMove={pan.onPointerMove}
       onPointerUp={pan.onPointerUp}
