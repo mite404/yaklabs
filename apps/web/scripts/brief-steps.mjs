@@ -210,15 +210,18 @@ async function workDetails(page, run) {
   await run.shot("06-work-details");
 }
 
+// Restart plays the show again from its start, at the rate it was left at.
 async function restartFaster(page, run) {
-  await toolbarOf(page).getByRole("button", { name: "Restart" }).click();
-  await until(async () => (await statusOf(page).innerText()) === "Ready", "Ready after Restart");
-  await composeOf(page).waitFor();
   const fast = toolbarOf(page).getByRole("button", { name: "Fast forward, 2x" });
   await fast.click();
   assert.equal(await fast.getAttribute("aria-pressed"), "true");
   const began = Date.now();
-  await button(page, "Play").click();
+  await toolbarOf(page).getByRole("button", { name: "Restart" }).click();
+  await until(
+    async () => (await statusOf(page).innerText()).startsWith("Playing"),
+    "Playing after Restart",
+  );
+  await composeOf(page).waitFor();
   await untilDone(page);
   const { timing } = run;
   timing.fast = Date.now() - began;
