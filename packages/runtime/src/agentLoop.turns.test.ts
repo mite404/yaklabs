@@ -9,8 +9,9 @@ import {
 } from "@yaklabs/catalog/reply";
 import type { ThreadMessage } from "@yaklabs/catalog/thread";
 import { describe, expect, it, vi } from "vitest";
-import { beats, init, profit, sendAsk, startLoop } from "./agentLoop.harness";
-import type { Notice } from "./protocol";
+import { beats, init, lastWorkspace, profit, sendAsk, startLoop } from "./agentLoop.harness";
+import type { Command, Notice } from "./protocol";
+import { projectIdSchema, threadIdSchema } from "./workspace";
 
 // A reply that shows its work: a check starts, a card and a finding land, the check settles
 // with its outcome, and the work is summed up.
@@ -170,5 +171,42 @@ describe("the agent loop keeps a question with its answer", () => {
     await run({ ...sendAsk, requestId: "r2", event: { kind: "answer", text: "Any" } });
     const answered = (await opened(run, notices)).at(-2);
     expect(answered).toEqual({ id: "u3", role: "user", text: "Any", time: "10:03" });
+  });
+});
+
+// A main made with no title, a message to it, and its title in the state pushed last.
+const untitled: Command = {
+  kind: "create",
+  requestId: "c1",
+  item: { kind: "main", projectId: projectIdSchema.parse("demo-store") },
+};
+const say = (requestId: string, text: string): Command => ({
+  kind: "send",
+  requestId,
+  threadId: threadIdSchema.parse("t-001"),
+  event: { kind: "message", text, attachments: [] },
+});
+const titleOf = (notices: Notice[]) =>
+  lastWorkspace(notices).threads.find((thread) => thread.id === "t-001")?.title;
+
+describe("a thread's first message names it", () => {
+  it("titles a new thread from its first message, and keeps that title after", async () => {
+    const { notices, run } = await startLoop();
+    await run(init);
+    await run(untitled);
+    await run(say("r1", "Which refunds  came\nin late last week?"));
+    expect(titleOf(notices)).toBe("Which refunds came in late last week?");
+    await run(say("r2", "And the week before?"));
+    expect(titleOf(notices)).toBe("Which refunds came in late last week?");
+  });
+
+  it("leaves a thread someone named alone", async () => {
+    const { notices, run } = await startLoop();
+    await run(init);
+    await run(untitled);
+    const name = "Refunds";
+    await run({ kind: "rename", requestId: "n1", target: { kind: "thread", id: "t-001" }, name });
+    await run(say("r1", "Which refunds came in late?"));
+    expect(titleOf(notices)).toBe("Refunds");
   });
 });

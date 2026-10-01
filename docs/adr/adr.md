@@ -2433,7 +2433,9 @@ Home never stacks a second blank thread. A plain visit to "/" still resumes the 
 screen, and with none open it opens that page too, where it said "Nothing open"; only a
 scenario, which has no Live Playground, still says so. A thread started with nothing naming its
 project goes in the Live Playground, not the sidebar's first project, the scripted Demo, whose
-stand-in had answered it. Every device
+stand-in had answered it. A main still called "New thread" takes its title from its first
+message, cut at a word as a lane's header is, so a Home that starts fresh threads never lists
+a column of them; a thread someone named keeps its name. Every device
 store gets the Live Playground: the seed ran only on an empty store, so a browser that held
 threads from before ADR-156 (its "Demo store", kept on the device, not the account) never had
 it. The splash takes the next look each visit, abstract, landscape, Vitruvian, then round again,

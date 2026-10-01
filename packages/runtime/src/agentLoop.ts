@@ -2,7 +2,7 @@ import type { Agent } from "@yaklabs/catalog/agent";
 import { createLabAgent } from "@yaklabs/catalog/labAgent";
 import { applyChunk, isEmptyReply, startReply } from "@yaklabs/catalog/reply";
 import { z } from "zod";
-import { settleReply, withAgentTurn, withUserTurn, type Stamp } from "./conversation";
+import { settleReply, withAgentTurn, type Stamp } from "./conversation";
 import { createPlaygroundAgent } from "./playgroundAgent";
 import {
   commandSchema,
@@ -12,7 +12,7 @@ import {
   type RuntimeData,
   type Source,
 } from "./protocol";
-import { create, isMenuWrite, menuWrite, type Writer } from "./storeWrites";
+import { create, isMenuWrite, menuWrite, recordAsk, type Writer } from "./storeWrites";
 import { createSettler, timeoutSchedule, type Schedule, type Settler } from "./settler";
 import { lanesOf, mergeLanes, type ThreadId } from "./workspace";
 
@@ -134,7 +134,7 @@ async function reply(
   const { requestId, threadId, event, accessToken } = command;
   const { store, mint, agent: spec } = session;
   const asked = stampOf(mint);
-  store.changeTranscript(threadId, (transcript) => withUserTurn(transcript, event, asked));
+  recordAsk(store, threadId, event, asked);
   pushState(loop, session);
   const agent = loop.host.createAgent(spec, { store, threadId, accessToken });
   let turn = startReply(requestId, asked.time); // → AgentMessage; its id is minted as it is saved

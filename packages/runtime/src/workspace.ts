@@ -12,6 +12,9 @@ export const threadIdSchema = idSchema.brand<"ThreadId">();
 /** A lane's id: `l-<threadId>` for a thread lane, `c-...` for a card lane. */
 export const laneIdSchema = idSchema.brand<"LaneId">();
 
+/** What a main thread is called until someone names it, or its first message does. */
+export const NEW_THREAD = "New thread";
+
 /**
  * What every device holds (`ensureStarter`): the Live Playground project and its one main
  * thread, with no turns and the title an untitled main gets (`storeWrites.ts`), so the first
@@ -20,7 +23,7 @@ export const laneIdSchema = idSchema.brand<"LaneId">();
  */
 export const STARTER = {
   project: { id: projectIdSchema.parse("live-playground"), name: "Live Playground" },
-  thread: { id: threadIdSchema.parse("playground"), title: "New thread" },
+  thread: { id: threadIdSchema.parse("playground"), title: NEW_THREAD },
 } as const;
 
 /** A project's id, branded so it never stands in for a thread's. */
