@@ -1362,6 +1362,9 @@ sign-in off there is no account to show, so the corner shows Kay; a WorkOS user 
 picture or initials. The button's name stays "Account" and the picture has no alternative text.
 Amended 2026-10-01: built in `apps/web/src/shell/account.tsx` for builds without sign-in;
 the deployed build signs in (ADR-156), so it shows the account.
+Amended 2026-10-01 (Ethan: "okay you can delete Kay's face"): the face is gone. It was YakLabs'
+mascot, cut from Ethan's mock, and permission to ship it never came. A build without sign-in
+now shows the avatar's person glyph; `kay-face.webp`, its credits and `cut-kay.mjs` are deleted.
 
 ## ADR-115 - The title bar can be painted, and stays solid by default
 
