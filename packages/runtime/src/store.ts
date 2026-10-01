@@ -120,13 +120,14 @@ export const STARTER = {
 } as const;
 
 /**
- * Gives an empty device store the starter: the Live Playground project and its empty thread.
- * A store with any thread is left alone, so running it again changes nothing.
+ * Gives a device store the starter wherever it lacks it: the Live Playground project and its
+ * empty thread, beside anything the store already holds, so a device with threads from before
+ * the Live Playground existed gets it too. Running it again changes nothing.
  * @throws When the store refuses the project or the thread.
  */
 export function ensureStarter(store: Store, at: string): void {
   const { projects, threads: existing } = store.workspace();
-  if (existing.length > 0) return;
+  if (existing.some((each) => each.id === STARTER.thread.id)) return;
   const { project, thread } = STARTER;
   if (!projects.some((each) => each.id === project.id))
     store.addProject({ ...project, createdAt: at });

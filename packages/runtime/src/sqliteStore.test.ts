@@ -262,11 +262,21 @@ describe("ensureStarter", () => {
     expect(store.transcript(t("playground"))?.messages).toEqual([]);
   });
 
-  it("leaves a store that holds any thread alone", async () => {
+  it("adds the Live Playground to a store from before it, keeping what the store holds", async () => {
     const store = await openStore();
     const before = store.workspace();
     ensureStarter(store, at(5));
-    expect(store.workspace()).toEqual(before);
+    const after = store.workspace();
+    expect(after.projects).toEqual([
+      ...before.projects,
+      { id: "live-playground", name: "Live Playground", createdAt: at(5) },
+    ]);
+    expect(after.threads.map((each) => each.id)).toEqual(
+      expect.arrayContaining([...before.threads.map((each) => each.id), "playground"]),
+    );
+    expect(after.threads).toHaveLength(before.threads.length + 1);
+    ensureStarter(store, at(9));
+    expect(store.workspace()).toEqual(after);
   });
 });
 
