@@ -52,6 +52,31 @@ export const STEPS = [
   },
 ];
 
+/** The shell the terminal picture showed: its window, its prompt bar, and the command typed. */
+export const SHELL = {
+  title: "yaklabs — zsh",
+  path: "~/Programming/web/fractal/yaklabs/apps",
+  branch: "main",
+  time: "01:36:08 AM",
+  program: "pnpm",
+  args: "verify-ui-drift run",
+};
+
+/** The comparator proof's counts for each engine, as the review app tabled them. */
+export const PROOF = [
+  { engine: "chromium", control: 0, color: 7735, geometry: 15600 },
+  { engine: "firefox", control: 0, color: 7740, geometry: 16497 },
+  { engine: "webkit", control: 0, color: 8023, geometry: 15863 },
+];
+
+/** Four measured token pairs under the Kay lens, light appearance, with the minimum each clears. */
+export const PAIRS = [
+  { pair: "--ink on --paper", ratio: 13.33, minimum: 4.5 },
+  { pair: "--soft-ink on --paper", ratio: 6.42, minimum: 4.5 },
+  { pair: "--rule on --paper", ratio: 5.68, minimum: 3 },
+  { pair: "--focus on --paper", ratio: 3.01, minimum: 3 },
+];
+
 /** The run the terminal picture showed, as the CLI printed it, with the home path shortened. */
 export const RUN = {
   command: "pnpm verify-ui-drift run",
