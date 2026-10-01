@@ -41,20 +41,25 @@ function useMicrophone(enabled: boolean, deviceId: string) {
   return { read: () => level.current, devices, error };
 }
 
-// Live transcription through the browser's speech service, where one exists.
+// Live transcription through the browser's speech service, where one exists, and what to tell
+// the user when it fails, since the waveform keeps moving either way.
 function useSpeechTranscript(enabled: boolean) {
   const [text, setText] = useState("");
+  const [failure, setFailure] = useState<string>();
   const Recognizer = speechRecognizer();
   const supported = Recognizer !== undefined;
 
   useEffect(() => {
-    const stop = enabled && Recognizer ? transcribe(Recognizer, setText) : undefined;
+    const stop =
+      enabled && Recognizer
+        ? transcribe(Recognizer, { onText: setText, onFailure: setFailure })
+        : undefined;
     return () => {
       stop?.();
     };
   }, [enabled, Recognizer]);
 
-  return { text, supported };
+  return { text, supported, failure };
 }
 
 type Microphone = ReturnType<typeof useMicrophone>;
@@ -91,7 +96,7 @@ function viewFor(
     devices: microphone.devices,
     transcript: speech.text,
     read: microphone.read,
-    notice: microphone.error ?? (speech.supported ? undefined : NO_SPEECH_NOTICE),
+    notice: microphone.error ?? (speech.supported ? speech.failure : NO_SPEECH_NOTICE),
   };
 }
 

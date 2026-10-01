@@ -9,11 +9,14 @@ type SpeechRecognizer = {
   continuous: boolean;
   interimResults: boolean;
   lang: string;
-  onresult: ((event: { results: SpeechResultList }) => void) | null;
+  addEventListener(type: "start" | "end", listener: () => void): void;
+  addEventListener(type: "result", listener: (event: { results: SpeechResultList }) => void): void;
+  addEventListener(type: "error", listener: (event: { error: string }) => void): void;
   start: () => void;
   stop: () => void;
 };
-type SpeechRecognizerClass = new () => SpeechRecognizer;
+/** A speech recognizer's class, as the browser names it (`SpeechRecognition`). */
+export type SpeechRecognizerClass = new () => SpeechRecognizer;
 type SpeechWindow = Window & {
   SpeechRecognition?: SpeechRecognizerClass;
   webkitSpeechRecognition?: SpeechRecognizerClass;
@@ -25,6 +28,49 @@ type MicrophoneSink = {
   onDevices: (devices: AudioDevice[]) => void;
   onError: (message: string) => void;
 };
+
+// Where the speech service reports to while it listens.
+type SpeechSink = {
+  onText: (text: string) => void;
+  onFailure: (message: string) => void;
+};
+
+// How long the speech service has to answer a start before the user hears it is not coming.
+const ANSWER_MS = 4000;
+
+// What the user reads when the speech service stops for good, by the error it names. The
+// waveform comes from the microphone itself, so it keeps moving when this fails; the words
+// are the only place that can say so.
+const SPEECH_FAILURES: Record<string, string> = {
+  "not-allowed": "Speech recognition is blocked for this site. Allow it in your browser settings.",
+  "service-not-allowed":
+    "This browser's speech service is turned off, so no text will appear. On a Mac, Safari needs Dictation on.",
+  network: "This browser's speech service could not be reached, so no text will appear.",
+  "audio-capture": "The speech service could not hear the microphone, so no text will appear.",
+  "language-not-supported":
+    "The speech service does not know this browser's language, so no text will appear.",
+};
+
+/** What the user reads when the speech service does not answer at all. */
+export const SILENT_SPEECH =
+  "This browser's speech service did not answer, so no text will appear.";
+
+/**
+ * What the user reads for a speech error, or undefined for one the service gets over: a
+ * stretch of silence, or the stop the page itself asked for.
+ */
+export function speechFailure(error: string): string | undefined {
+  if (error === "no-speech" || error === "aborted") return undefined;
+  return SPEECH_FAILURES[error] ?? `Speech recognition failed (${error}), so no text will appear.`;
+}
+
+/** The words heard so far: those of the sessions before, then the current session's. */
+export function heardSoFar(kept: string, session: string): string {
+  return [kept, session]
+    .map((part) => part.trim())
+    .filter((part) => part !== "")
+    .join(" ");
+}
 
 // What the user reads when the microphone cannot open, by the reason the browser gives.
 function microphoneError(reason: unknown): string {
@@ -105,26 +151,59 @@ export function listenToMicrophone(deviceId: string, sink: MicrophoneSink): () =
 
 /**
  * Runs the browser's speech service continuously, reporting the whole transcript so far each
- * time it changes.
+ * time it changes. Chrome ends a continuous session after a pause, so a session that ended
+ * while still wanted starts again and the words already heard are kept. A service that fails,
+ * or never answers within ANSWER_MS, goes to `sink.onFailure` with words for the user, never
+ * to the caller.
  * @returns The stop.
  */
-export function transcribe(
-  Recognizer: SpeechRecognizerClass,
-  onText: (text: string) => void,
-): () => void {
+export function transcribe(Recognizer: SpeechRecognizerClass, sink: SpeechSink): () => void {
+  let stopped = false;
+  let failed = false;
+  let answered = false; // → the current session has started
+  let kept = ""; // → the words of the sessions before this one
+  let session = "";
+  const fail = (message: string) => {
+    failed = true;
+    sink.onFailure(message);
+  };
   const recognizer = new Recognizer();
   recognizer.continuous = true;
   recognizer.interimResults = true;
   recognizer.lang = navigator.language || "en-US";
-  recognizer.onresult = (event) => {
-    onText(
-      Array.from(event.results, (result) => result[0].transcript)
-        .join(" ")
-        .trim(),
-    );
-  };
+  recognizer.addEventListener("start", () => {
+    answered = true;
+  });
+  recognizer.addEventListener("result", (event) => {
+    // Chrome starts each result after the first with a space, so runs of space close up.
+    session = Array.from(event.results, (result) => result[0].transcript)
+      .join(" ")
+      .replaceAll(/\s+/g, " ");
+    sink.onText(heardSoFar(kept, session));
+  });
+  recognizer.addEventListener("error", (event) => {
+    const message = speechFailure(event.error); // → string | undefined
+    if (message !== undefined) fail(message);
+  });
+  recognizer.addEventListener("end", () => {
+    if (stopped || failed) return;
+    // A session that ends without ever starting would end again at once: say so, once.
+    if (!answered) {
+      fail(SILENT_SPEECH);
+      return;
+    }
+    kept = heardSoFar(kept, session);
+    session = "";
+    answered = false;
+    recognizer.start();
+  });
+  const unanswered = setTimeout(() => {
+    if (!answered && !stopped && !failed) fail(SILENT_SPEECH);
+  }, ANSWER_MS);
   recognizer.start();
   return () => {
+    stopped = true;
+    clearTimeout(unanswered);
     recognizer.stop();
   };
 }
