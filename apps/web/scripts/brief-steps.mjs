@@ -6,17 +6,14 @@ import path from "node:path";
 
 // The walkthrough's ceiling for one scenario at 1x (the interview's three minutes).
 const WALKTHROUGH_MS = 180_000;
-// What 2x controls is the show's clock: every pause and keystroke in a script waits on it. The
-// reply's words wait on it too, but folding each word into the thread (the store, React, layout)
-// is main-thread work the clock cannot scale, about 30ms a word in headless Chromium against a dev
-// server, and the brief has some 250 words. That fixed share is why the whole run at 2x lands at
-// 59-63% of 1x, not 50%, and why the machine decides which side of 60% it falls on (ADR-153
-// amendment: the reveal is not paced in real time; it is slowed by rendering, not by a timer).
-// So the strict bound is on the clock-driven stretch from the docked question to the player's
-// answer (the script's own 4.5s pause), and the whole run only has to beat this looser one,
-// which still fails if 2x did nothing.
-const FAST_SHARE = 0.6;
-const WHOLE_RUN_SHARE = 0.75;
+// 2x speeds only the reply's text stream: the words wait on the show's clock at the rate, while
+// every other pause (a card, a step, the beat before the player's answer, a keystroke) runs at
+// 1x, so UI appears when it would at 1x (ADR-148). Two bounds prove it. The pause from the docked
+// question to the player's answer (the script's own 4.5s) must stay within PACE_SPREAD of its 1x
+// time, and the whole run must still come in under FAST_SHARE of 1x, which words alone can pull
+// down to about 90% (the brief's words are a fifth of its time).
+const PACE_SPREAD = 0.2;
+const FAST_SHARE = 0.95;
 const REQUEST = "Can you prepare Monday's support brief?";
 const INTERRUPTED = "Interrupted · Incomplete answer";
 
@@ -240,15 +237,13 @@ async function restartFaster(page, run) {
   const answerSpan = Date.now() - asked; // → ms from the question to the answer at 2x
   await untilDone(page);
   timing.fast = Date.now() - began;
+  const { answerSpan: kept } = timing;
   assert.ok(
-    answerSpan < timing.answerSpan * FAST_SHARE,
-    `question to answer: ${answerSpan}ms against ${timing.answerSpan}ms`,
+    Math.abs(answerSpan - kept) < kept * PACE_SPREAD,
+    `the pause before the answer ran ${answerSpan}ms at 2x against ${kept}ms at 1x`,
   );
-  assert.ok(
-    timing.fast < timing.slow * WHOLE_RUN_SHARE,
-    `${timing.fast}ms against ${timing.slow}ms`,
-  );
-  return `${timing.fast}ms at 2x against ${timing.slow}ms at 1x; the pause before the answer ${answerSpan}ms against ${timing.answerSpan}ms`;
+  assert.ok(timing.fast < timing.slow * FAST_SHARE, `${timing.fast}ms against ${timing.slow}ms`);
+  return `${timing.fast}ms at 2x against ${timing.slow}ms at 1x; the pause before the answer ${answerSpan}ms against ${kept}ms`;
 }
 
 async function childOpensLane(page, run) {
@@ -354,7 +349,7 @@ export const briefSteps = [
     "the disclosure above the reply says what was checked; Technical details holds the logs",
     workDetails,
   ],
-  ["Restart with 2x halves the clock-driven pauses and shortens the whole run", restartFaster],
+  ["Restart with 2x speeds the words, not the pauses between the show's beats", restartFaster],
   ["a child's row opens its lane on the canvas, under the demo's address", childOpensLane],
 ];
 

@@ -2152,11 +2152,12 @@ fill and send the compose box, answer the docked question, stop, try again), so 
 exercises the path a person's click takes. A beat after a reply waits for that reply to settle;
 one marked to overlap counts from the beat before it, so a second request goes out while the
 first reply streams. A presenter who answers the question first is not answered for again. One
-clock carries the rate (1x or 2x) and the pause, so Pause holds the streaming too. 2x halves
-every wait on that clock, the reveal's words included; it cannot halve the main-thread work of
-folding each word into the thread (about 30ms a word in headless Chromium on the dev server), so
-the whole brief at 2x runs in 59-63% of its 1x time, not 50%. The lever therefore holds 2x to
-half on the clock-driven pause before the player's answer, and to 75% on the whole run. Restart
+clock carries the rate (1x or 2x) and the pause, so Pause holds the streaming too. 2x speeds only
+the
+reply's text stream: the pause before a word waits on the clock at the rate, and every other pause
+(before a block, a card or a step, a beat's own gap, a keystroke) waits on it at 1x, still held by
+Pause, so UI appears and animates as at 1x. The lever holds 2x to that: the pause before the
+player's answer stays within 20% of its 1x time, and the whole run lands under 95% of it. Restart
 remounts the shell on a fresh workspace; the 2x setting outlives it. Under reduced motion the
 words of one block arrive together. A thread pane whose thread was worked on elsewhere (a child a
 parent finished) reads its turns again once that work settles, so a lane opened mid-run does not

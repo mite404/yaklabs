@@ -345,7 +345,8 @@ The first entries are ideas from before any code existed; the rest are parts of 
 - **The player** (`apps/web/src/demo/player.ts`) is the actor who plays the user: it types each
   request into the compose box, answers the docked question, presses Stop and Try again, all
   through the panel's own handle, and waits on the runtime for each reply to settle. One clock
-  (`clock.ts`) paces it and the agent alike, so Pause holds everything and 2x speeds everything.
+  (`clock.ts`) paces it and the agent alike, so Pause holds everything, while 2x speeds only the
+  words of the reply (`hold` vs `wait`).
 - **The Door's paths** (`apps/web/src/runtime.tsx`) are the call sheet's addresses: the Door now
   says where a thread lives, where home is and which thread a pathname names, so the same shell
   runs under `/t/:threadId` and under the demo's route without a single link knowing the
@@ -616,7 +617,9 @@ The first entries are ideas from before any code existed; the rest are parts of 
   "20m ago", moving on the panel's minute clock. It is the slate at the end of the take: one
   mark that dates the whole exchange, so the request above needs none (ADR-152).
 - **One clock for the script and the agent.** The player's keystrokes and the agent's word pauses
-  wait on the same clock, so Pause is one flag and 2x one number, and the two can never drift.
+  wait on the same clock, so Pause is one flag and 2x one number, and the two can never drift. 2x
+  reaches only the
+  words: every other pause runs at 1x so the UI keeps its pace.
 - **The recap is a view, not a note.** The panel could show a recap, but only Storybook ever
   handed it one; the app had nothing to hand. Rather than store a summary somebody writes after
   the fact, the recap is read from the record: each finished step's outcome, each reply that
@@ -1630,6 +1633,19 @@ with a 504 "Outdated Optimize Dep", and the browser logs it as an error. One war
 rebuild them, and the rerun was clean. `web-check.mjs` already guards for it; its comment says the
 first load has to be clean, not the second. Lesson: after a lockfile change, give the dev server one
 throwaway take before you judge the footage.
+
+### The 2x that was not twice as fast
+
+The lever said 2x must finish the brief in under 60% of its 1x time, and it flaked at 61-63%. The
+first guess was that the on-screen reveal ran on real time. It did not: every word already waited
+on the show's clock. The missing time was the cost of drawing each word (about 30ms in a headless
+browser), which no clock can halve. Marking when each stage appeared showed every stretch shrinking
+by the same 43%, so no one stage was the culprit. Then Ethan fixed the intent: 2x should speed only
+the reply's text stream, and no UI reveal or animation. The clock now has two waits: `wait` for
+words (scaled by the rate) and `hold` for everything else (always 1x, still frozen by Pause). The
+lever measures the pause before the player's answer and requires it to stay put. Lesson: when a
+timing bound flakes, measure where the time goes before choosing which side to bend; then write
+down what the control is meant to touch, not only what it happens to do.
 
 ## 5. Director's Commentary
 
