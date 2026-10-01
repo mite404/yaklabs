@@ -10,7 +10,8 @@ import { arg, chromium, ROOT } from "./harness.mjs";
 import { railOf, RAIL_PLACES } from "./rail-places.mjs";
 
 const BASE = arg("--base", "http://127.0.0.1:5173");
-// The gap between lanes: one step of the canvas's dot grid (index.css --canvas-grid).
+// The gap between lanes, and an arrow key's resize: one step of the canvas's dot grid
+// (index.css --canvas-grid, lane-separator.tsx).
 const LANE_GAP_PX = 18;
 const OUT = arg(
   "--out",
@@ -1026,7 +1027,7 @@ try {
     gapsAtRest.length > 0 &&
       gapsAtRest.every((gap) => gap.ok) === true &&
       gapsResized.every((gap) => gap.ok) === true &&
-      gapsResized[0].now === gapsAtRest[0].width + 24,
+      gapsResized[0].now === gapsAtRest[0].width + LANE_GAP_PX,
     `${gapsAtRest.map((gap) => `${gap.now}/${gap.width}`).join(" ")} → ${gapsResized.map((gap) => `${gap.now}/${gap.width}`).join(" ")}`,
   );
 
