@@ -2368,3 +2368,21 @@ picker showed on a first visit once first run opened the thread pane where it wa
 it now renders in development builds only. The device levers `apps/web/scripts/web-check.mjs`
 and `workspace-check.mjs` drive `?scenario=` fixtures, where the overlay is off and the profit
 thread still exists, so they run unchanged.
+
+## ADR-157 - A tool that keeps failing is retired for the rest of the turn
+
+2026-10-01 - Accepted (Ethan, as design guidance to the implementing thread: "make the illegal
+state unrepresentable: remove a repeatedly failing tool from the next round's offered tools").
+ADR-155's breaker asked the model to cooperate with its own constraint: a tool's second
+validation failure answered "Answer in prose instead", which only worked when the model
+complied. Now the failure that reaches a tool's limit still returns that error, and the next
+round's request no longer offers the tool. The limits live in `REMOVE_AFTER`
+(`apps/gateway/src/playgroundTools.ts`), a table keyed by every tool, so a new tool fails the
+build until the table names its limit and the roster its handler; `toolsFor(state)` derives
+each round's tools from the turn's failure counts. A model can still hallucinate a call to a
+retired tool, since the stream parser is tool-agnostic; the gateway refuses it flat
+("show_card is no longer available this turn."), with no page events and no further failure
+count. The unknown-tool error names only the tools still on offer, so it never points the
+model at a retired one. The cost: a valid third attempt with the retired tool is unavailable
+for the rest of the turn, though other tools and prose remain. `decide`, the 8-round and
+16-call caps, and the empty-answer fallback are unchanged.

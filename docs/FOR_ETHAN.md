@@ -1631,6 +1631,34 @@ rebuild them, and the rerun was clean. `web-check.mjs` already guards for it; it
 first load has to be clean, not the second. Lesson: after a lockfile change, give the dev server one
 throwaway take before you judge the footage.
 
+### The breaker that asked nicely
+
+The playground's first breaker was a sentence. A tool's second bad input got its error back
+with "Answer in prose instead" appended, so the whole defense rested on the model choosing to
+obey its own constraint. Most takes it did. But a note on the call sheet is not a wall: a
+model that kept calling the tool could keep failing, sixteen times a turn if it wanted, and
+every defense that ends in words depends on the reader's goodwill. The fix struck the set
+piece instead of repeating the note. The second failure still returns its error, and the next
+round's request no longer offers the tool at all; `toolsFor(state)` in the gateway builds each
+round's tools from the turn's failure counts. One trapdoor remained: the stream parser is
+tool-agnostic, so a model can hallucinate a call to a tool it was not offered. The gateway
+refuses that call flat ("show_card is no longer available this turn."), shows nothing, and
+counts nothing, so the hallucination cannot escalate. The drift guard is mechanical: a tool
+added to the policy table without a handler fails `tsc`, and a handler without a policy entry
+fails it too, so the roster and the policy cannot part ways silently.
+
+### The props left over from an old take
+
+The full test suite failed only in a fresh sandbox, in two acts. First the browser tests could
+not launch: Playwright's Chromium was never installed, because nothing in setup fetched it.
+Then the web unit tests failed the env schema on `VITE_GATEWAY_URL=` and
+`VITE_WORKOS_CLIENT_ID=`: the orb's `.env.local` had been copied from an older `.env.example`
+that left both empty, and the schema has since learned to reject an empty string where it
+wants a variable unset. The fix went where the file is born, the project's pre-setup script:
+it now installs the headless browser and comments out any empty `VITE_` line in a generated
+`.env.local`. Lesson: a generated file is a snapshot of its template's past, and templates
+move. Normalize the artifact, or the old take keeps walking onto the new set.
+
 ## 5. Director's Commentary
 
 ### The agent only states intent; the design system does the rest
@@ -3451,3 +3479,54 @@ but the door checks the date, so nobody from the old take walks onto the new set
 Senior-engineer takeaway: when work in flight can outlive the state it was started for, do not chase
 the work to cancel it. Give it a token that names the state, and make the reset invalidate every
 token in the same step. The stale write then fails by itself, however late it arrives.
+
+### Don't ask the model to behave; change what it can do
+
+Every defense that ends in text is a request. "Answer in prose instead" works until the model
+does not answer in prose, and the failure mode is invisible: nothing in the transcript says
+the constraint was even read. The durable version moves the constraint out of the words and
+into the request. After two validation failures the tool is not offered, so the illegal call
+is no longer representable, and the one gap the structure cannot close, a hallucinated call to
+a retired tool, gets a flat refusal that counts nothing.
+
+```ts
+// apps/gateway/src/playgroundTools.ts: the policy table doubles as the roster
+const REMOVE_AFTER = {
+  update_work: 2,
+  show_card: 2,
+  ask_question: 2,
+  report_outcome: 2,
+  report_failure: 2,
+};
+type ToolName = keyof typeof REMOVE_AFTER;
+// HANDLERS: Readonly<Record<ToolName, Handler>> - a missing or extra key fails the build
+
+// apps/gateway/src/playground.ts: each round offers only what failures have not retired
+tools: toolsFor(state), // → the catalog's tools, minus the retired ones
+```
+
+```mermaid
+sequenceDiagram
+  participant M as Model
+  participant G as Gateway loop
+  participant T as toolsFor(state)
+  M->>G: show_card (bad input)
+  G-->>M: error, count 1
+  M->>G: show_card (bad input)
+  G-->>M: error + "Answer in prose instead", count 2
+  Note over G,T: show_card retired for this turn
+  G->>T: next round's tools
+  T-->>G: the other four only
+  M->>G: show_card anyway (hallucinated)
+  G-->>M: flat refusal, no events, count stays 2
+```
+
+The film version: the first breaker was a note on the call sheet asking the actor not to enter
+before the cue. The new one strikes the door from the set. An actor can still rattle the
+handle from the wings, and the stage manager says once, flatly, that there is no door, and the
+take goes on.
+
+Senior-engineer takeaway: a constraint that depends on its violator's cooperation is a
+request, not a constraint. Move it into the structure - the type, the request, the roster - so
+compliance is the only expressible state. Then spend exactly one backstop on the gap the
+structure cannot close, and make that backstop boring.
