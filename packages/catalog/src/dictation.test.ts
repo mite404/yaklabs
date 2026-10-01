@@ -1,6 +1,10 @@
 import { expect, it } from "vitest";
 import {
   appendDictation,
+  DEFAULT_ONLY_NOTICE,
+  liveNotice,
+  NO_SPEECH_NOTICE,
+  SILENT_DEFAULT_NOTICE,
   formatElapsed,
   levelFromSamples,
   simulatedLevel,
@@ -42,4 +46,22 @@ it("reveals the simulated transcript word by word and never goes backwards", () 
 it("measures silence as zero and a full-scale signal as loud", () => {
   expect(levelFromSamples(new Float32Array(256))).toBe(0);
   expect(levelFromSamples(new Float32Array(256).fill(0.5))).toBe(1);
+});
+
+it("tells the live modal's user the most pressing thing first, and nothing while all is well", () => {
+  const well = {
+    microphoneError: undefined,
+    supported: true,
+    failure: undefined,
+    silent: false,
+    heard: false,
+    deviceId: "default",
+  };
+  expect(liveNotice(well)).toBeUndefined();
+  expect(liveNotice({ ...well, microphoneError: "Blocked", supported: false })).toBe("Blocked");
+  expect(liveNotice({ ...well, supported: false })).toBe(NO_SPEECH_NOTICE);
+  expect(liveNotice({ ...well, failure: "Unreachable", deviceId: "usb" })).toBe("Unreachable");
+  expect(liveNotice({ ...well, deviceId: "usb", silent: true })).toBe(DEFAULT_ONLY_NOTICE);
+  expect(liveNotice({ ...well, silent: true })).toBe(SILENT_DEFAULT_NOTICE);
+  expect(liveNotice({ ...well, silent: true, heard: true })).toBeUndefined();
 });

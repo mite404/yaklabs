@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import {
   SIMULATED_DEVICES,
   formatElapsed,
+  liveNotice,
   simulatedLevel,
   simulatedTranscript,
   type AudioDevice,
@@ -46,20 +47,25 @@ function useMicrophone(enabled: boolean, deviceId: string) {
 function useSpeechTranscript(enabled: boolean) {
   const [text, setText] = useState("");
   const [failure, setFailure] = useState<string>();
+  const [silent, setSilent] = useState(false);
   const Recognizer = speechRecognizer();
   const supported = Recognizer !== undefined;
 
   useEffect(() => {
-    const stop =
-      enabled && Recognizer
-        ? transcribe(Recognizer, { onText: setText, onFailure: setFailure })
-        : undefined;
+    const sink = {
+      onText: setText,
+      onFailure: setFailure,
+      onSilence: () => {
+        setSilent(true);
+      },
+    };
+    const stop = enabled && Recognizer ? transcribe(Recognizer, sink) : undefined;
     return () => {
       stop?.();
     };
   }, [enabled, Recognizer]);
 
-  return { text, supported, failure };
+  return { text, supported, failure, silent };
 }
 
 type Microphone = ReturnType<typeof useMicrophone>;
@@ -74,15 +80,13 @@ type DictationView = {
   notice: string | undefined;
 };
 
-const NO_SPEECH_NOTICE =
-  "The waveform is live, but this browser has no speech service, so no text will appear.";
-
 function viewFor(
   live: boolean,
   microphone: Microphone,
   speech: Speech,
   elapsed: number,
   startedAt: number,
+  deviceId: string,
 ): DictationView {
   if (!live) {
     return {
@@ -96,7 +100,14 @@ function viewFor(
     devices: microphone.devices,
     transcript: speech.text,
     read: microphone.read,
-    notice: microphone.error ?? (speech.supported ? speech.failure : NO_SPEECH_NOTICE),
+    notice: liveNotice({
+      microphoneError: microphone.error,
+      supported: speech.supported,
+      failure: speech.failure,
+      silent: speech.silent,
+      heard: speech.text !== "",
+      deviceId,
+    }),
   };
 }
 
@@ -201,6 +212,7 @@ export function DictationModal({
     speech,
     elapsed,
     startedAt,
+    deviceId,
   ); // → DictationView
 
   function onKeyDown(event: KeyboardEvent<HTMLElement>) {

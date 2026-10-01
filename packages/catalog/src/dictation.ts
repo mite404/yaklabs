@@ -59,3 +59,32 @@ export function appendDictation(draft: string, transcript: string): string {
   if (!spoken) return draft;
   return draft.trim() ? `${draft.trimEnd()} ${spoken}` : spoken;
 }
+
+// What the live dictation modal tells the user (DictationModal.tsx).
+/** Shown when the browser has no speech service. */
+export const NO_SPEECH_NOTICE =
+  "The waveform is live, but this browser has no speech service, so no text will appear.";
+// The browser's speech service hears the system's default input whatever the picker says
+// (the Web Speech API takes no device), so a chosen input moves only the waveform.
+/** Shown while the picker names an input other than the system's default. */
+export const DEFAULT_ONLY_NOTICE =
+  "Words come from your system's default microphone. This input moves only the waveform; to dictate with it, make it the default in your system's sound settings.";
+/** Shown once the speech service has heard no speech and no words have come. */
+export const SILENT_DEFAULT_NOTICE =
+  "No speech heard from your system's default microphone. Words come from that one, whatever the input above; check it in your system's sound settings.";
+
+/** What the live modal tells the user, most pressing first, or nothing while all is well. */
+export function liveNotice(state: {
+  microphoneError: string | undefined;
+  supported: boolean;
+  failure: string | undefined;
+  silent: boolean;
+  heard: boolean;
+  deviceId: string;
+}): string | undefined {
+  if (state.microphoneError !== undefined) return state.microphoneError;
+  if (!state.supported) return NO_SPEECH_NOTICE;
+  if (state.failure !== undefined) return state.failure;
+  if (state.deviceId !== "default") return DEFAULT_ONLY_NOTICE;
+  return state.silent && !state.heard ? SILENT_DEFAULT_NOTICE : undefined;
+}

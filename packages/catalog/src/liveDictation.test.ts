@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  defaultLabel,
   heardSoFar,
   SILENT_SPEECH,
   speechFailure,
@@ -43,6 +44,7 @@ function fakeService() {
 function listen(service: ReturnType<typeof fakeService>) {
   const heard: string[] = [];
   const failures: string[] = [];
+  const silences = { count: 0 };
   const stop = transcribe(service.Recognizer, {
     onText: (text) => {
       heard.push(text);
@@ -50,8 +52,11 @@ function listen(service: ReturnType<typeof fakeService>) {
     onFailure: (message) => {
       failures.push(message);
     },
+    onSilence: () => {
+      silences.count += 1;
+    },
   });
-  return { heard, failures, stop };
+  return { heard, failures, silences, stop };
 }
 
 beforeEach(() => {
@@ -77,9 +82,10 @@ describe("transcribe keeps listening through the speech service's pauses", () =>
 
   it("gets over a stretch of silence, and stops when asked without restarting", () => {
     const service = fakeService();
-    const { failures, stop } = listen(service);
+    const { failures, silences, stop } = listen(service);
     service.emit("start");
     service.emit("error", { error: "no-speech" });
+    expect(silences.count).toBe(1);
     stop();
     service.emit("error", { error: "aborted" });
     service.emit("end");
@@ -130,5 +136,14 @@ describe("speechFailure and heardSoFar", () => {
     expect(heardSoFar("", " hello ")).toBe("hello");
     expect(heardSoFar("hello", "")).toBe("hello");
     expect(heardSoFar("hello", "there")).toBe("hello there");
+  });
+});
+
+describe("defaultLabel names the device the system's default is", () => {
+  it("takes the device from the browser's label, and stands alone without one", () => {
+    expect(defaultLabel("Default - MacBook Pro Microphone (Built-in)")).toBe(
+      "System Default (MacBook Pro Microphone (Built-in))",
+    );
+    expect(defaultLabel("")).toBe("System Default");
   });
 });

@@ -29,10 +29,12 @@ type MicrophoneSink = {
   onError: (message: string) => void;
 };
 
-// Where the speech service reports to while it listens.
+// Where the speech service reports to while it listens: the words, a failure that ends it, and
+// a stretch it heard no speech in, which it gets over.
 type SpeechSink = {
   onText: (text: string) => void;
   onFailure: (message: string) => void;
+  onSilence: () => void;
 };
 
 // How long the speech service has to answer a start before the user hears it is not coming.
@@ -79,6 +81,15 @@ function microphoneError(reason: unknown): string {
     : "No microphone could be opened.";
 }
 
+/**
+ * The picker's name for the system's default input, with the device it is now where the browser
+ * says ("Default - MacBook Pro Microphone"), since the speech service always hears that one.
+ */
+export function defaultLabel(browserLabel: string): string {
+  const device = browserLabel.replace(/^Default\s*-\s*/, "").trim();
+  return device === "" ? "System Default" : `System Default (${device})`;
+}
+
 // The inputs to pick from, named for the picker; unnamed ones are numbered.
 function audioInputs(all: MediaDeviceInfo[]): AudioDevice[] {
   return all
@@ -87,7 +98,7 @@ function audioInputs(all: MediaDeviceInfo[]): AudioDevice[] {
       id: device.deviceId,
       label:
         device.deviceId === "default"
-          ? "System Default"
+          ? defaultLabel(device.label)
           : device.label || `Microphone ${index + 1}`,
     }));
 }
@@ -149,6 +160,15 @@ export function listenToMicrophone(deviceId: string, sink: MicrophoneSink): () =
   };
 }
 
+// A recognizer that keeps listening and reports words as they form, in the browser's language.
+function continuousRecognizer(Recognizer: SpeechRecognizerClass): SpeechRecognizer {
+  const recognizer = new Recognizer();
+  recognizer.continuous = true;
+  recognizer.interimResults = true;
+  recognizer.lang = navigator.language || "en-US";
+  return recognizer;
+}
+
 /**
  * Runs the browser's speech service continuously, reporting the whole transcript so far each
  * time it changes. Chrome ends a continuous session after a pause, so a session that ended
@@ -167,10 +187,7 @@ export function transcribe(Recognizer: SpeechRecognizerClass, sink: SpeechSink):
     failed = true;
     sink.onFailure(message);
   };
-  const recognizer = new Recognizer();
-  recognizer.continuous = true;
-  recognizer.interimResults = true;
-  recognizer.lang = navigator.language || "en-US";
+  const recognizer = continuousRecognizer(Recognizer);
   recognizer.addEventListener("start", () => {
     answered = true;
   });
@@ -182,6 +199,7 @@ export function transcribe(Recognizer: SpeechRecognizerClass, sink: SpeechSink):
     sink.onText(heardSoFar(kept, session));
   });
   recognizer.addEventListener("error", (event) => {
+    if (event.error === "no-speech") sink.onSilence();
     const message = speechFailure(event.error); // → string | undefined
     if (message !== undefined) fail(message);
   });
