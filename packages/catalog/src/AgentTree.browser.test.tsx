@@ -2,6 +2,7 @@ import { flushSync } from "react-dom";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, expect, it } from "vitest";
 import { AgentTree } from "./AgentTree";
+import "./AgentTree.cues.css";
 import "./tokens.css";
 
 type Box = { x: number; y: number; width: number; height: number };
@@ -108,4 +109,35 @@ it("scrolls the top branch in from above as the base scrolls out, as one strip",
   expect(half.branchOpacity).toBeCloseTo(0.5); // half faded up
   // the base is past the bottom edge as the branch lands home, solid
   expect(scrollAt(240)).toEqual({ baseTop: 13, branchTop: 1, branchOpacity: 1 });
+});
+
+it("lead cue: the top branch is already fading in when the base starts to roll", () => {
+  flushSync(() => {
+    root.render(
+      <div className="agent-tree-cue-lead">
+        <AgentTree duration={1000} />
+      </div>,
+    );
+  });
+
+  const start = scrollAt(80); // → the base's last frame home, 8% in
+  expect(start.baseTop).toBe(9);
+  expect(start.branchOpacity).toBeGreaterThan(0.2); // a third into its entry, visibly lit
+  expect(start.branchTop).toBeGreaterThan(-3); // and already peeking past the top edge
+  expect(scrollAt(320).baseTop).toBe(13); // the base still clears the bottom edge
+});
+
+it("half cue: the top branch has landed by the time the base is half gone", () => {
+  flushSync(() => {
+    root.render(
+      <div className="agent-tree-cue-half">
+        <AgentTree duration={1000} />
+      </div>,
+    );
+  });
+
+  const half = scrollAt(250); // → the base's scroll midpoint, and the top's lit-cycle midpoint
+  expect(half.baseTop).toBeCloseTo(11);
+  expect(half).toMatchObject({ branchTop: 1, branchOpacity: 1 });
+  expect(scrollAt(370).baseTop).toBe(13); // the base still clears the bottom edge
 });

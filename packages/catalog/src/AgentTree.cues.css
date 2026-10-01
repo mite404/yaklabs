@@ -1,0 +1,88 @@
+/* Agent tree cue experiments, loaded by the stories only. The shipped climb (motion.css) starts
+   the base's scroll and the top branch's entry on the same frame, but the branch arrives clear
+   and clipped, so the eye sees the base leave first and the top fill an empty box after it.
+   Each variant here holds the base home a little longer, so the top branch is already on its
+   way when the base starts to go. The top and middle branches keep the shipped keyframes, so
+   "green runs down the branches" is untouched; only the base's departure moves.
+   The scroll itself is unchanged: 4px over 24% of the loop on the same ease-in-out curve. */
+
+/* Lead: the base waits 8% of the loop (160ms at 2000ms), a third of the top's entry, so the top
+   branch is visibly on its way, about a quarter lit and 1px into the box, when the base starts
+   to roll. */
+@keyframes agent-tree-base-lead {
+  0%,
+  8% {
+    opacity: 1;
+    background: var(--working-strong);
+    transform: none;
+    /* same curve as the top */
+    animation-timing-function: cubic-bezier(0.4, 0, 0.6, 1);
+  }
+  32% {
+    opacity: 1;
+    background: var(--working-strong);
+    transform: translateY(4px);
+  }
+  33% {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  34%,
+  52% {
+    opacity: 0;
+    background: var(--working-soft);
+    transform: none;
+  }
+  70%,
+  100% {
+    opacity: 1;
+    background: var(--working-strong);
+    transform: none;
+  }
+}
+
+/* Half: the base waits 13% of the loop (260ms at 2000ms), so its scroll's midpoint (25%) lands
+   on the midpoint of the top branch's lit cycle (0-50%: in, hold, out). The top branch has
+   landed, solid, by the time the base is half gone. */
+@keyframes agent-tree-base-half {
+  0%,
+  13% {
+    opacity: 1;
+    background: var(--working-strong);
+    transform: none;
+    /* same curve as the top */
+    animation-timing-function: cubic-bezier(0.4, 0, 0.6, 1);
+  }
+  37% {
+    opacity: 1;
+    background: var(--working-strong);
+    transform: translateY(4px);
+  }
+  38% {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  39%,
+  52% {
+    opacity: 0;
+    background: var(--working-soft);
+    transform: none;
+  }
+  70%,
+  100% {
+    opacity: 1;
+    background: var(--working-strong);
+    transform: none;
+  }
+}
+
+/* Gated on no-preference: under reduced motion the shipped rule stills every pill, and these
+   selectors outrank it. */
+@media (prefers-reduced-motion: no-preference) {
+  .agent-tree-cue-lead .agent-tree-pill:nth-child(3) {
+    animation-name: agent-tree-base-lead;
+  }
+  .agent-tree-cue-half .agent-tree-pill:nth-child(3) {
+    animation-name: agent-tree-base-half;
+  }
+}
