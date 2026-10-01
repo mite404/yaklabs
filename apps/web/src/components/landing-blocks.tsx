@@ -211,10 +211,10 @@ export function Band() {
           />
           <img
             className="land-shot-front"
-            src={`${PICTURES}/contrast-material.webp`}
+            src={`${PICTURES}/review-header.webp`}
             width={2000}
-            height={420}
-            alt="The same table under the Material lens, with Material's note on its recommended ratios."
+            height={543}
+            alt="The review app's header: Yaklabs UI Verification Tool, the latest run's source and time, and its summary row: selected matrix Incomplete, 0 of 30 screenshots compared, 5 of 85 stories covered, 3 browsers."
             loading="lazy"
             decoding="async"
           />

@@ -9,8 +9,8 @@ them (ADR-160).
   The bento's biggest cell, cropped to its top left.
 - `contrast-kay.webp` (2000x979, about 71 KB): the Accessibility tab's Contrast in context
   under the Kay lens, every declared token pair in both themes. The band's main picture.
-- `contrast-material.webp` (2000x420, about 34 KB): the same table under the Material lens,
-  laid over the Kay one's corner.
+- `review-header.webp` (2000x543, about 29 KB): the review app's header, the latest run's
+  source and time and its summary row, laid over the Kay one's corner.
 
 The seal on the welcome and on the page is drawn by
 `apps/web/src/components/design-tooling-seal.tsx`, and the terminal in the hero is set as text
