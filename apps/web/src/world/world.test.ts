@@ -73,6 +73,25 @@ describe("the Demo world's verbs", () => {
     );
     await expect(world.saveShell({})).rejects.toThrow(/keeps no shell/);
   });
+
+  it("keeps a snooze's note in the bell with the snooze, and neither for a past one", async () => {
+    const world = playing();
+    const notesBefore = workspaceOf(world.state()).notifications.length;
+    const ahead = "2099-01-01T09:00:00.000Z";
+    await world.mark(BRIEF, { snoozedUntil: ahead }, { id: "n-snooze", text: "Snoozed brief" });
+    const ws = workspaceOf(world.state());
+    expect(ws.threads.find((each) => each.id === BRIEF)?.snoozedUntil).toBe(ahead);
+    expect(ws.notifications[0]).toMatchObject({
+      id: "n-snooze",
+      threadId: BRIEF,
+      text: "Snoozed brief",
+    });
+    const past = { snoozedUntil: "2000-01-01T09:00:00.000Z" };
+    await expect(world.mark(RETURNED, past, { id: "n-past", text: "No" })).rejects.toThrow(
+      "A snooze wakes after now",
+    );
+    expect(workspaceOf(world.state()).notifications).toHaveLength(notesBefore + 1);
+  });
 });
 
 describe("the Demo world's scripted replies", () => {

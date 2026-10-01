@@ -21,7 +21,7 @@ import {
   type Handle,
   type RuntimeState,
 } from "./handle";
-import type { ThreadMark } from "./marks";
+import type { MarkNote, ThreadMark } from "./marks";
 import { untilAborted } from "./untilAborted";
 import {
   lanesOf,
@@ -64,8 +64,11 @@ export type Runtime = {
   arrange(mainId: ThreadId, lanes: Lane[]): Promise<void>;
   /** Keeps the page's shell whole, in `state()` at once, then in the worker, like `rename`. */
   saveShell(shell: ShellState): Promise<void>;
-  /** Pins, snoozes or archives a thread, in `state()` at once, then in the worker, like `rename`. */
-  mark(id: ThreadId, change: ThreadMark): Promise<void>;
+  /**
+   * Pins, snoozes or archives a thread, in `state()` at once, then in the worker, like `rename`;
+   * a `note` lands in the bell with it, in the same write.
+   */
+  mark(id: ThreadId, change: ThreadMark, note?: MarkNote): Promise<void>;
   /**
    * Deletes a thread and its sub-threads: gone from `state()` at once, and for good once the
    * undo window (`UNDO_MS`) passes without a `restore` (ADR-130).
@@ -187,9 +190,9 @@ function listen(worker: Worker, handle: Handle): void {
 // a share and its end wait for the worker.
 function menuVerbs(handle: Handle, post: Post): Pick<Runtime, MenuVerb> {
   return {
-    mark: async (threadId, change) => {
-      const command: Command = { kind: "mark", requestId: newId(), threadId, change };
-      await ask(handle, post, command, marked(threadId, change, new Date().toISOString()));
+    mark: async (threadId, change, note) => {
+      const command: Command = { kind: "mark", requestId: newId(), threadId, change, note };
+      await ask(handle, post, command, marked(threadId, change, new Date().toISOString(), note));
     },
     delete: async (threadId) => {
       const command: Command = { kind: "delete", requestId: newId(), threadId };

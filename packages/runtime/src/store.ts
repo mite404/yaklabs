@@ -1,6 +1,6 @@
 import { threads, type Thread, type ThreadMessage } from "@yaklabs/catalog/thread";
 import type { Transcript } from "./conversation";
-import type { ThreadMark } from "./marks";
+import type { MarkNote, ThreadMark } from "./marks";
 import type { RenameTarget } from "./protocol";
 import {
   STARTER,
@@ -61,10 +61,11 @@ export type Store = {
   changeTranscript(id: ThreadId, change: (transcript: Transcript) => Transcript): void;
   /**
    * Pins, snoozes or archives a live thread at `now`, by `applyMark`'s rules, and restarts its
-   * idle clock.
-   * @throws For a thread it does not hold or that is deleted, and a snooze that is not ahead.
+   * idle clock; a `note` for the bell lands in the same write, or neither does.
+   * @throws For a thread it does not hold or that is deleted, a snooze that is not ahead, and a
+   *   note whose id is taken.
    */
-  mark(id: ThreadId, change: ThreadMark, now: string): void;
+  mark(id: ThreadId, change: ThreadMark, now: string, note?: MarkNote): void;
   /**
    * Deletes a thread, its sub-threads with it, behind a tombstone: gone from the workspace at
    * once, and for good once `settle` passes the undo window (ADR-130).

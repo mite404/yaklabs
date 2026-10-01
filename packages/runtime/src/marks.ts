@@ -15,6 +15,15 @@ export const threadMarkSchema = z
 /** What a mark changes on one thread; a key left out stays as it is. */
 export type ThreadMark = z.infer<typeof threadMarkSchema>;
 
+/**
+ * A note for the bell that a mark leaves in the same write: the page words it, as its toast
+ * said it, and names it, so it can count the note read at once.
+ */
+export const markNoteSchema = z.object({ id: z.string().min(1), text: z.string().min(1) });
+
+/** The bell's note a mark leaves; its thread and its time are the mark's. */
+export type MarkNote = z.infer<typeof markNoteSchema>;
+
 // The pin after a change: a pin keeps its first stamp, an unpin clears it, no word keeps it.
 function pinAfter(pinnedAt: string | null, pinned: boolean | undefined, now: string) {
   if (pinned === undefined) return pinnedAt;

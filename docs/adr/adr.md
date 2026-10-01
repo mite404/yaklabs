@@ -1528,6 +1528,11 @@ for the agent's question while it is open. A snoozed thread stays in its place a
 with an alarm clock before its title, and its tooltip and the menu say when it wakes. When the
 time comes, the settling pass (ADR-129) clears the snooze and posts a bell notice, "Back from
 snooze: <title>", and the wake restarts its idle clock. A time at or before now is refused.
+Amended 2026-10-01 (Ethan): the toast a snooze shows is kept as a record in the bell. The page
+words the note as the toast does, in its own clock and zone, and the mark carries it, so the
+store writes the snooze and its note in one transaction, or neither. The note counts as read
+at once: the person who would read it is the one who just snoozed, so it adds nothing to the
+badge.
 
 ## ADR-129 - Archive settles a thread to the bottom, dimmed, and idle threads settle on their own
 

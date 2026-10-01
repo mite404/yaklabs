@@ -12,7 +12,7 @@ import {
   threadShareSchema,
   workspaceSchema,
 } from "./workspace";
-import { threadMarkSchema } from "./marks";
+import { markNoteSchema, threadMarkSchema } from "./marks";
 
 // The catalog owns these shapes. Each schema is typed against the catalog's own type, so a
 // field the catalog adds or retypes fails to compile here until the schema learns it.
@@ -152,13 +152,15 @@ export const commandSchema = z.discriminatedUnion("kind", [
     base: z.array(laneIdSchema),
   }),
   z.object({ kind: z.literal("saveShell"), requestId: idSchema, shell: shellStateSchema }),
-  // The thread menu's writes (ADR-126): a pin, a snooze or an archive; a delete and its undo;
-  // and the device's record of a thread made public, and its end.
+  // The thread menu's writes (ADR-126): a pin, a snooze or an archive, with the bell's note it
+  // leaves, if any; a delete and its undo; and the device's record of a thread made public, and
+  // its end.
   z.object({
     kind: z.literal("mark"),
     requestId: idSchema,
     threadId: threadIdSchema,
     change: threadMarkSchema,
+    note: markNoteSchema.optional(),
   }),
   z.object({ kind: z.literal("delete"), requestId: idSchema, threadId: threadIdSchema }),
   z.object({ kind: z.literal("restore"), requestId: idSchema, threadId: threadIdSchema }),

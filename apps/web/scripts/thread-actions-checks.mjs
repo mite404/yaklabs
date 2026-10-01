@@ -189,10 +189,12 @@ export const threadActionChecks = {
   },
 
   // Snooze opens the ask-user card with the fallbacks; a tile snoozes, the row gets a clock and
-  // stays in place, and the menu says when it wakes.
+  // stays in place, the menu says when it wakes, and the toast's words stay in the bell, read.
   async A5(browser) {
     const page = await openDemo(browser);
     const before = await rowTitles(page);
+    const bell = page.getByRole("button", { name: /^Notifications/ });
+    const bellBefore = await bell.getAttribute("aria-label");
     await pick(page, "Snooze");
     const card = shownPanel(page).getByRole("region", { name: "Snooze" });
     await card.waitFor();
@@ -201,6 +203,11 @@ export const threadActionChecks = {
     await card.getByRole("radio", { name: /In 1 hour/ }).click();
     await card.getByRole("button", { name: "Submit" }).click();
     await card.waitFor({ state: "detached" });
+    const toast = (await page.locator("[data-sonner-toast]").first().innerText()).trim();
+    const bellAfter = await bell.getAttribute("aria-label");
+    await bell.click();
+    const note = (await page.getByRole("menuitem").first().innerText()).split("\n")[0].trim();
+    await page.keyboard.press("Escape");
     const row = await rowOf(page, serviceDesk);
     await menuButtonOf(page).click();
     const snooze = (await page.getByRole("menuitem", { name: /^Snooze/ }).innerText()).trim();
@@ -212,10 +219,13 @@ export const threadActionChecks = {
       row.marks.includes("snoozed") &&
       JSON.stringify(await rowTitles(page)) === JSON.stringify(before) &&
       named === 1 &&
-      focused.includes("In 1 hour");
+      focused.includes("In 1 hour") &&
+      toast.startsWith(`Snoozed “${serviceDesk}” until`) &&
+      note === toast &&
+      bellAfter === bellBefore;
     return {
       ok,
-      detail: `tiles [${tiles.join()}]; focus on "${focused.trim()}"; marks ${row.marks.join()}; menu "${snooze.replaceAll("\n", " ")}"`,
+      detail: `tiles [${tiles.join()}]; focus on "${focused.trim()}"; marks ${row.marks.join()}; menu "${snooze.replaceAll("\n", " ")}"; bell note "${note}", ${bellAfter}`,
     };
   },
 

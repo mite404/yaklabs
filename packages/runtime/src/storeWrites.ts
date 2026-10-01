@@ -58,7 +58,7 @@ export function menuWrite({ store, mint }: Writer, command: MenuCommand): void {
   const now = mint.now().toISOString();
   switch (command.kind) {
     case "mark":
-      store.mark(command.threadId, command.change, now);
+      store.mark(command.threadId, command.change, now, command.note);
       return;
     case "delete":
       store.remove(command.threadId, now);

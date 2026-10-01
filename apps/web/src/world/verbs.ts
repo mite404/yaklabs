@@ -7,7 +7,7 @@ import {
   type Runtime,
   type Workspace,
 } from "@yaklabs/runtime";
-import { renamed, shared, summary, withLanes, withNewThread, withThread } from "./edits";
+import { notified, renamed, shared, summary, withLanes, withNewThread, withThread } from "./edits";
 import { ids } from "./ids";
 import type { Stage } from "./stage";
 
@@ -83,10 +83,16 @@ export function menuVerbs(
   stage: Stage,
 ): Pick<Runtime, "mark" | "delete" | "restore" | "share" | "unshare"> {
   return {
-    mark: (id, change) =>
+    mark: (id, change, note) =>
       promised(() => {
-        const marked = applyMark(stage.thread(id), change, stage.stamp()); // throws on a past snooze
-        stage.commit(withThread(id, () => marked));
+        const at = stage.stamp();
+        const marked = applyMark(stage.thread(id), change, at); // throws on a past snooze
+        const onThread = withThread(id, () => marked);
+        stage.commit(
+          note === undefined
+            ? onThread
+            : (ws) => notified({ ...note, threadId: id, at })(onThread(ws)),
+        );
       }),
     delete: (id) =>
       promised(() => {

@@ -171,8 +171,10 @@ function search(db: Database, query: string): ThreadSummary[] {
 // The thread menu's calls on the store (ADR-126), each in sqliteMarks.ts.
 function menuCalls(db: Database): Pick<Store, MenuCall> {
   return {
-    mark: (id, change, now) => {
-      markThread(db, id, change, now);
+    mark: (id, change, now, note) => {
+      db.transaction(() => {
+        markThread(db, id, change, now, note);
+      });
     },
     remove: (id, now) => {
       removeThread(db, id, now);

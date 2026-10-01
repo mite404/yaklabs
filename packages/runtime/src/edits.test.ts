@@ -52,6 +52,20 @@ describe("marked shows a mark before the worker confirms it", () => {
   it("leaves the workspace alone for a mark the worker will refuse", () => {
     expect(marked(t("other"), { snoozedUntil: at(1) }, at(5))(ws)).toBe(ws);
   });
+
+  it("puts a snooze's note first in the bell, on its thread at the mark's time", () => {
+    const note = { id: "n2", text: "Snoozed “other”" };
+    const after = marked(t("other"), { snoozedUntil: at(30) }, at(5), note)(ws);
+    expect(after.notifications).toEqual([
+      { id: "n2", threadId: t("other"), text: "Snoozed “other”", at: at(5) },
+      ...ws.notifications,
+    ]);
+  });
+
+  it("shows no note for a snooze the worker will refuse", () => {
+    const note = { id: "n2", text: "Snoozed “other”" };
+    expect(marked(t("other"), { snoozedUntil: at(1) }, at(5), note)(ws)).toBe(ws);
+  });
 });
 
 describe("removed hides a delete before the worker confirms it", () => {

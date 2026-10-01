@@ -15,7 +15,7 @@ export { SHARE_TTLS, shareCreatedSchema } from "gateway/contract";
 export { IDLE_MS, UNDO_MS } from "./settle";
 export type { Runtime, RuntimeConfig, RuntimeState, Session } from "./runtime";
 export { applyMark } from "./marks";
-export type { ThreadMark } from "./marks";
+export type { MarkNote, ThreadMark } from "./marks";
 export {
   closeLane,
   collapseLane,
