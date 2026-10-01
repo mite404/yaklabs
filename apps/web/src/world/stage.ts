@@ -6,7 +6,17 @@ import {
   type ThreadSummary,
   type Workspace,
 } from "@yaklabs/runtime";
-import { coveredBy, recast, touched, withThread, type Edit, type Slice, type Tomb } from "./edits";
+import {
+  coveredBy,
+  recast,
+  removal,
+  restored,
+  touched,
+  withThread,
+  type Edit,
+  type Slice,
+  type Tomb,
+} from "./edits";
 
 /**
  * A writer's right to some threads' turns, reply counts and docked questions, until a reset of
@@ -67,10 +77,18 @@ export type Stage = {
   count(): number;
   /** A user verb's edit: a rename, a mark, a share, a new thread or project. */
   commit(edit?: Edit): void;
-  /** Keeps what a delete took, until a restore takes it back. */
-  bury(id: string, tomb: Tomb): void;
-  /** The tomb of `id`, gone from the stage once taken. */
-  exhume(id: string): Tomb | undefined;
+  /**
+   * Removes `id` and every thread under it, their notes and shares, keeping the tomb for an
+   * exhume: one commit, so the workspace and the tomb never part. A no-op once broken.
+   * @throws For a thread the workspace lacks.
+   */
+  bury(id: string): void;
+  /**
+   * Puts the tomb of `id` back as it was: one commit as the tomb leaves, so a broken stage can
+   * neither restore it nor lose it. A no-op once broken.
+   * @throws When nothing of `id` lies buried.
+   */
+  exhume(id: string): void;
   lease(ids: readonly string[]): Lease;
   /**
    * Puts a slice back as it opens, in one commit: revokes every lease on its main and on every
@@ -193,6 +211,25 @@ function leaseIn(held: Held, taken: readonly string[]): Lease {
   };
 }
 
+// Removes `id` and keeps its tomb, in one commit (see `Stage.bury`).
+function buryIn(held: Held, id: string): void {
+  if (held.state.kind !== "ready") return;
+  if (!held.state.workspace.threads.some((each) => each.id === id))
+    throw new Error(`There is no thread "${id}" in this demo`);
+  const { ws, tomb } = removal(held.state.workspace, id); // → the subtree out, its tomb aside
+  held.tombs.set(id, tomb);
+  commitIn(held, () => ws);
+}
+
+// Puts the tomb of `id` back, in one commit (see `Stage.exhume`).
+function exhumeIn(held: Held, id: string): void {
+  if (held.state.kind !== "ready") return;
+  const tomb = held.tombs.get(id);
+  if (tomb === undefined) throw new Error(`There is no deleted thread "${id}" to restore`);
+  held.tombs.delete(id);
+  commitIn(held, restored(tomb));
+}
+
 // Puts `slice` back as it opens, revoking every lease on what it covers (see `Stage.reset`).
 function resetIn(held: Held, slice: Slice): void {
   if (held.state.kind !== "ready") return;
@@ -265,13 +302,11 @@ export function createStage(seed: Seed): Stage {
     commit: (edit) => {
       commitIn(held, edit);
     },
-    bury: (id, tomb) => {
-      held.tombs.set(id, tomb);
+    bury: (id) => {
+      buryIn(held, id);
     },
     exhume: (id) => {
-      const tomb = held.tombs.get(id);
-      held.tombs.delete(id);
-      return tomb;
+      exhumeIn(held, id);
     },
     lease: (taken) => leaseIn(held, taken),
     reset: (slice) => {
