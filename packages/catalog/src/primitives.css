@@ -191,6 +191,55 @@
 .card-heading[data-carry]:active {
   cursor: grabbing;
 }
+/* In a thread, a card that carries shows the grip a lane's title bar shows (index.css, ADR-089):
+   six dots fading up in the middle of its header while the pointer is on it, over a veil in the
+   header's own paper, so the card says it can be picked up (Ethan). The title and the actions
+   keep their own hover and hide the grip, as on a lane's bar. */
+.thread-scroll .card-heading[data-carry] {
+  position: relative;
+}
+.thread-scroll .card-heading[data-carry]::before,
+.thread-scroll .card-heading[data-carry]::after {
+  content: "";
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 150ms ease;
+}
+.thread-scroll .card-heading[data-carry]::before {
+  inset: 0 auto 0 50%;
+  width: 46px;
+  transform: translateX(-50%);
+  background: linear-gradient(
+    to right,
+    transparent,
+    var(--paper) 30%,
+    var(--paper) 70%,
+    transparent
+  );
+}
+.thread-scroll .card-heading[data-carry]::after {
+  top: 50%;
+  left: 50%;
+  width: 15px;
+  height: 10px;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle, var(--soft-ink) 1.25px, transparent 1.75px) 0 0 / 5px 5px;
+}
+.thread-scroll .card-heading[data-carry]:hover::before,
+.thread-scroll .card-heading[data-carry]:hover::after {
+  opacity: 1;
+}
+.thread-scroll .card-heading[data-carry]:has(.card-heading-text:hover, .card-actions:hover)::before,
+.thread-scroll .card-heading[data-carry]:has(.card-heading-text:hover, .card-actions:hover)::after {
+  opacity: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .thread-scroll .card-heading[data-carry]::before,
+  .thread-scroll .card-heading[data-carry]::after {
+    transition: none;
+  }
+}
 /* The card left behind while its picture rides the pointer (ADR-089). */
 .card[data-lifted] {
   opacity: 0.35;
