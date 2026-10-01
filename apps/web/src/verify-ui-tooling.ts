@@ -16,6 +16,14 @@ export const STATS = [
 /** The five beats of a run, in order, by name. */
 export const STEPS = ["Capture", "Prove the camera", "Compare", "Check", "Decide and keep"];
 
+/** How the tool works, in four steps, beside the Pixels picture. */
+export const HOW = [
+  "We capture screenshots in batch: one command renders every Storybook story in Chromium, Firefox and WebKit, light and dark.",
+  "We compare before and after pixel by pixel against an approved baseline, with a wipe and a 4x inspector that show exactly what moved.",
+  "We check contrast and accessibility across the three major browser engines: every token pair measured, axe run on every story.",
+  "We fail loudly. If pixels or colours land anywhere but the baseline, the run fails. A missing reference is never a pass, and only a person can approve a new one.",
+];
+
 /** The shell the terminal picture showed: its window, its prompt bar, and the command typed. */
 export const SHELL = {
   title: "yaklabs — zsh",

@@ -2511,3 +2511,6 @@ second headline on the band. Every other line of copy left the page for
 is the tool's own evidence, the terminal, the verdicts, the cells' names from the review app's
 tabs, the counts, the pairs and the beats' names. The notes, the roles and the closing word are
 gone with their copy.
+Amended once more (Ethan): how the tool works stands beside the Pixels picture in four large
+numbered points, capture in batch, compare pixel by pixel, check contrast and accessibility
+across the three engines, fail loudly; the cells that stood there make a new row below.

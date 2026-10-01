@@ -1,5 +1,5 @@
 import { Link } from "react-router";
-import { MISSING, PAIRS, PICTURES, PROOF, STEPS } from "../verify-ui-tooling";
+import { HOW, MISSING, PAIRS, PICTURES, PROOF, STEPS } from "../verify-ui-tooling";
 import { Seal } from "./design-tooling-seal";
 
 // The lenses the Accessibility tab reads the contrast table through; Kay's is the one on.
@@ -150,11 +150,26 @@ function StepsCell() {
   );
 }
 
-/** The bento: six cells of what a run gives, the picture the biggest. */
+/** How the tool works, in four large numbered points beside the Pixels picture. */
+function How() {
+  return (
+    <div className="land-how">
+      <p className="land-kicker">How it works</p>
+      <ol>
+        {HOW.map((step) => (
+          <li key={step}>{step}</li>
+        ))}
+      </ol>
+    </div>
+  );
+}
+
+/** The bento: the picture with how the tool works beside it, then five cells of what a run gives. */
 export function Bento() {
   return (
-    <section className="land-bento" aria-label="What a run gives">
+    <section className="land-bento" aria-label="How the tool works and what a run gives">
       <PixelsCell />
+      <How />
       <ZeroCell />
       <ProofCell />
       <ApproveCell />

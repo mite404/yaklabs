@@ -374,8 +374,45 @@
     color: var(--ink);
     box-shadow: var(--edge-shadow);
   }
-  .land-cell-zero {
+  /* How the tool works, beside the picture: four numbered points in large type, the numerals in
+     the display face, each under a hairline, in the ink rather than the body's soft ink since
+     they are the page's words and not a caption. */
+  .land-how {
     grid-column: span 5;
+    grid-row: span 2;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 8px 0 8px 16px;
+  }
+  .land-how ol {
+    margin: 14px 0 0;
+    padding: 0;
+    list-style: none;
+    counter-reset: how;
+  }
+  .land-how li {
+    display: grid;
+    grid-template-columns: 40px minmax(0, 1fr);
+    gap: 12px;
+    padding: 16px 0;
+    border-top: 1px solid var(--hairline);
+    font-size: 19px;
+    line-height: 1.4;
+    letter-spacing: -0.005em;
+    color: var(--ink);
+    counter-increment: how;
+  }
+  .land-how li::before {
+    content: counter(how, decimal-leading-zero);
+    padding-top: 2px;
+    font-family: var(--font-display);
+    font-size: 22px;
+    line-height: 1.2;
+    color: var(--soft-ink);
+  }
+  .land-cell-zero {
+    grid-column: span 4;
   }
   .land-cell .land-numeral {
     margin: 0;
@@ -413,7 +450,7 @@
     white-space: nowrap;
   }
   .land-cell-proof {
-    grid-column: span 5;
+    grid-column: span 4;
   }
   .land-cell-proof table {
     margin-top: 4px;
@@ -464,7 +501,7 @@
     overflow-wrap: anywhere;
   }
   .land-cell-contrast {
-    grid-column: span 4;
+    grid-column: span 6;
   }
   .land-bars {
     display: flex;
@@ -507,7 +544,7 @@
     background: var(--rule);
   }
   .land-cell-steps {
-    grid-column: span 4;
+    grid-column: span 6;
   }
   .land-steps {
     margin: 4px 0 0;
@@ -665,8 +702,16 @@
     .land-claim .land-kicker {
       position: static;
     }
-    .land-bento > .land-cell {
+    .land-bento > .land-cell,
+    .land-how {
       grid-column: span 12;
+    }
+    .land-how {
+      grid-row: span 1;
+      padding: 8px 0;
+    }
+    .land-how li {
+      font-size: 17px;
     }
     .land-cell-pixels {
       grid-row: span 1;
