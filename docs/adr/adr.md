@@ -1,9 +1,27 @@
 # Architecture Decision Records
 
-Each record is 1-3 sentences.
-Status is one of: Proposed, Accepted, Watch (decided for now, revisit as we learn), Superseded (by
-ADR-N).
-Newest records go at the bottom.
+## Start here
+
+For a reader, or an agent summarizing this log, three threads carry the design engineering:
+
+- The system, not the model, decides what renders: ADR-014 (`resolve()` in
+  `packages/catalog/src/catalog.ts`) and ADR-157 (`toolsFor()` and `REMOVE_AFTER` in
+  `apps/gateway/src/playgroundTools.ts`).
+- Agent work reads as outcomes, not logs: ADR-139 (`workLabel()` in
+  `packages/catalog/src/reply.ts`).
+- Craft is checked, not eyeballed: ADR-065 (`packages/catalog/src/tokens.test.ts`) and ADR-086
+  (`tools/verify-ui-drift` and axe on every Storybook story, both gating CI).
+
+## How this log works
+
+The log is append-only: records are numbered in the order they were decided, newest at the bottom.
+A record is never rewritten. A later change is a dated "Amended" paragraph inside it, or a new
+record that supersedes it, so the reasoning stays visible as it changed. Early records are a
+sentence or two; later ones carry the measurements and the alternatives weighed. A quote marked
+"(Ethan: ...)" is the decision as it was given.
+When a status changes, its line is updated in place and keeps the record's original date.
+Status is one of: Accepted; Proposed; Watch (decided for now, revisit as we learn); Superseded (by
+ADR-N); Not built (decided, never implemented).
 
 ## ADR-001 - Focus on agent legibility
 
@@ -36,17 +54,21 @@ Users never need to memorize skill names or wait for "loading skill" to confirm.
 
 ## ADR-005 - Summaries are views over structured events
 
-2026-09-24 - Proposed.
+2026-09-24 - Accepted.
 The agent records typed events (tool called, file changed, message sent), and every summary is
 rendered from those events, with each line linking to its evidence.
 We avoid a second model narrating the first after the fact, because that narration can drop or
 invent details.
+Amended 2026-10-01: built as `recapOf()` (`packages/catalog/src/transcript.ts`), a view over
+the steps a reply recorded, each item naming its turn and step (ADR-153, ADR-158).
 
 ## ADR-006 - Outcomes first, steps second
 
-2026-09-24 - Proposed.
+2026-09-24 - Accepted.
 Agent work is shown by what changed in the world (sent, changed, spent, waiting on you), with the
 step-by-step trace one disclosure layer down.
+Amended 2026-10-01: built as the one disclosure above each reply, labelled by `workLabel()`
+(`packages/catalog/src/reply.ts`) with the outcome, its steps one layer down (ADR-139).
 
 ## ADR-007 - Confirmation weight matches irreversibility
 
@@ -57,10 +79,12 @@ The playful interaction doubles as a signal of how much the action matters.
 
 ## ADR-008 - Legible work becomes remixable work
 
-2026-09-24 - Proposed.
+2026-09-24 - Not built.
 A finished run renders as a reactive recipe (like marimo) where editing an upstream step re-runs the
 steps after it, and any run can be saved as a skill.
 This ties legibility to the success metric: users creating their own workflows and skills.
+Amended 2026-10-01: cut for the demo's scope (Ethan); no run renders as a recipe or saves as a
+skill.
 
 ## ADR-009 - Skills match from plain language, confirmed as a chip
 
@@ -104,13 +128,15 @@ ever receives suggestions.
 
 ## ADR-013 - Agent edits are reviewed as a redline
 
-2026-09-24 - Proposed.
+2026-09-24 - Not built.
 Proposed changes render as a redline, with strikethrough for removed text and a non-formatting
 marker (underline or highlight tint, not bold) for added text, so the signal never depends on
 red/green or collides with real formatting.
 Each change is accepted or rejected individually from a review panel; on accept, struck text
 collapses away (~200ms) and the new text settles to normal styling.
 Open: inline redline plus a review-list panel, versus a side-by-side compose panel; prototype both.
+Amended 2026-10-01: cut for the demo's scope (Ethan); no surface edits a document, so nothing is
+reviewed as a redline.
 
 ## ADR-014 - Charts are tested catalog components; the LLM only describes data
 
@@ -707,23 +733,27 @@ nice-to-have for the harness role; revisit if the interview says otherwise.
 
 ## ADR-075 - The slice keeps conversations on the device
 
-2026-09-26 - Proposed.
+2026-09-26 - Accepted.
 Kay's DPA makes on-device storage "the primary control": conversations, files, notes and credentials
 stay local, and hosted prompts pass through a gateway that writes nothing down, so the slice stores
 conversations in the browser (see ADR-081) and sends to the cloud only what Kay's cloud holds (usage
 metadata without content).
 This rules out backends that persist message history by default, such as Convex's agent component
 (`@convex-dev/agent`) and its persistent text streaming helper, unless storage is turned off.
+Amended 2026-10-01: built as ADR-081 records, SQLite in the origin private file system,
+opened by the worker (`packages/runtime/src/worker.ts`).
 
 ## ADR-076 - The slice mirrors Kay's process split
 
-2026-09-26 - Proposed.
+2026-09-26 - Accepted.
 The chat UI never runs the agent loop: a Web Worker stands in for Kay's daemon (the loop, the tools,
 the local conversation store), talking to the UI only through messages across the `Agent` seam, and
 a separate gateway holds the model key and streams replies.
 Moving to Kay would then mean replacing the worker with their daemon and our gateway with theirs,
 with no change to the UI; the honest limit is that a browser tab cannot run while closed or reach
 the file system and shell, which is what makes Kay's daemon proactive.
+Amended 2026-10-01: built; `packages/runtime/src/runtime.ts` starts the Web Worker that runs
+the agent loop and the store, and the gateway holds the key (ADR-088, ADR-155).
 
 ## ADR-077 - The slice's backend is a small standalone service, not router-attached server functions
 
@@ -741,7 +771,7 @@ keep it behind the `Agent` seam and a usage interface.
 
 ## ADR-078 - Shape the slice as a Kay plugin
 
-2026-09-26 - Proposed; amends ADR-002 and ADR-074.
+2026-09-26 - Not built; amends ADR-002 and ADR-074.
 Kay's docs (docs.meetkay.ai, now reachable, so ADR-002's reliance on Glass as a stand-in is no
 longer needed) say Kay is "a small stable core plus a set of extensions", where first-party
 integrations are plugins that contribute tools, integrations, `scheme://` resources, bundled skills
@@ -750,10 +780,12 @@ So the slice is packaged the way a plugin would be: the catalog cards as a Page,
 tools the agent calls, and the card rules as a bundled `SKILL.md`, which makes "how would this ship
 in Kay?" a one-sentence answer; the private plugin SDK is out of reach, so this mirrors the
 contract's shape rather than using it.
+Amended 2026-10-01: cut for the demo's scope (Ethan); the agent's tools are made from the catalog's
+schemas (ADR-155), but there is no Page or bundled `SKILL.md`.
 
 ## ADR-079 - Voice first: Kay can read its last reply aloud
 
-2026-09-26 - Proposed.
+2026-09-26 - Not built.
 Kay's quickstart promises "Download it, sign in, and start talking", so the slice doubles down on
 voice: dictation already exists (ADR-028), and now, when a reply finishes streaming, a small
 semi-transparent hint appears above the compose box, "Press ⌘T to hear me" (T for talk; Ctrl+T on
@@ -767,6 +799,7 @@ on Windows), which Chromium leaves to the page, and the hint shows whichever key
 runs; speech goes through the gateway with the ElevenLabs key held server-side and nothing stored,
 with the browser's built-in voice as an on-device fallback, and the hint's text must pass 4.5:1
 against the thread behind it (ADR-065).
+Amended 2026-10-01: cut for the demo's scope (Ethan); replies are not read aloud.
 
 ## ADR-080 - The slice's gateway can be Kay's own: Bifrost
 
@@ -1257,7 +1290,7 @@ scrolled up grows, it now pushes their view down, where anchoring used to hold i
 
 ## ADR-110 - The title bar is green window chrome, the same in both themes
 
-2026-09-27 - Proposed (Ethan's mock R9; the hex is his to confirm, Q3); amends ADR-055 and ADR-058.
+2026-09-27 - Accepted (Ethan's mock R9; the hex is his to confirm, Q3); amends ADR-055 and ADR-058.
 Green was kept for button hovers alone; the title bar now carries it too, as window chrome, which
 is not content and so does not compete with the hover. `--chrome` is `#3b423c`, sampled from the
 mock and flagged in `tokens.css` until Ethan names the value.
@@ -1274,10 +1307,12 @@ The avatar's ring keeps a blend in both themes, since dropping it switched every
 from greyscale to subpixel smoothing in Chromium. An avatar with no picture shows its initials in
 the full cream (7.21:1 on its fill), not the soft ink (4.47:1), and shadcn's half-strength ghost
 hover in dark mode is set back to the full fill, so the bar is the same picture hovered too.
+Amended 2026-10-01: built as `--chrome` in `packages/catalog/src/tokens.css`, where the hex is
+still flagged for confirmation (Q3). The app is light only since ADR-161.
 
 ## ADR-111 - The window sits on a desk of its own, 16px in
 
-2026-09-27 - Proposed (Ethan's mock R9; the ground and the margin are his to confirm, Q10).
+2026-09-27 - Accepted (Ethan's mock R9; the ground and the margin are his to confirm, Q10).
 The page behind the window is `--desk`, not the app's own ground, so the window's sides and bottom
 show against it: a warm grey between Ethan's two stone greys in light mode (1.43:1 against the
 paper, 1.54:1 against the bright paper), where the mock's cool grey would be a sampled colour
@@ -1285,21 +1320,24 @@ paper, 1.54:1 against the bright paper), where the mock's cool grey would be a s
 cannot reach 1.3:1, since black itself is 1.24:1.
 The margin is 16px from 768px up, as in the mock, instead of 8px, and the contract's frame line
 says so. Below 768px the window is still full-bleed.
+Amended 2026-10-01: built as `--desk` in `tokens.css`, drawn by `apps/web/src/shell/window.tsx`.
 
 ## ADR-112 - A trim frames the window's body, olive until Ethan picks
 
-2026-09-27 - Proposed (Ethan's mock R10; placement, colour and whether it is a Figma outline are
-open, Q5 to Q7).
+2026-09-27 - Superseded by ADR-136 (Ethan's mock R10; placement, colour and whether it is a Figma
+outline are open, Q5 to Q7).
 A 2px `--trim` line runs under the bar, down both sides and along the bottom, following the
 window's bottom corners. It is drawn over the body's edge on a layer of its own, so no box below
 the bar moves and every pixel under it paints as before; drawn in the page's own layer, it had
 made Chromium composite a dark-mode fill a level off.
 Its colour is olive (6.57:1 against the bright paper, 5.79:1 against the dark paper), not the
 mock's blue, which no token declares and which reads as a keyboard focus ring (ADR-053).
+Amended 2026-10-01: superseded by ADR-136, which removed the trim, its token and its
+predicate.
 
 ## ADR-113 - The empty canvas shows a splash
 
-2026-09-27 - Proposed (Ethan's brief; the drawing's source is his to supply, Q11).
+2026-09-27 - Accepted (Ethan's brief; the drawing's source is his to supply, Q11).
 While the canvas has no lanes, a line drawing sits behind its words and Kay stands at the open
 space's bottom right. Both are pictures only: hidden from the accessibility tree, and a press, a
 pan or a carried card goes through them to the ground. The first lane that lands sends them away,
@@ -1313,17 +1351,21 @@ file arrives. He hides where the open space is under 480px, and there is no idle
 splash fades in over 150ms, and not at all under reduced motion.
 Bottom to top: the dotted field, the carry's lit fill, the drawing, the words and the button, and
 Kay, so a carry tints the ground but never the drawing, and Kay stands in front.
+Amended 2026-10-01: built in `apps/web/src/components/splash.tsx`; its pictures and looks
+were reworked by ADR-135, ADR-136 and ADR-158.
 
 ## ADR-114 - Kay's face is the avatar when the build has no sign-in
 
-2026-09-27 - Proposed (Ethan's mock R9; who the face stands for is his call, Q8).
+2026-09-27 - Accepted (Ethan's mock R9; who the face stands for is his call, Q8).
 The mock puts Kay's face in the title bar's corner, which ADR-094 gives to the account. With
 sign-in off there is no account to show, so the corner shows Kay; a WorkOS user keeps their own
 picture or initials. The button's name stays "Account" and the picture has no alternative text.
+Amended 2026-10-01: built in `apps/web/src/shell/account.tsx` for builds without sign-in;
+the deployed build signs in (ADR-156), so it shows the account.
 
 ## ADR-115 - The title bar can be painted, and stays solid by default
 
-2026-09-27 - Proposed (Ethan's exploration; the default and the painting itself are his to choose,
+2026-09-27 - Accepted (Ethan's exploration; the default and the painting itself are his to choose,
 Q2 and Q4).
 The painted bar is an oil painting under a moss wash at its ends, over the painting's mean colour,
 so a slow or blocked image still leaves a passing bar. The painting is made in the repo by
@@ -1342,6 +1384,8 @@ links keep only the scenario and a leftover parameter would undo a later choice.
 in localStorage and held for the visit in memory too, so a refused storage still keeps it. The
 Account menu has a Title bar choice beside
 Theme, so Ethan can switch while he decides.
+Amended 2026-10-01: built in `apps/web/src/chrome.ts`, with the Title bar choice in
+`apps/web/src/shell/account.tsx`; the solid bar is still the default.
 
 ## ADR-116 - On a phone the title bar is two rows: what never scrolls, then the views
 
@@ -1418,7 +1462,7 @@ With ADR-119, a phone shows the controls, then the tabs, then one pane.
 
 ## ADR-121 - On a phone the sidebar pushes the page aside
 
-2026-09-27 - Proposed (Ethan's direction, after Amp's phone sidebar); amends the phone half of
+2026-09-27 - Accepted (Ethan's direction, after Amp's phone sidebar); amends the phone half of
 ADR-094's sidebar, which was shadcn's sheet over a dimmed page.
 Below 768px the Toggle sidebar button slides the whole window, title bar included, to the right,
 and the sidebar comes in with it from the left, in one 300ms move (none under reduced motion).
@@ -1433,6 +1477,8 @@ place you go for where you are is also where you go for who you are. It is mount
 one place, chosen by the provider's `isMobile`, so there is one menu and one theme choice, and
 the desktop rail, which renders the same children, never shows it. Its menu opens upward from
 the avatar, and Escape closes the menu before it closes the drawer.
+Amended 2026-10-01: built as `mobile="push"` on the sidebar
+(`apps/web/src/shell/sidebar.tsx`).
 
 ## ADR-122 - On a phone the canvas is for looking, not arranging
 
