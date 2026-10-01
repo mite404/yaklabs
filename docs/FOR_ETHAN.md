@@ -1817,6 +1817,30 @@ The same pass caught Chrome's habit of starting each later result with a space, 
 double spaces in the text. Lesson: a level meter proves the cable, not the transcriber. Every
 stage in a signal chain needs its own light.
 
+### The title card that hopped when the zoom landed
+
+On hover the welcome seal grows 10%, and "NOW WITH DESIGN TOOLING!" jumped up against its
+ribbon a hair, then back down on the way out. Ethan's recording, measured frame by frame, put
+the jump on the very frame the growth ended: during the 150ms grow the words sat dead centre,
+and they snapped about 1.5% of the ribbon's depth upward once it settled.
+
+The reason is how Chrome paints a moving layer. While the seal animates, Chrome scales a
+picture it has already painted, so everything moves together. When the animation ends, it
+paints the seal again at the new size, and it rounds a line of text to whole pixels as it
+does, so the words land on a slightly different pixel row than they did at rest. The ribbon is
+a shape, which is never rounded. The tilt does not save it either, since the rounding happens
+in the seal's own upright frame before the tilt is applied. Headless Chrome on Linux does not
+round this way, which is why the settled screenshots here matched and only the Mac's recording
+showed it.
+
+The fix draws the words as shapes too. A small script (`scripts/seal-words.mjs`) reads Inter
+at weight 600, lays out the line with its kerning and the 0.1em tracking, and writes the
+letters' outlines into `seal-words.ts`. The ribbon now carries one path where the text was:
+measured against the old text, it sits within 0.01px of the same place. The link keeps its
+spoken name, and a test fails if someone changes the words without drawing them again.
+Lesson: a title card burned into the plate moves with the plate; a caption laid over it is
+re-typeset every time the frame size changes.
+
 ## 5. Director's Commentary
 
 ### The agent only states intent; the design system does the rest
