@@ -64,11 +64,6 @@ export function appendDictation(draft: string, transcript: string): string {
 /** Shown when the browser has no speech service. */
 export const NO_SPEECH_NOTICE =
   "The waveform is live, but this browser has no speech service, so no text will appear.";
-// The browser's speech service hears the system's default input whatever the picker says
-// (the Web Speech API takes no device), so a chosen input moves only the waveform.
-/** Shown while the picker names an input other than the system's default. */
-export const DEFAULT_ONLY_NOTICE =
-  "Words come from your system's default microphone. This input moves only the waveform; to dictate with it, make it the default in your system's sound settings.";
 /** Shown once the speech service has heard no speech and no words have come. */
 export const SILENT_DEFAULT_NOTICE =
   "No speech heard from your system's default microphone. Words come from that one, whatever the input above; check it in your system's sound settings.";
@@ -80,18 +75,20 @@ export function liveNotice(state: {
   failure: string | undefined;
   silent: boolean;
   heard: boolean;
-  deviceId: string;
 }): string | undefined {
   if (state.microphoneError !== undefined) return state.microphoneError;
   if (!state.supported) return NO_SPEECH_NOTICE;
   if (state.failure !== undefined) return state.failure;
-  if (state.deviceId !== "default") return DEFAULT_ONLY_NOTICE;
   return state.silent && !state.heard ? SILENT_DEFAULT_NOTICE : undefined;
 }
 
-/** The live picker's note: only the system's default input turns speech into words. */
-export const DEFAULT_ONLY_NOTE =
-  "Only System Default turns your speech into text for the compose box. Other inputs show the waveform only.";
+/**
+ * The live modal's standing warning, shown the whole time it records (Ethan): the browser's
+ * speech service hears only the system's default input (the Web Speech API takes no device),
+ * so a chosen input that is not it moves the waveform and turns no speech into text.
+ */
+export const MIC_MATCH_WARNING =
+  "Microphone chosen here has to match your OS' chosen Default Audio Input for Speech to Text to work";
 
 /**
  * What a live input does, under its name in the picker: the system's default turns speech into

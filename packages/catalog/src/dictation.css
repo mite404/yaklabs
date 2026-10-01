@@ -78,10 +78,9 @@
   text-align: left;
   font-size: 13px;
 }
-/* With a live microphone each input says under its name what it does, and a note closes the
-   list: only the system's default turns speech into text (Ethan). Secondary words in the guide's
-   12px soft ink; the note sits under a hairline, inset as the options are. The radio stays on
-   the name's line. */
+/* With a live microphone each input says under its name what it does, since only the
+   system's default turns speech into text (Ethan). Secondary words in the guide's
+   12px soft ink. The radio stays on the name's line. */
 .device-picker .device-option:has(.device-hint) {
   align-items: flex-start;
 }
@@ -95,15 +94,6 @@
 }
 .device-hint {
   font-size: 12px;
-  color: var(--soft-ink);
-}
-.device-note {
-  margin: 6px 0 0;
-  padding: 8px 10px 4px;
-  max-width: 250px;
-  border-top: 1px solid var(--hairline);
-  font-size: 12px;
-  line-height: 16px;
   color: var(--soft-ink);
 }
 .device-picker .device-option:hover,
@@ -199,4 +189,10 @@
   .dictation-footer > span {
     display: none;
   }
+}
+
+/* The live modal's standing warning sits under the header, by the picker it is about, and
+   before the waveform: 14px from each, the gap the waveform keeps from the header. */
+.dictation-mic-warning {
+  margin: 14px 0 0;
 }

@@ -1,5 +1,4 @@
-import { useId } from "react";
-import { DEFAULT_ONLY_NOTE, deviceHint, type AudioDevice } from "./dictation";
+import { deviceHint, type AudioDevice } from "./dictation";
 
 // One input in the open list: its radio dot, its name, and with a live microphone what it does,
 // since only the system's default turns speech into text (Ethan).
@@ -34,19 +33,20 @@ function DeviceOption({
   );
 }
 
-// The open list: the inputs as a listbox, and with a live microphone the note under it.
+// The open list: the inputs as a listbox, described by the modal's warning when there is one.
 function DeviceList({
   devices,
   deviceId,
   live,
+  describedBy,
   onPick,
 }: {
   devices: AudioDevice[];
   deviceId: string;
   live: boolean;
+  describedBy: string | undefined;
   onPick: (id: string) => void;
 }) {
-  const noteId = useId();
   return (
     <div className="device-list">
       {/* Options sit directly in the listbox: an <li> there fails axe's listitem rule. */}
@@ -54,7 +54,7 @@ function DeviceList({
         // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- a <select> cannot draw these radio-dot rows; this is the ARIA listbox pattern
         role="listbox"
         aria-label="Choose microphone"
-        aria-describedby={live ? noteId : undefined}
+        aria-describedby={describedBy}
       >
         {devices.map((item) => (
           <DeviceOption
@@ -66,25 +66,21 @@ function DeviceList({
           />
         ))}
       </div>
-      {live && (
-        <p id={noteId} className="device-note">
-          {DEFAULT_ONLY_NOTE}
-        </p>
-      )}
     </div>
   );
 }
 
 /**
  * The dictation modal's microphone list: a button naming the current input, and while open a
- * listbox of inputs. With a live microphone each input says what it does, and a note under the
- * list says that only the system's default turns speech into text, since the browser's speech
- * service hears no other.
+ * listbox of inputs. With a live microphone each input says what it does, since the browser's
+ * speech service hears only the system's default.
+ * @param describedBy The id of the words that explain the list, the modal's standing warning.
  */
 export function DevicePicker({
   devices,
   deviceId,
   live,
+  describedBy,
   open,
   onToggle,
   onPick,
@@ -92,6 +88,7 @@ export function DevicePicker({
   devices: AudioDevice[];
   deviceId: string;
   live: boolean;
+  describedBy?: string;
   open: boolean;
   onToggle: () => void;
   onPick: (id: string) => void;
@@ -106,7 +103,15 @@ export function DevicePicker({
       <button aria-haspopup="listbox" aria-expanded={open} onClick={onToggle}>
         {device.label} <span aria-hidden="true">▾</span>
       </button>
-      {open && <DeviceList devices={devices} deviceId={deviceId} live={live} onPick={onPick} />}
+      {open && (
+        <DeviceList
+          devices={devices}
+          deviceId={deviceId}
+          live={live}
+          describedBy={describedBy}
+          onPick={onPick}
+        />
+      )}
     </div>
   );
 }

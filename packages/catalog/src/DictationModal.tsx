@@ -1,116 +1,13 @@
-import { useEffect, useRef, useState, type KeyboardEvent } from "react";
-import {
-  SIMULATED_DEVICES,
-  formatElapsed,
-  liveNotice,
-  simulatedLevel,
-  simulatedTranscript,
-  type AudioDevice,
-} from "./dictation";
+import { useEffect, useId, useRef, useState, type KeyboardEvent, type RefObject } from "react";
+import { formatElapsed, MIC_MATCH_WARNING, type AudioDevice } from "./dictation";
+import { useDictationView } from "./dictationSession";
 import { DevicePicker } from "./DevicePicker";
-import { listenToMicrophone, speechRecognizer, transcribe } from "./liveDictation";
 import { Modal } from "./Modal";
 import { Waveform } from "./Waveform";
 import "./dictation.css";
 
 /** Where audio comes from: a deterministic simulation, or the user's real microphone. */
 export type DictationSource = "simulated" | "microphone";
-
-// How often the visible timer and simulated transcript refresh.
-const CLOCK_MS = 250;
-
-// Live input: a real microphone stream measured by an AnalyserNode.
-function useMicrophone(enabled: boolean, deviceId: string) {
-  const level = useRef(0);
-  const [devices, setDevices] = useState<AudioDevice[]>([]);
-  const [error, setError] = useState<string>();
-
-  useEffect(() => {
-    const stop = enabled
-      ? listenToMicrophone(deviceId, {
-          onLevel: (value) => {
-            level.current = value;
-          },
-          onDevices: setDevices,
-          onError: setError,
-        })
-      : undefined;
-    return () => {
-      stop?.();
-    };
-  }, [enabled, deviceId]);
-
-  return { read: () => level.current, devices, error };
-}
-
-// Live transcription through the browser's speech service, where one exists, and what to tell
-// the user when it fails, since the waveform keeps moving either way.
-function useSpeechTranscript(enabled: boolean) {
-  const [text, setText] = useState("");
-  const [failure, setFailure] = useState<string>();
-  const [silent, setSilent] = useState(false);
-  const Recognizer = speechRecognizer();
-  const supported = Recognizer !== undefined;
-
-  useEffect(() => {
-    const sink = {
-      onText: setText,
-      onFailure: setFailure,
-      onSilence: () => {
-        setSilent(true);
-      },
-    };
-    const stop = enabled && Recognizer ? transcribe(Recognizer, sink) : undefined;
-    return () => {
-      stop?.();
-    };
-  }, [enabled, Recognizer]);
-
-  return { text, supported, failure, silent };
-}
-
-type Microphone = ReturnType<typeof useMicrophone>;
-type Speech = ReturnType<typeof useSpeechTranscript>;
-
-// What the modal shows for its source: the devices, the transcript so far, the level to draw,
-// and a notice when the browser cannot deliver part of it.
-type DictationView = {
-  devices: AudioDevice[];
-  transcript: string;
-  read: () => number;
-  notice: string | undefined;
-};
-
-function viewFor(
-  live: boolean,
-  microphone: Microphone,
-  speech: Speech,
-  elapsed: number,
-  startedAt: number,
-  deviceId: string,
-): DictationView {
-  if (!live) {
-    return {
-      devices: SIMULATED_DEVICES,
-      transcript: simulatedTranscript(elapsed),
-      read: () => simulatedLevel(performance.now() - startedAt),
-      notice: undefined,
-    };
-  }
-  return {
-    devices: microphone.devices,
-    transcript: speech.text,
-    read: microphone.read,
-    notice: liveNotice({
-      microphoneError: microphone.error,
-      supported: speech.supported,
-      failure: speech.failure,
-      silent: speech.silent,
-      heard: speech.text !== "",
-      deviceId,
-    }),
-  };
-}
 
 // The modal handles Tab and Escape; an open microphone picker takes Escape first, and Enter
 // anywhere but on a button finishes the recording.
@@ -124,109 +21,181 @@ function keyAction(
   return undefined;
 }
 
+// The modal's keys by `keyAction`: what an open picker or Enter asks for, done here.
+const keyHandler =
+  (picking: boolean, setPicking: (open: boolean) => void, finish: () => void) =>
+  (event: KeyboardEvent<HTMLElement>): void => {
+    const action = keyAction(event.key, picking, event.target instanceof HTMLButtonElement);
+    if (action === undefined) return;
+    event.preventDefault();
+    if (action === "close-picker") setPicking(false);
+    else finish();
+  };
+
+// The transcript so far, or the prompt to speak, and the notice when part of it cannot come.
+function Transcript({ transcript, notice }: { transcript: string; notice: string | undefined }) {
+  const heard = transcript !== "";
+  return (
+    <>
+      <p className={heard ? "dictation-text" : "dictation-text muted"} aria-live="polite">
+        {heard ? transcript : "Start speaking…"}
+      </p>
+      {notice !== undefined && <p className="dictation-notice">{notice}</p>}
+    </>
+  );
+}
+
+// The modal's name, with a pulsing dot and how long it has been listening.
+function DictationTitle({ elapsed }: { elapsed: number }) {
+  return (
+    <p id="dictation-title">
+      <span className="rec-dot" aria-hidden="true" />
+      Listening
+      <span className="dictation-time">{formatElapsed(elapsed)}</span>
+    </p>
+  );
+}
+
+// The title with the clock, the microphone picker, and the standing warning, if any, which also
+// explains the list.
+function DictationHeader({
+  elapsed,
+  devices,
+  deviceId,
+  live,
+  warning,
+  picking,
+  onPicking,
+  onPick,
+}: {
+  elapsed: number;
+  devices: AudioDevice[];
+  deviceId: string;
+  live: boolean;
+  warning: string | undefined;
+  picking: boolean;
+  onPicking: (open: boolean) => void;
+  onPick: (id: string) => void;
+}) {
+  const warningId = useId();
+  return (
+    <>
+      <header className="dictation-header">
+        <DictationTitle elapsed={elapsed} />
+        <DevicePicker
+          devices={devices}
+          deviceId={deviceId}
+          live={live}
+          describedBy={warning === undefined ? undefined : warningId}
+          open={picking}
+          onToggle={() => {
+            onPicking(!picking);
+          }}
+          onPick={(id) => {
+            onPick(id);
+            onPicking(false);
+          }}
+        />
+      </header>
+      {warning !== undefined && (
+        <p id={warningId} className="dictation-notice dictation-mic-warning">
+          {warning}
+        </p>
+      )}
+    </>
+  );
+}
+
+// A ref whose element takes the focus as the caller opens. Called from the modal itself, not
+// the footer: a child's effect runs before Modal's own, which would then take the focus to the
+// first control, while the modal's runs after it.
+function useFocusOnOpen<T extends HTMLElement>(): RefObject<T | null> {
+  const element = useRef<T>(null);
+  useEffect(() => {
+    element.current?.focus();
+  }, []);
+  return element;
+}
+
+// Cancel and Done; the modal puts the focus on Done as it opens, so Enter finishes.
+function DictationFooter({
+  doneButton,
+  onCancel,
+  onDone,
+}: {
+  doneButton: RefObject<HTMLButtonElement | null>;
+  onCancel: () => void;
+  onDone: () => void;
+}) {
+  return (
+    <footer className="dictation-footer">
+      <span className="muted">Typing is paused while recording</span>
+      <div>
+        <button className="btn btn-sm" onClick={onCancel}>
+          Cancel
+        </button>
+        <button ref={doneButton} className="dictation-done" onClick={onDone}>
+          <span className="stop-square" aria-hidden="true" /> Done
+        </button>
+      </div>
+    </footer>
+  );
+}
+
 /**
  * Full-attention dictation: a modal over the thread that makes clear typing is paused
  * while recording, with a large center-playhead waveform, a live transcript preview,
- * and a microphone picker. Esc cancels; Enter (or Done) inserts the text.
+ * and a microphone picker. A standing warning sits under the header: with the live microphone,
+ * that the picked input must be the system's default for speech to become text (Ethan). Esc
+ * cancels; Enter (or Done) inserts the text.
+ * @param note The host's standing warning in place of the live one, such as the Demo's pointer
+ *   to where speech can really be tested; none and a simulated source shows no warning.
  */
 export function DictationModal({
   source,
+  note,
   onCancel,
   onDone,
 }: {
   source: DictationSource;
+  note?: string;
   onCancel: () => void;
   onDone: (transcript: string) => void;
 }) {
   const live = source === "microphone";
   const [deviceId, setDeviceId] = useState("default");
   const [picking, setPicking] = useState(false);
-  const [elapsed, setElapsed] = useState(0);
-  // Read once, on the first render: the recording's start never moves.
-  const [startedAt] = useState(() => performance.now());
-  const doneButton = useRef<HTMLButtonElement>(null);
-  const microphone = useMicrophone(live, deviceId);
-  const speech = useSpeechTranscript(live && !microphone.error);
-
-  useEffect(() => {
-    doneButton.current?.focus();
-    const id = window.setInterval(() => {
-      setElapsed(performance.now() - startedAt);
-    }, CLOCK_MS);
-    return () => {
-      window.clearInterval(id);
-    };
-  }, [startedAt]);
-
-  const { devices, transcript, read, notice } = viewFor(
-    live,
-    microphone,
-    speech,
-    elapsed,
-    startedAt,
-    deviceId,
-  ); // → DictationView
-
-  function onKeyDown(event: KeyboardEvent<HTMLElement>) {
-    const action = keyAction(event.key, picking, event.target instanceof HTMLButtonElement);
-    if (action === undefined) return;
-    event.preventDefault();
-    if (action === "close-picker") setPicking(false);
-    else onDone(transcript);
-  }
+  const { devices, transcript, read, notice, elapsed } = useDictationView(live, deviceId);
+  const doneButton = useFocusOnOpen<HTMLButtonElement>();
 
   return (
     <Modal
       className="dictation"
       labelledBy="dictation-title"
       onClose={onCancel}
-      onKeyDown={onKeyDown}
+      onKeyDown={keyHandler(picking, setPicking, () => {
+        onDone(transcript);
+      })}
     >
-      <header className="dictation-header">
-        <p id="dictation-title">
-          <span className="rec-dot" aria-hidden="true" />
-          Listening
-          <span className="dictation-time">{formatElapsed(elapsed)}</span>
-        </p>
-        <DevicePicker
-          devices={devices}
-          deviceId={deviceId}
-          live={live}
-          open={picking}
-          onToggle={() => {
-            setPicking(!picking);
-          }}
-          onPick={(id) => {
-            setDeviceId(id);
-            setPicking(false);
-          }}
-        />
-      </header>
-
+      <DictationHeader
+        elapsed={elapsed}
+        devices={devices}
+        deviceId={deviceId}
+        live={live}
+        warning={note ?? (live ? MIC_MATCH_WARNING : undefined)}
+        picking={picking}
+        onPicking={setPicking}
+        onPick={setDeviceId}
+      />
       <Waveform read={read} />
-
-      <p className={transcript ? "dictation-text" : "dictation-text muted"} aria-live="polite">
-        {transcript || "Start speaking…"}
-      </p>
-      {notice && <p className="dictation-notice">{notice}</p>}
-
-      <footer className="dictation-footer">
-        <span className="muted">Typing is paused while recording</span>
-        <div>
-          <button className="btn btn-sm" onClick={onCancel}>
-            Cancel
-          </button>
-          <button
-            ref={doneButton}
-            className="dictation-done"
-            onClick={() => {
-              onDone(transcript);
-            }}
-          >
-            <span className="stop-square" aria-hidden="true" /> Done
-          </button>
-        </div>
-      </footer>
+      <Transcript transcript={transcript} notice={notice} />
+      <DictationFooter
+        doneButton={doneButton}
+        onCancel={onCancel}
+        onDone={() => {
+          onDone(transcript);
+        }}
+      />
     </Modal>
   );
 }

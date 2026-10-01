@@ -1,7 +1,6 @@
 import { expect, it } from "vitest";
 import {
   appendDictation,
-  DEFAULT_ONLY_NOTICE,
   deviceHint,
   liveNotice,
   NO_SPEECH_NOTICE,
@@ -56,13 +55,11 @@ it("tells the live modal's user the most pressing thing first, and nothing while
     failure: undefined,
     silent: false,
     heard: false,
-    deviceId: "default",
   };
   expect(liveNotice(well)).toBeUndefined();
   expect(liveNotice({ ...well, microphoneError: "Blocked", supported: false })).toBe("Blocked");
   expect(liveNotice({ ...well, supported: false })).toBe(NO_SPEECH_NOTICE);
-  expect(liveNotice({ ...well, failure: "Unreachable", deviceId: "usb" })).toBe("Unreachable");
-  expect(liveNotice({ ...well, deviceId: "usb", silent: true })).toBe(DEFAULT_ONLY_NOTICE);
+  expect(liveNotice({ ...well, failure: "Unreachable", silent: true })).toBe("Unreachable");
   expect(liveNotice({ ...well, silent: true })).toBe(SILENT_DEFAULT_NOTICE);
   expect(liveNotice({ ...well, silent: true, heard: true })).toBeUndefined();
 });
