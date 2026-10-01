@@ -643,13 +643,14 @@ html[data-dragging="sidebar"] * {
   }
 
   /* A divider that drags shows a hint of a line while the pointer is on it (ADR-089): full ink
-     for 20px either side of the pointer's height, fading to nothing by 50px, so the whole length
-     reads as something to take hold of without a line being drawn along all of it. The divider
-     sets --hint-y from the pointer (divider.ts); until it has, the line centres on the divider. */
+     for 40px either side of the pointer's height, fading to nothing by 70px (Ethan: "longer in
+     both directions by another 20px"), so the whole length reads as something to take hold of
+     without a line being drawn along all of it. The divider sets --hint-y from the pointer
+     (divider.ts); until it has, the line centres on the divider. */
   .drag-hint {
     --hint-y: 50%;
-    --hint-hold: 20px;
-    --hint-reach: 50px;
+    --hint-hold: 40px;
+    --hint-reach: 70px;
   }
   .drag-hint::before {
     content: "";

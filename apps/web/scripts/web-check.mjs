@@ -432,15 +432,15 @@ try {
       image: style.backgroundImage,
     };
   }, hoverY - separatorBox.y);
-  // Full ink for 20px either side of the pointer, gone by 50px: the stops appear either as
+  // Full ink for 40px either side of the pointer, gone by 70px: the stops appear either as
   // calc() offsets or, once resolved, as px positions around the centre.
   const stops = [...hint.image.matchAll(/(-?\d+(?:\.\d+)?)px/g)].map((m) => Number(m[1]));
   const stopAt = (n) => stops.some((v) => Math.abs(v - n) < 1);
   const profile =
     (stopAt(20) && stopAt(50)) ||
-    [-50, -20, 20, 50].every((offset) => stopAt(hint.centre + offset));
+    [-70, -40, 40, 70].every((offset) => stopAt(hint.centre + offset));
   record(
-    "the hint line shows on hover, centred on the pointer, holding 20px and gone by 50px",
+    "the hint line shows on hover, centred on the pointer, holding 40px and gone by 70px",
     hint.opacity === "1" && Math.abs(hint.centre - hint.y) < 2 && profile,
     `opacity ${hint.opacity}, centre ${Math.round(hint.centre)} for pointer at ${Math.round(hint.y)}; stops ${stops.join(" ")}`,
   );
