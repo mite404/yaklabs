@@ -1782,6 +1782,10 @@ over the slide's last 120ms (derived; design pillars, rule 26).
 Amended 2026-09-29: pressing the open Canvas in the layout switch closes it back to the thread
 (Ethan), and so does pressing the open Browser, so the switch reads one way for both side panes
 (derived). The thread pressed again stays.
+Amended 2026-10-01 (Ethan): a title renames from its own words or from Rename in the "⋯" menu,
+and from nothing else. A click on the words of the tab in view opens them as a field, the text
+cursor saying so; a click on a tab not in view only chooses it, and the double click is gone. A
+lane's title loses its dotted rule: it reads as plain words until the pointer rests on it.
 
 ## ADR-139 - Separate progress narration, finished responses, and work details
 
