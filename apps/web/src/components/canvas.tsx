@@ -12,15 +12,16 @@ import { LaneSeparator } from "./lane-separator";
 import { SplashDrawing } from "./splash";
 
 // The open space at the end of the row: the whole canvas when it is empty, with the splash
-// behind its words, and a slimmer column once lanes exist, so there is always somewhere to drop
-// the next thing. It steps aside for an incoming lane. The button is the catalog's own,
-// the one a card's "Show my work" uses.
+// behind its words, and a column as wide as a new lane once lanes exist, so there is always
+// somewhere to drop the next thing and it shows the room that thing will take. It steps aside
+// for an incoming lane. The button is the catalog's own, the one a card's "Show my work" uses.
 function OpenSpace({
   receiving,
   splash,
   onBlank,
 }: {
   receiving: boolean;
+  /** Whether the row is empty: the space fills the canvas, with the splash behind its words. */
   splash: boolean;
   onBlank: () => void;
 }) {
@@ -32,7 +33,7 @@ function OpenSpace({
           ? "translateX(calc(var(--lane-default-width) + var(--canvas-grid)))"
           : "",
       }}
-      className="open-space lane-shift @container relative isolate flex h-full min-w-[320px] flex-1 flex-col items-center justify-center gap-4 rounded-[var(--radius-card)] border border-dashed border-hairline p-6 text-center"
+      className={`open-space lane-shift @container relative isolate flex h-full ${splash ? "min-w-[320px] flex-1" : "w-(--lane-default-width) shrink-0"} flex-col items-center justify-center gap-4 rounded-[var(--radius-card)] border border-dashed border-hairline p-6 text-center`}
     >
       {splash && <SplashDrawing />}
       <p className="font-serif text-xl text-balance text-ink">
