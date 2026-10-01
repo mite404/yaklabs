@@ -144,16 +144,6 @@ describe("the Demo world's children", () => {
       [BRIEF],
       [],
     ]);
-    const ws = workspaceOf(world.state());
-    // Left to right as the sidebar lists them top to bottom: newest first.
-    expect(ws.lanes[BRIEF]?.map((lane) => lane.id)).toEqual([
-      `l-${response}`,
-      `l-${issues}`,
-      `l-${workload}`,
-    ]);
-    expect(childrenOf(ws, BRIEF).map((child) => `l-${child.id}`)).toEqual(
-      ws.lanes[BRIEF]?.map((lane) => lane.id),
-    );
     expect(lastTurn(await world.open(workload))).toMatchObject({
       text: "Backlog fell from 46 cases Monday to 18 by Friday.",
       streaming: false,
@@ -176,6 +166,27 @@ describe("the Demo world's children", () => {
     expect(lastTurn(await world.open(workload))).toMatchObject({ ended: "cancelled" });
     expect(lastTurn(await world.open(BRIEF))).toMatchObject({ ended: "cancelled" });
     expect(world.showOf(BRIEF)?.progress().settled.has(0)).toBe(true);
+  });
+});
+
+describe("the Demo world's lanes", () => {
+  const [workload, issues, response] = ["workload", "issues", "response"].map((local) =>
+    ids.child(BRIEF, local),
+  );
+
+  it("opens the children's lanes left to right as the sidebar lists them", async () => {
+    const world = playing();
+    await drain(world, BRIEF, ask("Prepare the brief"));
+    const ws = workspaceOf(world.state());
+    // Top to bottom in the sidebar is newest first.
+    expect(ws.lanes[BRIEF]?.map((lane) => lane.id)).toEqual([
+      `l-${response}`,
+      `l-${issues}`,
+      `l-${workload}`,
+    ]);
+    expect(childrenOf(ws, BRIEF).map((child) => `l-${child.id}`)).toEqual(
+      ws.lanes[BRIEF]?.map((lane) => lane.id),
+    );
   });
 });
 
