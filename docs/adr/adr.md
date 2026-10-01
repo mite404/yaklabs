@@ -2368,3 +2368,38 @@ picker showed on a first visit once first run opened the thread pane where it wa
 it now renders in development builds only. The device levers `apps/web/scripts/web-check.mjs`
 and `workspace-check.mjs` drive `?scenario=` fixtures, where the overlay is off and the profit
 thread still exists, so they run unchanged.
+
+## ADR-157 - Find marks words, a recap lands on its evidence, the canvas snaps to its grid
+
+2026-10-01 - Accepted (Ethan, walking the Weekly brief and Refund audit on a laptop). Amends
+ADR-018, ADR-022, ADR-089, ADR-133, ADR-134, ADR-136, ADR-143 and ADR-156.
+Search counts and steps through every occurrence of its words, as an editor's find does, rather
+than every turn that holds them (`matchesOf` returns `{ turnId, nth }`). The page marks them with
+the CSS Custom Highlight API (`packages/catalog/src/searchMarks.ts`): every match tinted, the one
+stepped to painted as a text selection, centred, and ringed once around its own words in a layer
+that scrolls with the turns. The turn no longer glows, since on a long reply the glow was the
+whole thread. A recap item names the step that recorded it (`RecapItem.stepId`); a jump glows the
+card in the reply's words that is that step's evidence (matched by contents, `stepBacking`), else
+unfolds Work details and glows the step's row, else the turn. The splash switch shows in every
+build again (ADR-156 had kept it to development builds): it is how a visitor looks through the
+design work. The first welcome a visitor sees is the abstract painting; from then on each visit
+draws landscape or Vitruvian at random (`lookForVisit`). The switch picks for the visit only, so a
+pick never freezes the draw, and the retired `kay.splash` key is cleared. Restart, at any point of
+a take, plays the show again from the top with a clear thread, and once a take is done its Play
+reads Play again and does the same. On the canvas, a sideways swipe anywhere on the row pans it:
+the thread's scroller no longer claims the x axis or contains it, and the row listens to the wheel
+itself, not passively, so a lane cannot latch the gesture. Every lane width is a whole number of
+grid steps (dragged, keyed, saved before this, and the default on a narrow pane), which keeps each
+gap's dots centred, and the drop zone is a default lane wide. A lane's collapse sits
+`--leading-space` from the edge and from the title; a collapsed strip spaces its expand, grip and
+title equally and starts its title under the open lanes' title-bar rule. A sidebar title too long
+for its row fades out instead of ending in an ellipsis.
+Alternatives weighed: wrapping each match in a `<mark>`, which would have rewritten text React
+owns and broken on the next render; keeping the turn-level search and adding a word highlight,
+which still left "3 matches" counting turns; pointing a recap item at a DOM id written into the
+step, when the card and the step already share the payload; a fade overlay on the sidebar's edge,
+which would also have faded the counts and the hover buttons; and snapping widths in TypeScript
+alone, which a width saved before the change would have escaped (CSS `round()` catches it).
+Known gaps: a collapsed card's strip uses the thread bar's rule, not the card heading's, which is
+taller and varies with the card; the brief lever's 2x timing bound sits at 59 to 63% on main as
+well as here, because the on-screen reveal does not scale with the show's clock.

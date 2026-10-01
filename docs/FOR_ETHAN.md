@@ -212,6 +212,13 @@ phase taught the mail room to carry parcels (ADR-147, amended), moved the live m
 mail (`composeRuntime`). `/new` and the playground page are gone, the old addresses redirect into
 the shell, and a first visit opens on the abstract painting with the canvas out of sight.
 
+Then came a walkthrough on a laptop screen, and a notebook of small wrongs (ADR-157). Search lit
+the whole reply instead of the word; the recap's second and third lines glowed the same paragraph as
+the first; sideways swipes died over a lane; the dotted gutter between two lanes sat off centre; the
+splash switch had vanished from production. None was a big bug. Each was a place where the app
+pointed at a wide shot when the viewer asked for a close-up, and the fixes all point closer: at the
+word, at the card, at the grid step.
+
 ## 2. Cast & Crew
 
 The first entries are ideas from before any code existed; the rest are parts of the running app.
@@ -1630,6 +1637,34 @@ with a 504 "Outdated Optimize Dep", and the browser logs it as an error. One war
 rebuild them, and the rerun was clean. `web-check.mjs` already guards for it; its comment says the
 first load has to be clean, not the second. Lesson: after a lockfile change, give the dev server one
 throwaway take before you judge the footage.
+
+### The swipe that the lane swallowed
+
+On the canvas, a two-finger sideways swipe only panned the row when it started on the bare ground.
+Over a lane it went nowhere. The thread's scroller set `overflow-y: auto`, and CSS quietly turns
+the other axis to `auto` as well when one axis scrolls, so the browser treated every lane as a
+sideways scroller with nothing to scroll. On top of that, `overscroll-behavior: contain` on both
+axes told it never to hand a leftover swipe to the canvas behind. A Mac trackpad latches the whole
+gesture to the first scroller it lands on, so the swipe was caught by a container that could not
+move. The fix has two halves: the thread clips its x axis and contains only y, and the canvas
+listens to the wheel itself, not passively, so it can claim a swipe whose sideways part is larger
+before any lane can latch it. A headless browser never reproduced the latch, which is why the fix
+does not lean on the browser's chaining at all.
+
+### The dots that drifted off the gutter
+
+The canvas is a dot grid of 18px steps, and the gap between lanes is exactly one step, so its
+column of dots should sit dead centre. It did on a wide screen. On a laptop the default lane fell
+back to `100cqw - 48px`, which is almost never a whole number of steps, and a dragged width could
+be any pixel. Lanes 440px wide put the gap 8px off its dots. Now every width snaps to the grid:
+dragged and keyed widths in TypeScript, saved ones and the narrow default in CSS with `round()`.
+
+### Three recap lines, one glow
+
+The weekly brief's recap had three lines, and all three glowed the same reply. The outcomes were
+real records, but each one only knew its turn, and the turn was the whole answer. Now each line
+also knows the step that recorded it, and the step's evidence is the same chart the reply shows
+between its paragraphs, so the jump finds that card by its contents and glows it alone.
 
 ## 5. Director's Commentary
 
@@ -3451,3 +3486,35 @@ but the door checks the date, so nobody from the old take walks onto the new set
 Senior-engineer takeaway: when work in flight can outlive the state it was started for, do not chase
 the work to cancel it. Give it a token that names the state, and make the reset invalidate every
 token in the same step. The stale write then fails by itself, however late it arrives.
+
+### Point at the word, not the reel: marks that never touch the film
+
+A search that wraps each match in a `<mark>` element edits the footage. The words belong to React,
+and the next render either throws the marks away or trips over nodes it did not put there. The CSS
+Custom Highlight API is a grading layer instead: it names ranges of text and paints them, and the
+DOM under it never changes.
+
+```ts
+// packages/catalog/src/searchMarks.ts: ranges in, paint out, no node rewritten
+const all = [...byTurn.values()].flatMap((turn) => rangesIn(turn, find.query)); // → Range[]
+marks.set(scroller, { all, current: shown }); // → this thread's marks, beside its neighbours'
+CSS.highlights.set("thread-search", new Highlight(...all)); // → thread.css paints ::highlight()
+```
+
+```mermaid
+flowchart LR
+  Q["query + current match"] --> D["matchesOf(messages)<br/>counts occurrences (data)"]
+  Q --> R["rangesIn(turn)<br/>finds the same words (DOM)"]
+  R --> H["CSS.highlights<br/>tint all, select current"]
+  R --> C["centerInScroller(range)"]
+  R --> G["ringRange(range)<br/>one ring per line"]
+  D --> S["status: 2 of 5"]
+```
+
+The count comes from the data, so it is testable without a browser. The marks come from the page,
+so they land on the exact letters. The two agree because they read the same words: the DOM walk
+skips what the data leaves out (cards, Work details, buttons).
+
+Senior-engineer takeaway: when a library owns the nodes, do not decorate them. Find an overlay that
+names what you want, a highlight, a ring layer, a data attribute, and let the owner keep its film.
+
