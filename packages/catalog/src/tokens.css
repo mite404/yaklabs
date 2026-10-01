@@ -5,6 +5,8 @@
 /* Inter's own italics, so an aside in a reply is a real italic, never a slanted roman (ADR-140). */
 @import "@fontsource-variable/inter/opsz-italic.css";
 @import "@fontsource-variable/newsreader/opsz.css";
+/* Newsreader's own italics, so an italic word in a headline is a real italic (ADR-160). */
+@import "@fontsource-variable/newsreader/opsz-italic.css";
 @import "./primitives.css";
 
 :root {

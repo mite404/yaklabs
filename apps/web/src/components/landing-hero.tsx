@@ -1,5 +1,4 @@
 import { Link } from "react-router";
-import type { ThemeChoice } from "../theme";
 import { RUN, SHELL, STATS, VERDICTS } from "../verify-ui-tooling";
 import { Seal } from "./design-tooling-seal";
 
@@ -17,23 +16,16 @@ const LINES: readonly Line[] = [
 // When the terminal's `n`th line arrives: 60ms after the one before, as a run prints them.
 const delayOf = (n: number): string => `${n * 60}ms`;
 
-/** The page's bar: the wordmark as the review app writes it, the way back, and the appearance. */
-export function Bar({ theme }: { theme: ThemeChoice }) {
-  const flip = () => {
-    const now = document.documentElement.dataset.theme; // → "light" | "dark" | undefined
-    theme.choose(now === "dark" ? "light" : "dark");
-  };
+/** The page's bar: the wordmark as the review app writes it, and the way back to Bonsai. */
+export function Bar() {
   return (
     <div className="topbar">
       <Link to="/" className="brand">
         Yaklabs <span>/ Verify</span>
       </Link>
       <div className="land-bar-actions">
-        <button type="button" className="btn btn-sm" onClick={flip}>
-          Switch appearance
-        </button>
         <Link to="/" className="btn btn-sm">
-          Back to Kay
+          Back to Bonsai
         </Link>
       </div>
     </div>
@@ -81,7 +73,9 @@ export function Hero() {
     <header className="land-hero">
       <div>
         <p className="land-kicker">Design engineering / tooling</p>
-        <h1 className="land-title">Design tooling that allows humans to verify at scale</h1>
+        <h1 className="land-title">
+          Design tooling that allows <em>humans</em> to verify at scale
+        </h1>
         <p className="land-lede">
           Agents and plugins can create new screens faster than a small team can review them. How
           does a system verify the product stays coherent as it grows?
