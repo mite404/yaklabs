@@ -179,7 +179,9 @@ export function Lane({
       ref={article}
       className={`lane lane-shift flex ${heightOf(lane)} shrink-0 flex-col`}
       style={{
-        ["--lane-width" as string]: width === null ? "var(--lane-default-width)" : `${width}px`,
+        // A width kept before lanes snapped to the grid still lands on it.
+        ["--lane-width" as string]:
+          width === null ? "var(--lane-default-width)" : `round(${width}px, var(--canvas-grid))`,
         ...style,
       }}
       data-lane={lane.id}

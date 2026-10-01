@@ -10,20 +10,21 @@ import {
 import { trackHintLine } from "./divider";
 
 // The widths the gap sets (ADR-117): never narrower than a readable measure for the thread
-// inside, and never wider than the widest canvas a 2560px screen lays out.
+// inside, and never wider than the widest canvas a 2560px screen lays out. Each is met in whole
+// grid steps (`snapWidth`).
 const LANE_MIN_PX = 320;
 const LANE_MAX_PX = 1800;
-// What an arrow does on a separator: resize the lane before it by some px, or, with Shift,
-// move that lane some slots.
-type KeyAction = { kind: "resize"; by: number } | { kind: "move"; step: number };
+// What an arrow does on a separator: resize the lane before it by some grid steps, or, with
+// Shift, move that lane some slots.
+type KeyAction = { kind: "resize"; steps: number } | { kind: "move"; step: number };
 type Keys = Partial<Record<string, KeyAction>>;
 const MOVE_KEYS: Keys = {
   "Shift+ArrowLeft": { kind: "move", step: -1 },
   "Shift+ArrowRight": { kind: "move", step: 1 },
 };
 const KEYS: Keys = {
-  ArrowLeft: { kind: "resize", by: -24 },
-  ArrowRight: { kind: "resize", by: 24 },
+  ArrowLeft: { kind: "resize", steps: -1 },
+  ArrowRight: { kind: "resize", steps: 1 },
   ...MOVE_KEYS,
 };
 
@@ -47,8 +48,21 @@ function laneBefore(separator: HTMLElement): HTMLElement | undefined {
   return lane instanceof HTMLElement ? lane : undefined;
 }
 
-function clampWidth(px: number): number {
-  return Math.min(LANE_MAX_PX, Math.max(LANE_MIN_PX, Math.round(px)));
+// One step of the canvas's dot grid. The gap is exactly one step wide (index.css), so it
+// measures the step rather than keeping a second copy of it here.
+function gridOf(separator: HTMLElement): number {
+  return separator.getBoundingClientRect().width || 18;
+}
+
+/**
+ * A lane width in whole steps of the dot grid, nearest first, inside the range the gap sets.
+ * Every lane being whole steps wide is what keeps each gap's column of dots centred between the
+ * lanes either side of it.
+ */
+export function snapWidth(px: number, step: number): number {
+  const min = Math.ceil(LANE_MIN_PX / step) * step;
+  const max = Math.floor(LANE_MAX_PX / step) * step;
+  return Math.min(max, Math.max(min, Math.round(px / step) * step));
 }
 
 // The gap's value, as ARIA's window splitter gives one: the lane's width, inside the range the
@@ -110,7 +124,8 @@ function useGapDrag(resizable: boolean, onResize: (px: number, kept: boolean) =>
     onPointerMove: (event: PointerEvent<HTMLDivElement>) => {
       trackHintLine(event);
       if (origin.current === null) return;
-      const px = clampWidth(origin.current.width + event.clientX - origin.current.x);
+      const step = gridOf(event.currentTarget);
+      const px = snapWidth(origin.current.width + event.clientX - origin.current.x, step);
       origin.current.reached = px;
       onResize(px, false);
     },
@@ -124,7 +139,7 @@ function keyName(event: KeyboardEvent<HTMLDivElement>): string {
   return event.shiftKey ? `Shift+${event.key}` : event.key;
 }
 
-// Arrows resize the lane before the gap, kept at once; with Shift they move it a slot instead.
+// Arrows resize the lane before the gap a grid step at a time, kept at once; with Shift they move it a slot instead.
 // A gap's keys may only move its lane, as after a collapsed one.
 function keyOn(
   event: KeyboardEvent<HTMLDivElement>,
@@ -137,14 +152,17 @@ function keyOn(
   if (action === undefined || lane === undefined) return;
   event.preventDefault();
   if (action.kind === "move") onMove(action.step);
-  else onResize(clampWidth(lane.getBoundingClientRect().width + action.by), true);
+  else {
+    const step = gridOf(event.currentTarget);
+    onResize(snapWidth(lane.getBoundingClientRect().width + action.steps * step, step), true);
+  }
 }
 
 /**
  * The gap after a lane, which drags the lane's right edge (ADR-089). The hint line shows while
  * the pointer is on it; pointer capture keeps the drag alive once the pointer outruns the gap.
- * The width follows the pointer and is kept when it lets go (`kept`); an arrow key keeps its
- * step at once, and with Shift moves the lane a slot instead. Focused, it says the lane's
+ * The width follows the pointer in whole steps of the dot grid and is kept when it lets go
+ * (`kept`); an arrow key keeps a step at once, and with Shift moves the lane a slot instead. Focused, it says the lane's
  * width, as a window splitter does. After a collapsed lane (ADR-133) it only moves the lane:
  * a strip has no width to drag, so it says its fixed width and draws no hint.
  */

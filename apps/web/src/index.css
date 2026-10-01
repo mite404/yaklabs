@@ -525,11 +525,17 @@ html[data-dragging="sidebar"] * {
     background-color: var(--bg);
     /* One step of the dot grid. Everything on the row is a whole number of steps: the gap
        between lanes is one, so it holds exactly one column of dots; a strip is two; the row
-       starts one in; a default lane is 31. The dots scroll with the row (`local`), so panning
-       never slides them out of step with the lanes. */
+       starts one in; a default lane is 31, or as many as fit a narrow pane, rounded down so a
+       laptop's pane never leaves a lane a fraction of a step wide and its gap's dots off centre.
+       The dots scroll with the row (`local`), so panning never slides them out of step with the
+       lanes. */
     --canvas-grid: 18px;
     container-type: inline-size;
-    --lane-default-width: min(calc(var(--canvas-grid) * 31), calc(100cqw - 48px));
+    --lane-default-width: round(
+      down,
+      min(calc(var(--canvas-grid) * 31), calc(100cqw - 48px)),
+      var(--canvas-grid)
+    );
     background-image: radial-gradient(var(--hairline) 1px, transparent 1px);
     background-size: var(--canvas-grid) var(--canvas-grid);
     background-attachment: local;
