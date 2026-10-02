@@ -106,6 +106,12 @@ const overloadedUpstream = (): Response =>
     { status: 529 },
   );
 
+const creditUpstream = (): Response =>
+  Response.json(
+    { type: "error", error: { type: "payment_required", message: "Insufficient credits" } },
+    { status: 402 },
+  );
+
 // Posts a turn as the browser would; `authorization: null` sends no Authorization header.
 const postMessages = (
   app: ReturnType<typeof createApp>,
@@ -232,5 +238,14 @@ describe("POST /api/messages reports", () => {
 
     expect(response.status).toBe(502);
     expect(await response.json()).toEqual({ error: "upstream", status: 529 });
+  });
+
+  it("an out-of-credit refusal as a 402 with only its marker", async () => {
+    const { app } = appWithUpstream(creditUpstream);
+
+    const response = await postMessages(app, { system: SYSTEM, messages: turns });
+
+    expect(response.status).toBe(402);
+    expect(await response.json()).toEqual({ error: "credit" });
   });
 });

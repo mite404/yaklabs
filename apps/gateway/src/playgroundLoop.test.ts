@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   BAR_CARD,
   QUESTION,
+  credit,
   eventsFor,
   overloaded,
   playgroundApp,
@@ -26,6 +27,11 @@ const working = round("tool_use", tool(0, "update_work", work("running")));
 // The closing events of a turn that stopped short: the reason and its line, in `end` alone.
 const cutShort = { type: "end", reason: "limit", line: "I stopped before finishing this reply." };
 const noResponse = { type: "end", reason: "upstream", line: "The model stopped responding." };
+const creditOut = {
+  type: "end",
+  reason: "upstream",
+  line: "The model's credit ran out before it could finish.",
+};
 describe("the tool loop shows", () => {
   it("a valid card and tells the model it was shown", async () => {
     const card = { cardId: "week", card: BAR_CARD };
@@ -234,6 +240,12 @@ describe("the tool loop reports", () => {
     const { events } = await eventsFor("Chart it.", working, overloaded);
 
     expect(events).toEqual([{ type: "work", ...work("running") }, noResponse]);
+  });
+
+  it("credit running out before a later round, with its line in the end event", async () => {
+    const { events } = await eventsFor("Chart it.", working, credit);
+
+    expect(events).toEqual([{ type: "work", ...work("running") }, creditOut]);
   });
 
   it("a round's stream that ends before it says why", async () => {

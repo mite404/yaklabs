@@ -63,6 +63,8 @@ that does not restate the limitation. No tables and no headings.`;
 const MAX_ROUNDS = 8;
 const CUT_SHORT = "I stopped before finishing this reply.";
 const NO_RESPONSE = "The model stopped responding.";
+// The upstream accepted the turn, then ran out of credit before its next round.
+const CREDIT_OUT = "The model's credit ran out before it could finish.";
 const NO_ANSWER = "I finished without an answer.";
 const encoder = new TextEncoder();
 
@@ -144,6 +146,10 @@ const noteFailure = (error: unknown): void => {
   console.error("[playground] round failed:", error);
 };
 
+// Whether the upstream refused because its credit ran out.
+const isCreditRefusal = (error: unknown): boolean =>
+  error instanceof APIError && error.status === 402;
+
 // Streams one round's page events and returns how it ended. An upstream failure mid-round
 // ends it `broken` with the seq it reached, so the closing events keep counting from there.
 async function* streamRound(
@@ -172,18 +178,18 @@ async function* streamRound(
   return end;
 }
 
-// Opens the next round, or undefined when the upstream refused it.
+// Opens the next round, or names credit running out; another upstream refusal is undefined.
 const tryOpenRound = async (
   upstream: PlaygroundUpstream,
   messages: Messages,
   state: TurnState,
   signal: AbortSignal,
-): Promise<UpstreamEvents | undefined> => {
+): Promise<UpstreamEvents | "credit" | undefined> => {
   try {
     return await openRound(upstream, messages, state, signal);
   } catch (error) {
     noteFailure(error);
-    return undefined;
+    return isCreditRefusal(error) ? "credit" : undefined;
   }
 };
 
@@ -191,7 +197,7 @@ const tryOpenRound = async (
 // each upstream event into page events, answers the tool calls and goes round again until the
 // model answers, asks, hits a limit or stops responding. The first event is `start`, the last
 // is `end`, and `seq` counts up from 0 without a gap. A closed browser (`signal`) stops it.
-// It throws the first round's `APIError` before `start`, so the route can answer 502 instead.
+// It throws the first round's `APIError` before `start`, so the route can answer before streaming.
 async function* playgroundEvents(
   upstream: PlaygroundUpstream,
   request: PlaygroundRequest,
@@ -199,11 +205,16 @@ async function* playgroundEvents(
 ): AsyncGenerator<PlaygroundEvent, void> {
   let messages = toUpstreamMessages(request); // → MessageParam[]
   // The first round opens before the turn has failed anything, so it offers every tool.
-  let events: UpstreamEvents | undefined = await openRound(upstream, messages, initialTurn, signal);
+  let events: UpstreamEvents | "credit" | undefined = await openRound(
+    upstream,
+    messages,
+    initialTurn,
+    signal,
+  );
   const opened = stamp(initialTurn, [{ type: "start", v: PLAYGROUND_PROTOCOL }]);
   let state = opened.state;
   yield* opened.events;
-  while (events !== undefined) {
+  while (events !== undefined && events !== "credit") {
     const end: RoundEnd = yield* streamRound(events, { ...state, round: state.round + 1 });
     if (signal.aborted) return;
     const decision = decide(end, messages); // → stop | continue
@@ -217,7 +228,13 @@ async function* playgroundEvents(
     events = await tryOpenRound(upstream, messages, state, signal);
   }
   if (signal.aborted) return;
-  yield* stamp(state, [{ type: "end", reason: "upstream", line: NO_RESPONSE }]).events;
+  yield* stamp(state, [
+    {
+      type: "end",
+      reason: "upstream",
+      line: events === "credit" ? CREDIT_OUT : NO_RESPONSE,
+    },
+  ]).events;
 }
 
 // One event per line, as the page reads them.

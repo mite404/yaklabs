@@ -2685,3 +2685,16 @@ olive in light and, in dark (Ethan), Zed's text grey `#aeaeae` with the page's n
 The focus ring stays the light theme's warm grey `#8a8a85` in dark (Ethan: "the focus should not
 be blue"), 4.56:1 on the dark paper and 3.78:1 on the compose box, and the recap's ring stays
 the cream, 11.71:1; Zed's cyan `#16c3dd` is gone from the theme.
+
+## ADR-164 - Name the out-of-credit refusal
+
+2026-10-02 - Accepted. Amends ADR-155.
+The interview build runs on the owner's capped OpenRouter key. When its credit runs out,
+OpenRouter answers 402. The gateway passes that status through as `{ error: "credit" }`, with a
+bare marker rather than the upstream body, which could echo the request. If credit runs out
+between rounds, the gateway names it in the end event's line. The page reads the initial 402 in
+plain words: the POC's model budget is spent, and the 3 scripted Demos still play.
+Alternatives weighed: keeping a 502 with a marker, which the client would never read because it
+deliberately branches on the status line; adding a new end reason and protocol bump for the
+mid-reply case, a heavier protocol change for a rare path the line already carries; and retrying
+with backoff, although credit does not come back on its own.
