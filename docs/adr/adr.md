@@ -2674,7 +2674,9 @@ Alternatives weighed: Umbralkai's values exactly as mapped, which fail the pill,
 and the menu hover; and a third theme beside the old dark, which keeps a theme Ethan never
 finessed.
 Amended 2026-10-02 (Ethan): the compose box and menus are `#323031`, and the compose box lies
-flat in dark, with no edge shadow (`--compose-shadow`), as it reads in light. The dividing lines
+flat in both themes, with no drop shadow ("i don't want a drop shadow on the chat compose input
+box"); its border and fill set it apart, and its keyboard focus halo stands alone. The dividing
+lines
 are the old dark theme's cream at 18%, 1.71:1 on the paper (1.7:1 before, 1.64:1 in light), where
 Zed's border at 1.19:1 read thinner. The send button is the same in a main thread and a child
 lane: soft ink on the inset fill while there is nothing to send. Once there is, it is cream on

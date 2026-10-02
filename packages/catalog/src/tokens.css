@@ -87,8 +87,6 @@
      the offset moves it down, the negative spread pulls its blur in from the sides, and the
      long blur gives the slow fall-off. Both themes read the same --shadow token. */
   --edge-shadow: 2px 13px 22px -12px var(--shadow);
-  /* The compose box's own, so dark can lay it flat (ADR-162). */
-  --compose-shadow: var(--edge-shadow);
   /* derived from --edge-shadow for a small floating control, such as the reading tools' bar: the
      same fall down and to the right, none above, scaled to a 34px bar, whose 22px blur the
      edge shadow's -12px spread would swallow; the strong shadow, since the box below it hides
@@ -356,9 +354,6 @@ button:hover {
   --bubble-line: #4f5257; /* 2.02:1 */
   --shadow: color-mix(in srgb, black 50%, transparent);
   --shadow-strong: color-mix(in srgb, black 70%, transparent);
-  /* Ethan: the compose box is flat, as it reads in light. A shadow that draws nothing rather than
-     `none`, since the focus ring lists it after its own halo and `none` there drops both. */
-  --compose-shadow: 0 0 transparent;
   /* the paintings show a step more on the dark paper (20%), where a daylight picture sits back
      anyway; Atlas is the ink at 26%, 2.29:1 off the dark paper */
   --splash-wash: color-mix(in srgb, var(--paper) 80%, transparent);

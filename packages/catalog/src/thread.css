@@ -62,7 +62,7 @@
    4px inset, and with a card docked (--dock-space, set by the panel) 8px clear of the card
    instead. Its corners and gaps are the menu's (8px) and the title bar's actions' (2px).
    The bar floats beside the compose box at its height, so it casts a shadow down and to the
-   right as the box does (--float-shadow, Ethan). The dock clips sideways (overflow keeps the
+   right as the cards do (--float-shadow, Ethan); the box itself lies flat (ADR-162). The dock clips sideways (overflow keeps the
    scrollbar gutter that lines the bar up), so it reaches 16px further down to hold that shadow,
    its 8px drop plus its 14px blur less its 6px spread, and sits 16px lower to keep the bar where
    it was. */
@@ -747,23 +747,20 @@
   font-size: 12px;
   line-height: 16px;
 }
+/* Flat in either theme, with no drop shadow (Ethan, ADR-162): its border and fill set it apart. */
 .compose-box {
   border: 1px solid var(--hairline);
   border-radius: 12px;
   padding: 10px 8px 6px 12px;
   background: var(--compose-bg);
-  box-shadow: var(--compose-shadow);
 }
-/* The ring is listed first so it paints over the edge shadow, which stays underneath. */
 .compose-box:focus-within {
   border-color: var(--focus);
-  box-shadow:
-    0 0 0 3px color-mix(in srgb, var(--focus) 16%, transparent),
-    var(--compose-shadow);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus) 16%, transparent);
 }
 /* Clicked into, the compose box keeps its focused border but drops the ring. */
 :root[data-input="pointer"] .compose-box:focus-within {
-  box-shadow: var(--compose-shadow);
+  box-shadow: none;
 }
 .compose-box textarea {
   display: block;
