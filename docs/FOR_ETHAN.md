@@ -1867,6 +1867,24 @@ draws); a resize redraws at once. Measuring the bars themselves this time: 207 o
 overran by up to 221px before, none after. Lesson: measure the thing the eye sees, the bars,
 not the frame around them.
 
+### The policy that knew nothing about SQLite
+
+Before the repo went in front of an employer, a security pass read every render path for
+cross-injection and every server route for data that could cross between users. It found the
+render paths honest (a reply's words are text nodes, card payloads pass a closed zod catalog,
+links may only be http, https or mailto) and the gateway holding nothing per user but sealed
+shares - but the site answered with no security headers at all. The fix is a build step,
+`write-headers.mjs`, that hashes every inline script the build prerendered and writes a
+Content-Security-Policy naming each hash into `_headers` (ADR-163). First run against
+`wrangler dev`, serving the way production serves: the splash opened, the console was clean,
+and the sidebar read "Your threads could not be opened." The runtime's worker compiles SQLite
+from WebAssembly, and to a policy, `WebAssembly.instantiate()` is an eval: refused without
+`'wasm-unsafe-eval'`. Typecheck green, unit tests green, lint green, and the site could not
+open a thread; only driving the real serving path saw it. One keyword admitted exactly the one
+compiler the runtime needs, and the demo and the public share page both render under the
+policy. Lesson: a header that serves is not a header that runs - open the build the way
+production serves it before you believe it.
+
 ## 5. Director's Commentary
 
 ### The agent only states intent; the design system does the rest
