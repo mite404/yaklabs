@@ -14,26 +14,42 @@ const PAINTING: unknown = JSON.parse(
   readFileSync(new URL("../../../apps/web/public/chrome/painting.json", import.meta.url), "utf8"),
 );
 
-const BOTH: Pair[] = [
-  ["--on-chrome", "--chrome", 8.98, 4.5],
-  ["--on-chrome-soft", "--chrome", 5.56, 4.5],
-  ["--chrome-hover", "--chrome", 1.25, 1.2],
-  ["--on-chrome", "--chrome-hover", 7.21, 4.5],
-  ["--chrome-pill", "--chrome", 8.98, 3],
-  ["--on-chrome-pill", "--chrome-pill", 16.11, 4.5],
-  ["--on-chrome-pill-soft", "--chrome-pill", 6.93, 4.5],
-  ["--on-chrome-pill-soft", "--chrome-pill-hover", 5.89, 4.5],
-  ["--on-chrome", "--chrome-painting", 7.41, 4.5],
-  ["--on-chrome-painting-soft", "--chrome-painting", 5.79, 4.5],
-];
+// The bar is green in the light theme and Umbralkai's grey in the dark one (ADR-162), so each
+// theme writes its own ratios.
+const CHROME: Record<"light" | "dark", Pair[]> = {
+  light: [
+    ["--on-chrome", "--chrome", 8.98, 4.5],
+    ["--on-chrome-soft", "--chrome", 5.56, 4.5],
+    ["--chrome-hover", "--chrome", 1.25, 1.2],
+    ["--on-chrome", "--chrome-hover", 7.21, 4.5],
+    ["--chrome-pill", "--chrome", 8.98, 3],
+    ["--on-chrome-pill", "--chrome-pill", 16.11, 4.5],
+    ["--on-chrome-pill-soft", "--chrome-pill", 6.93, 4.5],
+    ["--on-chrome-pill-soft", "--chrome-pill-hover", 5.89, 4.5],
+    ["--on-chrome", "--chrome-painting", 7.41, 4.5],
+    ["--on-chrome-painting-soft", "--chrome-painting", 5.79, 4.5],
+  ],
+  dark: [
+    ["--on-chrome", "--chrome", 12.6, 4.5],
+    ["--on-chrome-soft", "--chrome", 7.64, 4.5],
+    ["--chrome-hover", "--chrome", 1.26, 1.2],
+    ["--on-chrome", "--chrome-hover", 10.02, 4.5],
+    ["--chrome-pill", "--chrome", 15.96, 3],
+    ["--on-chrome-pill", "--chrome-pill", 17.61, 4.5],
+    ["--on-chrome-pill-soft", "--chrome-pill", 7.31, 4.5],
+    ["--on-chrome-pill-soft", "--chrome-pill-hover", 6.21, 4.5],
+    ["--on-chrome", "--chrome-painting", 6.34, 4.5],
+    ["--on-chrome-painting-soft", "--chrome-painting", 5.48, 4.5],
+  ],
+};
 const LIGHT: Pair[] = [
   ["--desk", "--yak-paper-bright", 1.54, 1.3],
   ["--desk", "--paper", 1.43, 1.3],
   ["--desk", "--chrome", 6.3, 1.5],
 ];
 const DARK: Pair[] = [
-  ["--desk", "--paper", 2.75, 1.3],
-  ["--desk", "--chrome", 1.69, 1.5],
+  ["--desk", "--paper", 1.52, 1.3],
+  ["--desk", "--chrome", 1.63, 1.5],
 ];
 const WASHES: Wash[] = [
   ["--chrome-line", "--chrome", 1.63, 1],
@@ -52,13 +68,13 @@ const FAINT: Record<"light" | "dark", Pair[]> = {
     ["--faint-ink", "--paper-deep", 4.67, 4.5],
   ],
   dark: [
-    ["--faint-ink", "--paper", 5.46, 4.5],
-    ["--faint-ink", "--paper-deep", 4.6, 4.5],
+    ["--faint-ink", "--paper", 5.35, 4.5],
+    ["--faint-ink", "--paper-deep", 4.56, 4.5],
   ],
 };
 // The splash's figure, the ink at a share over nothing, as it lands on the open space's paper
 // (ADR-135): a sketch behind the words, never competing with them.
-const SPLASH_FIGURE = { light: 1.84, dark: 2.21 };
+const SPLASH_FIGURE = { light: 1.84, dark: 2.29 };
 // The splash's paintings show through their paper wash at a share in this range: a picture
 // under the field, not a photograph on it, the same for both.
 const SPLASH_PAINT = { min: 0.1, max: 0.3 };
@@ -155,7 +171,9 @@ function misses(pairs: Pair[], theme: Map<string, string>[], ground?: string): s
 
 describe("the window chrome's tokens", () => {
   it("clear their ratios in either theme, as tokens.css writes them", () => {
-    expect([...misses(BOTH, THEMES.light), ...misses(BOTH, THEMES.dark)]).toEqual([]);
+    expect([...misses(CHROME.light, THEMES.light), ...misses(CHROME.dark, THEMES.dark)]).toEqual(
+      [],
+    );
   });
 
   it("set the window apart from its desk, and the trim apart from the body", () => {
