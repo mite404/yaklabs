@@ -1858,6 +1858,15 @@ the pixel. Lesson: when a renderer is always a frame behind the edit, keep the l
 stretched to the gate rather than letting it spill past it; nobody sees a frame of scale, but
 everybody sees a cropped picture.
 
+The first fix measured the chart's outer box and called it done; Ethan's next recording showed
+the main thread's chart, the one with the slider, still overrunning. That card eases its bars
+over 300ms so the eye can follow a change of measure, and Recharts animates any change in the
+bars' geometry, a width included, so each frame of a drag started a fresh slide from the old
+positions. The bars now ease only for 300ms after the stop changes (and as the card first
+draws); a resize redraws at once. Measuring the bars themselves this time: 207 of 237 frames
+overran by up to 221px before, none after. Lesson: measure the thing the eye sees, the bars,
+not the frame around them.
+
 ## 5. Director's Commentary
 
 ### The agent only states intent; the design system does the rest
