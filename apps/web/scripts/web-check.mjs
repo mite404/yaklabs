@@ -4,6 +4,7 @@
 //
 //   pnpm dev:web                                   # in one terminal
 //   node apps/web/scripts/web-check.mjs [--base http://127.0.0.1:5173] [--out dir]
+// oxlint-disable no-await-in-loop, no-console -- a lever steps in order and reports on stdout
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { arg, chromium, ROOT } from "./harness.mjs";
@@ -19,11 +20,13 @@ const OUT = arg(
 );
 mkdirSync(OUT, { recursive: true });
 
+/** @type {{ step: string, ok: boolean, detail: string }[]} */
 const results = [];
 const errors = [];
 function record(step, ok, detail = "") {
-  results.push({ step, ok, detail });
-  console.log(`${ok ? "PASS" : "FAIL"} ${step}${detail ? ` · ${detail}` : ""}`);
+  const passed = Boolean(ok); // a measure's `ok` can be any truthy value
+  results.push({ step, ok: passed, detail });
+  console.log(`${passed ? "PASS" : "FAIL"} ${step}${detail ? ` · ${detail}` : ""}`);
 }
 
 const browser = await chromium.launch();
@@ -228,7 +231,7 @@ try {
   await page.keyboard.press("End");
   const sentence = page.locator(".live-sentence");
   await page.waitForFunction(() =>
-    document.querySelector(".live-sentence")?.textContent?.includes("Net profit"),
+    document.querySelector(".live-sentence")?.textContent.includes("Net profit"),
   );
   await shot("thread-net-profit");
   record("slider moves to Net profit", true, (await sentence.textContent()).trim());
@@ -243,7 +246,7 @@ try {
       const last = turns.at(-1);
       return (
         turns.length >= 2 &&
-        last?.textContent?.includes("Net profit") &&
+        last?.textContent.includes("Net profit") === true &&
         !last.querySelector("[data-streaming]")
       );
     },
@@ -270,6 +273,7 @@ try {
   await title.waitFor({ timeout: 15_000 });
   await page.waitForTimeout(500);
   await shot("thread-after-reload");
+  /** @type {string[]} */
   const turns = await page.locator(".turn-user, .turn-agent").allTextContents();
   record(
     // A reload throws away everything a worker held only in memory, so this already proves the
@@ -315,7 +319,9 @@ try {
   const rail = railOf(page);
   const placesShown = [];
   for (const { role, name } of RAIL_PLACES) {
-    if (await rail.getByRole(role, { name, exact: true }).isVisible()) placesShown.push(name);
+    if ((await rail.getByRole(role, { name, exact: true }).isVisible()) === true) {
+      placesShown.push(name);
+    }
   }
   record(
     "the rail shows its places, Home to Lab",
@@ -435,13 +441,14 @@ try {
     const shown = await separator.evaluate(
       (el) => getComputedStyle(el, "::before").opacity === "1",
     );
-    if (shown) break;
+    if (shown === true) break;
     await page.waitForTimeout(100);
   }
   const hint = await separator.evaluate((el, y) => {
     const style = getComputedStyle(el, "::before");
     return {
       opacity: style.opacity,
+      // oxlint-disable-next-line unicorn/prefer-number-coercion -- Number() reads "12px" as NaN
       centre: parseFloat(el.style.getPropertyValue("--hint-y")),
       y,
       image: style.backgroundImage,
@@ -544,14 +551,14 @@ try {
   record(
     "a lane's grip shows a hand, and lifting it floats a copy under the pointer while the lane waits dimmed",
     grabHand === "grab" &&
-      lift.ghost &&
-      lift.lifted &&
+      lift.ghost === true &&
+      lift.lifted === true &&
       lift.ghostOpacity === "0.85" &&
       lift.liftedOpacity === "0.35" &&
-      lift.ghostFollows &&
-      lift.ghostWidth &&
-      lift.sameTitle &&
-      lift.inPlace,
+      lift.ghostFollows === true &&
+      lift.ghostWidth === true &&
+      lift.sameTitle === true &&
+      lift.inPlace === true,
     `cursor ${grabHand}; ${JSON.stringify(lift)}`,
   );
   await page.mouse.move(grip.x + laneWidths[0] + LANE_GAP_PX + 60, titleBox.y + 30, { steps: 6 });
@@ -648,6 +655,7 @@ try {
   const handleHint = await handle.evaluate(
     (el, y) => ({
       opacity: getComputedStyle(el, "::before").opacity,
+      // oxlint-disable-next-line unicorn/prefer-number-coercion -- Number() reads "12px" as NaN
       centre: parseFloat(el.style.getPropertyValue("--hint-y")),
       y,
     }),
@@ -712,7 +720,6 @@ try {
   await page.waitForTimeout(500);
   const closedOnce = (await canvas.locator("article").count()) === open - 1;
   for (let left = open - 1; left > 0; left--) {
-    // oxlint-disable-next-line no-await-in-loop -- each close changes the row the next one reads
     await canvas
       .getByRole("button", { name: /^Close / })
       .first()
@@ -815,9 +822,7 @@ try {
     .getByRole("button", { name: "New thread", exact: true });
   for (let made = 0; made < 2; made++) {
     const from = visited.url();
-    // oxlint-disable-next-line no-await-in-loop -- the second thread starts from the first one's page
     await newThread.click();
-    // oxlint-disable-next-line no-await-in-loop -- as above
     await visited.waitForURL((url) => url.href !== from, { timeout: 10_000 });
   }
   await openRow(visited, "Last week's sales");
@@ -862,7 +867,6 @@ try {
       ...fromDemo,
       leave: async (on) => {
         for (const closing of ["Service desk weekly review", "Last week's sales"]) {
-          // oxlint-disable-next-line no-await-in-loop -- each close changes the strip the next one reads
           await on.getByRole("button", { name: `Close ${closing}`, exact: true }).click();
         }
         await on.getByText("Nothing open").waitFor({ timeout: 10_000 });
@@ -871,9 +875,7 @@ try {
   };
   const falseNotices = [];
   for (const [way, { from, seed, leave }] of Object.entries(leaving)) {
-    // oxlint-disable-next-line no-await-in-loop -- one fresh page at a time
     const on = await pageAt(from, { seed });
-    // oxlint-disable-next-line no-await-in-loop -- as above
     await on.evaluate(() => {
       window.goneFrames = 0;
       requestAnimationFrame(function tick() {
@@ -881,13 +883,9 @@ try {
         requestAnimationFrame(tick);
       });
     });
-    // oxlint-disable-next-line no-await-in-loop -- as above
     await leave(on);
-    // oxlint-disable-next-line no-await-in-loop -- as above
     await on.waitForTimeout(300);
-    // oxlint-disable-next-line no-await-in-loop -- as above
     falseNotices.push(`${way} ${await on.evaluate(() => window.goneFrames)}`);
-    // oxlint-disable-next-line no-await-in-loop -- as above
     await on.close();
   }
   const nowhere = await browser.newPage({ viewport: { width: 1280, height: 900 } });
@@ -1046,13 +1044,9 @@ try {
       .getByRole("button", { name: /^Close / });
     const landed = [];
     for (const pick of which) {
-      // oxlint-disable-next-line no-await-in-loop -- each close changes the row the next one reads
       await (pick === "first" ? closes.first() : closes.last()).focus();
-      // oxlint-disable-next-line no-await-in-loop -- as above
       await view.keyboard.press("Enter");
-      // oxlint-disable-next-line no-await-in-loop -- as above
       await view.waitForTimeout(300);
-      // oxlint-disable-next-line no-await-in-loop -- as above
       const name = await view.evaluate(() => {
         const at = document.activeElement;
         if (at === null || at === document.body) return "the page";
@@ -1138,16 +1132,12 @@ try {
   const retryTab = retried.locator('[role="tabpanel"]:not([inert])');
   const afterRetry = [];
   for (const thread of ["Last week's sales", "Saturday leads at every level"]) {
-    // oxlint-disable-next-line no-await-in-loop -- one thread at a time, each read after its retry
     await retryTab
       .getByRole("region", { name: thread, exact: true })
       .getByRole("button", { name: "Try again" })
       .focus();
-    // oxlint-disable-next-line no-await-in-loop -- as above
     await retried.keyboard.press("Enter");
-    // oxlint-disable-next-line no-await-in-loop -- as above
     await retried.waitForTimeout(400);
-    // oxlint-disable-next-line no-await-in-loop -- as above
     const at = await retried.evaluate(() => {
       const focused = document.activeElement;
       if (focused === null || focused === document.body) return "the page";
@@ -1799,15 +1789,10 @@ try {
       // among the closed children, where a lane-ordered list once reshuffled them on a click.
       for (const kidTitle of titles) {
         const kidLane = composeCanvas.locator(`:scope > article[aria-label="${kidTitle}"]`);
-        // oxlint-disable-next-line no-await-in-loop -- one lane at a time, in order
         await side.getByRole("link", { name: kidTitle, exact: true }).click();
-        // oxlint-disable-next-line no-await-in-loop -- as above
         // Saturday's lane is open from the start, so wait for the visit's flash, as above.
-        // oxlint-disable-next-line no-await-in-loop -- as above
         await kidLane.and(own.locator("[data-flash]")).waitFor({ timeout: 10_000 });
-        // oxlint-disable-next-line no-await-in-loop -- as above
         await composeCanvas.getByRole("button", { name: `Close ${kidTitle}`, exact: true }).click();
-        // oxlint-disable-next-line no-await-in-loop -- as above
         await kidLane.waitFor({ state: "detached", timeout: 10_000 });
       }
       const before = await children();
@@ -2334,7 +2319,7 @@ try {
         ),
       ); // → string[]
       return {
-        ok: noHover && projectArrow === "1" && mainArrow === "1",
+        ok: noHover === true && projectArrow === "1" && mainArrow === "1",
         detail: `hover: none ${noHover}; project arrow ${projectArrow}, main arrow ${mainArrow}`,
       };
     },
