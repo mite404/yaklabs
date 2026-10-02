@@ -1841,6 +1841,23 @@ spoken name, and a test fails if someone changes the words without drawing them 
 Lesson: a title card burned into the plate moves with the plate; a caption laid over it is
 re-typeset every time the frame size changes.
 
+### The chart that arrived a frame late
+
+Dragging a pane or a lane narrower cut the right-hand bars off at the card's edge for as long
+as the drag lasted. Sampling every frame of a drag showed why: on most frames the drawing was
+one 18px grid step wider than its box. Recharts learns the new width from a ResizeObserver, sets
+state, and React draws the new chart after the browser has already painted. Until then Recharts
+holds its two wrappers at the old width in inline pixels, so the old drawing overhangs and the
+card's rounded clip slices it.
+
+The SVG itself already carries a viewBox and is told to fill its parent; only the wrappers kept
+it at the old size. One CSS rule lets the wrappers fill the chart's box too, so on the late
+frame the last drawing simply scales to fit, and the true redraw lands a frame later. Measured
+on the same drag: 18 overhanging frames before, none after, and a settled chart is identical to
+the pixel. Lesson: when a renderer is always a frame behind the edit, keep the last frame
+stretched to the gate rather than letting it spill past it; nobody sees a frame of scale, but
+everybody sees a cropped picture.
+
 ## 5. Director's Commentary
 
 ### The agent only states intent; the design system does the rest
