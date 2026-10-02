@@ -1,4 +1,5 @@
 import { useEffect, useEffectEvent, useRef } from "react";
+import { prefersReducedMotion } from "./reducedMotion";
 
 // One sample every TICK_MS; each sample is a bar BAR px wide with GAP px after it.
 const TICK_MS = 45;
@@ -18,10 +19,6 @@ function readPalette(el: HTMLElement): Palette {
     bar: token("--ink", "#252524"),
     future: token("--soft-ink", "#5c5c57"),
   };
-}
-
-function prefersReducedMotion(): boolean {
-  return window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
 }
 
 function drawBar(ctx: CanvasRenderingContext2D, x: number, mid: number, height: number) {
@@ -93,7 +90,9 @@ export function Waveform({ read }: { read: () => number }) {
       frame = requestAnimationFrame(draw);
     };
     frame = requestAnimationFrame(draw);
-    return () => cancelAnimationFrame(frame);
+    return () => {
+      cancelAnimationFrame(frame);
+    };
   }, []);
 
   return (

@@ -15,13 +15,8 @@ import {
   type InteractiveSelection,
 } from "./interactive";
 import { LiveSentence, ShowWork, StepSlider, StopChart, TRANSITION_MS } from "./interactiveParts";
+import { prefersReducedMotion } from "./reducedMotion";
 import "./interactive.css";
-
-function prefersReducedMotion(): boolean {
-  // Runs during render, so it must survive environments without a window (server rendering, tests).
-  if (typeof window === "undefined") return false;
-  return window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
-}
 
 // Whether the bars are easing from one stop to another: true from the moment the stop changes,
 // and as the card first draws, for TRANSITION_MS. Only then may Recharts animate. It animates any
