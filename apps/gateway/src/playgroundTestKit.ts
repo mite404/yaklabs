@@ -162,6 +162,13 @@ export const overloaded = (): Response =>
     { status: 529 },
   );
 
+/** The upstream refusing because its credit ran out. */
+export const credit = (): Response =>
+  Response.json(
+    { type: "error", error: { type: "payment_required", message: "Insufficient credits" } },
+    { status: 402 },
+  );
+
 /**
  * An app whose OpenRouter client answers each upstream request with the next scripted round,
  * recording the requests. A request past the script fails the test's upstream.
