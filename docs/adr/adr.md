@@ -2685,3 +2685,29 @@ olive in light and, in dark (Ethan), Zed's text grey `#aeaeae` with the page's n
 The focus ring stays the light theme's warm grey `#8a8a85` in dark (Ethan: "the focus should not
 be blue"), 4.56:1 on the dark paper and 3.78:1 on the compose box, and the recap's ring stays
 the cream, 11.71:1; Zed's cyan `#16c3dd` is gone from the theme.
+
+## ADR-163 - The build writes the site's security headers, hashed per build
+
+2026-10-02 - Accepted. Amends ADR-086, whose one Worker now also answers the static security
+headers.
+Every page answers with `X-Content-Type-Options: nosniff`, `Referrer-Policy:
+strict-origin-when-cross-origin`, a `Permissions-Policy` that lends the camera and geolocation to
+no one and the microphone to the page alone, and a Content-Security-Policy. The policy lets
+scripts run from the site's own files, from the SHA-256 of each inline script the build
+prerendered (the theme and chrome boots, React Router's hydration), and from `wasm-unsafe-eval`,
+which the runtime's SQLite needs to compile in its worker (ADR-083) while plain eval stays
+refused. Styles may be inline, since the charts and overlays lay themselves out in style
+attributes; images may come from any secure origin, since WorkOS hands back avatars it does not
+host; connections may leave for `api.workos.com` alone, the AuthKit session calls. Objects, the
+base tag and framing are refused, and forms may post only to the site.
+A static SPA has no server to mint a per-response nonce, so the inline scripts are named by hash,
+and the set changes with every build; a hand-kept header would break the boots on the first edit
+or go silently stale. `write-headers.mjs` runs as the second half of `pnpm --filter web build`,
+reads every prerendered HTML file, hashes each inline script and writes `_headers` beside it,
+failing the build when the boots are not among the scripts it pinned. Its test holds the policy's
+words and the hash of a known script, and the serving check ran against `wrangler dev`, which
+answers with the same headers the deployed Worker does; that check is what caught the SQLite
+compile the first policy refused.
+Alternatives weighed: `'unsafe-inline'` for scripts, which is no policy at all; moving the boots
+into files, which would flash the wrong theme on a dark system before the file arrived; and
+`'unsafe-eval'`, where `'wasm-unsafe-eval'` admits exactly the one compiler the runtime needs.
