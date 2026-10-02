@@ -4,10 +4,12 @@
 import { BASE, openApp } from "./lever.mjs";
 import { gutterHolds, rowGutters } from "./thread-row-gutter.mjs";
 
-// The menu's items, in Ethan's order (ADR-126).
+// The menu's items, in Ethan's order (ADR-126), as a phone's bar shows them, with no title to
+// rename.
 const ITEMS = ["Copy thread URL", "Share thread", "Pin thread", "Snooze", "Archive", "Delete"];
-// A tab's menu leads with Rename (ADR-138).
-const TAB_ITEMS = ["Rename", ...ITEMS];
+// A tab's menu, and a lane's, which is the same menu (Ethan): Rename heads the group after
+// sharing.
+const TAB_ITEMS = ["Copy thread URL", "Share thread", "Rename", ...ITEMS.slice(2)];
 const DEMO = `${BASE}/?scenario=demo`;
 
 /** The thread panel on screen: a main thread has no title bar, so its name is the panel's label. */
@@ -98,7 +100,7 @@ async function pinOrSnoozeChild(page, title, item) {
 
 /** The checks, keyed A1 to A9, each resolving to { ok, detail }; Share's are in share-checks.mjs. */
 export const threadActionChecks = {
-  // The active tab carries the "⋯" with Rename and the six items, and the main thread has no
+  // The active tab carries the "⋯" with the six items and Rename, and the main thread has no
   // title bar of its own (ADR-138).
   async A1(browser) {
     const page = await openDemo(browser);
@@ -187,10 +189,12 @@ export const threadActionChecks = {
   },
 
   // Snooze opens the ask-user card with the fallbacks; a tile snoozes, the row gets a clock and
-  // stays in place, and the menu says when it wakes.
+  // stays in place, the menu says when it wakes, and the toast's words stay in the bell, read.
   async A5(browser) {
     const page = await openDemo(browser);
     const before = await rowTitles(page);
+    const bell = page.getByRole("button", { name: /^Notifications/ });
+    const bellBefore = await bell.getAttribute("aria-label");
     await pick(page, "Snooze");
     const card = shownPanel(page).getByRole("region", { name: "Snooze" });
     await card.waitFor();
@@ -199,6 +203,11 @@ export const threadActionChecks = {
     await card.getByRole("radio", { name: /In 1 hour/ }).click();
     await card.getByRole("button", { name: "Submit" }).click();
     await card.waitFor({ state: "detached" });
+    const toast = (await page.locator("[data-sonner-toast]").first().innerText()).trim();
+    const bellAfter = await bell.getAttribute("aria-label");
+    await bell.click();
+    const note = (await page.getByRole("menuitem").first().innerText()).split("\n")[0].trim();
+    await page.keyboard.press("Escape");
     const row = await rowOf(page, serviceDesk);
     await menuButtonOf(page).click();
     const snooze = (await page.getByRole("menuitem", { name: /^Snooze/ }).innerText()).trim();
@@ -210,10 +219,13 @@ export const threadActionChecks = {
       row.marks.includes("snoozed") &&
       JSON.stringify(await rowTitles(page)) === JSON.stringify(before) &&
       named === 1 &&
-      focused.includes("In 1 hour");
+      focused.includes("In 1 hour") &&
+      toast.startsWith(`Snoozed “${serviceDesk}” until`) &&
+      note === toast &&
+      bellAfter === bellBefore;
     return {
       ok,
-      detail: `tiles [${tiles.join()}]; focus on "${focused.trim()}"; marks ${row.marks.join()}; menu "${snooze.replaceAll("\n", " ")}"`,
+      detail: `tiles [${tiles.join()}]; focus on "${focused.trim()}"; marks ${row.marks.join()}; menu "${snooze.replaceAll("\n", " ")}"; bell note "${note}", ${bellAfter}`,
     };
   },
 

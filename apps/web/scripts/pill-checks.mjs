@@ -102,7 +102,7 @@ async function pillsAtRest(page, theme) {
       path: shotPath(`P23-pill-${place.name.replaceAll(" ", "-")}-${theme}`),
       clip: { x: 0, y: 40, width: 320, height: 420 },
     });
-    ok &&= pillReads(place, pill) && (place.name === "Kay" || pill.instant === "delay");
+    ok &&= pillReads(place, pill) && (place.name === "Home" || pill.instant === "delay");
     notes.push(pillNote(`${theme} rest`, pill));
   }
   return { ok, notes };
@@ -182,7 +182,7 @@ export const pillChecks = {
   async P23(browser) {
     const notes = [];
     let ok = true;
-    for (const theme of ["light", "dark"]) {
+    for (const theme of ["light"]) {
       const { context, page } = await openDesk(browser, { theme });
       const results = [await pillsAtRest(page, theme)];
       await context.close();

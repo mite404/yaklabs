@@ -1,4 +1,4 @@
-// The visitor's choices for the projects panel (the sidebar), kept like the theme: docked or
+// The visitor's choices for the projects panel (the sidebar), kept on the device: docked or
 // closed, and the width its edge was dragged to. Both are read before the first paint, so the
 // panel and the tabs never jump, and both reach the page as the CSS the panel and the title bar
 // read.

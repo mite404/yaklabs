@@ -6,7 +6,7 @@ import { BASE } from "./lever.mjs";
 import { throughPeek, WIDTHS } from "./panel-frame-checks.mjs";
 import { openDesk, PANEL_EASE, PIN_MS } from "./sidebar-checks.mjs";
 
-const THEMES = ["light", "dark"];
+const THEMES = ["light"];
 // The tabs start this far past the docked panel's edge, and right after the toggle with it
 // closed (title-bar.tsx); the panel's default width (sidebar-width.ts).
 const TAB_INSET = 4;
@@ -74,12 +74,11 @@ const peeksBeside = (at, closed) =>
 
 // P30's short window: the account keeps the rail's foot and the Lab, last of the places, is
 // brought into view by focus, the places scrolling with no scrollbar drawn.
-async function shortWindow(browser, theme) {
+async function shortWindow(browser) {
   const context = await browser.newContext({ viewport: SHORT, deviceScaleFactor: 2 });
-  await context.addInitScript((t) => {
-    localStorage.setItem("theme", t);
+  await context.addInitScript(() => {
     localStorage.setItem("kay.sidebar", "closed");
-  }, theme);
+  });
   const page = await context.newPage();
   await page.goto(`${BASE}/?scenario=demo`);
   await page.locator('[data-slot="rail"]').waitFor();
@@ -104,7 +103,7 @@ async function shortWindow(browser, theme) {
       look.labShown === true &&
       look.noBar === true &&
       look.foot <= FOOT_PX,
-    note: `${theme} ${SHORT.width}x${SHORT.height}: places scroll ${look.scrolls}, Lab in view on focus ${look.labShown}, no scrollbar ${look.noBar}, account ${look.foot}px off the foot`,
+    note: `${SHORT.width}x${SHORT.height}: places scroll ${look.scrolls}, Lab in view on focus ${look.labShown}, no scrollbar ${look.noBar}, account ${look.foot}px off the foot`,
   };
 }
 
@@ -130,7 +129,7 @@ async function panelBeside(browser, theme) {
   notes.push(
     `${theme} closed: main ${closed.main}, tab ${closed.tab}, inert ${closed.inert}; peeking: panel ${open.left}+${open.width}, main ${open.main}, tab ${open.tab}; held frames with the rail's edge drawn by the rail at all ${PROBES} heights and the stage clipped: ${gated.length} of ${frames.length}`,
   );
-  const short = await shortWindow(browser, theme);
+  const short = await shortWindow(browser);
   return { ok: ok && short.ok, note: [...notes, short.note].join("; ") };
 }
 

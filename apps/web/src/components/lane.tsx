@@ -52,13 +52,22 @@ function CollapseToggle({ collapsed, onClick }: { collapsed: boolean; onClick: (
 }
 
 // The lane's close, last in its title bar whatever else the bar holds: the far end is where
-// a window's close is, so it never moves as a share or a menu comes and goes.
-function CloseButton({ title, onClick }: { title: string; onClick: () => void }) {
+// a window's close is, so it never moves as a share or a menu comes and goes. At a collapsed
+// strip's foot it takes the expand's 20px fill and 13px glyph (`small`), so head and foot match.
+function CloseButton({
+  title,
+  small = false,
+  onClick,
+}: {
+  title: string;
+  small?: boolean;
+  onClick: () => void;
+}) {
   return (
     <Button
       variant="ghost"
       size="icon-sm"
-      className="text-soft-ink hover:text-ink"
+      className={`text-soft-ink hover:text-ink ${small ? "size-5 [&_svg]:size-[13px]!" : ""}`}
       aria-label={`Close ${title}`}
       data-lane-close=""
       onClick={onClick}
@@ -70,20 +79,30 @@ function CloseButton({ title, onClick }: { title: string; onClick: () => void })
 
 // A collapsed lane (ADR-133): a slim strip filling the lane's article (its whole height, or a
 // card's half, see `heightOf`) with its expand at the head, the grip always shown beneath, and
-// the title turned to read top to bottom, clipped with an ellipsis. The whole strip but its
-// expand takes hold of the lane (lane-reorder.ts). The head starts 7px down (`pt-[7px]`) so the
-// expand's fill clears the 14px corner arc; the grip and title stay where they were.
-function LaneStrip({ title, toggle }: { title: string; toggle: ReactNode }) {
+// the title turned to read top to bottom, clipped with an ellipsis, and the lane's close at the
+// foot. The whole strip but its buttons takes hold of the lane (lane-reorder.ts). The expand and
+// the close sit 7px inside the border (`pt-[7px]`, `pb-[7px]`), the inset the open bar gives its
+// collapse (--leading-space), which clears the 14px corner arcs.
+function LaneStrip({
+  title,
+  toggle,
+  close,
+}: {
+  title: string;
+  toggle: ReactNode;
+  close: ReactNode;
+}) {
   return (
     <div
       data-lane-strip=""
-      className="lane-strip flex min-h-0 flex-1 flex-col items-center gap-2 rounded-[var(--radius-card)] border border-hairline bg-paper pt-[7px] pb-3"
+      className="lane-strip flex min-h-0 flex-1 flex-col items-center gap-2 rounded-[var(--radius-card)] border border-hairline bg-paper pt-[7px] pb-[7px]"
     >
       {toggle}
       <span data-lane-strip-grip="" aria-hidden="true" className="lane-strip-grip" />
       <span data-lane-strip-title="" className="lane-strip-title">
         {title}
       </span>
+      <span className="mt-auto flex">{close}</span>
     </div>
   );
 }
@@ -173,6 +192,15 @@ export function Lane({
 }) {
   const article = useRef<HTMLElement>(null);
   const toggle = useCollapseToggle(article, lane, reports.onCollapse);
+  const close = (small: boolean) => (
+    <CloseButton
+      title={lane.title}
+      small={small}
+      onClick={() => {
+        reports.onClose(lane.id);
+      }}
+    />
+  );
   return (
     // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- the pointer takes hold of the lane by its title bar or its strip; the keyboard moves it from the gap after it
     <article
@@ -191,19 +219,8 @@ export function Lane({
       aria-label={lane.title}
       {...handlers}
     >
-      {lane.collapsed && <LaneStrip title={lane.title} toggle={toggle} />}
-      <LaneBody
-        lane={lane}
-        toggle={toggle}
-        close={
-          <CloseButton
-            title={lane.title}
-            onClick={() => {
-              reports.onClose(lane.id);
-            }}
-          />
-        }
-      />
+      {lane.collapsed && <LaneStrip title={lane.title} toggle={toggle} close={close(true)} />}
+      <LaneBody lane={lane} toggle={toggle} close={close(false)} />
     </article>
   );
 }

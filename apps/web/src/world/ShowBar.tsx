@@ -77,7 +77,9 @@ function playLabel(status: PlayerStatus): string {
   return status === "done" ? "Play again" : "Play";
 }
 
-// Play, Pause while playing, and Play again once the take is done.
+// Play, Pause while playing, and Play again once the take is done. While the show is not
+// playing, Play calls for the eye on a loop in the canvas's olive flash (index.css,
+// `data-callout`), so a viewer always knows where to start (Ethan).
 function PlayButton({ show, state }: On) {
   const replay = useReplay(show);
   const label = playLabel(state.status);
@@ -90,6 +92,7 @@ function PlayButton({ show, state }: On) {
           size="icon-sm"
           className={GHOST}
           aria-label={label}
+          data-callout={state.status === "playing" ? undefined : ""}
           onClick={() => {
             if (state.status === "playing") show.pause();
             else if (state.status === "done") replay();
@@ -160,33 +163,40 @@ function Transport({ show, state }: On) {
   );
 }
 
-// What this is, that nothing leaves the page (ADR-096), and the show's standing: what of it is
-// shipped and what is proposed, so the bar says so before anyone asks.
-function Standing({ show }: { show: Show }) {
-  const { script } = show;
+// What this is, which demo is on (Ethan: "SCRIPTED DEMO: Weekly Brief"), in the title bar's
+// green, bold.
+function Title({ show }: { show: Show }) {
   return (
-    <div className="flex min-w-0 flex-col justify-center leading-4">
-      <div className="flex min-w-0 items-baseline gap-2">
-        <span className="shrink-0 text-[11px] font-medium tracking-[0.1em] text-soft-ink uppercase">
-          Scripted demo
-        </span>
-        <span className="truncate text-[11px] text-soft-ink max-lg:hidden">
-          Nothing is sent or changed
-        </span>
-      </div>
-      <p data-slot="demo-standing" className="truncate text-[11px] text-soft-ink max-md:hidden">
-        {script.standing}
-      </p>
+    <div className="flex min-w-0 items-baseline gap-2">
+      <span
+        data-slot="demo-title"
+        className="demo-title truncate text-sm font-bold tracking-[0.06em]"
+      >
+        <span className="uppercase">Scripted demo:</span> {show.script.thread}
+      </span>
     </div>
   );
 }
 
+// The show's standing, what of it is shipped and what is proposed, so the bar says so before
+// anyone asks: in the middle of the bar (Ethan).
+function Standing({ show }: { show: Show }) {
+  return (
+    <p
+      data-slot="demo-standing"
+      className="truncate text-center text-[11px] text-soft-ink max-md:hidden"
+    >
+      {show.script.standing}
+    </p>
+  );
+}
+
 /**
- * The controls of the show on screen, one row under the title bar (two on a phone): what this
- * is, that nothing leaves the page (ADR-096) and what of the show is shipped or proposed, then
- * Play, 2x, Restart and the time played. It draws nothing unless the thread on screen is a
- * show's main or one of its children, so it comes and goes with the Demo's threads. The thread
- * below is the app's own, driven through its own controls.
+ * The controls of the show on screen, one row under the title bar (two on a phone): which demo
+ * this is, what of the show is shipped or proposed in the middle, then Play, 2x, Restart and the
+ * time played. It draws nothing unless the thread on screen is a show's main or one of its
+ * children, so it comes and goes with the Demo's threads. The thread below is the app's own,
+ * driven through its own controls.
  */
 export function ShowBar() {
   const shell = useShell();
@@ -197,10 +207,13 @@ export function ShowBar() {
       role="toolbar"
       aria-label="Scripted demo"
       data-slot="demo-controls"
-      className="flex h-10 shrink-0 items-center justify-between gap-3 border-b border-hairline bg-paper px-3"
+      className="grid h-10 shrink-0 grid-cols-[minmax(0,1fr)_minmax(0,auto)_minmax(0,1fr)] items-center gap-3 border-b border-hairline bg-paper px-3"
     >
+      <Title show={on.show} />
       <Standing show={on.show} />
-      <Transport show={on.show} state={on.state} />
+      <div className="flex justify-end">
+        <Transport show={on.show} state={on.state} />
+      </div>
     </div>
   );
 }

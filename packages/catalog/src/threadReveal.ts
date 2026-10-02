@@ -1,3 +1,5 @@
+import { prefersReducedMotion } from "./reducedMotion";
+
 /** A vertical span in a scroller's content coordinates (px from the top of its content). */
 export type Span = { top: number; bottom: number };
 
@@ -68,10 +70,11 @@ function viewport(scroller: HTMLElement): Viewport {
   };
 }
 
-function prefersReducedMotion(): boolean {
-  if (typeof window === "undefined") return false;
-  return window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
-}
+// The control the user pressed, which a reveal keeps in view: the button, summary or link the
+// press landed in, else what it landed on.
+const pressedControl = (interaction: Interaction): HTMLElement =>
+  interaction.target.closest<HTMLElement>("button, summary, a, [role='button']") ??
+  interaction.target;
 
 // What to reveal when `turn` grew: the card the user just clicked or keyed inside, when the
 // growth came soon enough to be that interaction's result; undefined when nobody asked for it.
@@ -89,14 +92,19 @@ function askedToReveal(
  * The smallest scroll that keeps `target` clear of the compose box (ADR-038, ADR-071). A target
  * that is not clipped at the bottom stays put; a clipped one rises until its bottom edge rests
  * `insetBottom` above the compose box (or the card docked over it), like the last card in the
- * thread, even when that takes its top out of view: seeing the bottom edge is how the user
- * knows the whole card has been shown. Since it only reveals what is below, the thread never
- * scrolls up, which would move away from the click.
+ * thread: seeing the bottom edge is how the user knows the whole card has been shown. Since it
+ * only reveals what is below, the thread never scrolls up, which would move away from the click.
+ * @param anchorTop Where the control the user pressed starts, in content coordinates: the rise
+ * stops once that control reaches the top of the band, so what it opened reads on from right
+ * under it rather than from somewhere further down (Ethan, ADR-159).
  */
-export function nudgeScrollTop(target: Span, view: Viewport): number {
+export function nudgeScrollTop(target: Span, view: Viewport, anchorTop?: number): number {
   const bandBottom = view.scrollTop + view.height - view.insetBottom;
   if (target.bottom <= bandBottom) return view.scrollTop;
-  return clamp(target.bottom - view.height + view.insetBottom, view.maxScrollTop);
+  const shown = target.bottom - view.height + view.insetBottom; // → the bottom edge in view
+  const held =
+    anchorTop === undefined ? shown : Math.max(view.scrollTop, anchorTop - view.insetTop);
+  return clamp(Math.min(shown, held), view.maxScrollTop);
 }
 
 /**
@@ -206,11 +214,19 @@ export function scrollToEnd(scroller: HTMLElement): void {
   });
 }
 
-/** Scrolls `scroller` by the smallest amount that keeps `elements` clear of the compose box. */
-export function nudgeInScroller(scroller: HTMLElement, elements: HTMLElement[]): void {
+/**
+ * Scrolls `scroller` by the smallest amount that keeps `elements` clear of the compose box, and
+ * never so far that `anchor`, the control that opened them, leaves the top of the band.
+ */
+export function nudgeInScroller(
+  scroller: HTMLElement,
+  elements: HTMLElement[],
+  anchor?: HTMLElement,
+): void {
   if (elements.length === 0) return;
   const view = viewport(scroller);
-  const top = nudgeScrollTop(contentSpan(scroller, elements), view);
+  const anchorTop = anchor === undefined ? undefined : contentSpan(scroller, [anchor]).top;
+  const top = nudgeScrollTop(contentSpan(scroller, elements), view, anchorTop);
   if (top !== view.scrollTop)
     scroller.scrollTo({ top, behavior: prefersReducedMotion() ? "auto" : "smooth" });
 }
@@ -231,6 +247,50 @@ export function centerInScroller(scroller: HTMLElement, element: Element | Range
   if (runway === 0) releaseRunway(scroller);
   else watchRunway(scroller, top);
   scroller.scrollTo({ top, behavior: prefersReducedMotion() ? "auto" : "smooth" });
+}
+
+/**
+ * How a jump frames its target (Ethan, ADR-159): a target already wholly in the visible band
+ * stays where it is, and only its highlight says where it is ("stay"); a user's message out of
+ * view is centered ("center", ADR-022); anything else out of view scrolls just far enough to
+ * show it, and never so far that its top is cut off (a scrollTop).
+ */
+export function jumpPlan(
+  target: Span,
+  view: Viewport,
+  center: boolean,
+): "stay" | "center" | number {
+  const bandTop = view.scrollTop + view.insetTop;
+  const bandBottom = view.scrollTop + view.height - view.insetBottom;
+  if (target.top >= bandTop && target.bottom <= bandBottom) return "stay";
+  if (center) return "center";
+  const topInView = target.top - view.insetTop; // → the scroll that shows its top first
+  if (target.top < bandTop) return clamp(topInView, view.maxScrollTop);
+  const bottomInView = target.bottom - view.height + view.insetBottom;
+  return clamp(Math.min(bottomInView, topInView), view.maxScrollTop);
+}
+
+// Whether a jump's target is a user's message, or words in one: the only target a jump centers.
+function inUserMessage(target: Element | Range): boolean {
+  const node = target instanceof Range ? target.commonAncestorContainer : target;
+  const element = node instanceof Element ? node : node.parentElement;
+  return (element?.closest(".turn-user") ?? null) !== null;
+}
+
+/**
+ * Brings a jump's target into view by `jumpPlan`: a user's message out of view lands centered
+ * (`centerInScroller`), anything else out of view scrolls just into view, and a target already
+ * in view does not move.
+ */
+export function jumpInScroller(scroller: HTMLElement, target: Element | Range): void {
+  const plan = jumpPlan(contentSpan(scroller, [target]), viewport(scroller), inUserMessage(target));
+  if (plan === "stay") return;
+  if (plan === "center") {
+    centerInScroller(scroller, target);
+    return;
+  }
+  releaseRunway(scroller);
+  scroller.scrollTo({ top: plan, behavior: prefersReducedMotion() ? "auto" : "smooth" });
 }
 
 /** Where a thread's scroll stands: `reach` is the furthest `scrollTop` it can scroll to. */
@@ -301,7 +361,8 @@ export function keepExpansionsInView(scroller: HTMLElement): () => void {
     const asked = grown
       .map((turn) => askedToReveal(turn, interaction, now)) // → (HTMLElement | undefined)[]
       .filter((card) => card !== undefined); // → HTMLElement[]
-    if (asked.length > 0) nudgeInScroller(scroller, asked);
+    if (asked.length > 0 && interaction !== undefined)
+      nudgeInScroller(scroller, asked, pressedControl(interaction));
     else if (moved > 0 && restedAtEnd(standOf(scroller), moved))
       scroller.scrollTop = scroller.scrollHeight;
   });

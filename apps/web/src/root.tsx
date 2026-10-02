@@ -18,7 +18,6 @@ import type { Route } from "./+types/root";
 import { env } from "./env";
 import { safeReturnTo } from "./returnTo";
 import { CHROME_BOOT } from "./chrome";
-import { THEME_BOOT, useTheme, type ThemeChoice } from "./theme";
 
 export function Layout({ children }: { children: ReactNode }) {
   return (
@@ -26,9 +25,9 @@ export function Layout({ children }: { children: ReactNode }) {
       <head>
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="color-scheme" content="only light" />
         <Meta />
         <Links />
-        <script dangerouslySetInnerHTML={{ __html: THEME_BOOT }} />
         <script dangerouslySetInnerHTML={{ __html: CHROME_BOOT }} />
       </head>
       <body>
@@ -62,14 +61,13 @@ function Providers({ children }: { children: ReactNode }) {
 }
 
 export default function App() {
-  const [preference, setPreference] = useTheme();
   useEffect(() => trackInputModality(), []);
   return (
     <Providers>
       <TooltipProvider>
-        <Outlet context={{ preference, choose: setPreference } satisfies ThemeChoice} />
+        <Outlet />
       </TooltipProvider>
-      <Toaster richColors theme={preference} />
+      <Toaster richColors theme="light" />
     </Providers>
   );
 }

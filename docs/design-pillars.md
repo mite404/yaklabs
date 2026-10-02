@@ -12,6 +12,9 @@ Decisions behind these rules live in `docs/adr/adr.md` (ADR-033 to ADR-035); tok
 
 ## Colour
 
+The site is light only (ADR-161). The dark values in these rules belong to the catalog, whose
+dark theme stays for its stories and the design tooling.
+
 ### 1. There is no black: neutrals are olive-tinted
 
 Headings, body copy, and the "Apply for this role" button all share one olive-yellow hue (about
@@ -226,6 +229,34 @@ the vendored shadcn tooltip. P23 reads the rail's pills in both themes.
 | Motion | in over 125ms, `cubic-bezier(0.23, 1, 0.32, 1)`, scale 0.97 and fade; out in 100ms | derived |
 | Reduced motion | fades only, no scale | derived |
 
+### 33. The design tooling seal is a gold medal with an ink ribbon
+
+The welcome's link to the design tooling page (ADR-160) is a seal: a serrated gold disc with
+"Yaklabs" over the top of its ring and "Seal of quality" under the bottom, and an ink ribbon
+across its middle carrying the link's words, which runs past the seal on either side.
+Gold is a metal, so the seal keeps one colour in either theme; only the ribbon turns over with
+the ink. The words are on the ribbon, never on the gold, since they run off the seal onto the
+paper, where the brown ink fails in the dark theme.
+The seal is drawn (`design-tooling-seal.tsx`), never a picture, so it scales to any size and
+takes its colours from tokens. On the welcome the medal, the ribbon and its words are one SVG,
+so they grow and settle as one piece (Ethan): an HTML ribbon beside the SVG medal snapped its
+words to whole font sizes and its edges to whole pixels on every frame of the hover, each part
+landing at its own time.
+
+| Property | Value | Source |
+| --- | --- | --- |
+| Face | `--seal-gold` (`--yak-orange`, `#d19456`), lit from the top left to `--seal-gold-glint` | derived (Ethan's example seal) |
+| Edge | `--seal-gold-deep` (`--rust`, `#a86f36`): 3.5:1 on the light paper, 6.6:1 dark, so the silhouette clears 3:1 | derived |
+| Ring words | `--on-seal` (`--yak-brown-ink`, `#3b2612`): 5.5:1 on the face, the orange pill's pair | derived (rule 13) |
+| Ribbon | `--ink` with `--on-ink`, 230px × 27px across the 112px medal, notched 8px at both ends; 11px 600 upper case, "NOW WITH DESIGN TOOLING!", set to the 186px the 0.1em tracking gives, drawn as Inter outlines (`seal-words.ts`, from `scripts/seal-words.mjs`) rather than live text, so the words never shift against the ribbon when Chrome redraws the grown seal | derived (rule 28's pill), Ethan |
+| Ribbon hover | fills `--moss` with `--on-accent` over 150ms `ease`, as the outline button | css (rule 8) |
+| Size | 112px on the welcome, 200px on the page's hero; 36 teeth, 5 units deep in a 120-unit box | derived |
+| Place on the welcome | pinned above the greeting at the column's right, aligned optically: the ribbon's far tip in line with the ink of the projects' "+", 8px inside the column, and its lowest corner 4px below the mark's circle; worked out in CSS from the tilt, the size and the ribbon's corners, so it holds when either changes; tilted 25° with the left side up, as a medal on a lapel; in the column's flow under 641px | Ethan (mockup) |
+| Focus | the site's ring, 2px `--focus` 3px off, on the link's 4px corners | derived |
+| Size on the welcome | 73.5% of the drawn 112px, by `scale`, so the words stay crisp; 5% up from 70% so the ring's "Seal of quality" reads | Ethan |
+| Hop | every 4s: 6px up and back over 480ms, a 2px second hop, then still; on `transform` under the tilt, so it hops along its lean; none under reduced motion (rule 24) | Ethan |
+| Hover and focus | grows 10% (`scale` 0.735 to 0.8085) over 150ms `ease`, the button's timing (rule 8), the hop held meanwhile; no growth under reduced motion | Ethan |
+
 ## Inputs
 
 ### 14. A place to type is outlined, and its prompt is greyer
@@ -267,6 +298,8 @@ behind each rule below is told in `docs/FOR_ETHAN.md`.
 | A loading thread's "Opening ..." line | shown after 100ms | none, steps in | derived (rule 9) |
 | The empty canvas's splash, arriving | 150ms fade in | `ease-out` | derived (ADR-113) |
 | A new thread's welcome picture | none, arrives with its words | none | derived (the paintings) |
+| The welcome's seal, hopping (rule 33) | 480ms of a 4s cycle, 6px then 2px | `ease-in-out` | Ethan |
+| The welcome's seal, growing under the pointer (rule 33) | 150ms, 10% | `ease` | Ethan (rule 8) |
 | Agent working glyph (wave, orbit) | 2000ms loop | `linear` fades | Ethan |
 | Agent tree glyph | 2000ms loop | `linear` fades, `cubic-bezier(0.4, 0, 0.6, 1)` scroll | Ethan |
 | Sidebar peek slide, out and back (rule 26) | 220ms | `cubic-bezier(0.17, 1.02, 0.58, 1)` (`--panel-ease`) | Ethan |
@@ -462,14 +495,27 @@ ADR-150).
 | Child footnote | 12px `--soft-ink`; the Running pill in `--bubble-tint-strong` with `--bubble-line`, 11px 500 | Ethan (ADR-142) |
 | The disclosure above the reply | 13px 500, its chevron first, mounted as the work starts; live, the working glyph then the activity; settled, the reply's summary or Work finished, incomplete, Stopped; its count in 12px `--soft-ink` beside the label ("3 checks · 1 needs attention") | Ethan (ADR-139, amended) |
 | Basis lines under a step's outcome | how the outcome was found, in a few lines between the outcome and its evidence card: 13px on 20px `--soft-ink`, disc bullets at the earlier narration's 22px indent, the prose's 510px measure, so the outcome stays the loudest line of the row | derived (ADR-147, widened; the narration row in pillar 29) |
-| Lane collapse toggle | a 20px fill, 13px glyph, `--leading-space` (10px, half the 20px gutter) from the lane's edge to the fill and from the fill to the title, so the glyph's ink sits 15px from both; centred on the title's capitals (cap top to baseline), 2px above its line box; the same spacing on a card lane's heading | Ethan (ADR-158) |
-| Collapsed strip | the expand, the grip and the title with equal paper between them, about 13.5px ink to ink; the title's first letter starts just under an open lane's title-bar rule (55.5px down), so one line runs across open lanes and strips | Ethan (ADR-158) |
+| Lane collapse toggle | a 20px fill, 13px glyph, `--leading-space` (7px) inside the lane's 1px border, the inset the collapsed strip gives its expand; `--leading-gap` (14px) from the fill to the title, so the glyph's ink sits 20px from the title's first letter, as the bar's Share icon sits from its Close; centred on the title's capitals (cap top to baseline), 2px above its line box; the same on a card lane's heading | Ethan (ADR-159) |
+| Collapsed strip | the expand at its head and the lane's close at its foot, each a 20px fill with a 13px glyph 7px inside the border; the grip and the title between, with equal paper either side of the grip, about 13.5px ink to ink; the title's first letter starts just under an open lane's title-bar rule (55.5px down), so one line runs across open lanes and strips | Ethan (ADR-159) |
+| Title-bar grip | six 2.5px dots in `--soft-ink` on a 5px pitch, on the collapse's line (the title's capitals, 2px above the bar's middle); over an 86px veil of the bar's paper, solid for its middle 47px so faded letters stop 16px either side of the dots; only a 50px circle about the dots, 25px every way from their centre, shows the hand, wakes the dots and veil, and takes the lane, so neither the hand nor the dots show on the way to the collapse, "⋯", Share or Close, or near the bar's edges; the circle is a clip, not a radius, which would round the dots' own box and shave its corner dots; the veil only paints; the grip stays up on a lane's or a card's picture in flight | Ethan |
+| Thread menu | one list for a tab and a lane's title bar: Copy thread URL, Share thread; a rule; Rename, Pin, Snooze, Archive; a rule; Delete. A phone's bar, with no title to rename, has no Rename | Ethan (ADR-126) |
 | Canvas grid | every lane, strip, gap and the drop zone is a whole number of 18px steps, so each gap's column of dots sits centred between its lanes; a default lane is 31 steps, or as many as fit, rounded down; the drop zone is a default lane wide | Ethan (ADR-158) |
 | Search marks | every match tinted `--blue` at 40%, the one stepped to in `--blue` with `--on-blue` words (`--yak-night`, 8.0:1 in both themes, as text selection now is), as a text selection (`::highlight()`); a 2px `--blue` ring with a 5px halo around its words alone, widening and fading over 1.2s on the strong ease-out; reduced motion holds the 2px ring | Ethan (ADR-158) |
 | Cut sidebar title | fades to nothing over its last 24px (`--space`) instead of an ellipsis; a title that fits keeps every letter | Ethan (ADR-158) |
+| Rail place fill | the hover and open fill takes the site's 4px button corners (`--radius`), as a sidebar row's does | Ethan (ADR-159) |
+| Play callout | each visit to a demo's thread that is not playing rings Play once in the canvas's lane flash: 3px `--olive`, fading over 1.2s, on the button's own corners; reduced motion holds the ring | Ethan (ADR-159) |
+| An answer given for the user | a demo shows it as a hand would: the tile hovered (700ms at 1x), selected (600ms), then Submit pressed (180ms: the moss hover fill and scale 0.96, which a real press gets too), then sent | Ethan (ADR-159) |
+| Jump framing | a target already wholly in view does not move, and only its glow says where it is; a user's message out of view lands centred; anything else out of view scrolls just into view, its top never cut off | Ethan (ADR-159) |
+| Reveal after a press | a control that opens something keeps itself in view: the thread rises to show what opened, and stops once the control reaches the top of the band | Ethan (ADR-159) |
+| Resize hint | full `--ink` for 40px either side of the pointer, gone by 70px | Ethan (ADR-159) |
+| Splash | each visit takes the next look: abstract, landscape, Vitruvian, then round again; the switch lists them in that order, then Bonsai | Ethan (ADR-159) |
 | Kay's mark | the bonsai's three pills on a 12-unit grid, `currentColor`, in the rail's 20px box | Ethan (ADR-094, amended) |
 | Reading tools at rest | the bookmark alone on `--scrim` (paper at 72%), glyph opaque; clear until the pointer is over the thread's turns, up over 300ms on the strong ease-out; Search unfolds over 220ms on the panel ease, the drawer's slide | Ethan (ADR-143, amended) |
 | Reading tools open | `--paper`, solid, over 150ms on the strong ease-out; the list of requests on `--scrim` with an 8px blur | Ethan (ADR-143, amended) |
+| Reading tools shadow | `--float-shadow` (`2px 8px 14px -6px` of `--shadow-strong`): down and to the right as the compose box's `--edge-shadow`, none above (ADR-069), scaled to the 34px bar; it passes under the compose box, which stands over the dock | derived (`--edge-shadow`), Ethan |
+| Toast | a menu's shape, since both float over the page: `rounded-xl` (8px) corners, 1px `--border`, `--popup-shadow` (`0 8px 24px` of `--shadow-strong`, the catalog Menu's shadow, which the shadcn menu and dialog share); Inter, rule 7, over Sonner's system stack | derived (`.menu`), Ethan |
+| Snooze note | the snooze toast's words stay in the bell as a note on the thread, written with the snooze or not at all, and counted read, since its reader is the one who snoozed | Ethan (ADR-128, amended) |
+| Dictation warning and picker | one warning, the modal's only notice (Ethan), in `--warn-bg` and `--warn-ink`, 14px under the header and 14px over the waveform: while speech cannot become text, why (blocked, unreachable, no service, no answer); otherwise with the live microphone "Speech to Text only offered via system's default microphone.", since the browser's speech service hears only the system's default; in the Demo's simulated recording "Choose Live Playground to test Speech to Text". In the live picker each input says under its name what it does in 12px `--soft-ink`: System Default "Turns speech into text", naming the device it is, the rest "Waveform only"; the device the default is now is not listed twice, and no input shows the USB ids Chrome appends ("(1532:0557)"), while "(Built-in)" and "(Virtual)" stay | Ethan |
 | Reply stamp | 11px on 16px `--soft-ink`, tabular figures, under the latest settled reply only: "just now", then 20-minute steps; no time on a user's turn | Ethan (ADR-152) |
 
 ## Open questions

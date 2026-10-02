@@ -219,6 +219,19 @@ splash switch had vanished from production. None was a big bug. Each was a place
 pointed at a wide shot when the viewer asked for a close-up, and the fixes all point closer: at the
 word, at the card, at the grid step.
 
+The second walkthrough asked the app to behave like a good camera operator (ADR-159): don't pan
+to something already in frame, don't crop the top of a subject, and when the presenter's hand
+picks an answer, let the audience see the hand. Home became a hub you can return to, the demo's
+Play button learned to call for attention, child lanes now line up with the sidebar, and the
+splash steps through its three looks one visit at a time.
+
+Then the tooling got its own trailer (ADR-160). `/verify-ui-tooling` is a public page that tells
+an interviewer what `verify-ui-drift` is for before they have seen it run: the problem of two
+kinds of editors on one surface, the five beats of a run, the transcript, the verdicts, the
+pixels, the comparator proof, the contrast lenses, and what approval means. The welcome now ends
+with a gold seal that says "Includes design tooling" on an ink ribbon, drawn in SVG from four new
+tokens so it is one medal in both themes.
+
 ## 2. Cast & Crew
 
 The first entries are ideas from before any code existed; the rest are parts of the running app.
@@ -1694,6 +1707,34 @@ real records, but each one only knew its turn, and the turn was the whole answer
 also knows the step that recorded it, and the step's evidence is the same chart the reply shows
 between its paragraphs, so the jump finds that card by its contents and glows it alone.
 
+### The project that never arrived
+
+Ethan's sidebar showed Demo and a mystery "Demo store", but no Live Playground. Demo store was his
+own browser's data from builds before ADR-156, migrated into a project of that name, and it held
+the clue: the seed that adds the Live Playground ran only on an empty store. Every browser that
+had ever been used kept its old threads and never got the new project. The seed now asks the
+question it meant to ask, "is the Live Playground thread here?", and adds it beside whatever the
+store already holds.
+
+### The camera that panned to the actor already on screen
+
+Every jump centred its target, whatever it was and wherever it stood. A recap card already in
+view slid to the middle anyway, and a card taller than half the view was centred so far down that
+its header went off the top. The fix is a rule with three outcomes: in view, stay and glow; a
+user's message out of view, centre; anything else out of view, the smallest move that shows it,
+top first.
+
+### The new thread that walked onto the wrong set
+
+Typing `/playground` on Ethan's browser landed on "Nothing open", and "Start a thread" there got
+canned lab answers instead of the model. Two bugs stacked up. First, his browser held old
+threads, so the seed never added the Live Playground (the blooper above), and `/playground`
+pointed at a thread that wasn't there. Second, a thread started with nothing on screen went into
+"the first project in the sidebar". On this site that's the scripted Demo, and a thread in the
+Demo is answered by the stand-in. The fallback now names the Live Playground. Home was rebuilt
+around the same idea: the bonsai, or "/" with nothing open, goes to the Live Playground's blank
+thread (reusing one, else making one). That's the page a first visit sees, composer and all.
+
 ### The entrance nobody saw
 
 Ethan's note was that the agent tree's hand-off "isn't quite right". On paper it was perfect: the
@@ -1712,6 +1753,119 @@ and a longer one where the top had landed by the time the base was half gone). T
 lead itself, base still home while the branch is visibly lit, and fails on the old timing.
 Lesson: equal on paper is not equal on screen. An actor who walks on from the dark needs an
 earlier cue than one already in the light.
+
+### The matte that rounded the prop
+
+The lane grip's six dots showed with the left pair shaved into half moons. The dots are a
+15px by 10px patch painted inside a 50px circle, the circle being the only place the hand
+shows. The circle came from `border-radius: 50%`, and the dots were painted only in the
+middle of the circle with `background-clip: content-box`. A radius does not just round the
+outer edge: it rounds every inner box too, by 25px less the padding, so the little dots box
+became a 15px by 10px ellipse and the corner dots fell outside it.
+
+The fix swapped the radius for `clip-path: circle(50%)`. A clip is a matte laid over the
+finished frame: it cuts the circle for the eye and for the pointer alike, and leaves the boxes
+inside it square. The 25px grab zone still lifts at 20px from the centre and not at 35px.
+Lesson: a radius reshapes the set, a clip only frames it. Reach for the clip when the shape is
+about where things can be touched, not how they are built.
+
+### Sixteen levers waiting for a set that was struck
+
+The browser levers opened on `/` and waited for "Last week's sales", the Demo store's profit
+thread with its card. Every device used to be seeded with that thread. When the Live Playground
+became the device's seed (#35), and then Home began opening its blank thread (ADR-159), the set
+the levers were waiting for was gone, and sixteen of them timed out at their first line. The mock
+`?scenario=demo` has the thread, but its store lives in the worker's memory, and four levers
+reload to prove the device keeps lanes, tabs and panes. A reload of a scenario starts it over.
+
+The fix is a seed a dev build plants on the device when a lever asks:
+
+```js
+// lever.mjs: the lever asks before the page loads; the worker plants it beside the starter
+if (seed !== undefined) {
+  await page.addInitScript((name) => {
+    localStorage.setItem("kay.seed", name); // → runtime.tsx sends { kind: "device", seed }
+  }, seed);
+}
+```
+
+`runtime.tsx` sends the seed only when `import.meta.env.DEV` is true, and the worker loads
+`seedDemoStore` from the fixtures module by dynamic import, so a production build neither honours
+the key nor ships the fixture. The rest of the run turned up checks that had gone stale while the
+first line blocked them: a press at the far end of a lane's title bar that only the grip takes
+now, a 24px arrow step on an 18px grid, and two waits that read a menu before it had opened. The
+film version: when the standing set is struck, the crew does not reshoot every scene on a new
+one; it builds the old set again on a stage it controls, and checks each shot list against what
+changed while the camera was down. Lesson: a check that depends on what a fresh device holds
+breaks when the seed changes; give it a seed of its own.
+
+### The mic that was live and the words that never came
+
+On the Live Playground the dictation waveform moved with Ethan's voice, yet Done left the
+compose box empty. The waveform and the words are two different crews: the waveform reads the
+microphone directly, while the words come from the browser's speech service, a separate (and in
+Chrome, remote) recognizer. The code listened only for that service's results. When it failed
+(blocked, unreachable, switched off, or simply silent, as it is in a headless browser), or when
+Chrome ended its session after a pause, nothing said so: the meter kept dancing and the
+transcript stayed on "Start speaking...".
+
+The fix listens for the rest of the service's events. An error names itself in the modal's
+notice ("could not be reached", "is turned off"), a service that never answers within 4s says
+so, and a session Chrome ends after a pause starts again, keeping the words already heard. A
+stand-in recognizer in the browser proved the words now reach the compose box across a pause.
+The same pass caught Chrome's habit of starting each later result with a space, which left
+double spaces in the text. Lesson: a level meter proves the cable, not the transcriber. Every
+stage in a signal chain needs its own light.
+
+### The title card that hopped when the zoom landed
+
+On hover the welcome seal grows 10%, and "NOW WITH DESIGN TOOLING!" jumped up against its
+ribbon a hair, then back down on the way out. Ethan's recording, measured frame by frame, put
+the jump on the very frame the growth ended: during the 150ms grow the words sat dead centre,
+and they snapped about 1.5% of the ribbon's depth upward once it settled.
+
+The reason is how Chrome paints a moving layer. While the seal animates, Chrome scales a
+picture it has already painted, so everything moves together. When the animation ends, it
+paints the seal again at the new size, and it rounds a line of text to whole pixels as it
+does, so the words land on a slightly different pixel row than they did at rest. The ribbon is
+a shape, which is never rounded. The tilt does not save it either, since the rounding happens
+in the seal's own upright frame before the tilt is applied. Headless Chrome on Linux does not
+round this way, which is why the settled screenshots here matched and only the Mac's recording
+showed it.
+
+The fix draws the words as shapes too. A small script (`scripts/seal-words.mjs`) reads Inter
+at weight 600, lays out the line with its kerning and the 0.1em tracking, and writes the
+letters' outlines into `seal-words.ts`. The ribbon now carries one path where the text was:
+measured against the old text, it sits within 0.01px of the same place. The link keeps its
+spoken name, and a test fails if someone changes the words without drawing them again.
+Lesson: a title card burned into the plate moves with the plate; a caption laid over it is
+re-typeset every time the frame size changes.
+
+### The chart that arrived a frame late
+
+Dragging a pane or a lane narrower cut the right-hand bars off at the card's edge for as long
+as the drag lasted. Sampling every frame of a drag showed why: on most frames the drawing was
+one 18px grid step wider than its box. Recharts learns the new width from a ResizeObserver, sets
+state, and React draws the new chart after the browser has already painted. Until then Recharts
+holds its two wrappers at the old width in inline pixels, so the old drawing overhangs and the
+card's rounded clip slices it.
+
+The SVG itself already carries a viewBox and is told to fill its parent; only the wrappers kept
+it at the old size. One CSS rule lets the wrappers fill the chart's box too, so on the late
+frame the last drawing simply scales to fit, and the true redraw lands a frame later. Measured
+on the same drag: 18 overhanging frames before, none after, and a settled chart is identical to
+the pixel. Lesson: when a renderer is always a frame behind the edit, keep the last frame
+stretched to the gate rather than letting it spill past it; nobody sees a frame of scale, but
+everybody sees a cropped picture.
+
+The first fix measured the chart's outer box and called it done; Ethan's next recording showed
+the main thread's chart, the one with the slider, still overrunning. That card eases its bars
+over 300ms so the eye can follow a change of measure, and Recharts animates any change in the
+bars' geometry, a width included, so each frame of a drag started a fresh slide from the old
+positions. The bars now ease only for 300ms after the stop changes (and as the card first
+draws); a resize redraws at once. Measuring the bars themselves this time: 207 of 237 frames
+overran by up to 221px before, none after. Lesson: measure the thing the eye sees, the bars,
+not the frame around them.
 
 ## 5. Director's Commentary
 
@@ -3616,3 +3770,100 @@ skips what the data leaves out (cards, Work details, buttons).
 Senior-engineer takeaway: when a library owns the nodes, do not decorate them. Find an overlay that
 names what you want, a highlight, a ring layer, a data attribute, and let the owner keep its film.
 
+### Frame by rule, not by habit: three outcomes for every jump
+
+A jump used to have one move, "centre it". Most of the complaints were about the cases where that
+move was wrong. The fix is to make the decision explicit as data first, then let a thin layer act
+on it.
+
+```ts
+// packages/catalog/src/threadReveal.ts: the decision, with no DOM in sight
+export function jumpPlan(target: Span, view: Viewport, center: boolean): "stay" | "center" | number {
+  if (target.top >= bandTop && target.bottom <= bandBottom) return "stay"; // → glow only
+  if (center) return "center"; // → a user's message: the eye goes to the middle
+  return clamp(Math.min(bottomInView, topInView), view.maxScrollTop); // → just into view
+}
+```
+
+```mermaid
+flowchart TD
+  J["jump to a target"] --> V{"wholly in view?"}
+  V -- yes --> S["stay: glow only"]
+  V -- no --> U{"a user's message?"}
+  U -- yes --> C["centre it (runway if near the end)"]
+  U -- no --> N["smallest scroll that shows it, top never cut"]
+```
+
+The film version: a good operator doesn't reframe a shot the subject is already in, and never
+crops a head to centre a body. Senior-engineer takeaway: when one behaviour keeps being "almost
+right", list the situations it runs in and write the decision as a pure function with one test
+per situation. The edge cases stop being bugs and become rows in a table.
+
+### Draw the prop, don't photograph it: a seal that themes itself
+
+The example seal arrived as a photo. Pasting it in would have worked for one theme at one size,
+and the words would have been pixels. The seal is instead a small program: the serrated edge is
+one closed path computed from three numbers, and every colour is a token.
+
+```tsx
+// design-tooling-seal.tsx: the edge from three numbers, no hand-drawn points
+function starburst(teeth: number, outer: number, inner: number): string {
+  const step = 180 / teeth; // → degrees between a point and the notch after it
+  const points = Array.from({ length: teeth * 2 }, (_, i) =>
+    pointAt(i % 2 === 0 ? outer : inner, i * step - 90),
+  ); // → "x y"[]
+  return `M${points.join("L")}Z`;
+}
+```
+
+```mermaid
+flowchart LR
+  T["tokens.css<br/>--seal-gold, --seal-gold-deep,<br/>--seal-gold-glint, --on-seal"] --> S["Seal (SVG)<br/>starburst + ring + words on arcs"]
+  S --> W["welcome: 112px<br/>+ ink ribbon = the link"]
+  S --> H["tooling page hero: 200px<br/>no ribbon, no link"]
+  W -- "same medal" --> D["dark theme: ribbon flips to cream,<br/>the gold stays"]
+```
+
+The film version: a prop built by the art department is one object you can light any way you
+like; a photo of a prop is a flat card that only matches the lighting it was shot in. Two
+decisions followed from drawing it. The words went on the ribbon, not the gold, because the
+ribbon runs off the seal onto the paper and brown ink on the dark paper fails 4.5:1. And the
+link's accessible name is the ribbon's text, so what a screen reader hears is what the eye reads.
+Senior-engineer takeaway: when an asset has to live in two themes and several sizes, ask whether
+it can be a function of the tokens before you ask which file format to save it in.
+
+### One slate, two takes: a record that rides on the write it records
+
+Ethan wanted the snooze toast kept in the bell. The tempting build is two calls: snooze the
+thread, then add a note. Two calls can split: the snooze is refused (a time already past) and
+the note lands anyway, or the note fails and the snooze stands with no record. So the note rides
+on the snooze itself, and the store writes both inside one transaction.
+
+```ts
+// sqliteStore.ts: one transaction, so a refused snooze leaves no note and a refused note no snooze
+mark: (id, change, now, note) => {
+  db.transaction(() => {
+    markThread(db, id, change, now, note); // → snooze row updated, then the note inserted
+  });
+},
+```
+
+```mermaid
+sequenceDiagram
+  participant P as Page (thread-verbs.ts)
+  participant W as Worker store
+  participant B as Bell
+  P->>P: words the note as the toast ("Snoozed ... until Thursday 1 October at 21:36")
+  P->>B: shows the snooze and the note at once (the optimistic edit)
+  P->>W: mark { snoozedUntil, note }
+  W->>W: one transaction: snooze + note, or neither
+  W-->>B: the confirmed workspace, the note in it
+```
+
+The page words the note, not the worker, because only the page knows the viewer's clock and
+time zone, so the bell says exactly what the toast said. The page also names the note, which
+lets it count the note as read at once: the person who would read it is the one who just
+snoozed, so the badge stays quiet. The film version: the clapperboard is written by the camera
+team at the moment of the take, on the same slate, so a take never exists without its label.
+Senior-engineer takeaway: when one action must leave a record, make the record part of the
+action's write, not a second call that can succeed or fail on its own.

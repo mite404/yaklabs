@@ -45,6 +45,8 @@ type Openable = Exclude<Wanted, { kind: "unknown" }>;
 // The v1 canvas's two keys (ADR-089), which the worker's 1 → 2 migration reads once.
 const LEGACY_HIDDEN = "kay.canvas.hidden";
 const LEGACY_ORDER = "kay.canvas.order";
+// The key a browser lever sets to have a dev build seed the device (`seedDemoStore`).
+const SEED = "kay.seed";
 
 const DoorContext = createContext<Door | null>(null);
 
@@ -63,14 +65,21 @@ export function inBackground(write: Promise<unknown>, doing: string): void {
   });
 }
 
-// A browser that refuses storage has no v1 keys to send.
-function readLegacy(): RuntimeData {
+// The seed a browser lever asked for; a production build never seeds the device.
+function seedAsked(): "demo-store" | undefined {
+  if (!import.meta.env.DEV) return undefined;
+  return localStorage.getItem(SEED) === "demo-store" ? "demo-store" : undefined;
+}
+
+// The device's store with the v1 keys and a lever's seed; a browser that refuses storage has
+// neither to send.
+function readDevice(): RuntimeData {
   try {
     const legacy = legacyFrom(
       localStorage.getItem(LEGACY_HIDDEN),
       localStorage.getItem(LEGACY_ORDER),
     );
-    return { kind: "device", legacy };
+    return { kind: "device", legacy, seed: seedAsked() };
   } catch {
     return { kind: "device" };
   }
@@ -163,7 +172,7 @@ function RuntimeHost({
 
   useEffect(() => {
     const data: RuntimeData =
-      wanted.kind === "device" ? readLegacy() : { kind: "scenario", name: wanted.name };
+      wanted.kind === "device" ? readDevice() : { kind: "scenario", name: wanted.name };
     const started = startRuntime({ agent: env.agent, data });
     if (wanted.kind === "device") void navigator.storage.persist(); // ADR-081: keep the file
     const stopClearing = clearLegacyOnceKept(started);

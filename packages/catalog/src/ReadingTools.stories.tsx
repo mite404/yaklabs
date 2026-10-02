@@ -51,13 +51,32 @@ function alphaOf(color: string): number {
   return rgba ? Number(rgba[1]) : 1;
 }
 
-// Whether the turn with this id glows and sits in the middle of the visible thread, or, when
+// Whether the turn with this id sits wholly inside the visible thread.
+function wholeInView(scroller: HTMLElement, turnId: string): boolean {
+  const turn = scroller.querySelector(`[data-turn-id="${turnId}"]`);
+  if (!turn) throw new Error(`no turn ${turnId}`);
+  const view = scroller.getBoundingClientRect();
+  const box = turn.getBoundingClientRect();
+  return box.top >= view.top && box.bottom <= view.bottom;
+}
+
+// Whether the jump to the request with this id glows it and frames it as a jump should
+// (ADR-159): a request that was already in view (`wasInView`) stays exactly where it was, its
+// glow saying where it is; one out of view lands in the middle of the visible thread, or, when
 // the thread cannot scroll up that far (a turn near its start), in full view at the top. A turn
 // near the end still centers: the jump adds room below the end (threadReveal.ts).
-async function expectLandedOn(scroller: HTMLElement, turnId: string) {
+async function expectLandedOn(
+  scroller: HTMLElement,
+  turnId: string,
+  before: { wasInView: boolean; scrollTop: number },
+) {
   const turn = scroller.querySelector<HTMLElement>(`[data-turn-id="${turnId}"]`);
   if (!turn) throw new Error(`no turn ${turnId}`);
   await expect(turn.dataset.flash).toBe("true");
+  if (before.wasInView) {
+    await expect(scroller.scrollTop).toBe(before.scrollTop);
+    return;
+  }
   await waitFor(async () => {
     const view = scroller.getBoundingClientRect();
     const box = turn.getBoundingClientRect();
@@ -72,10 +91,22 @@ async function expectLandedOn(scroller: HTMLElement, turnId: string) {
   });
 }
 
-// Whether a search step landed on its words in the turn with this id: they sit in the middle of
-// the visible thread (or in full view near its start), selected as a drag would select them,
-// with the ring around them alone, and the turn they sit in does not glow.
-async function expectFoundIn(scroller: HTMLElement, turnId: string, words: string) {
+// Where a jump to the turn with this id starts from: whether the turn is in view, and the scroll.
+const standBefore = (scroller: HTMLElement, turnId: string) => ({
+  wasInView: wholeInView(scroller, turnId),
+  scrollTop: scroller.scrollTop,
+});
+
+// Whether a search step landed on its words in the turn with this id: in a user's message they
+// sit in the middle of the visible thread (or in full view near its start), anywhere else just
+// in view (`framing`); selected as a drag would select them, with the ring around them alone, and
+// the turn they sit in does not glow.
+async function expectFoundIn(
+  scroller: HTMLElement,
+  turnId: string,
+  words: string,
+  framing: "centered" | "in view",
+) {
   const turn = scroller.querySelector<HTMLElement>(`[data-turn-id="${turnId}"]`);
   if (!turn) throw new Error(`no turn ${turnId}`);
   const selected = [...(CSS.highlights.get("thread-search-current") ?? [])];
@@ -94,7 +125,7 @@ async function expectFoundIn(scroller: HTMLElement, turnId: string, words: strin
   await waitFor(async () => {
     const view = scroller.getBoundingClientRect();
     const now = range.getBoundingClientRect();
-    if (scroller.scrollTop < 1) {
+    if (framing === "in view" || scroller.scrollTop < 1) {
       await expect(now.top).toBeGreaterThanOrEqual(view.top);
       await expect(now.bottom).toBeLessThanOrEqual(view.bottom);
     } else {
@@ -226,8 +257,18 @@ export const JumpToARequest: Story = {
     const items = within(list).getAllByRole("menuitem");
     await expect(items).toHaveLength(ASKED.length);
     await expect(items[1]).toHaveTextContent("Which day had t…9:04");
-    await userEvent.click(items[3]);
-    await expectLandedOn(scroller, "ask-3");
+    const outOfView = standBefore(scroller, "ask-1");
+    await expect(outOfView.wasInView).toBe(false);
+    await userEvent.click(items[1]);
+    await expectLandedOn(scroller, "ask-1", outOfView);
+
+    // A request already in view stays where it is; only its glow says where it is.
+    await userEvent.click(tools.getByRole("button", { name: "Your requests" }));
+    const reopened = within(document.body).getByRole("menu", { name: "Your requests" });
+    const inView = standBefore(scroller, "ask-1");
+    await expect(inView.wasInView).toBe(true);
+    await userEvent.click(within(reopened).getAllByRole("menuitem")[1]);
+    await expectLandedOn(scroller, "ask-1", inView);
 
     // The list closed under the pointer, so no leave reached the bar; moving on still folds it.
     await userEvent.hover(scroller);
@@ -243,12 +284,16 @@ export const AltClickForTheLatest: Story = {
     const { scroller, tools } = await parts(canvasElement);
     scroller.scrollTop = 0;
     // One session, so the held Alt is still down when the click lands.
+    await expect(wholeInView(scroller, `ask-${ASKED.length - 1}`)).toBe(false);
     const user = userEvent.setup();
     await user.keyboard("{Alt>}");
     await user.click(tools.getByRole("button", { name: "Your requests" }));
     await user.keyboard("{/Alt}");
     await expect(within(document.body).queryByRole("menu")).toBeNull();
-    await expectLandedOn(scroller, `ask-${ASKED.length - 1}`);
+    await expectLandedOn(scroller, `ask-${ASKED.length - 1}`, {
+      wasInView: false,
+      scrollTop: 0,
+    });
   },
 };
 
@@ -270,11 +315,11 @@ export const SearchTheThread: Story = {
     await expect(CSS.highlights.get("thread-search")?.size).toBe(4);
     await userEvent.keyboard("{Enter}");
     await expect(tools.getByRole("status")).toHaveTextContent("1 of 4");
-    await expectFoundIn(scroller, "ask-1", "margin");
+    await expectFoundIn(scroller, "ask-1", "margin", "centered");
 
     await userEvent.keyboard("{Shift>}{Enter}{/Shift}");
     await expect(tools.getByRole("status")).toHaveTextContent("4 of 4");
-    await expectFoundIn(scroller, "answer-6", "margin");
+    await expectFoundIn(scroller, "answer-6", "margin", "in view");
 
     await userEvent.keyboard("{Escape}");
     await expect(tools.queryByRole("searchbox")).toBeNull();

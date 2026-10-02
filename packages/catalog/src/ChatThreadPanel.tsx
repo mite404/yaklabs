@@ -14,7 +14,7 @@ import {
 import type { Agent, AgentEvent } from "./agent";
 import { AgentTree } from "./AgentTree";
 import { AwaitingInputCard } from "./AwaitingInputCard";
-import { resolveAwaiting, type AwaitingInput } from "./awaiting";
+import { resolveAwaiting, type AnswerPhase, type AwaitingInput } from "./awaiting";
 import { ComposeBox } from "./ComposeBox";
 import { appendDictation } from "./dictation";
 import { markGrabbableHighlight } from "./grabbable";
@@ -27,6 +27,7 @@ import type { Recover } from "./QuietProse";
 import { ReadingTools } from "./ReadingTools";
 import { markSearch, ringRange, type Find } from "./searchMarks";
 import { Recap } from "./Recap";
+import { ThreadRenameContext } from "./threadRename";
 import { shouldShowRecap, type RecapItem, type ThreadActivity } from "./recapRules";
 import {
   applyChunk,
@@ -40,7 +41,7 @@ import {
 } from "./reply";
 import type { Thread, ThreadHandle, ThreadMessage } from "./thread";
 import {
-  centerInScroller,
+  jumpInScroller,
   keepExpansionsInView,
   releaseRunway,
   scrollToEnd,
@@ -75,13 +76,16 @@ export type HostAsk = {
 export type { ThreadActivity };
 
 /**
- * How the thread takes dictation: which audio it hears, simulated unless told otherwise, and
- * whether it opens already recording (stories).
+ * How the thread takes dictation: which audio it hears, simulated unless told otherwise,
+ * whether it opens already recording (stories), and the host's standing warning for the modal
+ * in place of the live microphone's own (`DictationModal`'s `note`).
  */
-export type Dictation = { source?: DictationSource; open?: boolean };
+export type Dictation = { source?: DictationSource; open?: boolean; note?: string };
 
-// The dictation setup with its defaults filled in.
-function dictationSetup(dictation: Dictation | undefined): Required<Dictation> {
+// The dictation setup with its defaults filled in; a note stays optional.
+function dictationSetup(
+  dictation: Dictation | undefined,
+): Required<Omit<Dictation, "note">> & Pick<Dictation, "note"> {
   return { source: "simulated", open: false, ...dictation };
 }
 
@@ -162,7 +166,8 @@ function RenameField({
 // The title bar. With `onRename` the title is a button that becomes a field on click: Enter or
 // leaving the field keeps the new name, Escape or an empty name keeps the old one (ADR-089).
 // Every way out goes through the field's blur, so the field is never torn down inside the key
-// event that closed it. The host's `actions` sit at the bar's end (ADR-126).
+// event that closed it. The host's `actions` sit at the bar's end (ADR-126), and can open the
+// title as a field themselves (useThreadRename), as the thread menu's Rename does.
 function ThreadHeader({
   title,
   leading,
@@ -184,6 +189,9 @@ function ThreadHeader({
     if (next !== "" && next !== title) onRename?.(next);
     setEditing(false);
   };
+  const startEditing = () => {
+    setEditing(true);
+  };
   return (
     <header className="thread-header">
       {leading !== undefined && <div className="header-leading">{leading}</div>}
@@ -196,9 +204,7 @@ function ThreadHeader({
               type="button"
               className="thread-title"
               title="Rename this thread"
-              onClick={() => {
-                setEditing(true);
-              }}
+              onClick={startEditing}
             >
               {title}
             </button>
@@ -207,7 +213,11 @@ function ThreadHeader({
           )}
         </h2>
       )}
-      {actions !== undefined && <div className="thread-header-actions">{actions}</div>}
+      {actions !== undefined && (
+        <ThreadRenameContext value={onRename === undefined ? undefined : startEditing}>
+          <div className="thread-header-actions">{actions}</div>
+        </ThreadRenameContext>
+      )}
     </header>
   );
 }
@@ -681,11 +691,12 @@ function clearFlash(turn: HTMLElement): void {
   delete turn.dataset.flash;
 }
 
-// Jump so the evidence lands vertically centered, every time (ADR-022 eye trace). Only what was
-// jumped to last glows: stepping through matches moves the glow rather than leaving a trail, and
-// a second jump to the same place starts its glow over.
+// Jump to the evidence and glow it (`jumpInScroller`): a user's message out of view lands
+// centered (ADR-022 eye trace), anything else just comes into view, and what is already in view
+// only glows. Only what was jumped to last glows: stepping through matches moves the glow rather
+// than leaving a trail, and a second jump to the same place starts its glow over.
 function flashElement(scroller: HTMLElement, target: HTMLElement): void {
-  centerInScroller(scroller, target);
+  jumpInScroller(scroller, target);
   scroller.querySelectorAll<HTMLElement>("[data-flash]").forEach(clearFlash);
   void target.offsetWidth; // a style flush, so the glow's animation starts over
   target.dataset.flash = "true";
@@ -752,8 +763,8 @@ function remarkAsTurnsLand(scroller: HTMLElement, find: Find): () => void {
 
 // A thread's search, marked on its turns: every match tinted and the one stepped to selected,
 // kept as turns arrive, and cleared as the search closes or the thread unmounts. A step brings
-// the match to the middle (ADR-022 eye trace) and rings its words once, rather than the turn
-// around them; a match the page cannot place glows its turn instead.
+// the match into view as any jump does (`jumpInScroller`) and rings its words once, rather than
+// the turn around them; a match the page cannot place glows its turn instead.
 function useSearchMarks(scroller: RefObject<HTMLDivElement | null>): {
   setRings: (layer: HTMLDivElement | null) => void;
   onFind: (find: Find | null) => void;
@@ -783,7 +794,7 @@ function useSearchMarks(scroller: RefObject<HTMLDivElement | null>): {
         flashTurn(el, current.turnId);
         return;
       }
-      centerInScroller(el, words);
+      jumpInScroller(el, words);
       if (rings) ringRange(rings, words);
     },
   };
@@ -966,7 +977,7 @@ export function ChatThreadPanel({
   footnote?: ReactNode;
   ref?: Ref<ThreadHandle>;
 }) {
-  const { source, open } = dictationSetup(dictation);
+  const { source, open, note } = dictationSetup(dictation);
   const [messages, setMessages] = useState(thread.messages);
   // A question in a reply's stream goes to the dock, which needs the agent to report a malformed
   // one back: the dock's `ask` reaches the replies through this ref, kept current below.
@@ -976,6 +987,8 @@ export function ChatThreadPanel({
   const [dictating, setDictating] = useState(open);
   const outbox = useOutbox(thread.messages);
   const { awaiting, setAwaiting, ask } = useAwaiting(thread, replies.tell);
+  // An answer a host is giving on the user's behalf, shown on the card before it is sent.
+  const [staged, setStaged] = useState<{ text: string; phase: AnswerPhase }>();
   useLayoutEffect(() => {
     questions.current = ask;
   });
@@ -1070,7 +1083,11 @@ export function ChatThreadPanel({
       if (latest().trim() !== "" || outbox.attachments.length > 0) send();
     },
     answer: (text) => {
+      setStaged(undefined);
       if (awaiting !== undefined) answer(text);
+    },
+    stageAnswer: (text, phase) => {
+      setStaged(phase === null || awaiting === undefined ? undefined : { text, phase });
     },
     choose: (measure, turnId) => {
       const choice = choiceOf(messages, measure, turnId); // → the attachment, or none
@@ -1170,6 +1187,7 @@ export function ChatThreadPanel({
           <div className="dock-overlay" ref={setDockSlot}>
             <AwaitingInputCard
               question={awaiting}
+              staged={staged}
               onAnswer={answer}
               onElsewhere={() => {
                 setAwaiting(undefined);
@@ -1217,6 +1235,7 @@ export function ChatThreadPanel({
       {dictating && (
         <DictationModal
           source={source}
+          note={note}
           onCancel={() => {
             endDictation();
           }}

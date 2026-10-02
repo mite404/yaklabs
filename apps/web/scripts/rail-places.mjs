@@ -8,7 +8,7 @@
  * it opens a site elsewhere, in a new tab (ADR-144).
  */
 export const RAIL_PLACES = [
-  { name: "Kay", role: "link", icon: null, outOfScope: false, external: false },
+  { name: "Home", role: "link", icon: null, outOfScope: false, external: false },
   { name: "Memory", role: "button", icon: "lucide-brain", outOfScope: true, external: false },
   { name: "Skills", role: "button", icon: "lucide-unplug", outOfScope: true, external: false },
   { name: "App store", role: "button", icon: "lucide-store", outOfScope: true, external: false },

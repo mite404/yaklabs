@@ -1,10 +1,9 @@
 import { threads, type Thread, type ThreadMessage } from "@yaklabs/catalog/thread";
 import type { Transcript } from "./conversation";
-import type { ThreadMark } from "./marks";
+import type { MarkNote, ThreadMark } from "./marks";
 import type { RenameTarget } from "./protocol";
 import {
-  projectIdSchema,
-  threadIdSchema,
+  STARTER,
   type Lane,
   type Notification,
   type Place,
@@ -62,10 +61,11 @@ export type Store = {
   changeTranscript(id: ThreadId, change: (transcript: Transcript) => Transcript): void;
   /**
    * Pins, snoozes or archives a live thread at `now`, by `applyMark`'s rules, and restarts its
-   * idle clock.
-   * @throws For a thread it does not hold or that is deleted, and a snooze that is not ahead.
+   * idle clock; a `note` for the bell lands in the same write, or neither does.
+   * @throws For a thread it does not hold or that is deleted, a snooze that is not ahead, and a
+   *   note whose id is taken.
    */
-  mark(id: ThreadId, change: ThreadMark, now: string): void;
+  mark(id: ThreadId, change: ThreadMark, now: string, note?: MarkNote): void;
   /**
    * Deletes a thread, its sub-threads with it, behind a tombstone: gone from the workspace at
    * once, and for good once `settle` passes the undo window (ADR-130).
@@ -110,23 +110,14 @@ export function seedThread(name: string): Thread {
 }
 
 /**
- * What an empty device starts with: the Live Playground project and its one main thread, with
- * no turns and the title an untitled main gets (`storeWrites.ts`), so the first visit opens on
- * an empty thread. Their ids never change, so an address to either holds on every device.
- */
-export const STARTER = {
-  project: { id: projectIdSchema.parse("live-playground"), name: "Live Playground" },
-  thread: { id: threadIdSchema.parse("playground"), title: "New thread" },
-} as const;
-
-/**
- * Gives an empty device store the starter: the Live Playground project and its empty thread.
- * A store with any thread is left alone, so running it again changes nothing.
+ * Gives a device store the starter wherever it lacks it: the Live Playground project and its
+ * empty thread, beside anything the store already holds, so a device with threads from before
+ * the Live Playground existed gets it too. Running it again changes nothing.
  * @throws When the store refuses the project or the thread.
  */
 export function ensureStarter(store: Store, at: string): void {
   const { projects, threads: existing } = store.workspace();
-  if (existing.length > 0) return;
+  if (existing.some((each) => each.id === STARTER.thread.id)) return;
   const { project, thread } = STARTER;
   if (!projects.some((each) => each.id === project.id))
     store.addProject({ ...project, createdAt: at });

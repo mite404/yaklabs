@@ -1,5 +1,5 @@
 // Checks for the lane title bar, the rename field, the carry and the Disclosure primitive.
-import { luminance, openApp, shotPath, STORYBOOK } from "./lever.mjs";
+import { BASE, luminance, openApp, shotPath, STORYBOOK } from "./lever.mjs";
 
 const LONG_TITLE = "Here's last week's profit by day, net of refunds";
 
@@ -119,6 +119,38 @@ export async function makeLane(page, title) {
   return lane;
 }
 
+// Puts the canvas beside the open thread by the layout switch: a thread opens alone until it
+// asks for one, and the tab keeps the choice across a reload.
+async function showCanvas(page) {
+  const layout = page.getByRole("group", { name: "Layout" });
+  await layout
+    .getByRole("radio", { name: "Canvas" })
+    .or(layout.getByRole("button", { name: "Canvas" }))
+    .first()
+    .click();
+  await canvasOf(page).waitFor();
+  return page;
+}
+
+/**
+ * The app with its canvas on screen: Home opens the Live Playground's blank main thread
+ * (ADR-159), shown here beside its canvas.
+ */
+export async function openCanvas(browser) {
+  const { page } = await openApp(browser);
+  return showCanvas(page);
+}
+
+/**
+ * "Last week's sales" as every device held it before the Live Playground, on a device the dev
+ * build seeds, so it survives a reload: the profit card in its thread and the canvas beside it
+ * with no lanes.
+ */
+export async function openProfit(browser) {
+  const { page } = await openApp(browser, `${BASE}/t/profit`, { seed: "demo-store" });
+  return showCanvas(page);
+}
+
 // Counts native drags, which hand the cursor to the browser.
 async function countNativeDrags(page) {
   await page.evaluate(() => {
@@ -131,7 +163,7 @@ async function countNativeDrags(page) {
 /** The lane title bar, the rename field, the carry and the Disclosure (P1 to P3h, P8). */
 export const canvasChecks = {
   async P1(browser) {
-    const { page } = await openApp(browser);
+    const page = await openCanvas(browser);
     const lane = await makeLane(page, LONG_TITLE);
     const header = lane.locator(".thread-header");
     const title = lane.locator(".thread-title");
@@ -157,8 +189,12 @@ export const canvasChecks = {
       return { min: Math.min(left.min, right.min) };
     };
     const restInk = await ink();
+    // The dots wake only within the grip's circle, never at the bar's edge (Ethan).
     const bar = await header.boundingBox();
     await page.mouse.move(bar.x + bar.width - 30, bar.y + bar.height / 2);
+    await page.waitForTimeout(350);
+    const atEdge = await header.evaluate((el) => getComputedStyle(el, "::after").opacity);
+    await page.mouse.move(bar.x + bar.width / 2 + 10, bar.y + bar.height / 2);
     await page.waitForTimeout(350);
     const hoverInk = await ink();
     const grip = await header.evaluate((el) => getComputedStyle(el, "::after").opacity);
@@ -176,15 +212,16 @@ export const canvasChecks = {
       restInk.min < 140 &&
       hoverInk.min - restInk.min >= 60 &&
       grip === "1" &&
+      atEdge === "0" &&
       overTitle === "0";
     return {
       ok,
-      detail: `whole title shown ${rest.shown}, runs past the middle ${rest.pastMiddle}; ink beside the grip ${restInk.min} at rest, ${hoverInk.min} on hover; grip ${grip} on the bar, ${overTitle} over the title`,
+      detail: `whole title shown ${rest.shown}, runs past the middle ${rest.pastMiddle}; ink beside the grip ${restInk.min} at rest, ${hoverInk.min} on hover; grip ${grip} by the grip, ${atEdge} at the edge, ${overTitle} over the title`,
     };
   },
 
   async P2(browser) {
-    const { page } = await openApp(browser);
+    const page = await openCanvas(browser);
     const lane = await makeLane(page, LONG_TITLE);
     // At its start: a long title runs under the grip's veil mid-bar, which takes the press.
     await lane.locator(".thread-title").click({ position: { x: 8, y: 8 } });
@@ -207,7 +244,7 @@ export const canvasChecks = {
   },
 
   async P3(browser) {
-    const { page } = await openApp(browser);
+    const page = await openProfit(browser);
     await makeLane(page, "First lane");
     await makeLane(page, "Second lane");
     await canvasOf(page).evaluate((el) => (el.scrollLeft = 0));
@@ -253,7 +290,7 @@ export const canvasChecks = {
   },
 
   async P3h(browser) {
-    const { page } = await openApp(browser);
+    const page = await openProfit(browser);
     const nativeDrags = await countNativeDrags(page);
     const picked = await selectReply(page, 33);
     const open = canvasOf(page).getByRole("button", { name: "Create blank thread" });

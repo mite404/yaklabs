@@ -12,6 +12,20 @@ export const threadIdSchema = idSchema.brand<"ThreadId">();
 /** A lane's id: `l-<threadId>` for a thread lane, `c-...` for a card lane. */
 export const laneIdSchema = idSchema.brand<"LaneId">();
 
+/** What a main thread is called until someone names it, or its first message does. */
+export const NEW_THREAD = "New thread";
+
+/**
+ * What every device holds (`ensureStarter`): the Live Playground project and its one main
+ * thread, with no turns and the title an untitled main gets (`storeWrites.ts`), so the first
+ * visit opens on an empty thread. Their ids never change, so an address to either holds on
+ * every device, and the page finds the project its live threads go in by it.
+ */
+export const STARTER = {
+  project: { id: projectIdSchema.parse("live-playground"), name: "Live Playground" },
+  thread: { id: threadIdSchema.parse("playground"), title: NEW_THREAD },
+} as const;
+
 /** A project's id, branded so it never stands in for a thread's. */
 export type ProjectId = z.infer<typeof projectIdSchema>;
 /** A thread's id, branded so it never stands in for a project's or a lane's. */
@@ -212,10 +226,24 @@ export function closeLane(lanes: Lane[], id: LaneId): Lane[] {
   return lanes.filter((lane) => lane.id !== id);
 }
 
-/** The thread's lane appended at the default width, unless it is already open. */
-export function reopenLane(lanes: Lane[], threadId: ThreadId): Lane[] {
+/**
+ * A child's lane opened at the default width where the sidebar lists the child among the open
+ * children (top to bottom is left to right, Ethan): before the first open child the sidebar
+ * lists after it, else at the end. A child already open stays where it is, so a lane the reader
+ * moved keeps their order; the sidebar never follows the canvas (ADR-125).
+ * @param order The main's children as the sidebar lists them (`childrenOf`).
+ */
+export function openChildLane(
+  lanes: Lane[],
+  threadId: ThreadId,
+  order: readonly ThreadId[],
+): Lane[] {
   const id = threadLaneId(threadId);
-  return lanes.some((lane) => lane.id === id) ? lanes : [...lanes, threadLane(threadId)];
+  if (lanes.some((lane) => lane.id === id)) return lanes;
+  const rank = order.indexOf(threadId);
+  const after = (lane: Lane) => lane.kind === "thread" && order.indexOf(lane.threadId) > rank;
+  const at = rank === -1 ? -1 : lanes.findIndex((lane) => after(lane)); // → the first lane listed after it
+  return insertLane(lanes, at === -1 ? lanes.length : at, threadLane(threadId));
 }
 
 // Where a lane from `current` goes in `merged`: after the nearest lane left of it that `merged`
@@ -264,9 +292,21 @@ export function collapseLanes(lanes: Lane[], collapsed: boolean): Lane[] {
  * lead and the archived settle to the bottom, keeping that order among themselves; a snoozed
  * thread stays where it is (ADR-127, ADR-129).
  */
+/**
+ * Threads in the order the sidebar lists them, top to bottom: newest created first, ties by id
+ * (ADR-125). The canvas opens a main's child lanes in this order too.
+ */
+export function inSidebarOrder<T extends { createdAt: string; id: string }>(threads: T[]): T[] {
+  return threads.toSorted(newestCreated);
+}
+
+/** A main's children as the sidebar lists them, top to bottom (`inSidebarOrder`). */
+export function childrenOf(ws: Workspace, mainId: ThreadId): ThreadSummary[] {
+  return inSidebarOrder(ws.threads.filter((thread) => parentOf(thread) === mainId));
+}
+
 export function sidebarTree(ws: Workspace): ProjectNode[] {
-  const children = (main: ThreadSummary): ThreadSummary[] =>
-    markOrder(ws.threads.filter((thread) => parentOf(thread) === main.id).toSorted(newestCreated));
+  const children = (main: ThreadSummary): ThreadSummary[] => markOrder(childrenOf(ws, main.id));
   return ws.projects.toSorted(byCreated).map((project) => ({
     project,
     mains: markOrder(

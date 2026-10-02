@@ -1,10 +1,34 @@
-import { rowForKey } from "./awaiting";
+import { rowForKey, stagedRows } from "./awaiting";
 import { useRef, useState, type KeyboardEvent } from "react";
-import type { AwaitingInput } from "./awaiting";
+import type { AnswerPhase, AwaitingInput } from "./awaiting";
 import { Disclosure } from "./Disclosure";
 
 // The way out when the agent does not word one for the moment: the user is never cornered.
 const ELSEWHERE = "Chat about something else";
+
+// Skip and Submit; Submit shows pressed while a host's answer goes in on the user's behalf.
+function Actions(props: {
+  canSubmit: boolean;
+  pressed: boolean;
+  onSkip: () => void;
+  onSubmit: () => void;
+}) {
+  return (
+    <div className="awaiting-actions">
+      <button className="awaiting-action" onClick={props.onSkip}>
+        Skip
+      </button>
+      <button
+        className="awaiting-action awaiting-submit"
+        disabled={!props.canSubmit}
+        data-pressed={props.pressed || undefined}
+        onClick={props.onSubmit}
+      >
+        Submit
+      </button>
+    </div>
+  );
+}
 
 /**
  * "Needs you": the agent is blocked on a question, floating above the compose box (ADR-039).
@@ -18,6 +42,9 @@ const ELSEWHERE = "Chat about something else";
  * @param startCollapsed Open folded to its header (stories).
  * @param label What the card is called, on its header and to assistive technology: "Needs
  * attention" for the agent's question, or the host's own name for one it asks, such as "Snooze".
+ * @param staged An answer a host is giving on the user's behalf, shown as a hand would give it:
+ * its tile hovered, then selected, then Submit pressed (`AnswerPhase`), so a viewer sees what
+ * was chosen before the card leaves.
  */
 export function AwaitingInputCard({
   question,
@@ -25,15 +52,17 @@ export function AwaitingInputCard({
   onElsewhere,
   startCollapsed = false,
   label = "Needs attention",
+  staged,
 }: {
   question: AwaitingInput;
   onAnswer: (answer: string) => void;
   onElsewhere: () => void;
   startCollapsed?: boolean;
   label?: string;
+  staged?: { text: string; phase: AnswerPhase };
 }) {
   const [open, setOpen] = useState(!startCollapsed);
-  const [selected, setSelected] = useState<number>();
+  const [chosen, setChosen] = useState<number>();
   const [typed, setTyped] = useState("");
   const field = useRef<HTMLInputElement>(null);
   const options = useRef<HTMLDivElement>(null);
@@ -41,11 +70,13 @@ export function AwaitingInputCard({
   const answerRow = question.options.length;
   const elsewhereRow = answerRow + 1;
   const rows = elsewhereRow + 1;
+  const labels = question.options.map((option) => option.label);
+  const { hovered, selected } = stagedRows(labels, staged, chosen); // → rows shown hovered, selected
   const canSubmit = selected !== undefined && (selected !== answerRow || typed.trim() !== "");
 
   // Selecting moves focus to the chosen tile, as in any radio group, so Enter sends it.
   function select(row: number) {
-    setSelected(row);
+    setChosen(row);
     if (row === answerRow) field.current?.focus();
     else options.current?.querySelectorAll<HTMLElement>(".awaiting-tile")[row]?.focus();
   }
@@ -84,6 +115,7 @@ export function AwaitingInputCard({
     "aria-posinset": row + 1,
     "aria-setsize": rows,
     "data-selected": selected === row || undefined,
+    "data-hover": hovered === row || undefined,
   });
 
   return (
@@ -143,7 +175,7 @@ export function AwaitingInputCard({
               className="field"
               value={typed}
               onFocus={() => {
-                setSelected(answerRow);
+                setChosen(answerRow);
               }}
               onChange={(event) => {
                 setTyped(event.target.value);
@@ -163,18 +195,12 @@ export function AwaitingInputCard({
             <span className="awaiting-option">{question.elsewhere ?? ELSEWHERE}</span>
           </button>
         </div>
-        <div className="awaiting-actions">
-          <button className="awaiting-action" onClick={onElsewhere}>
-            Skip
-          </button>
-          <button
-            className="awaiting-action awaiting-submit"
-            disabled={!canSubmit}
-            onClick={submit}
-          >
-            Submit
-          </button>
-        </div>
+        <Actions
+          canSubmit={canSubmit}
+          pressed={staged?.phase === "pressed"}
+          onSkip={onElsewhere}
+          onSubmit={submit}
+        />
       </Disclosure>
     </section>
   );

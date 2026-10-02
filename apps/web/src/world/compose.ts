@@ -97,7 +97,7 @@ export function composeRuntime(worker: Runtime, overlay: Overlay): Runtime {
     rename: (target, name) => sideOf(target.id).rename(target, name),
     arrange: (mainId, lanes) => sideOf(mainId).arrange(mainId, lanes),
     saveShell: (shell) => worker.saveShell(shell),
-    mark: (id, change) => sideOf(id).mark(id, change),
+    mark: (id, change, note) => sideOf(id).mark(id, change, note),
     delete: (id) => sideOf(id).delete(id),
     restore: (id) => sideOf(id).restore(id),
     share: (share) => sideOf(share.threadId).share(share),

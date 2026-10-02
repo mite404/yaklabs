@@ -152,9 +152,6 @@ const pressesInert = (presses) =>
 // faint ink at 4.5:1 or more.
 async function outOfScopeRows(browser, theme) {
   const context = await browser.newContext({ viewport: PHONE, deviceScaleFactor: 2 });
-  await context.addInitScript((t) => {
-    localStorage.setItem("theme", t);
-  }, theme);
   const page = await context.newPage();
   // A thread's own address: "/" moves on to a thread, and that arrival would close the drawer.
   await page.goto(`${BASE}/t/t-005?scenario=demo`);
@@ -195,7 +192,7 @@ const placeChecks = {
   async P25(browser) {
     const notes = [];
     let ok = true;
-    for (const theme of ["light", "dark"]) {
+    for (const theme of ["light"]) {
       const places = placesVerdict(await placesEverywhere(browser, theme));
       const { context, page } = await openDesk(browser, { theme });
       const rests = await restOnOutOfScope(page);

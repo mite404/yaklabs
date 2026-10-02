@@ -23,6 +23,7 @@ import {
   type ShellState,
 } from "./state";
 import type { ShareClient } from "./share-thread";
+import { liveProjectOf } from "./home";
 import { shareVerbs, type ShareVerbs } from "./share-verbs";
 import { threadVerbs, type ThreadVerbs } from "./thread-verbs";
 
@@ -63,8 +64,9 @@ type Deps = {
 // What a project started from the shell is called until someone names it.
 const NEW_PROJECT = "New project";
 
-// The project a new thread goes in: the one asked for, else the active thread's, else the
-// first; undefined when there is none yet.
+// The project a new thread goes in: the one asked for, else the active thread's, else the Live
+// Playground, so a thread started from nothing is a live one, else the first; undefined when
+// there is none yet.
 function projectFor(
   ws: Workspace,
   active: Located | null,
@@ -73,7 +75,7 @@ function projectFor(
   if (asked !== undefined) return asked;
   const main = ws.threads.find((thread) => thread.id === active?.main);
   if (main?.place.kind === "main") return main.place.projectId;
-  return sidebarTree(ws).at(0)?.project.id;
+  return liveProjectOf(ws) ?? sidebarTree(ws).at(0)?.project.id;
 }
 
 // A project `create` just made, found by its id in the state it already lists.

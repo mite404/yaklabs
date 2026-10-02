@@ -9,13 +9,14 @@ The agent loop and the conversation store run in a Web Worker from `@yaklabs/run
 
 | Path                       | What it shows                                                        | Sign-in  |
 | -------------------------- | -------------------------------------------------------------------- | -------- |
-| `/`                        | The last thread shown, else the latest main, else "Nothing open"     | required |
+| `/`                        | The last tab shown, else a blank Live Playground thread              | required |
 | `/t/:threadId`             | That thread's tab: a main beside its canvas, or a child's lane in it | required |
 | `/lab`                     | The evaluation workbench: fixtures through the same validation       | required |
 | `/playground`              | Redirects to `/t/playground`, the Live Playground's thread           | required |
 | `/demo/weekly-brief`       | Redirects to `/t/demo-<script>` (`?script=`, else the brief)         | required |
 | `/demo/weekly-brief/t/:id` | Redirects to `/t/:id`                                                | required |
 | `/share.html`              | One shared card from the link's fragment (ADR-064)                   | public   |
+| `/verify-ui-tooling`       | The design tooling page: what `verify-ui-drift` is for (ADR-160)     | public   |
 | `/callback`                | Where WorkOS sends visitors back; the provider finishes sign-in      | public   |
 
 Any signed-in route takes `?scenario=` (below), and every link inside the app keeps it. The
@@ -32,7 +33,8 @@ title bar while one of them is on screen. Nothing of the Demo is kept; a reload 
 The app draws itself as a desktop window (ADR-094): rounded on the page's ground, full-bleed
 below 768px. The title bar runs its whole width: decorative traffic lights, the sidebar toggle,
 the open threads as tabs with "New thread", then the data marker (where threads are kept), the
-layout switch (Thread, Browser, Canvas), the bell and the account, which holds the theme. Below
+layout switch (Thread, Browser, Canvas), the bell and the account, which holds the title bar's look.
+Below
 it the sidebar (shadcn's `sidebar-16` pattern) opens to Kay, Documentation, Lab and the project
 tree, and collapses to a 56px rail of places. A project row folds its main threads, a main's
 count ("^ 2") folds its children, and the "+" starts a main in that project.
@@ -61,6 +63,11 @@ lanes and notifications), `empty`, `long` (twelve projects and tabs, long names,
 nine children, a 120-turn thread), `loading` (a start that never finishes), `failure` (a start
 that fails) and `thread-fails` (every open and send fails). An unknown name is refused with the
 list of the valid ones.
+
+A dev build can also seed the device itself, for the browser levers that need a thread with a
+card on a store that survives a reload: with `localStorage["kay.seed"] = "demo-store"` set
+before the page loads, the worker adds the Demo store and its `profit` thread ("Last week's
+sales", at `/t/profit`) beside the Live Playground. A production build ignores the key.
 
 "Required" applies only when the build has sign-in turned on (below).
 
@@ -103,8 +110,9 @@ pnpm --filter web build      # build/client, served by the gateway Worker as sta
 `catalog` cascade layer between Tailwind's preflight and its utilities, so the catalog keeps
 its element styles while a class on a shadcn primitive still wins (ADR-082). Where the catalog
 styles a bare `button` or `a`, the components layer puts preflight back for any element shadcn
-renders (it carries a `data-slot`), so a shadcn control shows only its own classes. The theme is
-the root's `data-theme`, set by `src/theme.ts` and booted from the prerendered shell.
+renders (it carries a `data-slot`), so a shadcn control shows only its own classes. The site is
+light only (ADR-161): nothing sets the root's `data-theme`, and the root declares
+`color-scheme: only light`.
 
 ## Prove it in a browser
 

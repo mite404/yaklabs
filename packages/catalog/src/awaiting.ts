@@ -47,6 +47,12 @@ export const awaitingSchema = z.strictObject({
 /** A validated question the agent is waiting on. */
 export type AwaitingInput = z.infer<typeof awaitingSchema>;
 
+/**
+ * How far an answer shown on the card has got, for a host that answers on the user's behalf (a
+ * scripted demo): the pointer over its tile, the tile selected, then Submit pressed.
+ */
+export type AnswerPhase = "hover" | "selected" | "pressed";
+
 /** The outcome of checking an agent's question: a card to show, or the error for the agent. */
 export type AwaitingResult =
   | { kind: "approved"; question: AwaitingInput }
@@ -79,4 +85,21 @@ export function rowForKey(
   if (key === "ArrowUp") return ((selected ?? rows) - 1 + rows) % rows;
   const digit = Number(key); // → NaN for anything but a digit key
   return digit >= 1 && digit <= rows ? digit - 1 : undefined;
+}
+
+/**
+ * Which tile a card shows hovered and which selected: the user's own choice (`chosen`), or,
+ * while a host gives an answer on the user's behalf, that answer's tile, hovered and then
+ * selected. An answer that is no branch's label leaves the user's choice as it is.
+ * @param labels The branches' labels, in the card's order.
+ */
+export function stagedRows(
+  labels: readonly string[],
+  staged: { text: string; phase: AnswerPhase } | undefined,
+  chosen: number | undefined,
+): { hovered: number | undefined; selected: number | undefined } {
+  const row = staged === undefined ? -1 : labels.indexOf(staged.text);
+  if (row === -1) return { hovered: undefined, selected: chosen };
+  if (staged?.phase === "hover") return { hovered: row, selected: chosen };
+  return { hovered: undefined, selected: row };
 }

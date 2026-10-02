@@ -3,6 +3,7 @@ import { resolveAwaiting } from "@yaklabs/catalog/awaiting";
 import { cancelReply, completeReply, type AgentMessage } from "@yaklabs/catalog/reply";
 import type { ThreadMessage } from "@yaklabs/catalog/thread";
 import { awaitingOf } from "@yaklabs/catalog/transcript";
+import { titleFor } from "./workspace";
 
 /** A thread's turns and the opening draft a dropped highlight left: what a reply rewrites. */
 export type Transcript = { messages: ThreadMessage[]; draft: string; updatedAt: string };
@@ -96,4 +97,15 @@ export function settleReply(turn: AgentMessage, stopped: boolean): AgentMessage 
 export function withAgentTurn(transcript: Transcript, turn: AgentMessage, at: string): Transcript {
   const saved: AgentMessage = { ...turn, id: nextId(transcript.messages, "a") };
   return { ...transcript, messages: [...transcript.messages, saved], updatedAt: at };
+}
+
+/**
+ * The title a thread takes from its first message (Ethan), so the sidebar tells one from the
+ * next: the message's first words, cut as a lane's header cuts them. Undefined once the thread
+ * has a user turn, for an event other than a typed message, and for a message with no words.
+ */
+export function firstAskTitle(messages: ThreadMessage[], event: AgentEvent): string | undefined {
+  const first = event.kind === "message" && !messages.some((message) => message.role === "user");
+  const title = first ? titleFor(event.text) : "";
+  return title === "" ? undefined : title;
 }

@@ -7,7 +7,8 @@ import {
   moveLane,
   newCardLaneId,
   quoteFor,
-  reopenLane,
+  childrenOf,
+  openChildLane,
   resizeLane,
   titleFor,
   type Lane,
@@ -18,7 +19,7 @@ import {
   type Workspace,
 } from "@yaklabs/runtime";
 import { useSidebar } from "@yaklabs/ui/components/sidebar";
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useEffectEvent, type ReactNode } from "react";
 import { inBackground, useRuntime } from "../runtime";
 import { arrangeFrom } from "./arrange";
 import { Canvas, type LaneView } from "./canvas";
@@ -131,8 +132,13 @@ export function MainCanvas({
   const threads = new Map(workspace.threads.map((thread) => [thread.id, thread] as const));
   // Each visit to a child's address opens its lane, a second click on a row the address already
   // names included: that click changes the visit and nothing else.
+  // The sidebar's order as it is when the visit lands, read without making each workspace change
+  // a visit: closing the focused lane must not open it again.
+  const childOrder = useEffectEvent(() => childrenOf(workspace, main).map((child) => child.id));
   useEffect(() => {
-    if (focus !== null) arrangeFrom(runtime, main, (current) => reopenLane(current, focus));
+    if (focus === null) return;
+    const order = childOrder(); // → the main's children, top to bottom as the sidebar lists them
+    arrangeFrom(runtime, main, (current) => openChildLane(current, focus, order));
     // oxlint-disable-next-line react/exhaustive-effect-dependencies -- `visit` is what runs it again
   }, [runtime, main, focus, visit]);
   const focused = lanes.find((lane) => lane.kind === "thread" && lane.threadId === focus);

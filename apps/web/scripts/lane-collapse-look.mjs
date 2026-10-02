@@ -1,7 +1,7 @@
-// What the collapsible lane checks (ADR-133) measure with: a themed app in a context of its own,
+// What the collapsible lane checks (ADR-133) measure with: the app in a context of its own,
 // a collapsed lane's look, and a drag by its strip.
-import { canvasOf } from "./canvas-checks.mjs";
-import { BASE, shotPath } from "./lever.mjs";
+import { canvasOf, openCanvas } from "./canvas-checks.mjs";
+import { shotPath } from "./lever.mjs";
 
 // Long enough to outgrow a strip down a 900px window, so its end has to give way to an ellipsis.
 export const LONG_TITLE =
@@ -20,22 +20,11 @@ export const NO_INK = { min: 255, max: 0, mean: 0 };
 export const laneNamed = (page, title) =>
   canvasOf(page).locator(`:scope > article[aria-label="${title.replaceAll('"', '\\"')}"]`);
 
-// The app in `theme` in a fresh context, ready once a thread panel is on screen. The context is
-// the page's own, so a reload keeps what the device stored and nothing else sees it.
-export async function openThemed(browser, theme = "light") {
-  const context = await browser.newContext({
-    viewport: { width: 1440, height: 900 },
-    reducedMotion: "reduce",
-  });
-  const page = await context.newPage();
-  const errors = [];
-  page.on("pageerror", (error) => errors.push(String(error)));
-  await page.addInitScript((chosen) => {
-    localStorage.setItem("theme", chosen);
-  }, theme);
-  await page.goto(`${BASE}/`, { waitUntil: "load" });
-  await page.locator(".thread-panel").first().waitFor({ timeout: 20_000 });
-  return { page, errors, close: () => context.close() };
+// The app in a fresh context with the Live Playground's canvas on screen. The context is the
+// page's own, so a reload keeps what the device stored and nothing else sees it.
+export async function openThemed(browser) {
+  const page = await openCanvas(browser);
+  return { page, close: () => page.context().close() };
 }
 
 /**

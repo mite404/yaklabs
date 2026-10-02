@@ -10,7 +10,7 @@ import { BASE, shotPath, sidebarDrawn } from "./lever.mjs";
 
 /** The looks that have their assets, in the switch's order; Bonsai is listed and waits. */
 export const LOOKS = ["landscape", "abstract", "vitruvian"];
-const THEMES = ["light", "dark"];
+const THEMES = ["light"];
 // WCAG AA for body text: the words against the worst pixel of the painting behind them.
 const AA = 4.5;
 
@@ -23,21 +23,14 @@ const layoutButton = (page, name) =>
 const labelOf = (look) => look[0].toUpperCase() + look.slice(1);
 
 /**
- * The demo at a desktop size in a fresh context. `seen` says a welcome was on screen in an
- * earlier visit (`kay.splash.seen`), `retired` is what the retired `kay.splash` key holds before
- * the app boots, `query` is added to the address, `motion` is the page's reduced-motion
+ * The demo at a desktop size in a fresh context. `turn` is where the splash cycle stands before
+ * the app boots (`kay.splash.turn`, null for a first visit), `retired` is what the retired
+ * `kay.splash` key holds, `query` is added to the address, `motion` is the page's reduced-motion
  * preference, and `prepare` gets the context before the page opens.
  */
 export async function openDemo(
   browser,
-  {
-    theme = "light",
-    query = "",
-    seen = false,
-    retired = null,
-    motion = "reduce",
-    prepare = async () => {},
-  } = {},
+  { query = "", turn = null, retired = null, motion = "reduce", prepare = async () => {} } = {},
 ) {
   const context = await browser.newContext({
     viewport: { width: 1440, height: 900 },
@@ -45,20 +38,19 @@ export async function openDemo(
   });
   await prepare(context);
   await context.addInitScript(
-    ([chosen, before, look]) => {
+    ([before, look]) => {
       // Runs in every frame, and a sandboxed one has no storage to write to. Only before the
       // first load: a reload must see what the app itself wrote.
       try {
         if (sessionStorage.getItem("lever.seeded") !== null) return;
         sessionStorage.setItem("lever.seeded", "1");
-        localStorage.setItem("theme", chosen);
-        if (before) localStorage.setItem("kay.splash.seen", "1");
+        if (before !== null) localStorage.setItem("kay.splash.turn", String(before));
         if (look !== null) localStorage.setItem("kay.splash", look);
       } catch {
         // Nothing to seed there.
       }
     },
-    [theme, seen, retired],
+    [turn, retired],
   );
   const errors = [];
   context.on("weberror", (failure) => errors.push(String(failure.error())));
@@ -308,7 +300,7 @@ export const welcomeChecks = {
 
   // W2: a first visit opens on the abstract painting; each available look sets <html
   // data-splash>, draws its own painting or sheet, changes the picture and labels the button;
-  // the next visit draws landscape or Vitruvian, whatever the switch picked.
+  // the next visit opens on landscape, the cycle's next look, whatever the switch picked.
   async W2(browser) {
     const { page, context, errors } = await openDemo(browser);
     await startThread(page);
@@ -339,28 +331,29 @@ export const welcomeChecks = {
     const returns = Buffer.compare(a, again) === 0;
     await pickLook(page, "vitruvian");
     await page.screenshot({ path: shotPath("W2-vitruvian") });
-    const seen = await page.evaluate(() => localStorage.getItem("kay.splash.seen"));
+    const turned = await page.evaluate(() => localStorage.getItem("kay.splash.turn"));
     await page.reload({ waitUntil: "load" });
     await sidebarDrawn(page);
     await startThread(page);
     const drawn = await paintOf(page);
     await context.close();
-    const drew = drawn.attr === "landscape" || drawn.attr === "vitruvian";
-    ok &&= differ && returns && seen === "1" && drew;
+    ok &&= differ && returns && turned === "1" && drawn.attr === "landscape";
     ok &&= errors.length === 0;
     return {
       ok,
-      detail: `${notes.join("; ")}; pictures differ ${differ}, abstract returns ${returns}; seen ${seen}; after a reload ${drawn.attr}; errors ${JSON.stringify(errors).slice(0, 300)}`,
+      detail: `${notes.join("; ")}; pictures differ ${differ}, abstract returns ${returns}; turn ${turned}; after a reload ${drawn.attr}; errors ${JSON.stringify(errors).slice(0, 300)}`,
     };
   },
 
-  // W3: Bonsai is listed and disabled; an unknown or unavailable look in the address falls back
-  // to the visit's own look (abstract first, then landscape or Vitruvian), a look the address
-  // names wins, and a look the switch kept before the draw no longer stands in for it.
+  // W3: Bonsai is listed and disabled, after the cycle's looks in its order; an unknown or
+  // unavailable look in the address falls back to where the cycle stands (abstract, landscape,
+  // Vitruvian), a look the address names wins, and a look the switch kept in an earlier build no
+  // longer stands in for the cycle.
   async W3(browser) {
     const { page, context } = await openDemo(browser);
     await startThread(page);
     await switchOf(page).click();
+    await menuOf(page).waitFor();
     const bonsai = page.getByRole("menuitemradio", { name: /^Bonsai/ });
     const listed = await page.getByRole("menuitemradio").allInnerTexts();
     const disabled = (await bonsai.getAttribute("aria-disabled")) === "true";
@@ -368,27 +361,25 @@ export const welcomeChecks = {
     await bonsai.click({ force: true });
     const after = await paintOf(page);
     await context.close();
-    const DRAWN = "landscape|vitruvian";
     const cases = [
-      { query: "splash=bonsai", seen: false, retired: null, want: "abstract" },
-      { query: "splash=nonsense", seen: false, retired: null, want: "abstract" },
-      { query: "splash=nonsense", seen: true, retired: null, want: DRAWN },
-      { query: "", seen: true, retired: "abstract", want: DRAWN },
-      { query: "splash=vitruvian", seen: false, retired: null, want: "vitruvian" },
-      { query: "splash=abstract", seen: true, retired: null, want: "abstract" },
+      { query: "splash=bonsai", turn: null, retired: null, want: "abstract" },
+      { query: "splash=nonsense", turn: 1, retired: null, want: "landscape" },
+      { query: "", turn: 2, retired: "abstract", want: "vitruvian" },
+      { query: "splash=vitruvian", turn: 0, retired: null, want: "vitruvian" },
+      { query: "splash=abstract", turn: 2, retired: null, want: "abstract" },
     ];
     const got = [];
-    for (const { query, seen, retired } of cases) {
-      const other = await openDemo(browser, { query, seen, retired });
+    for (const { query, turn, retired } of cases) {
+      const other = await openDemo(browser, { query, turn, retired });
       got.push(await other.page.evaluate(() => document.documentElement.dataset.splash));
       await other.context.close();
     }
-    const fallbacks = cases.every((each, i) => each.want.split("|").includes(got[i]));
+    const fallbacks = cases.every((each, i) => got[i] === each.want);
     return {
       ok:
         listed.length === 4 &&
         listed.map((text) => text.replace(/\s*Coming soon/, "")).join("|") ===
-          "Landscape|Abstract|Vitruvian|Bonsai" &&
+          "Abstract|Landscape|Vitruvian|Bonsai" &&
         disabled &&
         hint &&
         after.attr === "abstract" &&

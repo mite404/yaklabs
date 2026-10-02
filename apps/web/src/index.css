@@ -20,11 +20,6 @@
   outline: 2px solid var(--focus);
   outline-offset: 2px;
 }
-/* shadcn's ghost button hovers at half strength in dark mode (dark:hover:bg-muted/50). The bar
-   is the same in either theme (ADR-110), so its hover is the full fill there too. */
-:root[data-theme="dark"] .chrome-surface .dark\:hover\:bg-muted\/50:hover {
-  background-color: var(--muted);
-}
 /* The empty canvas's raised surface (ADR-136) draws a solid edge; the open space's own
    `border-dashed` utility would win over a layered rule, so this one is unlayered too. */
 .open-space:has(> .splash) {
@@ -92,6 +87,12 @@
   --panel-pin: 250ms;
   /* The rows' fade as the panel closes: at 0 by the curve's 75% mark, 27% of the peek's 220ms. */
   --rows-leave: 60ms;
+}
+/* The site is light only (ADR-161): the catalog's dark tokens wait behind data-theme="dark",
+   which nothing here sets, and `only light` keeps the browser's own surfaces (scrollbars, form
+   fields) light and stops a browser that darkens pages itself from doing so. */
+:root {
+  color-scheme: only light;
 }
 /* The pin and the unpin by the toggle: the gap that pushes the workspace and the panel sliding
    behind the rail move on one clock with the title bar's lead that carries the tabs
@@ -465,9 +466,7 @@ html[data-dragging="sidebar"] * {
      landscape or the abstract strokes by <html data-splash> (splash.ts), under the same paper
      wash and the same clearing of plain paper behind the words, fading out in every direction,
      so the two read as one treatment with a different picture. A third look, Vitruvian, draws
-     the empty canvas's sheet instead (below). The greeting names the morning in the light theme
-     and the evening in the dark one, both in the DOM, one shown. The scroll area drops its
-     gutters for it (thread.css, data-empty), and the welcome fills it to centre the words. */
+     the empty canvas's sheet instead (below). The scroll area drops its gutters for it (thread.css, data-empty), and the welcome fills it to centre the words. */
   .welcome {
     --clearing: var(--paper);
     position: relative;
@@ -489,10 +488,6 @@ html[data-dragging="sidebar"] * {
     background:
       linear-gradient(var(--splash-wash), var(--splash-wash)),
       url("/splash/abstract.webp") center / cover no-repeat;
-  }
-  html[data-theme="dark"] .welcome [data-part="morning"],
-  html:not([data-theme="dark"]) .welcome [data-part="evening"] {
-    display: none;
   }
   .welcome-art::after {
     content: "";
@@ -524,6 +519,124 @@ html[data-dragging="sidebar"] * {
     border-radius: 1.5rem;
     background: var(--clearing);
     box-shadow: 0 0 1.5rem 0.75rem var(--clearing);
+  }
+
+  /* The design tooling seal (ADR-160, design-tooling-seal.tsx): one drawing, the medal with an
+     ink ribbon across it that runs past it on either side, so medal, ribbon and words always
+     scale as one piece (Ethan). The ribbon is the site's ink carrying the paper's words,
+     notched at both ends like a medal's, and fills with moss over 150ms on hover, as the
+     outline button does (design pillars, rule 8). A key arriving on the link sees the site's
+     own ring. The ring's words on the gold take the brown ink of the orange pill (5.5:1). The
+     link sets its own width, so a flex column does not stretch it across. */
+  .seal-link {
+    position: relative;
+    display: inline-block;
+    width: max-content;
+    line-height: 0;
+    border-radius: 4px; /* the focus ring follows the site's corners */
+    color: inherit;
+    text-decoration: none;
+  }
+  .seal-words {
+    font-family: var(--font-text);
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    fill: var(--on-seal);
+  }
+  .seal-ribbon polygon,
+  .seal-ribbon-words {
+    transition: fill 150ms ease;
+  }
+  .seal-ribbon polygon {
+    fill: var(--ink);
+  }
+  .seal-ribbon-words {
+    fill: var(--on-ink);
+  }
+  .seal-link:hover .seal-ribbon polygon {
+    fill: var(--moss);
+  }
+  .seal-link:hover .seal-ribbon-words {
+    fill: var(--on-accent);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .seal-ribbon polygon,
+    .seal-ribbon-words {
+      transition: none;
+    }
+  }
+  /* On the welcome the seal is pinned above the greeting at the column's right, aligned
+     optically to Ethan's mockup: its ribbon's far tip in line with the projects' "+" as the eye
+     sees it, at the glyph's ink 8px inside the column (a 12px icon centred in its 24px button,
+     its bar reaching 9.5px with a half-pixel cap) rather than at the button's unseen edge, and
+     the ribbon's lowest corner 4px below the mark's circle, a hair under its baseline. Tilted 25deg with its left side up, as a medal sits on a lapel,
+     and at 73.5% of its drawn size, 5% up from 70% so the ring's smaller words read (Ethan).
+     The place is worked out from the drawing, not nudged by eye, so it holds if the tilt or the
+     size changes: the ribbon's right corners sit 115px right of the 230 by 112 link's centre and
+     13.5px either side of it, so tilted and scaled the top corner reaches
+     (115cos + 13.5sin) * scale to the right and the bottom one (115sin + 13.5cos) * scale down.
+     First in the column's DOM, since it is first on screen. On a narrow pane it has no room
+     beside the greeting, so it stays in the column's flow.
+     It says it can be pressed two ways (Ethan): a small hop every 4s, 6px up and back in 480ms
+     with a 2px second hop, then still for the rest of the cycle; and under the pointer or a
+     keyboard's focus it grows 10% over the button's 150ms ease, the hop held while it does.
+     The hop rides `transform`, under the tilt, so the seal hops along its own lean; the size
+     is its own `scale`, so the two never fight. Reduced motion keeps it still and the same
+     size (design pillars, rule 24). */
+  .welcome-seal {
+    --seal-tilt: 25deg;
+    --seal-size: 0.735;
+    --seal-mark: 2.5rem; /* the mark's circle, size-10 in welcome.tsx */
+    --seal-inset: 8px; /* the "+" glyph's ink inside the column's edge */
+    rotate: var(--seal-tilt);
+    scale: var(--seal-size);
+    transition: scale 150ms ease;
+    animation: seal-hop 4s ease-in-out infinite;
+  }
+  .welcome-seal:hover,
+  .welcome-seal:focus-visible {
+    scale: 0.8085;
+    animation-play-state: paused;
+  }
+  @keyframes seal-hop {
+    0%,
+    12%,
+    100% {
+      transform: translateY(0);
+    }
+    6% {
+      transform: translateY(-6px);
+    }
+    16% {
+      transform: translateY(-2px);
+    }
+    20% {
+      transform: translateY(0);
+    }
+  }
+  @media (min-width: 641px) {
+    .welcome-seal {
+      position: absolute;
+      top: calc(
+        var(--seal-mark) + 4px - (115px * sin(var(--seal-tilt)) + 13.5px * cos(var(--seal-tilt))) *
+          var(--seal-size)
+      );
+      right: calc(
+        (115px * cos(var(--seal-tilt)) + 13.5px * sin(var(--seal-tilt))) * var(--seal-size) -
+          115px + var(--seal-inset)
+      );
+      translate: 0 -50%;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .welcome-seal {
+      animation: none;
+      transition: none;
+    }
+    .welcome-seal:hover,
+    .welcome-seal:focus-visible {
+      scale: var(--seal-size);
+    }
   }
 
   /* The canvas is a dotted field (ADR-089): open ground that invites something to be put down. */
@@ -611,15 +724,42 @@ html[data-dragging="sidebar"] * {
       box-shadow: 0 0 0 3px transparent;
     }
   }
+  /* A show's Play says where to start while the show is not playing (ShowBar.tsx, Ethan: "on
+     loop so its blinking when not in play state"): the olive flash a focused lane gives, round
+     the button's own corners, then a beat of rest, every 2s. Under reduced motion the ring holds
+     still instead. */
+  [data-slot="demo-controls"] [data-callout] {
+    animation: play-callout 2s ease-out infinite;
+  }
+  @keyframes play-callout {
+    0% {
+      box-shadow: 0 0 0 3px var(--olive);
+    }
+    60%,
+    100% {
+      box-shadow: 0 0 0 3px transparent;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    [data-slot="demo-controls"] [data-callout] {
+      animation: none;
+      box-shadow: 0 0 0 3px var(--olive);
+    }
+  }
+  /* Which demo is on, in the title bar's own green (Ethan). */
+  .demo-title {
+    color: var(--chrome);
+  }
 
   /* A divider that drags shows a hint of a line while the pointer is on it (ADR-089): full ink
-     for 20px either side of the pointer's height, fading to nothing by 50px, so the whole length
-     reads as something to take hold of without a line being drawn along all of it. The divider
-     sets --hint-y from the pointer (divider.ts); until it has, the line centres on the divider. */
+     for 40px either side of the pointer's height, fading to nothing by 70px (Ethan: "longer in
+     both directions by another 20px"), so the whole length reads as something to take hold of
+     without a line being drawn along all of it. The divider sets --hint-y from the pointer
+     (divider.ts); until it has, the line centres on the divider. */
   .drag-hint {
     --hint-y: 50%;
-    --hint-hold: 20px;
-    --hint-reach: 50px;
+    --hint-hold: 40px;
+    --hint-reach: 70px;
   }
   .drag-hint::before {
     content: "";
@@ -645,66 +785,74 @@ html[data-dragging="sidebar"] * {
     opacity: 1;
   }
 
-  /* A lane on its way to another slot (ADR-089): a hand over its title bar says it can be
-     taken; once lifted, a copy of it floats under the pointer with a shadow, the lane itself
-     waits dimmed in the slot it would take, and the lanes it passes slide aside. On a phone
-     the row is view-only (ADR-122), so every grip affordance below is scoped to a row that
-     still reorders: it never shows there, sticky hover after a tap included. */
-  [data-reorder="true"] .lane :is(.thread-header, .card-heading) {
-    position: relative;
-    cursor: grab;
-  }
+  /* A lane on its way to another slot (ADR-089): a hand over the grip on its title bar says it
+     can be taken; once lifted, a copy of it floats under the pointer with a shadow, the lane
+     itself waits dimmed in the slot it would take, and the lanes it passes slide aside. On a
+     phone the row is view-only (ADR-122), so every grip affordance below is scoped to a row
+     that still reorders: it never shows there, sticky hover after a tap included. The bar
+     itself keeps the ordinary pointer, a card lane's too (the catalog gives a carrying header
+     the hand), so the hand never shows on the way to its collapse, "⋯", Share or Close. */
+  [data-reorder="true"] .lane :is(.thread-header, .card-heading),
+  [data-reorder="true"] .lane .card-heading[data-carry]:active,
   [data-reorder="true"] .lane .card-heading-text {
     cursor: default;
   }
-  /* The grip: six dots that fade up in the middle of the bar while the pointer is on the part
-     of it that drags, and stay away while it is on the title, which renames. Beneath the dots a
-     veil in the bar's own paper fades out the stretch of title they sit on, so the whole title
-     shows at rest and only yields its middle to the grip on hover. The veil is the grip's hit
-     area too: a press on it lands on the bar, never on the title under it. */
-  [data-reorder="true"] .lane :is(.thread-header, .card-heading)::before,
-  [data-reorder="true"] .lane :is(.thread-header, .card-heading)::after {
+  :is([data-reorder="true"] .lane, .lane-ghost) :is(.thread-header, .card-heading) {
+    position: relative;
+  }
+  /* The grip: six dots that fade up in the middle of the bar only while the pointer is within
+     its circle, where the hand shows and a press takes the lane (lane-reorder.ts marks the bar
+     data-grip-near), so the dots never wake at the bar's edges or on the title (Ethan).
+     Beneath the dots a veil in the bar's own paper fades out the stretch of title they sit on,
+     so the whole title shows at rest and only yields its middle to the grip: 86px, solid for
+     its middle 47px, so the faded letters stop 16px either side of the 15px dots (Ethan). The
+     dots sit on the collapse's line, the title's capitals, 2px above the bar's middle, rather
+     than down on its baseline. The grip is the only place that takes the lane (Ethan): a 50px
+     circle about the dots, 25px every way from their centre (grip-zone.ts holds the same
+     radius for the press and the mark), shows the hand and takes the press; the veil only
+     paints. The floating copy of a lane in flight (lane-reorder.ts) keeps the grip up the
+     whole way, so the hand still holds what it took. */
+  :is([data-reorder="true"] .lane, .lane-ghost) :is(.thread-header, .card-heading)::before,
+  :is([data-reorder="true"] .lane, .lane-ghost) :is(.thread-header, .card-heading)::after {
     content: "";
     position: absolute;
     opacity: 0;
     transition: opacity 150ms ease;
   }
-  [data-reorder="true"] .lane :is(.thread-header, .card-heading)::before {
+  :is([data-reorder="true"] .lane, .lane-ghost) :is(.thread-header, .card-heading)::before {
     inset: 0 auto 0 50%;
-    width: 46px;
+    width: 86px;
     transform: translateX(-50%);
     background: linear-gradient(
       to right,
       transparent,
-      var(--paper) 30%,
-      var(--paper) 70%,
+      var(--paper) calc(50% - 23.5px),
+      var(--paper) calc(50% + 23.5px),
       transparent
     );
-  }
-  [data-reorder="true"] .lane :is(.thread-header, .card-heading)::after {
-    top: 50%;
-    left: 50%;
-    width: 15px;
-    height: 10px;
-    transform: translate(-50%, -50%);
-    background: radial-gradient(circle, var(--soft-ink) 1.25px, transparent 1.75px) 0 0 / 5px 5px;
     pointer-events: none;
   }
-  [data-reorder="true"] .lane :is(.thread-header, .card-heading):hover::before,
-  [data-reorder="true"] .lane :is(.thread-header, .card-heading):hover::after {
-    opacity: 1;
+  :is([data-reorder="true"] .lane, .lane-ghost) :is(.thread-header, .card-heading)::after {
+    top: calc(50% - 2px);
+    left: 50%;
+    box-sizing: border-box;
+    width: 50px;
+    height: 50px;
+    padding: 20px 17.5px; /* the 15px by 10px of dots, centred in the circle */
+    /* A clip, not a radius: a radius also rounds the dots' own box (25px less the padding) and
+       shaves the corner dots, where a clip cuts only the circle, for the eye and the hit alike. */
+    clip-path: circle(50%);
+    transform: translate(-50%, -50%);
+    background: radial-gradient(circle, var(--soft-ink) 1.25px, transparent 1.75px) 0 0 / 5px 5px;
+    background-origin: content-box;
+    background-clip: content-box;
+    cursor: grab;
   }
-  [data-reorder="true"]
-    .lane
-    :is(.thread-header, .card-heading):has(
-      :is(h2, .card-heading-text, .thread-rename):hover
-    )::before,
-  [data-reorder="true"]
-    .lane
-    :is(.thread-header, .card-heading):has(
-      :is(h2, .card-heading-text, .thread-rename):hover
-    )::after {
-    opacity: 0;
+  [data-reorder="true"] .lane :is(.thread-header, .card-heading)[data-grip-near]::before,
+  [data-reorder="true"] .lane :is(.thread-header, .card-heading)[data-grip-near]::after,
+  .lane.lane-ghost :is(.thread-header, .card-heading)::before,
+  .lane.lane-ghost :is(.thread-header, .card-heading)::after {
+    opacity: 1;
   }
   /* The title hugs its text so the whole thing shows at rest; it only clips with an ellipsis
      once it outgrows the bar itself (the rename button's own clip is at the top of this file). */

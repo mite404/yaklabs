@@ -2,12 +2,12 @@ import {
   applyMark,
   insertLane,
   lanesOf,
-  reopenLane,
+  threadLane,
   type NewItem,
   type Runtime,
   type Workspace,
 } from "@yaklabs/runtime";
-import { renamed, shared, summary, withLanes, withNewThread, withThread } from "./edits";
+import { notified, renamed, shared, summary, withLanes, withNewThread, withThread } from "./edits";
 import { ids } from "./ids";
 import type { Stage } from "./stage";
 
@@ -37,7 +37,7 @@ function createThread(stage: Stage, item: Exclude<NewItem, { kind: "project" }>)
     throw new Error(`"${item.parentId}" is not a main thread, so it takes no children`);
   const place = { kind: "child", parentId: item.parentId } as const;
   const made = summary({ id, title: item.title, place, draft: item.draft, at });
-  const [lane] = reopenLane([], id); // → the child's lane, the only one
+  const lane = threadLane(id); // → the child's lane, where the reader put it
   const lanes = (ws: Workspace) => insertLane(lanesOf(ws, item.parentId), item.at, lane);
   stage.commit((ws) => withLanes(item.parentId, lanes(ws))(withNewThread(made)(ws)));
   return id;
@@ -83,10 +83,16 @@ export function menuVerbs(
   stage: Stage,
 ): Pick<Runtime, "mark" | "delete" | "restore" | "share" | "unshare"> {
   return {
-    mark: (id, change) =>
+    mark: (id, change, note) =>
       promised(() => {
-        const marked = applyMark(stage.thread(id), change, stage.stamp()); // throws on a past snooze
-        stage.commit(withThread(id, () => marked));
+        const at = stage.stamp();
+        const marked = applyMark(stage.thread(id), change, at); // throws on a past snooze
+        const onThread = withThread(id, () => marked);
+        stage.commit(
+          note === undefined
+            ? onThread
+            : (ws) => notified({ ...note, threadId: id, at })(onThread(ws)),
+        );
       }),
     delete: (id) =>
       promised(() => {

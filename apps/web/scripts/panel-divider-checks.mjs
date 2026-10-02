@@ -105,7 +105,7 @@ export const panelDividerChecks = {
   // through an unpin's slide until the panel is home; an unpin by a key, with no slide, takes it
   // away on the next frame.
   async P35(browser) {
-    const results = [await dividerIn(browser, "light"), await dividerIn(browser, "dark")];
+    const results = [await dividerIn(browser, "light")];
     return {
       ok: results.every((r) => r.ok),
       detail: results.map((r) => r.note).join("; "),

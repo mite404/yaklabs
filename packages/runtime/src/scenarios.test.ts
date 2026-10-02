@@ -2,8 +2,9 @@ import { describe, expect, it, onTestFinished } from "vitest";
 import { z } from "zod";
 import type { Opened } from "./agentLoop";
 import { scenarioNames, type ScenarioName } from "./protocol";
-import { openScenario } from "./scenarios";
-import { seedThread } from "./store";
+import { openScenario, seedDemoStore } from "./scenarios";
+import { openSqliteStore } from "./sqliteStore";
+import { ensureStarter, seedThread } from "./store";
 import { lanesOf, sidebarTree, threadIdSchema, type ThreadId, type Workspace } from "./workspace";
 
 // A scenario, opened fresh and closed when the test ends.
@@ -110,5 +111,27 @@ describe("the long and empty scenarios", () => {
       notifications: [],
       shares: [],
     });
+  });
+});
+
+describe("seedDemoStore", () => {
+  it("adds the Demo store's profit thread beside the starter, once", async () => {
+    const store = await openSqliteStore({ kind: "memory" });
+    onTestFinished(() => {
+      store.close();
+    });
+    const at = "2026-09-26T10:00:00.000Z";
+    ensureStarter(store, at);
+    seedDemoStore(store, at);
+    const once = store.workspace();
+    seedDemoStore(store, "2026-09-26T10:05:00.000Z");
+    expect(store.workspace()).toEqual(once);
+    expect(outline(once)).toEqual([
+      { "Demo store": [["Last week's sales"]] },
+      { "Live Playground": [["New thread"]] },
+    ]);
+    const profit = threadIdSchema.parse("profit");
+    expect(lanesOf(once, profit)).toEqual([]);
+    expect(store.transcript(profit)?.messages).toEqual(seedThread("profit").messages);
   });
 });

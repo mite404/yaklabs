@@ -24,8 +24,9 @@ type Hover = {
   leave: (id: ThreadId) => void;
 };
 
-// Which tab's title is open as a field (a double click on it, or Rename in its menu). Only one
-// is at a time, and it is held here because the tab and its "⋯" sit in different layers.
+// Which tab's title is open as a field (a click on its words while it is in view, or Rename in
+// its menu). Only one is at a time, and it is held here because the tab and its "⋯" sit in
+// different layers.
 type Renaming = { id: ThreadId | null; set: (id: ThreadId | null) => void };
 
 function tabId(main: ThreadId): string {
@@ -160,16 +161,27 @@ function useRefocusAfterRename(id: ThreadId, editing: boolean): (refocus: boolea
   };
 }
 
-// The tab itself, which chooses its thread. Delete closes it (APG), and so does a middle click;
-// a double click opens its title as a field.
+// Whether a thread is the main one in view.
+const inView = (shell: Shell, id: ThreadId): boolean => shell.active?.main === id;
+
+// Whether a click landed on a tab's title words rather than its glyph or padding.
+const onTitle = (target: EventTarget): boolean =>
+  target instanceof Element && target.closest("[data-tab-title]") !== null;
+
+// The tab itself, which chooses its thread. Delete closes it (APG), and so does a middle click.
+// On the tab in view, a click on its title's words opens them as a field, the text cursor
+// saying so (Ethan); elsewhere on it, or on a tab not in view, a click chooses the tab, so a
+// second click on another tab's title, once the first has chosen it, renames it.
 function TabButton({
   thread,
+  active,
   hover,
   icon,
   onRename,
   onClose,
 }: {
   thread: ThreadSummary;
+  active: boolean;
   hover: Hover;
   icon: ReactNode;
   onRename: () => void;
@@ -181,26 +193,30 @@ function TabButton({
       id={tabId(thread.id)}
       aria-controls={panelId(thread.id)}
       data-hovered={hover.hovered === thread.id || undefined}
-      className="tab h-[30px] w-full min-w-0 flex-none justify-start gap-2 rounded-[var(--radius)] bg-transparent px-2.5 text-xs font-normal text-soft-ink data-hovered:pr-7 data-hovered:text-ink data-hovered:not-data-active:bg-paper-deep data-active:bg-[var(--chrome-pill)] data-active:pr-13 data-active:text-ink dark:text-soft-ink dark:data-hovered:text-ink dark:data-active:border-transparent dark:data-active:bg-[var(--chrome-pill)] dark:data-active:text-ink"
+      className="tab h-[30px] w-full min-w-0 flex-none justify-start gap-2 rounded-[var(--radius)] bg-transparent px-2.5 text-xs font-normal text-soft-ink data-hovered:pr-7 data-hovered:text-ink data-hovered:not-data-active:bg-paper-deep data-active:bg-[var(--chrome-pill)] data-active:pr-13 data-active:text-ink"
       {...hover.handlers(thread.id)}
-      onDoubleClick={onRename}
       onAuxClick={(event) => {
         if (event.button === 1) onClose(event.currentTarget);
       }}
       onKeyDown={(event) => {
         if (event.key === "Delete" || event.key === "Backspace") onClose(event.currentTarget);
       }}
+      onClick={(event) => {
+        if (active && onTitle(event.target)) onRename();
+      }}
     >
       {icon}
-      <span className="truncate">{thread.title}</span>
+      <span data-tab-title className={active ? "cursor-text truncate" : "truncate"}>
+        {thread.title}
+      </span>
     </TabsTrigger>
   );
 }
 
 // One open thread: its layout's glyph and title (APG: Delete closes a focused tab, and a
 // middle click closes any). On the green bar a tab is clear at rest, fills while hovered, and the
-// active one is the cream pill (ADR-110). A double click on it opens the title as a field, in
-// place of the tab and inside the same box.
+// active one is the cream pill (ADR-110). A click on the active one's words opens the title as a
+// field, in place of the tab and inside the same box.
 function Tab({ thread, shell, hover, renaming, plus }: TabProps) {
   const { Icon } = LAYOUTS[viewOf(shell.doc, thread.id).pane];
   const { leave } = hover;
@@ -218,10 +234,11 @@ function Tab({ thread, shell, hover, renaming, plus }: TabProps) {
   const close = (control: Element) => {
     closeFrom(shell, thread.id, control, plus);
   };
+  const active = inView(shell, thread.id);
   return (
     <div
       role="presentation"
-      data-active={shell.active?.main === thread.id || undefined}
+      data-active={active || undefined}
       className={`chrome-pill flex ${TAB_BOX}`}
     >
       {editing ? (
@@ -237,6 +254,7 @@ function Tab({ thread, shell, hover, renaming, plus }: TabProps) {
       ) : (
         <TabButton
           thread={thread}
+          active={active}
           hover={hover}
           icon={icon}
           onRename={() => {
@@ -291,7 +309,7 @@ function TabMenu({ thread, shell, hover, renaming }: TabProps) {
 // the pointer is on the tab. It is for the pointer; the keyboard closes a tab with Delete.
 function CloseSlot(props: TabProps) {
   const { thread, shell, hover, plus } = props;
-  const active = shell.active?.main === thread.id;
+  const active = inView(shell, thread.id);
   return (
     <div data-active={active || undefined} className={`chrome-pill group/slot relative ${TAB_BOX}`}>
       <TabMenu {...props} />

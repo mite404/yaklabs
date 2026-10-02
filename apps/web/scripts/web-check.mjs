@@ -10,7 +10,8 @@ import { arg, chromium, ROOT } from "./harness.mjs";
 import { railOf, RAIL_PLACES } from "./rail-places.mjs";
 
 const BASE = arg("--base", "http://127.0.0.1:5173");
-// The gap between lanes: one step of the canvas's dot grid (index.css --canvas-grid).
+// The gap between lanes, and an arrow key's resize: one step of the canvas's dot grid
+// (index.css --canvas-grid, lane-separator.tsx).
 const LANE_GAP_PX = 18;
 const OUT = arg(
   "--out",
@@ -68,17 +69,17 @@ async function carryTo(from, to) {
 // The main threads a tab's sidebar lists, top to bottom.
 const mainTitles = (tab) => tab.locator('[data-thread="main"]').allTextContents();
 
-// The theme lives in the account menu, at the sidebar's foot.
-async function chooseTheme(name) {
-  await page.getByRole("button", { name: "Account" }).click();
-  await page.getByRole("menuitemradio", { name }).click();
-  await page.keyboard.press("Escape");
-}
-
 // A page of its own at `address` (a mock scenario's, ADR-096), with its console errors counted
 // among the rest, once a thread is on screen.
-async function pageAt(address) {
+// A fresh page at `address`, ready once a thread shows; `seed` asks the dev build to seed its
+// device first, as the run's own page is.
+async function pageAt(address, { seed } = {}) {
   const opened = await browser.newPage({ viewport: { width: 1280, height: 900 } });
+  if (seed !== undefined) {
+    await opened.addInitScript((name) => {
+      localStorage.setItem("kay.seed", name);
+    }, seed);
+  }
   opened.on("console", (message) => {
     if (message.type() === "error") errors.push(message.text());
   });
@@ -209,8 +210,14 @@ const menuOnScreen = (own, width, height) =>
     [width, height],
   );
 
+// The dev build seeds this page's device with the Demo store's profit thread, which every device
+// held before Home opened on the Live Playground (ADR-159): the run starts there.
+await page.addInitScript(() => {
+  localStorage.setItem("kay.seed", "demo-store");
+});
+
 try {
-  await page.goto(`${BASE}/`, { waitUntil: "load" });
+  await page.goto(`${BASE}/t/profit`, { waitUntil: "load" });
   const title = page.getByRole("heading", { name: "Last week's profit by day" });
   await title.waitFor({ timeout: 15_000 });
   await shot("thread");
@@ -292,18 +299,18 @@ try {
       };
     });
   const light = await surface();
-  await chooseTheme("Dark");
-  await page.waitForFunction(() => document.documentElement.dataset.theme === "dark");
-  await page.waitForTimeout(300);
-  await shot("thread-dark");
-  const dark = await surface();
+  await page.getByRole("button", { name: "Account" }).click();
+  const accountMenu = page.getByRole("menu");
+  await accountMenu.waitFor();
+  const themeChoices = await page.getByRole("menuitemradio", { name: /Light|Dark|System/ }).count();
+  await page.keyboard.press("Escape");
+  await accountMenu.waitFor({ state: "detached" });
   record(
-    "dark mode changes the page, the paper and the ink",
-    light.page !== dark.page && light.paper !== dark.paper && light.ink !== dark.ink,
-    `paper ${light.paper} → ${dark.paper}`,
+    "the site is light only: the account menu offers no theme, and the root names none (ADR-161)",
+    themeChoices === 0 &&
+      (await page.evaluate(() => document.documentElement.dataset.theme)) === undefined,
+    `paper ${light.paper}; theme choices ${themeChoices}`,
   );
-  await chooseTheme("Light");
-  await page.waitForFunction(() => document.documentElement.dataset.theme === "light");
 
   const rail = railOf(page);
   const placesShown = [];
@@ -311,14 +318,20 @@ try {
     if (await rail.getByRole(role, { name, exact: true }).isVisible()) placesShown.push(name);
   }
   record(
-    "the rail shows its places, Kay to Lab",
+    "the rail shows its places, Home to Lab",
     placesShown.length === RAIL_PLACES.length,
     placesShown.join(", "),
   );
 
+  // A thread opens alone; the layout switch puts its canvas beside it.
+  await page
+    .getByRole("group", { name: "Layout" })
+    .getByRole("button", { name: "Canvas", exact: true })
+    .click();
   const canvas = page
     .locator('[role="tabpanel"]:not([inert])')
     .getByRole("region", { name: "Compose canvas" });
+  await canvas.waitFor();
   record(
     "the canvas opens empty and invites a drop",
     await canvas.getByText("Drag a text selection or UI card here").isVisible(),
@@ -388,13 +401,15 @@ try {
     el.scrollLeft = 0;
   });
 
-  // The grip fades up in the middle of a lane's title bar, and stays away over the title.
+  // The grip fades up within its circle in the middle of a lane's title bar, and stays away at
+  // the bar's edge and over the title.
   const firstHeader = canvas.locator("article").first().locator(".thread-header");
   const firstHeaderBox = await firstHeader.boundingBox();
-  await page.mouse.move(
-    firstHeaderBox.x + firstHeaderBox.width * 0.6,
-    firstHeaderBox.y + firstHeaderBox.height / 2,
-  );
+  const barMiddle = firstHeaderBox.y + firstHeaderBox.height / 2;
+  await page.mouse.move(firstHeaderBox.x + firstHeaderBox.width * 0.85, barMiddle);
+  await page.waitForTimeout(250);
+  const gripAtEdge = await firstHeader.evaluate((el) => getComputedStyle(el, "::after").opacity);
+  await page.mouse.move(firstHeaderBox.x + firstHeaderBox.width / 2 + 10, barMiddle);
   await page.waitForTimeout(250);
   const gripShown = await firstHeader.evaluate((el) => getComputedStyle(el, "::after").opacity);
   const titleButton = canvas.locator("article").first().locator(".thread-title");
@@ -403,9 +418,9 @@ try {
   const gripHidden = await firstHeader.evaluate((el) => getComputedStyle(el, "::after").opacity);
   const titleCursor = await titleButton.evaluate((el) => getComputedStyle(el).cursor);
   record(
-    "the grip fades up in the middle of the title bar, and not over the title, which is for renaming",
-    gripShown === "1" && gripHidden === "0" && titleCursor === "text",
-    `grip ${gripShown} in the middle, ${gripHidden} over the title; title cursor ${titleCursor}`,
+    "the grip fades up only within its circle, not at the bar's edge or over the title",
+    gripShown === "1" && gripAtEdge === "0" && gripHidden === "0" && titleCursor === "text",
+    `grip ${gripShown} in the middle, ${gripAtEdge} at the edge, ${gripHidden} over the title; title cursor ${titleCursor}`,
   );
   await page.mouse.move(10, 10);
 
@@ -432,15 +447,15 @@ try {
       image: style.backgroundImage,
     };
   }, hoverY - separatorBox.y);
-  // Full ink for 20px either side of the pointer, gone by 50px: the stops appear either as
+  // Full ink for 40px either side of the pointer, gone by 70px: the stops appear either as
   // calc() offsets or, once resolved, as px positions around the centre.
   const stops = [...hint.image.matchAll(/(-?\d+(?:\.\d+)?)px/g)].map((m) => Number(m[1]));
   const stopAt = (n) => stops.some((v) => Math.abs(v - n) < 1);
   const profile =
     (stopAt(20) && stopAt(50)) ||
-    [-50, -20, 20, 50].every((offset) => stopAt(hint.centre + offset));
+    [-70, -40, 40, 70].every((offset) => stopAt(hint.centre + offset));
   record(
-    "the hint line shows on hover, centred on the pointer, holding 20px and gone by 50px",
+    "the hint line shows on hover, centred on the pointer, holding 40px and gone by 70px",
     hint.opacity === "1" && Math.abs(hint.centre - hint.y) < 2 && profile,
     `opacity ${hint.opacity}, centre ${Math.round(hint.centre)} for pointer at ${Math.round(hint.y)}; stops ${stops.join(" ")}`,
   );
@@ -493,12 +508,18 @@ try {
   });
   const titleBar = canvas.locator("article").first().locator(".thread-header");
   const titleBox = await titleBar.boundingBox();
-  const grabHand = await titleBar.evaluate((el) => getComputedStyle(el).cursor);
   const laneBox = await canvas.locator("article").first().boundingBox();
-  const grip = titleBox.x + titleBox.width * 0.6;
-  await page.mouse.move(grip, titleBox.y + titleBox.height / 2);
+  // The grip, the one place on the bar that shows the hand and takes the lane (grip-zone.ts).
+  const grip = { x: titleBox.x + titleBox.width / 2, y: titleBox.y + titleBox.height / 2 - 2 };
+  await page.mouse.move(grip.x, grip.y);
+  await page.waitForTimeout(250);
+  // The hand is the grip's own (its ::after, clipped to its circle), there once the bar marks
+  // the pointer near it.
+  const grabHand = await titleBar.evaluate((el) =>
+    el.dataset.gripNear === undefined ? "none" : getComputedStyle(el, "::after").cursor,
+  );
   await page.mouse.down();
-  await page.mouse.move(grip + 300, titleBox.y + 30, { steps: 6 });
+  await page.mouse.move(grip.x + 300, titleBox.y + 30, { steps: 6 });
   await page.waitForTimeout(250);
   const lift = await page.evaluate(
     ([expectedLeft, laneWidth]) => {
@@ -521,7 +542,7 @@ try {
   );
   await shot("canvas-reorder");
   record(
-    "a lane's title bar shows a hand, and lifting it floats a copy under the pointer while the lane waits dimmed",
+    "a lane's grip shows a hand, and lifting it floats a copy under the pointer while the lane waits dimmed",
     grabHand === "grab" &&
       lift.ghost &&
       lift.lifted &&
@@ -533,7 +554,7 @@ try {
       lift.inPlace,
     `cursor ${grabHand}; ${JSON.stringify(lift)}`,
   );
-  await page.mouse.move(grip + laneWidths[0] + LANE_GAP_PX + 60, titleBox.y + 30, { steps: 6 });
+  await page.mouse.move(grip.x + laneWidths[0] + LANE_GAP_PX + 60, titleBox.y + 30, { steps: 6 });
   await page.waitForTimeout(250);
   const slid = await page.evaluate(
     (expected) =>
@@ -548,7 +569,7 @@ try {
     slid,
     `expected a slide of ${Math.round(laneWidths[1] + LANE_GAP_PX)}px`,
   );
-  await page.mouse.move(grip + laneWidths[0] + laneWidths[1] + 32 + 60, titleBox.y + 30, {
+  await page.mouse.move(grip.x + laneWidths[0] + laneWidths[1] + 32 + 60, titleBox.y + 30, {
     steps: 6,
   });
   await page.mouse.up();
@@ -565,8 +586,8 @@ try {
   const threadLanes = canvas.locator("article").filter({ has: page.locator(".thread-header") });
   await threadLanes.first().scrollIntoViewIfNeeded();
   const firstBar = await threadLanes.first().locator(".thread-header").boundingBox();
-  // The bar's far end, past any title however long.
-  const firstGrip = { x: firstBar.x + firstBar.width - 12, y: firstBar.y + firstBar.height / 2 };
+  // The grip, the one place on the bar that takes the lane (grip-zone.ts).
+  const firstGrip = { x: firstBar.x + firstBar.width / 2, y: firstBar.y + firstBar.height / 2 - 2 };
   await page.mouse.move(firstGrip.x, firstGrip.y);
   await page.mouse.down();
   await page.mouse.move(firstGrip.x - 200, firstGrip.y + 30, { steps: 8 });
@@ -664,7 +685,8 @@ try {
   await page.keyboard.press("ControlOrMeta+a");
   await page.keyboard.type("Weekend margins");
   await page.keyboard.press("Enter");
-  await page.getByRole("tab", { name: "Last week's sales" }).dblclick();
+  // The main tab is in view, so one click on its words opens the field (Ethan).
+  await page.getByRole("tab", { name: "Last week's sales" }).locator("[data-tab-title]").click();
   await page.keyboard.press("ControlOrMeta+a");
   await page.keyboard.type("Sales, last week");
   await page.keyboard.press("Enter");
@@ -707,11 +729,6 @@ try {
   await page.getByText("Useful answers.").waitFor({ timeout: 10_000 });
   await shot("lab");
   record("lab route renders the workbench", true);
-  await chooseTheme("Dark");
-  await page.waitForFunction(() => document.documentElement.dataset.theme === "dark");
-  await page.waitForTimeout(300);
-  await shot("lab-dark");
-  await chooseTheme("Light");
 
   // The dev server serves the catalog's own modules, so the fragment comes from the real encoder.
   const fragment = await page.evaluate(async (root) => {
@@ -816,29 +833,46 @@ try {
 
   // Leaving a thread never says it is gone while the next page loads; the notice is for an
   // address no thread has. Each way out starts on a fresh page, so its route is not loaded yet.
+  // Home leaves from the device's profit thread for the Live Playground's blank thread (ADR-159);
+  // a scenario has no Live Playground, so there Home stays on the tab it resumes.
+  const fromDemo = { from: "/t/t-001?scenario=demo" };
   const leaving = {
-    "the Lab link": (on) =>
-      railOf(on)
-        .getByRole("link", { name: "Lab", exact: true })
-        .click()
-        .then(() => on.getByText("Useful answers.").waitFor({ timeout: 10_000 })),
-    "the Kay link": (on) =>
-      railOf(on)
-        .getByRole("link", { name: "Kay", exact: true })
-        .click()
-        .then(() => shownPanel(on).locator(".thread-panel").first().waitFor({ timeout: 10_000 })),
-    "closing the last tab": async (on) => {
-      for (const closing of ["Service desk weekly review", "Last week's sales"]) {
-        // oxlint-disable-next-line no-await-in-loop -- each close changes the strip the next one reads
-        await on.getByRole("button", { name: `Close ${closing}`, exact: true }).click();
-      }
-      await on.getByText("Nothing open").waitFor({ timeout: 10_000 });
+    "the Lab link": {
+      ...fromDemo,
+      leave: (on) =>
+        railOf(on)
+          .getByRole("link", { name: "Lab", exact: true })
+          .click()
+          .then(() => on.getByText("Useful answers.").waitFor({ timeout: 10_000 })),
+    },
+    "the Home link": {
+      from: "/t/profit",
+      seed: "demo-store",
+      leave: (on) =>
+        railOf(on)
+          .getByRole("link", { name: "Home", exact: true })
+          .click()
+          .then(() =>
+            on
+              .locator('[role="tabpanel"]:not([inert]) [data-slot="welcome"]')
+              .waitFor({ timeout: 10_000 }),
+          ),
+    },
+    "closing the last tab": {
+      ...fromDemo,
+      leave: async (on) => {
+        for (const closing of ["Service desk weekly review", "Last week's sales"]) {
+          // oxlint-disable-next-line no-await-in-loop -- each close changes the strip the next one reads
+          await on.getByRole("button", { name: `Close ${closing}`, exact: true }).click();
+        }
+        await on.getByText("Nothing open").waitFor({ timeout: 10_000 });
+      },
     },
   };
   const falseNotices = [];
-  for (const [way, leave] of Object.entries(leaving)) {
+  for (const [way, { from, seed, leave }] of Object.entries(leaving)) {
     // oxlint-disable-next-line no-await-in-loop -- one fresh page at a time
-    const on = await pageAt("/t/t-001?scenario=demo");
+    const on = await pageAt(from, { seed });
     // oxlint-disable-next-line no-await-in-loop -- as above
     await on.evaluate(() => {
       window.goneFrames = 0;
@@ -996,7 +1030,7 @@ try {
     gapsAtRest.length > 0 &&
       gapsAtRest.every((gap) => gap.ok) === true &&
       gapsResized.every((gap) => gap.ok) === true &&
-      gapsResized[0].now === gapsAtRest[0].width + 24,
+      gapsResized[0].now === gapsAtRest[0].width + LANE_GAP_PX,
     `${gapsAtRest.map((gap) => `${gap.now}/${gap.width}`).join(" ")} → ${gapsResized.map((gap) => `${gap.now}/${gap.width}`).join(" ")}`,
   );
 
@@ -1038,7 +1072,7 @@ try {
 
   // A thread that cannot be opened keeps the frame an open one has: a lane its paper, border and
   // title bar, the main pane its bare pane (ADR-138), with the reason and Try again inside it.
-  // The title bar is what takes hold of a lane, so the failed lane still moves along the row.
+  // The title bar's grip is what takes hold of a lane, so the failed lane still moves along the row.
   const fails = await openScenario("/t/t-002?scenario=thread-fails", 'button:text-is("Try again")');
   const failedTab = fails.locator('[role="tabpanel"]:not([inert])');
   const frames = await failedTab.evaluate((tab) =>
@@ -1064,12 +1098,15 @@ try {
   const failedBar = failedCanvas.locator("article .thread-header").last();
   const failedBox = (await failedBar.count()) === 0 ? null : await failedBar.boundingBox();
   if (failedBox !== null) {
-    await fails.mouse.move(failedBox.x + failedBox.width - 16, failedBox.y + failedBox.height / 2);
+    // The grip, the one place on the bar that takes the lane (grip-zone.ts).
+    const failedGrip = {
+      x: failedBox.x + failedBox.width / 2,
+      y: failedBox.y + failedBox.height / 2 - 2,
+    };
+    await fails.mouse.move(failedGrip.x, failedGrip.y);
     await fails.mouse.down();
-    await fails.mouse.move(failedBox.x + failedBox.width - 40, failedBox.y + failedBox.height / 2, {
-      steps: 4,
-    });
-    await fails.mouse.move(failedBox.x - 400, failedBox.y + failedBox.height / 2, { steps: 12 });
+    await fails.mouse.move(failedGrip.x - 24, failedGrip.y, { steps: 4 });
+    await fails.mouse.move(failedBox.x - 400, failedGrip.y, { steps: 12 });
     await fails.mouse.up();
     await fails.waitForTimeout(400);
   }
@@ -1414,7 +1451,6 @@ try {
       await own.locator('[data-slot="project-name"]').filter({ hasText: /\S/ }).waitFor({
         timeout: 15_000,
       });
-      const initialTheme = await own.evaluate(() => document.documentElement.dataset.theme);
       await own.getByRole("button", { name: "Toggle sidebar" }).click();
       await own.waitForTimeout(600);
       const drawer = own.getByRole("dialog");
@@ -1425,27 +1461,15 @@ try {
       await account.click();
       await own.getByRole("menu").waitFor();
       const within = await menuOnScreen(own, 390, 844);
-      await own.screenshot({ path: path.join(OUT, "account-menu-phone-light.png") });
-      await own.getByRole("menuitemradio", { name: "Dark" }).click();
-      const darkened = await own.evaluate(() => document.documentElement.dataset.theme);
-      await own.screenshot({ path: path.join(OUT, "account-menu-phone-dark.png") });
-      await own.getByRole("menuitemradio", { name: "System" }).click();
-      const restored = await own.evaluate(() => document.documentElement.dataset.theme);
+      await own.screenshot({ path: path.join(OUT, "account-menu-phone.png") });
       await own.keyboard.press("Escape");
       await own.waitForTimeout(200);
       const menuGone = (await own.getByRole("menu").count()) === 0;
       const drawerStillOpen = (await drawer.count()) === 1;
       return {
         ok:
-          onePage &&
-          inDrawer &&
-          footed === true &&
-          within === true &&
-          darkened === "dark" &&
-          restored === initialTheme &&
-          menuGone &&
-          drawerStillOpen,
-        detail: `one Account button on the page ${onePage}; in the drawer ${inDrawer}; low in it ${footed}; every item on screen ${within}; theme light→${darkened}→${restored}; Escape closed the menu ${menuGone}, left the drawer open ${drawerStillOpen}`,
+          onePage && inDrawer && footed === true && within === true && menuGone && drawerStillOpen,
+        detail: `one Account button on the page ${onePage}; in the drawer ${inDrawer}; low in it ${footed}; every item on screen ${within}; Escape closed the menu ${menuGone}, left the drawer open ${drawerStillOpen}`,
       };
     },
   );
@@ -1894,7 +1918,7 @@ try {
   );
 
   await onOwnPage(
-    "the browser's Simulated badge clears 4.5:1 on the address field, light and dark",
+    "the browser's Simulated badge clears 4.5:1 on the address field, and an OS in dark mode gets the same light page (ADR-161)",
     "/t/t-005?scenario=demo",
     {},
     async (own) => {
@@ -1940,8 +1964,8 @@ try {
       const onLight = await ratio("light");
       const onDark = await ratio("dark");
       return {
-        ok: onLight >= 4.5 && onDark >= 4.5,
-        detail: `light ${onLight}:1, dark ${onDark}:1`,
+        ok: onLight >= 4.5 && onDark === onLight,
+        detail: `OS light ${onLight}:1, OS dark ${onDark}:1`,
       };
     },
   );
@@ -2043,9 +2067,13 @@ try {
   }
   await firstTab.goto(`${BASE}/`, { waitUntil: "load" });
   await firstTab.locator(".thread-panel").first().waitFor({ timeout: 20_000 });
+  // The Demo's scripted shows list beside the device's own mains; New thread adds one more.
+  await firstTab.locator('[data-thread="main"][href="/t/playground"]').waitFor();
+  const mainsBefore = await firstTab.locator('[data-thread="main"]').count();
   await firstTab.getByRole("button", { name: "New thread", exact: true }).click();
   await firstTab.waitForFunction(
-    () => document.querySelectorAll('[data-thread="main"]').length === 2,
+    (count) => document.querySelectorAll('[data-thread="main"]').length === count,
+    mainsBefore + 1,
   );
   const kept = await mainTitles(firstTab);
   await secondTab.goto(`${BASE}/`, { waitUntil: "load" });

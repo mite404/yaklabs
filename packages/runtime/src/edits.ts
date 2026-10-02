@@ -1,4 +1,4 @@
-import { applyMark, type ThreadMark } from "./marks";
+import { applyMark, type MarkNote, type ThreadMark } from "./marks";
 import type { RenameTarget } from "./protocol";
 import {
   lanesOf,
@@ -42,15 +42,18 @@ export function withShell(shell: ShellState): Edit {
 }
 
 /**
- * The thread with a pin, a snooze or an archive on it, stamped `now` by the page's clock until
- * the worker's own stamp arrives. A mark the worker will refuse shows nothing.
+ * The thread with a pin, a snooze or an archive on it, and its `note` first in the bell, both
+ * stamped `now` by the page's clock until the worker's own stamp arrives. A mark the worker will
+ * refuse shows nothing.
  */
-export function marked(id: ThreadId, change: ThreadMark, now: string): Edit {
+export function marked(id: ThreadId, change: ThreadMark, now: string, note?: MarkNote): Edit {
+  const notes = note === undefined ? [] : [{ ...note, threadId: id, at: now }]; // → Notification[]
   return (ws) => {
     try {
       return {
         ...ws,
         threads: ws.threads.map((each) => (each.id === id ? applyMark(each, change, now) : each)),
+        notifications: [...notes, ...ws.notifications],
       };
     } catch {
       return ws;

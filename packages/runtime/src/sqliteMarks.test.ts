@@ -50,6 +50,27 @@ describe("the store keeps marks (ADR-127 to ADR-129)", () => {
     }).toThrow("A snooze wakes after now");
   });
 
+  it("keeps a snooze's note in the bell, written with the snooze", async () => {
+    const store = await openStore();
+    store.mark(other, { snoozedUntil: at(40) }, at(11), { id: "n1", text: "Snoozed “other”" });
+    expect(store.workspace().notifications).toEqual([
+      { id: "n1", threadId: other, text: "Snoozed “other”", at: at(11) },
+    ]);
+  });
+
+  it("writes neither the mark nor its note when either is refused", async () => {
+    const store = await openStore();
+    store.addNotification({ id: "n1", threadId: main, text: "Taken", at: at(5) });
+    expect(() => {
+      store.mark(other, { snoozedUntil: at(40) }, at(11), { id: "n1", text: "Snoozed" });
+    }).toThrow("UNIQUE constraint failed");
+    expect(store.workspace().threads.find((each) => each.id === other)?.snoozedUntil).toBeNull();
+    expect(() => {
+      store.mark(other, { snoozedUntil: at(10) }, at(11), { id: "n2", text: "Snoozed" });
+    }).toThrow("A snooze wakes after now");
+    expect(store.workspace().notifications.map((each) => each.id)).toEqual(["n1"]);
+  });
+
   it("brings an archived thread and its main back when a message arrives", async () => {
     const store = await openStore();
     addChild(store, "child");

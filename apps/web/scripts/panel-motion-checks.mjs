@@ -4,7 +4,7 @@
 // oxlint-disable no-await-in-loop -- one pointer drives one page, so each step waits for the last
 import { openDesk, peek, PIN_MS } from "./sidebar-checks.mjs";
 
-const THEMES = ["light", "dark"];
+const THEMES = ["light"];
 // The instants a pin or an unpin is held at, in ms from its first frame.
 const HELD_MS = [0, 20, 40, 60, 80, 120, 160, 200, PIN_MS - 1];
 // The last share of an unpin's travel in which no row may show, and how faint "no row" is.

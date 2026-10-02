@@ -1528,6 +1528,11 @@ for the agent's question while it is open. A snoozed thread stays in its place a
 with an alarm clock before its title, and its tooltip and the menu say when it wakes. When the
 time comes, the settling pass (ADR-129) clears the snooze and posts a bell notice, "Back from
 snooze: <title>", and the wake restarts its idle clock. A time at or before now is refused.
+Amended 2026-10-01 (Ethan): the toast a snooze shows is kept as a record in the bell. The page
+words the note as the toast does, in its own clock and zone, and the mark carries it, so the
+store writes the snooze and its note in one transaction, or neither. The note counts as read
+at once: the person who would read it is the one who just snoozed, so it adds nothing to the
+badge.
 
 ## ADR-129 - Archive settles a thread to the bottom, dimmed, and idle threads settle on their own
 
@@ -1777,6 +1782,10 @@ over the slide's last 120ms (derived; design pillars, rule 26).
 Amended 2026-09-29: pressing the open Canvas in the layout switch closes it back to the thread
 (Ethan), and so does pressing the open Browser, so the switch reads one way for both side panes
 (derived). The thread pressed again stays.
+Amended 2026-10-01 (Ethan): a title renames from its own words or from Rename in the "⋯" menu,
+and from nothing else. A click on the words of the tab in view opens them as a field, the text
+cursor saying so; a click on a tab not in view only chooses it, and the double click is gone. A
+lane's title loses its dotted rule: it reads as plain words until the pointer rests on it.
 
 ## ADR-139 - Separate progress narration, finished responses, and work details
 
@@ -1839,6 +1848,9 @@ The main panel can therefore show a child without turning it into a main thread.
 panel placement must not infer parentage from the panel currently holding the thread.
 The child keeps "Controlled by parent thread" below its composer, including in the main panel,
 so the larger reading surface does not imply that control changed.
+Amended 2026-10-02 (Ethan): the line names the parent, "Belongs to Weekly brief", since a
+child's composer takes messages and "Controlled by" read as though it would not; it says
+"parent thread" while the parent is not yet in the workspace.
 Verification must cover both the menu and drag paths, with the same parent ID before and after.
 
 ## ADR-142 - Keep running status by the composer and tasks in a movable card
@@ -2421,3 +2433,146 @@ alone, which a width saved before the change would have escaped (CSS `round()` c
 Known gaps: a collapsed card's strip uses the thread bar's rule, not the card heading's, which is
 taller and varies with the card; the brief lever's 2x timing bound sits at 59 to 63% on main as
 well as here, because the on-screen reveal does not scale with the show's clock.
+
+## ADR-159 - Home is a blank live thread, jumps frame by rule, the demo shows its hands
+
+2026-10-01 - Accepted (Ethan, a second walkthrough). Amends ADR-022, ADR-038, ADR-089, ADR-125,
+ADR-134, ADR-136, ADR-156 and ADR-158.
+The rail's mark is named Home and opens a first visit's page whatever is open: the Live
+Playground's blank main, its welcome over the splash, so whatever is typed there goes to the
+live model. The starter while it is blank, else the newest blank main there, else a new one;
+Home never stacks a second blank thread. A plain visit to "/" still resumes the tab last on
+screen, and with none open it opens that page too, where it said "Nothing open"; only a
+scenario, which has no Live Playground, still says so. A thread started with nothing naming its
+project goes in the Live Playground, not the sidebar's first project, the scripted Demo, whose
+stand-in had answered it. A main still called "New thread" takes its title from its first
+message, cut at a word as a lane's header is, so a Home that starts fresh threads never lists
+a column of them; a thread someone named keeps its name. Every device
+store gets the Live Playground: the seed ran only on an empty store, so a browser that held
+threads from before ADR-156 (its "Demo store", kept on the device, not the account) never had
+it. The splash takes the next look each visit, abstract, landscape, Vitruvian, then round again,
+in place of ADR-158's draw. A jump frames its target by rule (`jumpPlan`): one already wholly in
+view does not move and only glows; a user's message out of view is centered; anything else out
+of view comes just into view, its top never cut off. A press that opens something (Work details)
+keeps the pressed control in view, the thread rising only until it reaches the top of the band,
+where ADR-038 had shown the bottom of everything that opened. Work with no steps folds its
+technical lines straight into Work details, never into a second disclosure. A demo's Play pulses
+in the lane flash on a loop while it is not playing, and the demo answers a
+docked question as a hand would: the tile hovered, selected, Submit pressed, then sent, on the
+show's clock. A main's child lanes open where the sidebar lists the child (newest first, ADR-125),
+top to bottom being left to right; a lane the reader moves keeps its place, and the sidebar
+never follows the canvas. A lane's collapse sits 7px inside the border, open or collapsed, and
+14px before the title, the Share-to-Close spacing; a collapsed strip carries its close at the
+foot. The rail's fills take the site's 4px corners, and the resize hint holds 40px either side
+of the pointer, gone by 70px.
+Alternatives weighed: a separate Home route, which would have left "/" two meanings; a hub
+with no thread under it, whose composer would have had to hand its first message to a thread
+made on send, where a blank live thread already is that page; resetting
+the device store to drop Demo store, which would delete the visitor's own threads; centering
+every jump, which is what moved a card already in view and cut tall ones off at the top; and
+ordering the sidebar's children oldest first to match the canvas, which ADR-125 had settled the
+other way at Ethan's word.
+Known gaps: Demo store stays on a device that has it, beside Demo and Live Playground; removing
+it is Ethan's call. The brief lever's 2x timing bound still sits at 59 to 63% on main as here.
+Amended the same day (Ethan: "the live playground voice input component needs to be the
+dictation live microphone"): dictation in the device's own threads, the Live Playground's,
+listens to the visitor's microphone and the browser's speech service (ADR-028's live source);
+the Demo's threads and a scenario's keep the simulated recording, so a scripted take and a
+fixture sound the same every time.
+
+## ADR-160 - A public page tells the design tooling's story, sealed on the welcome
+
+2026-10-01 - Accepted (Ethan: "a static site on a new route called /verify-ui-tooling ... on
+the splash screen i want a graphic link w/a gold seal as the bg and copy that says Includes
+Design Tooling"). Amends ADR-136 and ADR-156.
+`/verify-ui-tooling` is a page of Kay's paper outside the signed-in shell, beside `/share.html`,
+that says what `tools/verify-ui-drift` is for and shows it: why a check has to be a tool when
+people and agents edit one surface, the five beats of a run, the run's own transcript, the four
+verdicts, the Pixels workbench, the comparator proof, the contrast table under its lenses, what
+approval means, and where the work lands by role. Its pictures are Ethan's screenshots of the
+review app (`apps/web/public/verify-ui-tooling/`); the transcript and the two results tables
+are set as text, since a terminal and a table read better as what they are. The words live in
+`apps/web/src/verify-ui-tooling.ts` apart from the page, so the copy reads as one piece.
+A new thread's welcome ends with the way there: a gold seal, "Yaklabs" over the top of its ring
+and "Seal of evidence" under the bottom, with an ink ribbon across its middle saying "Includes
+design tooling" that runs past the seal on either side. The ribbon is the link's only words,
+so a screen reader hears what a sighted visitor reads, and it fills with moss on hover as the
+site's button does. The seal is drawn, not a picture: one SVG in `design-tooling-seal.tsx`,
+coloured by four new tokens derived from the caution orange and the rust, since a metal keeps
+one colour in either theme (design pillars, rule 33). The page's hero shows the same seal.
+Alternatives weighed: a page inside the shell, which would have put sign-in and the runtime
+in front of a visitor who only wants to read; the seal as a WebP after the example Ethan
+sent, which would have needed a second file for dark mode and could not carry live words; and
+the ribbon's words on the gold itself, where the brown ink clears 4.5:1 on the orange but
+not where the words run off the seal onto the dark paper.
+Known gaps: the page is linked from the welcome and from nowhere else, and the review app's
+screenshots are from Ethan's Mac at 2x, so they will not match a later build of the tool pixel
+for pixel.
+Amended the same day (Ethan, circling the spot): the seal is pinned above the greeting at
+the column's right rather than closing the column, tilted 25° with its left side up, and the
+page's copy was cut to what a reader skimming it in three minutes keeps.
+Amended again the same day (Ethan: "make it look more like a landing page ... the screenshot
+of the cli tool in the hero ... more variation of blocks"): the page is a landing page now,
+after the product sites Ethan named. The run's terminal opens it, set as text from his
+screenshot with its prompt bar, turned a few degrees toward the words and printing its lines
+60ms apart, with the seal stamped on its corner; the verdicts roll by on an ink ticker; the
+three notes cascade down a twelve-column grid; a bento of six cells holds the pixels, the
+numeral, the camera proof's table, the approve command on ink, four measured bars and the
+five beats; the contrast table sits on a full-bleed band in the window chrome's green; the
+four roles stand under one label turned on its side; and the closing word sits by the seal.
+The terminal is text rather than the screenshot, which never arrived as a file, so it reads,
+copies, scales and themes; the comparator proof's picture gave way to its numbers.
+Amended once more (Ethan: "version 2 is the winner ... these need to be the text on the
+page ... rip out, but save into an .md"): the landing page carries Ethan's copy and nothing
+else of its own: his headline and question in the hero, his question over the bento, his
+second headline on the band. Every other line of copy left the page for
+`docs/reference/verify-ui-tooling-copy.md`, to cross-check later; what stays beside his words
+is the tool's own evidence, the terminal, the verdicts, the cells' names from the review app's
+tabs, the counts, the pairs and the beats' names. The notes, the roles and the closing word are
+gone with their copy.
+Amended once more (Ethan): how the tool works stands beside the Pixels picture in four large
+numbered points, capture in batch, compare pixel by pixel, check contrast and accessibility
+across the three engines, fail loudly; the cells that stood there make a new row below.
+Amended once more (Ethan): on the welcome the seal is scaled to 70%, hops 6px every 4s to say
+it can be pressed, and grows 10% under the pointer over the button's 150ms; reduced motion keeps
+it still (design pillars, rule 33).
+Amended once more (Ethan): the hero reads "Design tooling that allows humans to verify at
+scale" with humans in Newsreader's own italic, whose cut tokens.css now loads beside the roman
+as ADR-140 loaded Inter's; the review app's header, from Ethan's screenshot, is the picture
+laid over the contrast table on the band, in place of the Material lens; the way back says
+Back to Bonsai; and the page is light only: it pins the light theme on the root while it is
+open and gives the visitor's choice back on leaving, and its appearance switch is gone.
+Amended once more (Ethan: "the text, the ribbon and the seal all seem to scale at different
+times ... scale as if 'one asset'"): on the welcome the medal, the ribbon and its words are
+one SVG. As an HTML ribbon laid over the SVG medal, the hover's growth repainted the three
+apart: the words snapped to whole font sizes and jumped 42% of the way on the first frame of
+his recording, the ribbon's box snapped to whole pixels and finished by the eighth, and the
+medal scaled smoothly to the twelfth. Drawn as one picture they scale as one, the words set
+to a fixed length at geometric precision, so no font's metrics or hinting move them. The
+link's name is its `aria-label`, the ribbon's words, so a screen reader still hears what the
+eye reads. Alternatives weighed: `will-change` on the link, which in Chrome only moved the
+redraw to after the growth; and a moss copy of the ribbon fading over the ink one, which left
+a hairline of the ink at the moss's edges in the dark theme.
+Amended 2026-10-01 (Ethan): the ring's words read "Seal of quality" and the ribbon's "Now with
+design tooling!", which is also the link's name; on the welcome the seal grows 5%, to 73.5% of
+its drawn size, so the ring's smaller words read.
+
+## ADR-161 - The site is light only
+
+2026-10-01 - Accepted (Ethan: "i never tweaked dark mode. let's delete it ... i don't want
+someone to view something i didn't finesse"). Amends ADR-046 and ADR-090, whose dark mode
+for every surface now stays in the catalog.
+The app shows the light theme to every visitor, whatever the OS or the browser prefers. The
+account menu's Theme choice is gone, with the hook that followed the OS, the script that set
+the theme before React loaded and the remembered choice; nothing in the app sets
+`data-theme="dark"`, so the catalog's dark tokens never apply. The root declares
+`color-scheme: only light`, so scrollbars and form fields stay light and a browser that darkens
+pages on its own leaves this one alone. The app's own dark-only rules and `dark:` utilities
+went with it, the welcome always says good morning, and the design tooling page no longer pins
+the light theme, having nothing to pin against. Its hero lost the "Themes 2" figure.
+The catalog keeps its dark theme (Ethan: "you can leave dark mode in the catalogue"): its
+tokens, Storybook's theme switch and verify-ui-drift's dark captures and baselines are as they
+were, and so are the landing page's pictures and rows that show dark.
+Alternatives weighed: deleting dark from the catalog as well, which would have taken the
+tooling's dark captures and baselines with it; and keeping the code behind a switch that is
+never offered, which leaves untested paths a visitor's browser could still reach.

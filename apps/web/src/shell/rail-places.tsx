@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useId, type ComponentType, type ReactElement, type ReactNode } from "react";
 import { Link, useLocation } from "react-router";
+import { HOME_HUB } from "./home-hub";
 import { usePaths } from "../runtime";
 
 // The mark as meetkay.ai declares it (ADR-095): one polygon, drawn in the text colour.
@@ -25,10 +26,12 @@ const DOCS_URL = "https://docs.meetkay.ai";
 
 // A place's two looks, its glyph soft in both until the pointer is on it or its place is open:
 // a 40px square in the desktop's rail, 10px of padding centring the 20px glyph, that names its
-// place in a pill; and a labelled row in the phone's drawer, the glyph the same 10px in.
+// place in a pill; and a labelled row in the phone's drawer, the glyph the same 10px in. Its
+// hover and open fill takes the site's 4px button corners (--radius), as a sidebar row's does.
 const LOOKS = {
-  square: "size-10 p-2.5 text-soft-ink hover:text-ink data-active:text-ink [&_svg]:size-5",
-  row: "h-10 gap-3 px-2.5 text-sm text-soft-ink hover:text-ink data-active:text-ink [&_svg]:size-5",
+  square:
+    "size-10 rounded-[var(--radius)] p-2.5 text-soft-ink hover:text-ink data-active:text-ink [&_svg]:size-5",
+  row: "h-10 gap-3 rounded-[var(--radius)] px-2.5 text-sm text-soft-ink hover:text-ink data-active:text-ink [&_svg]:size-5",
 } as const;
 type Look = keyof typeof LOOKS;
 
@@ -83,7 +86,7 @@ export function BonsaiMark({ className }: { className?: string }) {
 // has and this demo leaves out of scope, each keeping its name and glyph (Ethan, after Kay's
 // own rail), then the documentation link, and the Lab last.
 const PLACES = [
-  { kind: "home", label: "Kay", Glyph: BonsaiMark, to: "/" },
+  { kind: "home", label: "Home", Glyph: BonsaiMark, to: "/" },
   { kind: "outOfScope", label: "Memory", Glyph: Brain },
   { kind: "outOfScope", label: "Skills", Glyph: Unplug },
   { kind: "outOfScope", label: "App store", Glyph: Store },
@@ -98,12 +101,13 @@ const PLACES = [
 // not the sidebar.
 const pillOf = (children: ReactNode) => ({ children, hidden: false }) as const;
 
-// What a live place opens: a route of the app, or a site of its own in a new tab.
+// What a live place opens: Home's hub, a route of the app, or a site of its own in a new tab.
 function linkOf(place: LivePlace, hrefTo: (path: "/" | "/lab") => string) {
   if (place.kind === "external") {
     return <a href={place.href} target="_blank" rel="noreferrer" aria-label={place.label} />;
   }
-  return <Link to={hrefTo(place.to)} aria-label={place.label} />;
+  const state = place.kind === "home" ? HOME_HUB : undefined;
+  return <Link to={hrefTo(place.to)} state={state} aria-label={place.label} />;
 }
 
 // How each kind of live place draws its glyph and name: Kay's mark and serif name in ink, the

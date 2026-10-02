@@ -5,6 +5,8 @@
 /* Inter's own italics, so an aside in a reply is a real italic, never a slanted roman (ADR-140). */
 @import "@fontsource-variable/inter/opsz-italic.css";
 @import "@fontsource-variable/newsreader/opsz.css";
+/* Newsreader's own italics, so an italic word in a headline is a real italic (ADR-160). */
+@import "@fontsource-variable/newsreader/opsz-italic.css";
 @import "./primitives.css";
 
 :root {
@@ -77,6 +79,15 @@
      the offset moves it down, the negative spread pulls its blur in from the sides, and the
      long blur gives the slow fall-off. Both themes read the same --shadow token. */
   --edge-shadow: 2px 13px 22px -12px var(--shadow);
+  /* derived from --edge-shadow for a small floating control, such as the reading tools' bar: the
+     same fall down and to the right, none above, scaled to a 34px bar, whose 22px blur the
+     edge shadow's -12px spread would swallow; the strong shadow, since the box below it hides
+     most of what falls. */
+  --float-shadow: 2px 8px 14px -6px var(--shadow-strong);
+  /* What floats over the whole page, a menu, a dialog or a toast: an even fall below with none
+     above, the catalog Menu's own (primitives.css), which the shadcn menu took up, named so the
+     toast can't drift from them (Ethan). */
+  --popup-shadow: 0 8px 24px var(--shadow-strong);
   --scrim: color-mix(in srgb, var(--paper) 72%, transparent);
   --warn-bg: #f4ecd9; /* derived: warm notice, harmonised with the paper */
   --warn-ink: #66511f; /* derived */
@@ -153,13 +164,25 @@
   /* the construction lines behind Atlas, the ink at 12%: 1.26:1 off the paper, so they read as
      pencil under the figure and never as ground */
   --splash-line: color-mix(in srgb, var(--ink) 12%, transparent);
+  /* The design tooling seal (ADR-160), a gold medal that links the welcome to the tooling page:
+     a metal, so it keeps one colour in either theme. derived: the caution orange is the face,
+     the rust is the edge (3.5:1 on the light paper, so the silhouette clears 3:1 as a mark),
+     and the glint is the orange lifted to the bright paper. The words on the face take the
+     brown ink the orange pill already carries (5.5:1). */
+  --seal-gold: var(--yak-orange);
+  --seal-gold-deep: var(--rust);
+  --seal-gold-glint: color-mix(in srgb, var(--yak-orange) 55%, var(--yak-paper-bright));
+  --on-seal: var(--yak-brown-ink);
 
   --btn-radius: 4px; /* every button's corners (.btn, Done, Skip, Submit); tokens.test.ts guards it */
   --radius-card: 14px; /* the catalog card and the thread panel; shadcn owns --radius (ADR-082) */
-  /* the room either side of a lane's collapse (ADR-134): from the lane's edge to its 20px fill,
-     and from the fill to the title, so the glyph sits equally far from both; half the thread's
-     20px gutter (derived, Ethan: "equal distance b/t the toggle and the name") */
-  --leading-space: 10px;
+  /* A lane's collapse (ADR-134): its 20px fill sits --leading-space inside the lane's 1px border,
+     the inset the collapsed strip gives its expand, open or collapsed alike (Ethan: "the same
+     padding b/t the edge of the component and itself in expanded view as it does in
+     collapsed"); and --leading-gap before the title, the 14px between the Share and Close icons
+     at the bar's other end (28px buttons, 16px icons, 2px apart; Ethan). */
+  --leading-space: 7px;
+  --leading-gap: 14px;
   --space: 24px;
 }
 * {
@@ -655,13 +678,14 @@ h1 span {
   align-self: center;
   margin-left: -7px;
 }
-/* In a heading, the same --leading-space from the card's edge to the fill as from the fill to
-   the title, as in a thread's title bar, so a card lane and a thread lane put their collapse
-   and their title in the same place. */
+/* In a heading, --leading-space from the card's edge to the fill and --leading-gap from the
+   fill to the title, as in a thread's title bar, so a card lane and a thread lane put their
+   collapse and their title in the same place. The heading's own start padding becomes the
+   space, whatever padding its context gives it (a card in a thread or a lane has 16px, a page's
+   card 24px or 18px), so the collapse never rests on a guess of it. */
 .card-heading > .header-leading {
-  --heading-pad: 24px;
-  margin-left: calc(var(--leading-space) - var(--heading-pad));
-  margin-right: calc(var(--leading-space) - 14px);
+  margin-left: 0;
+  margin-right: calc(var(--leading-gap) - 14px);
 }
 /* The host's control at the far end (a lane's close): a card with no header carries it at its
    top right, where the header's actions would have ended. */
@@ -696,6 +720,17 @@ h1 span {
 .chart {
   height: 254px;
   width: 100%;
+}
+/* Recharts learns a resized box a frame late (its ResizeObserver sets state, React draws after
+   the paint) and holds the drawing at the old width in the meantime, so dragging a pane or a
+   lane narrower clipped the bars at the card's edge on every frame of the drag (Ethan). Its
+   SVG already fills its parent and carries a viewBox, so its wrappers fill the chart instead
+   of keeping the old width inline, and the last drawing scales to the box until the redraw
+   lands. The !important beats the sizes Recharts writes inline. */
+.chart .recharts-responsive-container > div,
+.chart .recharts-wrapper {
+  width: 100% !important;
+  height: 100% !important;
 }
 .muted {
   color: var(--soft-ink);
@@ -950,9 +985,6 @@ thead {
   }
   .card-heading {
     padding: 18px;
-  }
-  .card-heading > .header-leading {
-    --heading-pad: 18px;
   }
   .card-heading h2 {
     font-size: 18px;

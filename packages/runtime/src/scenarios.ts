@@ -4,6 +4,7 @@ import { fixedMint, type Mint } from "./mint";
 import type { ScenarioName } from "./protocol";
 import { openSqliteStore } from "./sqliteStore";
 import { seedThread, type Store } from "./store";
+import { DEMO_PROJECT, PROFIT } from "./v2Plan";
 import {
   threadLane,
   type Lane,
@@ -248,6 +249,24 @@ const SCENARIOS: Record<ScenarioName, Scenario> = {
     fill: fillDemo,
   },
 };
+
+/**
+ * Gives a device store what every device held before the Live Playground: the Demo store
+ * project and its `profit` main thread, the catalog's profit thread, with no lanes. A dev build
+ * asks for it for the browser levers, which need a thread with a card on a store that survives a
+ * reload. A store that already holds the thread is left alone, so running it again changes
+ * nothing.
+ * @throws When the store refuses the project or the thread.
+ */
+export function seedDemoStore(store: Store, at: string): void {
+  const { projects, threads } = store.workspace();
+  if (threads.some((thread) => thread.id === PROFIT)) return;
+  if (!projects.some((project) => project.id === DEMO_PROJECT.id))
+    store.addProject({ ...DEMO_PROJECT, createdAt: at });
+  const { title, messages } = seedThread("profit");
+  const place = main(DEMO_PROJECT.id);
+  store.addThread({ id: PROFIT, title, place, createdAt: at, updatedAt: at, draft: "", messages });
+}
 
 /**
  * Opens a scenario (ADR-096) in a fresh in-memory store: its fixtures written through the

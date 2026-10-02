@@ -1,6 +1,7 @@
 import {
   lanesOf,
-  reopenLane,
+  childrenOf,
+  openChildLane,
   type Lane,
   type Notification,
   type RenameTarget,
@@ -82,15 +83,21 @@ export function withNewThread(thread: ThreadSummary): Edit {
   return (ws) => ({ ...ws, threads: [...ws.threads, thread].toSorted(oldestFirst) });
 }
 
-/** The child a step first names, under the main, holding `turns`, its lane at the canvas's end. */
+/**
+ * The child a step first names, under the main, holding `turns`, its lane where the sidebar lists
+ * it among the open children: the newest, so first.
+ */
 export function addChild(child: ChildOf, main: ThreadId, turns: ThreadMessage[], at: string): Edit {
   const place = { kind: "child", parentId: main } as const;
   const thread = touched(
     turns,
     at,
   )(summary({ id: child.id, title: child.title, place, draft: "", at }));
-  return (ws) =>
-    withLanes(main, reopenLane(lanesOf(ws, main), child.id))(withNewThread(thread)(ws));
+  return (ws) => {
+    const added = withNewThread(thread)(ws);
+    const order = childrenOf(added, main).map((each) => each.id); // → as the sidebar lists them
+    return withLanes(main, openChildLane(lanesOf(added, main), child.id, order))(added);
+  };
 }
 
 /** A note for the bell, newest first. */

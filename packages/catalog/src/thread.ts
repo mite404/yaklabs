@@ -1,3 +1,4 @@
+import type { AnswerPhase } from "./awaiting";
 import { scenarios, trend } from "./fixtures";
 import type { CardAttachment, InteractiveSelection } from "./interactive";
 import {
@@ -70,6 +71,11 @@ export type ThreadHandle = {
   send(): void;
   /** Answers the docked question with a tile's label or typed text. */
   answer(text: string): void;
+  /**
+   * Shows an answer on the docked question's card before it is sent, as a hand giving it would:
+   * the pointer over its tile, the tile selected, Submit pressed; null clears it. Sends nothing.
+   */
+  stageAnswer(text: string, phase: AnswerPhase | null): void;
   /**
    * Steps an interactive card to the stop named by its label, as the card's own control would,
    * so the choice rides along with the next message (ADR-030): the card on the turn named, or

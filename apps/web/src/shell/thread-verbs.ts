@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import { inBackground } from "../runtime";
 import { copyText } from "./share-verbs";
 import { wakeText } from "./wake-text";
-import { awayFrom, type ShellState } from "./state";
+import { awayFrom, markRead, type ShellState } from "./state";
 
 /** What the thread's menu does (ADR-126), besides Share (see share-verbs.ts). */
 export type ThreadVerbs = {
@@ -74,6 +74,17 @@ function removeWithUndo(deps: ThreadDeps, id: ThreadId): void {
   });
 }
 
+// Snoozes, and keeps the toast's words in the bell as a note of it (Ethan). The note is read
+// already, since the person reading it is the one who just snoozed.
+function snoozeWithNote(deps: ThreadDeps, id: ThreadId, until: string): void {
+  const { runtime, threads, change } = deps;
+  const text = `Snoozed ${named(threads, id)} until ${wakeText(new Date(until), "long")}`;
+  const note = { id: crypto.randomUUID(), text }; // → MarkNote
+  inBackground(runtime.mark(id, { snoozedUntil: until }, note), "Snoozing");
+  change((doc) => markRead(doc, [note.id]));
+  toast(text);
+}
+
 /** The thread menu's verbs over the runtime (ADR-126 to ADR-130). */
 export function threadVerbs(deps: ThreadDeps): ThreadVerbs {
   const { runtime, threads, href, setSnoozing } = deps;
@@ -86,11 +97,11 @@ export function threadVerbs(deps: ThreadDeps): ThreadVerbs {
     },
     askSnooze: setSnoozing,
     snooze: (id, until) => {
-      inBackground(runtime.mark(id, { snoozedUntil: until }), "Snoozing");
       setSnoozing(null);
-      const title = named(threads, id);
-      if (until === null) toast(`${title} is awake`);
-      else toast(`Snoozed ${title} until ${wakeText(new Date(until), "long")}`);
+      if (until === null) {
+        inBackground(runtime.mark(id, { snoozedUntil: null }), "Snoozing");
+        toast(`${named(threads, id)} is awake`);
+      } else snoozeWithNote(deps, id, until);
     },
     archive: (id, archived) => {
       inBackground(runtime.mark(id, { archived }), archived ? "Archiving" : "Unarchiving");

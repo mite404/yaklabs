@@ -15,9 +15,12 @@ import {
 } from "./lane-collapse-look.mjs";
 import { luminance, shotPath } from "./lever.mjs";
 
+// The collapse's fill, in the title bar and in the strip alike (lane.tsx `CollapseToggle`).
+const TOGGLE_PX = 20;
+
 // One theme's strip: a long-titled lane collapsed, measured at rest with the pointer away.
 async function stripIn(browser, theme) {
-  const { page, close } = await openThemed(browser, theme);
+  const { page, close } = await openThemed(browser);
   await makeLane(page, LONG_TITLE);
   const lane = laneNamed(page, LONG_TITLE);
   // Open, the toggle sits in the thread's own title bar, before its title.
@@ -52,11 +55,12 @@ async function stripIn(browser, theme) {
     marked(gripInk) &&
     marked(titleInk) &&
     !look.contentShown &&
-    JSON.stringify(look.buttons) === JSON.stringify(["Expand lane"]) &&
+    // The expand at the strip's head and the lane's close at its foot (db80f60).
+    JSON.stringify(look.buttons) === JSON.stringify(["Expand lane", `Close ${LONG_TITLE}`]) &&
     look.toggleInStrip &&
     inHeader === 1 &&
-    near(barToggle.width, 28) &&
-    near(clear.size, 24) &&
+    near(barToggle.width, TOGGLE_PX) &&
+    near(clear.size, TOGGLE_PX) &&
     clear.fill >= 5 &&
     clear.ring >= 3;
   return {
@@ -68,7 +72,7 @@ async function stripIn(browser, theme) {
 /** Collapsible lanes (P14 to P18). */
 export const laneCollapseChecks = {
   async P14(browser) {
-    const results = await Promise.all(["light", "dark"].map((theme) => stripIn(browser, theme)));
+    const results = await Promise.all(["light"].map((theme) => stripIn(browser, theme)));
     return {
       ok: results.every((each) => each.ok),
       detail: results.map((each) => each.note).join("; "),

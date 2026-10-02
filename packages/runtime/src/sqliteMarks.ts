@@ -2,7 +2,7 @@ import type { Database } from "@sqlite.org/sqlite-wasm";
 import { planSettle } from "./settle";
 import { readSettleInput, readWorkspace } from "./sqliteRead";
 import type { Settled } from "./store";
-import { applyMark, type ThreadMark } from "./marks";
+import { applyMark, type MarkNote, type ThreadMark } from "./marks";
 import type { ThreadId, ThreadShare, ThreadSummary } from "./workspace";
 
 // The store's writes for the thread menu (ADR-126 to ADR-131): marks, tombstones, the settling
@@ -12,6 +12,7 @@ const SET_MARKS = `
   update conversations set pinned_at = ?, snoozed_until = ?, archived_at = ?, touched_at = ?
   where id = ?
 `;
+const INSERT_NOTE = "insert into notifications (id, thread_id, text, at) values (?, ?, ?, ?)";
 const INSERT_SHARE = `
   insert into shares (id, thread_id, link, revoke_token, created_at, expires_at)
   values (?, ?, ?, ?, ?, ?)
@@ -37,12 +38,21 @@ function liveThread(db: Database, id: ThreadId): ThreadSummary {
 }
 
 /**
- * Pins, snoozes or archives a live thread by `applyMark`'s rules, restarting its idle clock.
- * @throws For a thread that is unknown or deleted, and a snooze that is not ahead.
+ * Pins, snoozes or archives a live thread by `applyMark`'s rules, restarting its idle clock,
+ * and leaves its `note` for the bell, stamped `now`.
+ * @throws For a thread that is unknown or deleted, a snooze that is not ahead, and a note whose
+ *   id is taken.
  */
-export function markThread(db: Database, id: ThreadId, change: ThreadMark, now: string): void {
+export function markThread(
+  db: Database,
+  id: ThreadId,
+  change: ThreadMark,
+  now: string,
+  note?: MarkNote,
+): void {
   const { pinnedAt, snoozedUntil, archivedAt } = applyMark(liveThread(db, id), change, now);
   db.exec({ sql: SET_MARKS, bind: [pinnedAt, snoozedUntil, archivedAt, now, id] });
+  if (note !== undefined) db.exec({ sql: INSERT_NOTE, bind: [note.id, id, note.text, now] });
 }
 
 /**

@@ -1,4 +1,4 @@
-import { latestMain, sidebarTree } from "@yaklabs/runtime";
+import { childrenOf, latestMain, sidebarTree } from "@yaklabs/runtime";
 import { describe, expect, it } from "vitest";
 import { brief } from "../demo/scenarios/brief";
 import { at, type Script } from "../demo/script";
@@ -73,6 +73,25 @@ describe("the Demo world's verbs", () => {
     );
     await expect(world.saveShell({})).rejects.toThrow(/keeps no shell/);
   });
+
+  it("keeps a snooze's note in the bell with the snooze, and neither for a past one", async () => {
+    const world = playing();
+    const notesBefore = workspaceOf(world.state()).notifications.length;
+    const ahead = "2099-01-01T09:00:00.000Z";
+    await world.mark(BRIEF, { snoozedUntil: ahead }, { id: "n-snooze", text: "Snoozed brief" });
+    const ws = workspaceOf(world.state());
+    expect(ws.threads.find((each) => each.id === BRIEF)?.snoozedUntil).toBe(ahead);
+    expect(ws.notifications[0]).toMatchObject({
+      id: "n-snooze",
+      threadId: BRIEF,
+      text: "Snoozed brief",
+    });
+    const past = { snoozedUntil: "2000-01-01T09:00:00.000Z" };
+    await expect(world.mark(RETURNED, past, { id: "n-past", text: "No" })).rejects.toThrow(
+      "A snooze wakes after now",
+    );
+    expect(workspaceOf(world.state()).notifications).toHaveLength(notesBefore + 1);
+  });
 });
 
 describe("the Demo world's scripted replies", () => {
@@ -144,12 +163,6 @@ describe("the Demo world's children", () => {
       [BRIEF],
       [],
     ]);
-    const ws = workspaceOf(world.state());
-    expect(ws.lanes[BRIEF]?.map((lane) => lane.id)).toEqual([
-      `l-${workload}`,
-      `l-${issues}`,
-      `l-${response}`,
-    ]);
     expect(lastTurn(await world.open(workload))).toMatchObject({
       text: "Backlog fell from 46 cases Monday to 18 by Friday.",
       streaming: false,
@@ -172,6 +185,27 @@ describe("the Demo world's children", () => {
     expect(lastTurn(await world.open(workload))).toMatchObject({ ended: "cancelled" });
     expect(lastTurn(await world.open(BRIEF))).toMatchObject({ ended: "cancelled" });
     expect(world.showOf(BRIEF)?.progress().settled.has(0)).toBe(true);
+  });
+});
+
+describe("the Demo world's lanes", () => {
+  const [workload, issues, response] = ["workload", "issues", "response"].map((local) =>
+    ids.child(BRIEF, local),
+  );
+
+  it("opens the children's lanes left to right as the sidebar lists them", async () => {
+    const world = playing();
+    await drain(world, BRIEF, ask("Prepare the brief"));
+    const ws = workspaceOf(world.state());
+    // Top to bottom in the sidebar is newest first.
+    expect(ws.lanes[BRIEF]?.map((lane) => lane.id)).toEqual([
+      `l-${response}`,
+      `l-${issues}`,
+      `l-${workload}`,
+    ]);
+    expect(childrenOf(ws, BRIEF).map((child) => `l-${child.id}`)).toEqual(
+      ws.lanes[BRIEF]?.map((lane) => lane.id),
+    );
   });
 });
 

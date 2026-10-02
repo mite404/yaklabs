@@ -5,7 +5,7 @@ const rows = z
   .array(
     z.strictObject({
       label: z.string().min(1).max(40),
-      value: z.number().finite().min(-1e12).max(1e12),
+      value: z.number().min(-1e12).max(1e12),
     }),
   )
   .min(1)
@@ -132,6 +132,9 @@ export function summarize(stop: Stop, period: string): Record<Placeholder, strin
   };
 }
 
+/** A run of a filled sentence: the template's own words, or a live value the card emphasises. */
+export type SentencePart = { text: string; live: boolean };
+
 /**
  * Splits a sentence template into text and filled values, so the card can emphasise
  * the live numbers. The schema rejects unknown placeholders; should one reach here anyway,
@@ -140,8 +143,8 @@ export function summarize(stop: Stop, period: string): Record<Placeholder, strin
 export function fillSentence(
   template: string,
   values: Record<Placeholder, string>,
-): { text: string; live: boolean }[] {
-  const parts: { text: string; live: boolean }[] = [];
+): SentencePart[] {
+  const parts: SentencePart[] = [];
   let cursor = 0;
   for (const match of template.matchAll(PLACEHOLDER_PATTERN)) {
     const [whole, name] = match; // → "{total}", "total"
@@ -153,6 +156,42 @@ export function fillSentence(
   }
   if (cursor < template.length) parts.push({ text: template.slice(cursor), live: false });
   return parts;
+}
+
+/** One axis for every stop: rescaling per stop would make net look as tall as gross. */
+export function axisMax(selection: InteractiveSelection): number {
+  const values = selection.props.control.stops.flatMap((stop) => stop.rows.map((row) => row.value));
+  return niceCeiling(Math.max(...values));
+}
+
+/** The stop a card opens on: its `initial`, by id, which the schema holds to be one of its stops. */
+export function initialStopIndex(selection: InteractiveSelection): number {
+  const { control } = selection.props;
+  return control.stops.findIndex((stop) => stop.id === control.initial);
+}
+
+/** The stop a card shows: the host's, by its label, when it holds one the card has; else its own. */
+export function shownStopIndex({
+  stops,
+  measure,
+  own,
+}: {
+  stops: Stop[];
+  measure: string | undefined;
+  own: number;
+}): number {
+  const held = stops.findIndex((each) => each.label === measure); // → -1 when none is held
+  return held === -1 ? own : held;
+}
+
+/** Where a stop sits along the slider's track, and whether it is one of the track's two ends. */
+export type StopPlace = { left: string; edge: "start" | "end" | undefined };
+
+/** A stop's place on the track; the schema holds two stops or more, so the span is never zero. */
+export function stopPlace({ index, count }: { index: number; count: number }): StopPlace {
+  const left = `${(index / (count - 1)) * 100}%`;
+  if (index === 0) return { left, edge: "start" };
+  return { left, edge: index === count - 1 ? "end" : undefined };
 }
 
 /** The chip label for a card choice, e.g. "Net profit · Sep 14–20". */
