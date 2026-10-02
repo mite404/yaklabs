@@ -68,6 +68,9 @@
   --olive: var(--yak-green); /* 6.1:1 on paper and under cream text */
   --on-accent: var(--yak-cream); /* css: the site's text on dark fills, in either mode */
   --on-ink: var(--paper); /* text on an ink fill: paper in light mode, night in dark */
+  /* The compose box's send button once there is something to send: the olive, cream on it. */
+  --send: var(--olive);
+  --on-send: var(--on-accent);
   --control-bg: white; /* a button at rest: brighter than the paper it sits on */
   /* The user's bubble, and nothing else (ADR-047): the site's sage tint marks "you". */
   --bubble-tint: color-mix(in srgb, var(--sage) 40%, var(--paper));
@@ -342,6 +345,10 @@ button:hover {
   --on-ink: var(--bg); /* 17.61:1 on the ink */
   --focus: #16c3dd; /* Zed: border.focused; 7.44:1 on the paper, 8.8:1 on the bg */
   --on-accent: #fff7ed; /* the button hover keeps moss: 11.3:1 on it */
+  /* Ethan: the send button ready to send is Zed's text grey, not the olive, with the page's
+     near-black arrow on it (8.43:1; the cream would be 2.09:1); 5.91:1 on the compose box */
+  --send: #aeaeae;
+  --on-send: var(--bg);
   /* derived: Zed's element greys, so "you" still reads apart from the agent's words */
   --bubble-tint: #2e3033;
   --bubble-tint-strong: #3e4044;

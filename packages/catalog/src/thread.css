@@ -884,12 +884,12 @@
   padding: 0;
   border-radius: 50%;
   border: none;
-  background: var(--olive);
-  color: var(--on-accent);
+  background: var(--send);
+  color: var(--on-send);
   font-size: 15px;
 }
 .compose-send:hover {
-  background: var(--olive);
+  background: var(--send);
 }
 .compose-send:disabled {
   background: var(--paper-deep);
