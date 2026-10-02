@@ -30,6 +30,13 @@ export const COPY = {
     title: "The live model is unavailable",
     detail: "The live model could not be reached just now. Try again in a moment.",
   },
+  /** The demo's model budget is spent: the meter is empty, not the app broken. */
+  credit: {
+    title: "The live model is out of credit",
+    detail:
+      "This demo's model budget is spent, so live answers are paused. Nothing is broken - the meter is empty. The scripted Demo beside it still plays.",
+    retry: false,
+  },
   /** The stream broke: an unreadable or missing line, or a body that closed before `end`. */
   cutOff: {
     title: "Reply cut off",

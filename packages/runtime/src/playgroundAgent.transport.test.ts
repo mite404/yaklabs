@@ -76,6 +76,7 @@ describe("the live agent reads a refusal in plain words", () => {
   it.each([
     [401, COPY.expired],
     [400, COPY.rejected],
+    [402, COPY.credit],
     [502, COPY.unavailable],
     [200, COPY.cutOff],
   ])("answered %i before any line", async (status, failure) => {
