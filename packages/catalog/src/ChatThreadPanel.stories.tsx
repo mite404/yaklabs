@@ -846,15 +846,15 @@ export const RetryWithheld: Story = {
 };
 
 /**
- * The demo's model budget spent mid-visit (ADR-164): it says the credit ran out, that the app
- * is fine and the Demo still plays, and offers no Try again that would only fail the same way.
+ * The POC's model budget spent mid-visit (ADR-164): it says the budget is spent and the 3
+ * scripted Demos still play, and offers no Try again that would only fail the same way.
  */
 export const CreditRanOut: Story = {
   args: { thread: threads.credit },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(canvas.getByText("Could not start")).toBeVisible();
-    await expect(canvas.getByText(/the meter is empty/)).toBeVisible();
+    await expect(canvas.getByText(/3 scripted Demos still play/)).toBeVisible();
     await expect(canvas.queryByRole("button", { name: "Try again" })).toBeNull();
   },
 };

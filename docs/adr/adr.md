@@ -2693,7 +2693,7 @@ The interview build runs on the owner's capped OpenRouter key. When its credit r
 OpenRouter answers 402. The gateway passes that status through as `{ error: "credit" }`, with a
 bare marker rather than the upstream body, which could echo the request. If credit runs out
 between rounds, the gateway names it in the end event's line. The page reads the initial 402 in
-plain words: the app is fine, the meter is empty, and the scripted Demo still plays.
+plain words: the POC's model budget is spent, and the 3 scripted Demos still play.
 Alternatives weighed: keeping a 502 with a marker, which the client would never read because it
 deliberately branches on the status line; adding a new end reason and protocol bump for the
 mid-reply case, a heavier protocol change for a rare path the line already carries; and retrying

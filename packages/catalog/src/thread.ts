@@ -419,7 +419,7 @@ export const threads: Record<string, Thread> = {
       },
     ],
   },
-  /** The demo's model budget spent mid-visit: the app is fine, the meter is empty, no Try again. */
+  /** The POC's model budget spent mid-visit: live answers pause, the Demos still play, no Try again. */
   credit: {
     title: "Live numbers",
     messages: [
@@ -438,7 +438,7 @@ export const threads: Record<string, Thread> = {
         failure: {
           title: "The live model is out of credit",
           detail:
-            "This demo's model budget is spent, so live answers are paused. Nothing is broken - the meter is empty. The scripted Demo beside it still plays.",
+            "This POC's model budget is spent, so live answers are paused. The 3 scripted Demos still play.",
           retry: false,
         },
       },
