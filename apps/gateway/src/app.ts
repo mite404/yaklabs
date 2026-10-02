@@ -61,15 +61,17 @@ const openReply = async (
 };
 
 // An upstream refusal as a 502 carrying the status alone: the upstream's body could echo the
-// request, and the key stays here. A network failure has no status. Anything else is a bug and
-// is thrown on.
+// request, and the key stays here. Out of credit keeps its status so the page can name it
+// (ADR-164), still with a bare marker. A network failure has no status. Anything else is a bug
+// and is thrown on.
 function upstreamFailure(c: Context, error: unknown): Response {
   if (!(error instanceof APIError)) throw error;
   const status = typeof error.status === "number" ? error.status : null; // → number | null
+  if (status === 402) return c.json({ error: "credit" }, 402);
   return c.json({ error: "upstream", status }, 502);
 }
 
-// The reply `open` starts, streamed as NDJSON, or the upstream's refusal as a 502.
+// The reply `open` starts, streamed as NDJSON, or the upstream's refusal as an error response.
 async function ndjsonReply(c: Context, open: () => Promise<ReadableStream>): Promise<Response> {
   try {
     return c.body(await open(), 200, { "Content-Type": NDJSON });
