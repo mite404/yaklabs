@@ -1,4 +1,3 @@
-import { AuthKitProvider } from "@workos-inc/authkit-react";
 import { trackInputModality } from "@yaklabs/catalog/inputModality";
 import { Toaster } from "@yaklabs/ui/components/sonner";
 import { TooltipProvider } from "@yaklabs/ui/components/tooltip";
@@ -10,14 +9,12 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
-  useNavigate,
 } from "react-router";
 
 import "./index.css";
 import type { Route } from "./+types/root";
-import { env } from "./env";
-import { safeReturnTo } from "./returnTo";
 import { CHROME_BOOT } from "./chrome";
+import { Providers } from "./providers";
 
 export function Layout({ children }: { children: ReactNode }) {
   return (
@@ -36,27 +33,6 @@ export function Layout({ children }: { children: ReactNode }) {
         <Scripts />
       </body>
     </html>
-  );
-}
-
-// WorkOS AuthKit in the browser (ADR-084); the provider also finishes the sign-in when the
-// callback route loads with a code. Dev mode everywhere keeps the refresh token in localStorage:
-// without a custom auth domain, the alternative is a cookie on api.workos.com, which the
-// browser blocks as third-party, so every reply after the first token expired failed (ADR-154).
-function Providers({ children }: { children: ReactNode }) {
-  const navigate = useNavigate();
-  if (env.auth.kind === "none") return children;
-  return (
-    <AuthKitProvider
-      clientId={env.auth.clientId}
-      redirectUri={env.auth.redirectUri}
-      devMode
-      onRedirectCallback={({ state }) =>
-        void navigate(safeReturnTo(state, window.location.origin), { replace: true })
-      }
-    >
-      {children}
-    </AuthKitProvider>
   );
 }
 
