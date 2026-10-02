@@ -6,7 +6,7 @@ import { ROOT } from "./harness.mjs";
 import { BASE, sidebarDrawn } from "./lever.mjs";
 
 export const BASELINE = path.join(ROOT, ".artifacts/polish/baseline");
-export const THEMES = ["light"];
+export const THEMES = ["light", "dark"];
 export const WIDTHS = [
   { width: 1440, height: 900 },
   { width: 1280, height: 800 },
@@ -31,14 +31,14 @@ const addressOf = (scenario, query) =>
  * A fresh context on a scenario in a theme, ready once the sidebar has drawn and stopped
  * loading (SC-bar). `motion` is "reduce" unless a predicate says otherwise.
  */
-export async function openScenario(
-  browser,
-  { scenario = "demo", query, viewport = WIDTHS[0], motion = "reduce", ready = true, scale = 1 },
-) {
+export async function openScenario(browser, { theme = "light", ...options }) {
+  const { scenario = "demo", query, viewport = WIDTHS[0], motion = "reduce" } = options;
+  const { ready = true, scale = 1 } = options;
   const context = await browser.newContext({
     viewport,
     reducedMotion: motion,
     deviceScaleFactor: scale,
+    colorScheme: theme,
   });
   const page = await context.newPage();
   const errors = [];
@@ -47,7 +47,7 @@ export async function openScenario(
     if (message.type() === "error") errors.push(message.text());
   });
   await page.goto(addressOf(scenario, query), { waitUntil: "load" });
-  if (ready) {
+  if (ready !== false) {
     await sidebarDrawn(page);
     await page
       .locator('[data-sidebar="menu-skeleton"]')

@@ -5,7 +5,7 @@
 import { placeOf, RAIL_PLACES } from "./rail-places.mjs";
 import { openDesk } from "./sidebar-checks.mjs";
 
-const THEMES = ["light"];
+const THEMES = ["light", "dark"];
 // The rail's stops top to bottom: its places, then the account at its foot.
 const RAIL_STOPS = [...RAIL_PLACES.map((place) => place.name), "Account"];
 // How many Tabs a walk from the toggle takes before it gives up.

@@ -40,14 +40,18 @@ const edges = (page) =>
   }));
 
 /**
- * A fresh desktop window on the demo, the sidebar open or collapsed, at a kept width, with
- * motion on unless asked.
+ * A fresh desktop window on the demo, the sidebar open or collapsed, at a kept width, in a
+ * theme through the system's scheme, with motion on unless asked.
  */
-export async function openDesk(browser, { side = "closed", width, motion = "no-preference" } = {}) {
+export async function openDesk(
+  browser,
+  { side = "closed", width, theme = "light", motion = "no-preference" } = {},
+) {
   const context = await browser.newContext({
     viewport: DESK,
     deviceScaleFactor: 2,
     reducedMotion: motion,
+    colorScheme: theme,
   });
   await context.addInitScript(
     ([s, w]) => {
@@ -515,7 +519,7 @@ export const sidebarChecks = {
   async P22(browser) {
     const notes = [];
     let ok = true;
-    for (const theme of ["light"]) {
+    for (const theme of ["light", "dark"]) {
       for (const width of [208, 256, 400]) {
         const { context, page } = await openDesk(browser, { side: "open", width, theme });
         const { tab, edge } = await edges(page);
@@ -595,7 +599,7 @@ export const sidebarChecks = {
       .map((f) => `${f.ms}:${round(f.edge)}@${round(f.opacity)}/${round(f.rows)}`)
       .join(" ");
     const tails = [];
-    for (const theme of ["light"]) {
+    for (const theme of ["light", "dark"]) {
       const share = await tailShare(browser, theme);
       tails.push(
         `${theme} ${round(share.full * 100)}% at full strength, ${round(share.faded * 100)}% faded`,

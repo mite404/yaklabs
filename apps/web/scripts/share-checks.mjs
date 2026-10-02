@@ -73,8 +73,12 @@ async function openShare(page) {
  * The demo at a desktop size in a context of its own, with the gateway's share stand-in and the
  * clipboard open, once the thread menu's button is on screen.
  */
-export async function openSharing(browser) {
-  const context = await browser.newContext({ viewport: DESKTOP, reducedMotion: "reduce" });
+export async function openSharing(browser, { theme = "light" } = {}) {
+  const context = await browser.newContext({
+    viewport: DESKTOP,
+    reducedMotion: "reduce",
+    colorScheme: theme,
+  });
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
   await serveShares(context);
   const page = await context.newPage();

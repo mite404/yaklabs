@@ -182,7 +182,7 @@ export const pillChecks = {
   async P23(browser) {
     const notes = [];
     let ok = true;
-    for (const theme of ["light"]) {
+    for (const theme of ["light", "dark"]) {
       const { context, page } = await openDesk(browser, { theme });
       const results = [await pillsAtRest(page, theme)];
       await context.close();

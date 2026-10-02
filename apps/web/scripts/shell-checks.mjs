@@ -82,6 +82,7 @@ async function narrowBar(browser, { theme, width }) {
   const context = await browser.newContext({
     viewport: { width, height: 844 },
     reducedMotion: "reduce",
+    colorScheme: theme,
   });
   const page = await context.newPage();
   await page.goto(`${BASE}/?scenario=demo`, { waitUntil: "load" });
@@ -542,7 +543,7 @@ export const shellChecks = {
   },
 
   async P13(browser) {
-    const cases = ["light"].flatMap((theme) => NARROW.map((width) => ({ theme, width })));
+    const cases = ["light", "dark"].flatMap((theme) => NARROW.map((width) => ({ theme, width })));
     const results = await Promise.all(cases.map((each) => narrowBar(browser, each)));
     return {
       ok: results.every((each) => each.ok),

@@ -20,7 +20,7 @@ const TOGGLE_PX = 20;
 
 // One theme's strip: a long-titled lane collapsed, measured at rest with the pointer away.
 async function stripIn(browser, theme) {
-  const { page, close } = await openThemed(browser);
+  const { page, close } = await openThemed(browser, theme);
   await makeLane(page, LONG_TITLE);
   const lane = laneNamed(page, LONG_TITLE);
   // Open, the toggle sits in the thread's own title bar, before its title.
@@ -72,7 +72,7 @@ async function stripIn(browser, theme) {
 /** Collapsible lanes (P14 to P18). */
 export const laneCollapseChecks = {
   async P14(browser) {
-    const results = await Promise.all(["light"].map((theme) => stripIn(browser, theme)));
+    const results = await Promise.all(["light", "dark"].map((theme) => stripIn(browser, theme)));
     return {
       ok: results.every((each) => each.ok),
       detail: results.map((each) => each.note).join("; "),

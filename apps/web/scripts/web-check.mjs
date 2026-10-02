@@ -298,18 +298,42 @@ try {
         ink: getComputedStyle(panel).color,
       };
     });
+  // The browser here prefers light, so System, the default, is the light page.
   const light = await surface();
-  await page.getByRole("button", { name: "Account" }).click();
   const accountMenu = page.getByRole("menu");
+  const chooseTheme = async (name) => {
+    await page.getByRole("button", { name: "Account" }).click();
+    await accountMenu.waitFor();
+    await page.getByRole("menuitemradio", { name, exact: true }).click();
+    // A radio item keeps the menu open, so the choice can be changed again in place.
+    await page.keyboard.press("Escape");
+    await accountMenu.waitFor({ state: "detached" });
+  };
+  await page.getByRole("button", { name: "Account" }).click();
   await accountMenu.waitFor();
-  const themeChoices = await page.getByRole("menuitemradio", { name: /Light|Dark|System/ }).count();
+  const themeChoices = await page
+    .getByRole("menuitemradio", { name: /^(Light|Dark|System)$/ })
+    .allInnerTexts();
+  const checked = await page.getByRole("menuitemradio", { checked: true }).allInnerTexts();
   await page.keyboard.press("Escape");
   await accountMenu.waitFor({ state: "detached" });
+  await chooseTheme("Dark");
+  await page.waitForTimeout(300);
+  await shot("thread-dark");
+  const dark = await surface();
+  const stored = await page.evaluate(() => localStorage.getItem("theme"));
+  await chooseTheme("System");
+  const followed = await surface();
   record(
-    "the site is light only: the account menu offers no theme, and the root names none (ADR-161)",
-    themeChoices === 0 &&
-      (await page.evaluate(() => document.documentElement.dataset.theme)) === undefined,
-    `paper ${light.paper}; theme choices ${themeChoices}`,
+    "the account menu offers Light, Dark and System, System by default, and Dark turns the page, the paper and the ink (ADR-162)",
+    themeChoices.join(",") === "Light,Dark,System" &&
+      checked.join(", ") === "System, Solid" &&
+      stored === "dark" &&
+      dark.page !== light.page &&
+      dark.paper !== light.paper &&
+      dark.ink !== light.ink &&
+      followed.paper === light.paper,
+    `choices ${themeChoices.join(", ")}; checked ${checked.join(", ")}; paper ${light.paper} → ${dark.paper} → ${followed.paper}`,
   );
 
   const rail = railOf(page);
@@ -729,6 +753,10 @@ try {
   await page.getByText("Useful answers.").waitFor({ timeout: 10_000 });
   await shot("lab");
   record("lab route renders the workbench", true);
+  await chooseTheme("Dark");
+  await page.waitForTimeout(300);
+  await shot("lab-dark");
+  await chooseTheme("System");
 
   // The dev server serves the catalog's own modules, so the fragment comes from the real encoder.
   const fragment = await page.evaluate(async (root) => {
@@ -1451,6 +1479,7 @@ try {
       await own.locator('[data-slot="project-name"]').filter({ hasText: /\S/ }).waitFor({
         timeout: 15_000,
       });
+      const initialTheme = await own.evaluate(() => document.documentElement.dataset.theme);
       await own.getByRole("button", { name: "Toggle sidebar" }).click();
       await own.waitForTimeout(600);
       const drawer = own.getByRole("dialog");
@@ -1461,15 +1490,27 @@ try {
       await account.click();
       await own.getByRole("menu").waitFor();
       const within = await menuOnScreen(own, 390, 844);
-      await own.screenshot({ path: path.join(OUT, "account-menu-phone.png") });
+      await own.screenshot({ path: path.join(OUT, "account-menu-phone-light.png") });
+      await own.getByRole("menuitemradio", { name: "Dark" }).click();
+      const darkened = await own.evaluate(() => document.documentElement.dataset.theme);
+      await own.screenshot({ path: path.join(OUT, "account-menu-phone-dark.png") });
+      await own.getByRole("menuitemradio", { name: "System" }).click();
+      const restored = await own.evaluate(() => document.documentElement.dataset.theme);
       await own.keyboard.press("Escape");
       await own.waitForTimeout(200);
       const menuGone = (await own.getByRole("menu").count()) === 0;
       const drawerStillOpen = (await drawer.count()) === 1;
       return {
         ok:
-          onePage && inDrawer && footed === true && within === true && menuGone && drawerStillOpen,
-        detail: `one Account button on the page ${onePage}; in the drawer ${inDrawer}; low in it ${footed}; every item on screen ${within}; Escape closed the menu ${menuGone}, left the drawer open ${drawerStillOpen}`,
+          onePage &&
+          inDrawer &&
+          footed === true &&
+          within === true &&
+          darkened === "dark" &&
+          restored === initialTheme &&
+          menuGone &&
+          drawerStillOpen,
+        detail: `one Account button on the page ${onePage}; in the drawer ${inDrawer}; low in it ${footed}; every item on screen ${within}; theme light→${darkened}→${restored}; Escape closed the menu ${menuGone}, left the drawer open ${drawerStillOpen}`,
       };
     },
   );
@@ -1918,7 +1959,7 @@ try {
   );
 
   await onOwnPage(
-    "the browser's Simulated badge clears 4.5:1 on the address field, and an OS in dark mode gets the same light page (ADR-161)",
+    "the browser's Simulated badge clears 4.5:1 on the address field in either theme, and an OS in dark mode gets the dark page (ADR-162)",
     "/t/t-005?scenario=demo",
     {},
     async (own) => {
@@ -1963,9 +2004,10 @@ try {
       };
       const onLight = await ratio("light");
       const onDark = await ratio("dark");
+      const theme = await own.evaluate(() => document.documentElement.dataset.theme);
       return {
-        ok: onLight >= 4.5 && onDark === onLight,
-        detail: `OS light ${onLight}:1, OS dark ${onDark}:1`,
+        ok: onLight >= 4.5 && onDark >= 4.5 && theme === "dark",
+        detail: `OS light ${onLight}:1, OS dark ${onDark}:1, root ${theme}`,
       };
     },
   );

@@ -10,7 +10,7 @@ import { BASE, shotPath, sidebarDrawn } from "./lever.mjs";
 
 /** The looks that have their assets, in the switch's order; Bonsai is listed and waits. */
 export const LOOKS = ["landscape", "abstract", "vitruvian"];
-const THEMES = ["light"];
+const THEMES = ["light", "dark"];
 // WCAG AA for body text: the words against the worst pixel of the painting behind them.
 const AA = 4.5;
 
@@ -30,11 +30,19 @@ const labelOf = (look) => look[0].toUpperCase() + look.slice(1);
  */
 export async function openDemo(
   browser,
-  { query = "", turn = null, retired = null, motion = "reduce", prepare = async () => {} } = {},
+  {
+    theme = "light",
+    query = "",
+    turn = null,
+    retired = null,
+    motion = "reduce",
+    prepare = async () => {},
+  } = {},
 ) {
   const context = await browser.newContext({
     viewport: { width: 1440, height: 900 },
     reducedMotion: motion,
+    colorScheme: theme,
   });
   await prepare(context);
   await context.addInitScript(

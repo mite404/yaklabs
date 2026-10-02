@@ -10,7 +10,7 @@ import { panelReachChecks } from "./panel-reach-checks.mjs";
 import { placeOf, RAIL_PLACES } from "./rail-places.mjs";
 import { CLOSE_MS, openDesk, peek, phaseOf, SLIDE_MS } from "./sidebar-checks.mjs";
 
-const THEMES = ["light"];
+const THEMES = ["light", "dark"];
 // What the closing panel hides that keyboard focus can sit on: a project row and the edge.
 const HIDDEN_ON_CLOSE = [
   { role: "button", name: "Demo store" },

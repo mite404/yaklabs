@@ -151,7 +151,11 @@ const pressesInert = (presses) =>
 // name and "Out of demo scope" after it, clear of the name by the row's gap and inside its padding, both in
 // faint ink at 4.5:1 or more.
 async function outOfScopeRows(browser, theme) {
-  const context = await browser.newContext({ viewport: PHONE, deviceScaleFactor: 2 });
+  const context = await browser.newContext({
+    viewport: PHONE,
+    deviceScaleFactor: 2,
+    colorScheme: theme,
+  });
   const page = await context.newPage();
   // A thread's own address: "/" moves on to a thread, and that arrival would close the drawer.
   await page.goto(`${BASE}/t/t-005?scenario=demo`);
@@ -192,7 +196,7 @@ const placeChecks = {
   async P25(browser) {
     const notes = [];
     let ok = true;
-    for (const theme of ["light"]) {
+    for (const theme of ["light", "dark"]) {
       const places = placesVerdict(await placesEverywhere(browser, theme));
       const { context, page } = await openDesk(browser, { theme });
       const rests = await restOnOutOfScope(page);
