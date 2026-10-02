@@ -77,7 +77,9 @@
   --bubble-tint-strong: color-mix(in srgb, var(--sage) 75%, var(--paper));
   --bubble-line: var(--sage);
   --data: var(--yak-graphite); /* chart marks: 6.4:1 on paper */
-  /* Ethan: a warm mid grey; 3.0:1 on the app surface and 3.3:1 on the page, the 3:1 a ring needs. */
+  /* Ethan: a warm mid grey; 3.0:1 on the app surface and 3.3:1 on the page, the 3:1 a ring needs.
+     The same grey in dark (Ethan), never Zed's cyan: 4.56:1 on the dark paper, 3.78:1 on the
+     compose box. */
   --focus: #8a8a85;
   --shadow: color-mix(in srgb, var(--yak-night) 10%, transparent);
   --shadow-strong: color-mix(in srgb, var(--yak-night) 20%, transparent);
@@ -343,7 +345,6 @@ button:hover {
   --desk: #3e4044;
   --data: #aeaeae; /* Zed: text, chart marks: 7.13:1 */
   --on-ink: var(--bg); /* 17.61:1 on the ink */
-  --focus: #16c3dd; /* Zed: border.focused; 7.44:1 on the paper, 8.8:1 on the bg */
   --on-accent: #fff7ed; /* the button hover keeps moss: 11.3:1 on it */
   /* Ethan: the send button ready to send is Zed's text grey, not the olive, with the page's
      near-black arrow on it (8.43:1; the cream would be 2.09:1); 5.91:1 on the compose box */
@@ -355,7 +356,9 @@ button:hover {
   --bubble-line: #4f5257; /* 2.02:1 */
   --shadow: color-mix(in srgb, black 50%, transparent);
   --shadow-strong: color-mix(in srgb, black 70%, transparent);
-  --compose-shadow: none; /* Ethan: the compose box is flat, as it reads in light */
+  /* Ethan: the compose box is flat, as it reads in light. A shadow that draws nothing rather than
+     `none`, since the focus ring lists it after its own halo and `none` there drops both. */
+  --compose-shadow: 0 0 transparent;
   /* the paintings show a step more on the dark paper (20%), where a daylight picture sits back
      anyway; Atlas is the ink at 26%, 2.29:1 off the dark paper */
   --splash-wash: color-mix(in srgb, var(--paper) 80%, transparent);
@@ -372,7 +375,8 @@ button:hover {
   --awaiting-tile-bg: #1e1c1d;
   --awaiting-hover: #3e4044;
   --attention-line: #3e4044;
-  --attention-focus: #16c3dd;
+  /* Ethan: the ring on the recap is the cream, as before Umbralkai, never Zed's cyan; 11.71:1 */
+  --attention-focus: var(--yak-cream);
   --on-attention-inverse: #2a2829;
   --tile-bg: #1e1c1d; /* Zed: panel */
   --tile-ink: #dedede; /* 12.6:1 */

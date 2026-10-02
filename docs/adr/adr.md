@@ -2680,3 +2680,6 @@ Zed's border at 1.19:1 read thinner. The send button is the same in a main threa
 lane: soft ink on the inset fill while there is nothing to send. Once there is, it is cream on
 olive in light and, in dark (Ethan), Zed's text grey `#aeaeae` with the page's near-black arrow
 (8.43:1), through `--send` and `--on-send`.
+The focus ring stays the light theme's warm grey `#8a8a85` in dark (Ethan: "the focus should not
+be blue"), 4.56:1 on the dark paper and 3.78:1 on the compose box, and the recap's ring stays
+the cream, 11.71:1; Zed's cyan `#16c3dd` is gone from the theme.

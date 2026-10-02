@@ -204,7 +204,7 @@ label is a caution orange pill (ADR-067, ADR-068).
 | Surface (dark) | `#302e2f`, one step above the paper; `#dedede` text 10.02:1, `#aeaeae` 6.08:1 | Ethan (Umbralkai) |
 | Tiles (dark) | Zed's panel `#1e1c1d`, 1.26:1 against the card; `#dedede` 12.6:1, `#aeaeae` 7.64:1 | Zed |
 | Hover (dark) | Zed's element grey `#3e4044`, text to `#fff7ed` at 9.78:1 | Zed |
-| Focus (dark) | Zed's focused border `#16c3dd`, the page's ring too: 7.44:1 on the paper | Zed |
+| Focus (dark) | the cream ring, 11.71:1 on the surface; the page's own ring stays the light theme's grey `#8a8a85` (4.56:1 on the dark paper), not Zed's cyan | Ethan |
 
 ### 28. A hover label is an ink pill
 
