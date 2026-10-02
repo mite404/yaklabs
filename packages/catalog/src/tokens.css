@@ -721,6 +721,17 @@ h1 span {
   height: 254px;
   width: 100%;
 }
+/* Recharts learns a resized box a frame late (its ResizeObserver sets state, React draws after
+   the paint) and holds the drawing at the old width in the meantime, so dragging a pane or a
+   lane narrower clipped the bars at the card's edge on every frame of the drag (Ethan). Its
+   SVG already fills its parent and carries a viewBox, so its wrappers fill the chart instead
+   of keeping the old width inline, and the last drawing scales to the box until the redraw
+   lands. The !important beats the sizes Recharts writes inline. */
+.chart .recharts-responsive-container > div,
+.chart .recharts-wrapper {
+  width: 100% !important;
+  height: 100% !important;
+}
 .muted {
   color: var(--soft-ink);
 }
