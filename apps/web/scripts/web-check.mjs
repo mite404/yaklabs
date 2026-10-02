@@ -914,7 +914,9 @@ try {
     .getByRole("link", { name: childTitle, exact: true });
   const childLane = reopeningCanvas.locator(`:scope > article[aria-label="${childTitle}"]`);
   await childRow.click();
-  await childLane.waitFor({ timeout: 10_000 });
+  // The demo opens this lane already, so only its flash says the click's visit has landed; a
+  // close before then is undone when the visit opens the lane.
+  await childLane.and(reopening.locator("[data-flash]")).waitFor({ timeout: 10_000 });
   await reopeningCanvas.getByRole("button", { name: `Close ${childTitle}`, exact: true }).click();
   await childLane.waitFor({ state: "detached", timeout: 10_000 });
   await childRow.click();
@@ -1800,7 +1802,9 @@ try {
         // oxlint-disable-next-line no-await-in-loop -- one lane at a time, in order
         await side.getByRole("link", { name: kidTitle, exact: true }).click();
         // oxlint-disable-next-line no-await-in-loop -- as above
-        await kidLane.waitFor({ timeout: 10_000 });
+        // Saturday's lane is open from the start, so wait for the visit's flash, as above.
+        // oxlint-disable-next-line no-await-in-loop -- as above
+        await kidLane.and(own.locator("[data-flash]")).waitFor({ timeout: 10_000 });
         // oxlint-disable-next-line no-await-in-loop -- as above
         await composeCanvas.getByRole("button", { name: `Close ${kidTitle}`, exact: true }).click();
         // oxlint-disable-next-line no-await-in-loop -- as above
