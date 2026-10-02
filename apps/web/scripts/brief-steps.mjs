@@ -236,7 +236,7 @@ async function childOpensLane(page, run) {
     .getByRole("region", { name: "Compose canvas" })
     .locator('article[aria-label="Weekly workload"]');
   await lane.waitFor();
-  await lane.getByText("Controlled by parent thread").waitFor();
+  await lane.getByText("Belongs to Weekly brief").waitFor();
   await run.shot("07-child-lane");
   return page.url();
 }

@@ -1848,6 +1848,9 @@ The main panel can therefore show a child without turning it into a main thread.
 panel placement must not infer parentage from the panel currently holding the thread.
 The child keeps "Controlled by parent thread" below its composer, including in the main panel,
 so the larger reading surface does not imply that control changed.
+Amended 2026-10-02 (Ethan): the line names the parent, "Belongs to Weekly brief", since a
+child's composer takes messages and "Controlled by" read as though it would not; it says
+"parent thread" while the parent is not yet in the workspace.
 Verification must cover both the menu and drag paths, with the same parent ID before and after.
 
 ## ADR-142 - Keep running status by the composer and tasks in a movable card

@@ -218,9 +218,9 @@ it("sets consecutive answers on one surface, each question over its answer", () 
 
 it("puts a host's footnote under the compose box and offers no Stop while nothing streams", () => {
   const html = renderToStaticMarkup(
-    <ChatThreadPanel thread={threads.trend} footnote="Controlled by parent thread" />,
+    <ChatThreadPanel thread={threads.trend} footnote="Belongs to Weekly brief" />,
   );
-  expect(html).toContain('<div class="thread-footnote">Controlled by parent thread</div>');
+  expect(html).toContain('<div class="thread-footnote">Belongs to Weekly brief</div>');
   expect(html).toContain('class="thread-compose" data-footnote=""');
   expect(html).not.toContain('aria-label="Stop"');
 });
