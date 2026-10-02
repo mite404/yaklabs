@@ -1168,6 +1168,12 @@ and never renames. The rename field draws no rule while editing, so the title re
 the same box the moment it opens.
 Proof: the workspace lever measures the whole title at rest, the ink beside the grip going from 37
 at rest to 162 on hover, and a 0px rule in the field (`docs/trail/evidence/projects-sidebar/css`).
+Amended 2026-10-02 (Ethan: "the grip icon seems to be finicky in the main chat thread"): a card's
+header in a thread wakes its grip the way a lane's bar does, while the pointer is within 25px of
+the dots, rather than on hover less its title and actions. A title wrapped to two lines in a
+narrow thread filled the header, so only the padding and the gaps between words woke the dots
+and they blinked as the pointer crossed the words. The zone moved to the catalog
+(`gripZone.ts`), so the card's header and the lane's bar read one radius.
 
 ## ADR-098 - The Disclosure's hover fill sits 4px inside its host
 
