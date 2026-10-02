@@ -2,9 +2,6 @@ import { Link } from "react-router";
 import { HOW, MISSING, PAIRS, PICTURES, PROOF, STEPS } from "../verify-ui-tooling";
 import { Seal } from "./design-tooling-seal";
 
-// The lenses the Accessibility tab reads the contrast table through; Kay's is the one on.
-const LENSES = ["Kay", "Apple", "Microsoft", "Material"] as const;
-
 // The bars' scale: the highest ratio a declared pair reaches, so every bar fits its track.
 const BAR_TOP = 16;
 
@@ -192,13 +189,6 @@ export function Band() {
             In the era of building with agents, one person doesn’t just ship one person’s work, they
             build the systems that build the product.
           </p>
-          <ul className="land-lenses">
-            {LENSES.map((lens) => (
-              <li key={lens} data-on={lens === "Kay" ? "" : undefined}>
-                {lens}
-              </li>
-            ))}
-          </ul>
         </div>
         <figure className="land-shots">
           <img
