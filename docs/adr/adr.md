@@ -2698,3 +2698,18 @@ Alternatives weighed: keeping a 502 with a marker, which the client would never 
 deliberately branches on the status line; adding a new end reason and protocol bump for the
 mid-reply case, a heavier protocol change for a rare path the line already carries; and retrying
 with backoff, although credit does not come back on its own.
+
+## ADR-165 - Cap the model's thinking at the API's floor
+
+2026-10-02 - Accepted. Amends ADR-146.
+Kimi K2.6 reasons before it answers, and left to itself that reasoning ran 15 to 30 seconds
+before the first visible token, which reads as a stuck page in an interview. Every round now
+sends `thinking: { type: "enabled", budget_tokens: 1024 }`, the Messages API's smallest
+budget, so the wait is capped at about a thousand tokens of reasoning a round. The thinking
+shares the reply's 8192-token budget, which leaves the answer and the tool loop their room.
+Whether OpenRouter's Anthropic-format adapter honours the budget for a Kimi model is checked
+live against the real key before this merges.
+Alternatives weighed: the model's default, which costs the page its first impression;
+`{ type: "disabled" }`, which Kimi may refuse and which spends the reasoning the tool calls
+lean on; and streaming the reasoning itself to the page, a protocol change not worth taking on
+before the interviews.
