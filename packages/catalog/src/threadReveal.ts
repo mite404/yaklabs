@@ -1,3 +1,5 @@
+import { prefersReducedMotion } from "./reducedMotion";
+
 /** A vertical span in a scroller's content coordinates (px from the top of its content). */
 export type Span = { top: number; bottom: number };
 
@@ -66,11 +68,6 @@ function viewport(scroller: HTMLElement): Viewport {
     insetBottom: (parseFloat(style.paddingBottom) || 0) - runway,
     maxScrollTop: scroller.scrollHeight - scroller.clientHeight - runway,
   };
-}
-
-function prefersReducedMotion(): boolean {
-  if (typeof window === "undefined") return false;
-  return window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
 }
 
 // The control the user pressed, which a reveal keeps in view: the button, summary or link the

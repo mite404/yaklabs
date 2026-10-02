@@ -76,13 +76,16 @@ export type HostAsk = {
 export type { ThreadActivity };
 
 /**
- * How the thread takes dictation: which audio it hears, simulated unless told otherwise, and
- * whether it opens already recording (stories).
+ * How the thread takes dictation: which audio it hears, simulated unless told otherwise,
+ * whether it opens already recording (stories), and the host's standing warning for the modal
+ * in place of the live microphone's own (`DictationModal`'s `note`).
  */
-export type Dictation = { source?: DictationSource; open?: boolean };
+export type Dictation = { source?: DictationSource; open?: boolean; note?: string };
 
-// The dictation setup with its defaults filled in.
-function dictationSetup(dictation: Dictation | undefined): Required<Dictation> {
+// The dictation setup with its defaults filled in; a note stays optional.
+function dictationSetup(
+  dictation: Dictation | undefined,
+): Required<Omit<Dictation, "note">> & Pick<Dictation, "note"> {
   return { source: "simulated", open: false, ...dictation };
 }
 
@@ -974,7 +977,7 @@ export function ChatThreadPanel({
   footnote?: ReactNode;
   ref?: Ref<ThreadHandle>;
 }) {
-  const { source, open } = dictationSetup(dictation);
+  const { source, open, note } = dictationSetup(dictation);
   const [messages, setMessages] = useState(thread.messages);
   // A question in a reply's stream goes to the dock, which needs the agent to report a malformed
   // one back: the dock's `ask` reaches the replies through this ref, kept current below.
@@ -1232,6 +1235,7 @@ export function ChatThreadPanel({
       {dictating && (
         <DictationModal
           source={source}
+          note={note}
           onCancel={() => {
             endDictation();
           }}

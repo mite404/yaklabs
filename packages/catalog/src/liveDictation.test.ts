@@ -1,5 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
+  defaultLabel,
+  inputName,
+  pickableInputs,
   heardSoFar,
   SILENT_SPEECH,
   speechFailure,
@@ -130,5 +133,50 @@ describe("speechFailure and heardSoFar", () => {
     expect(heardSoFar("", " hello ")).toBe("hello");
     expect(heardSoFar("hello", "")).toBe("hello");
     expect(heardSoFar("hello", "there")).toBe("hello there");
+  });
+});
+
+describe("defaultLabel names the device the system's default is", () => {
+  it("takes the device from the browser's label, and stands alone without one", () => {
+    expect(defaultLabel("Default - MacBook Pro Microphone (Built-in)")).toBe(
+      "System Default (MacBook Pro Microphone (Built-in))",
+    );
+    expect(defaultLabel("Default - Razer BlackShark V2 X USB (1532:0557)")).toBe(
+      "System Default (Razer BlackShark V2 X USB)",
+    );
+    expect(defaultLabel("")).toBe("System Default");
+  });
+});
+
+describe("the picker's inputs, as Ethan wants them read", () => {
+  // The list Chrome gave on Ethan's Mac, with the Razer as the system's default.
+  const mac = [
+    ["default", "Default - Razer BlackShark V2 X USB (1532:0557)"],
+    ["a", "MacBook Pro Microphone (Built-in)"],
+    ["b", "Loopback Audio (Virtual)"],
+    ["c", "Razer BlackShark V2 X USB (1532:0557)"],
+    ["d", "LoomAudioDevice (Virtual)"],
+  ].map(([deviceId, label]) => ({ deviceId, label, kind: "audioinput" as const }));
+
+  it("drops a USB input's ids and keeps words in brackets", () => {
+    expect(inputName("Razer BlackShark V2 X USB (1532:0557)")).toBe("Razer BlackShark V2 X USB");
+    expect(inputName("MacBook Pro Microphone (Built-in)")).toBe(
+      "MacBook Pro Microphone (Built-in)",
+    );
+    expect(inputName("Loopback Audio (Virtual)")).toBe("Loopback Audio (Virtual)");
+  });
+
+  it("names the default's device, and leaves that device out so it is not listed twice", () => {
+    expect(pickableInputs(mac).map((each) => each.label)).toEqual([
+      "System Default (Razer BlackShark V2 X USB)",
+      "MacBook Pro Microphone (Built-in)",
+      "Loopback Audio (Virtual)",
+      "LoomAudioDevice (Virtual)",
+    ]);
+  });
+
+  it("lists every input where the browser does not name the default's device", () => {
+    const unnamed = [{ ...mac[0], label: "" }, ...mac.slice(1)];
+    expect(pickableInputs(unnamed).map((each) => each.id)).toEqual(["default", "a", "b", "c", "d"]);
   });
 });

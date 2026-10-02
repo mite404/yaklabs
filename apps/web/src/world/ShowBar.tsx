@@ -164,7 +164,7 @@ function Transport({ show, state }: On) {
 }
 
 // What this is, which demo is on (Ethan: "SCRIPTED DEMO: Weekly Brief"), in the title bar's
-// green, bold, and that nothing leaves the page (ADR-096).
+// green, bold.
 function Title({ show }: { show: Show }) {
   return (
     <div className="flex min-w-0 items-baseline gap-2">
@@ -173,9 +173,6 @@ function Title({ show }: { show: Show }) {
         className="demo-title truncate text-sm font-bold tracking-[0.06em]"
       >
         <span className="uppercase">Scripted demo:</span> {show.script.thread}
-      </span>
-      <span className="shrink-0 text-[11px] text-soft-ink max-xl:hidden">
-        Nothing is sent or changed
       </span>
     </div>
   );
@@ -196,10 +193,10 @@ function Standing({ show }: { show: Show }) {
 
 /**
  * The controls of the show on screen, one row under the title bar (two on a phone): which demo
- * this is and that nothing leaves the page (ADR-096), what of the show is shipped or proposed in
- * the middle, then Play, 2x, Restart and the time played. It draws nothing unless the thread on screen is a
- * show's main or one of its children, so it comes and goes with the Demo's threads. The thread
- * below is the app's own, driven through its own controls.
+ * this is, what of the show is shipped or proposed in the middle, then Play, 2x, Restart and the
+ * time played. It draws nothing unless the thread on screen is a show's main or one of its
+ * children, so it comes and goes with the Demo's threads. The thread below is the app's own,
+ * driven through its own controls.
  */
 export function ShowBar() {
   const shell = useShell();

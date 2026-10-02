@@ -1,6 +1,6 @@
 import type { RuntimeState, Workspace } from "@yaklabs/runtime";
 import { describe, expect, it } from "vitest";
-import { dictationOf } from "./dictation";
+import { dictationOf, noteOf, SIMULATED_NOTE } from "./dictation";
 
 const workspace: Workspace = {
   projects: [],
@@ -35,5 +35,12 @@ describe("dictationOf", () => {
 
   it("plays the simulated recording until the runtime is ready", () => {
     expect(dictationOf({ kind: "starting", source: null }, false)).toBe("simulated");
+  });
+});
+
+describe("noteOf", () => {
+  it("points a simulated recording to the Live Playground, and leaves the live one its own", () => {
+    expect(noteOf("simulated")).toBe(SIMULATED_NOTE);
+    expect(noteOf("microphone")).toBeUndefined();
   });
 });

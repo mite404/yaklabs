@@ -1817,6 +1817,56 @@ The same pass caught Chrome's habit of starting each later result with a space, 
 double spaces in the text. Lesson: a level meter proves the cable, not the transcriber. Every
 stage in a signal chain needs its own light.
 
+### The title card that hopped when the zoom landed
+
+On hover the welcome seal grows 10%, and "NOW WITH DESIGN TOOLING!" jumped up against its
+ribbon a hair, then back down on the way out. Ethan's recording, measured frame by frame, put
+the jump on the very frame the growth ended: during the 150ms grow the words sat dead centre,
+and they snapped about 1.5% of the ribbon's depth upward once it settled.
+
+The reason is how Chrome paints a moving layer. While the seal animates, Chrome scales a
+picture it has already painted, so everything moves together. When the animation ends, it
+paints the seal again at the new size, and it rounds a line of text to whole pixels as it
+does, so the words land on a slightly different pixel row than they did at rest. The ribbon is
+a shape, which is never rounded. The tilt does not save it either, since the rounding happens
+in the seal's own upright frame before the tilt is applied. Headless Chrome on Linux does not
+round this way, which is why the settled screenshots here matched and only the Mac's recording
+showed it.
+
+The fix draws the words as shapes too. A small script (`scripts/seal-words.mjs`) reads Inter
+at weight 600, lays out the line with its kerning and the 0.1em tracking, and writes the
+letters' outlines into `seal-words.ts`. The ribbon now carries one path where the text was:
+measured against the old text, it sits within 0.01px of the same place. The link keeps its
+spoken name, and a test fails if someone changes the words without drawing them again.
+Lesson: a title card burned into the plate moves with the plate; a caption laid over it is
+re-typeset every time the frame size changes.
+
+### The chart that arrived a frame late
+
+Dragging a pane or a lane narrower cut the right-hand bars off at the card's edge for as long
+as the drag lasted. Sampling every frame of a drag showed why: on most frames the drawing was
+one 18px grid step wider than its box. Recharts learns the new width from a ResizeObserver, sets
+state, and React draws the new chart after the browser has already painted. Until then Recharts
+holds its two wrappers at the old width in inline pixels, so the old drawing overhangs and the
+card's rounded clip slices it.
+
+The SVG itself already carries a viewBox and is told to fill its parent; only the wrappers kept
+it at the old size. One CSS rule lets the wrappers fill the chart's box too, so on the late
+frame the last drawing simply scales to fit, and the true redraw lands a frame later. Measured
+on the same drag: 18 overhanging frames before, none after, and a settled chart is identical to
+the pixel. Lesson: when a renderer is always a frame behind the edit, keep the last frame
+stretched to the gate rather than letting it spill past it; nobody sees a frame of scale, but
+everybody sees a cropped picture.
+
+The first fix measured the chart's outer box and called it done; Ethan's next recording showed
+the main thread's chart, the one with the slider, still overrunning. That card eases its bars
+over 300ms so the eye can follow a change of measure, and Recharts animates any change in the
+bars' geometry, a width included, so each frame of a drag started a fresh slide from the old
+positions. The bars now ease only for 300ms after the stop changes (and as the card first
+draws); a resize redraws at once. Measuring the bars themselves this time: 207 of 237 frames
+overran by up to 221px before, none after. Lesson: measure the thing the eye sees, the bars,
+not the frame around them.
+
 ## 5. Director's Commentary
 
 ### The agent only states intent; the design system does the rest

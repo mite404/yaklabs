@@ -17,7 +17,19 @@ export function dictationOf(state: RuntimeState, scripted: boolean): DictationSo
   return onDevice && !scripted ? "microphone" : "simulated";
 }
 
-/** How the thread `id` hears dictation (`dictationOf`), as the panel's `dictation` prop. */
-export function useDictation(id: string): { source: DictationSource } {
-  return { source: dictationOf(useRuntimeState(), useScripted(id)) };
+/**
+ * The standing warning a simulated recording shows in place of the live microphone's: it
+ * plays a scripted take, so it points to where speech really turns into text (Ethan).
+ */
+export const SIMULATED_NOTE = "Choose Live Playground to test Speech to Text";
+
+/** The dictation modal's standing warning for a source: the simulated one's, or the live one's own. */
+export function noteOf(source: DictationSource): string | undefined {
+  return source === "simulated" ? SIMULATED_NOTE : undefined;
+}
+
+/** How the thread `id` hears dictation (`dictationOf`) and its note, as the panel's `dictation`. */
+export function useDictation(id: string): { source: DictationSource; note: string | undefined } {
+  const source = dictationOf(useRuntimeState(), useScripted(id)); // → DictationSource
+  return { source, note: noteOf(source) };
 }

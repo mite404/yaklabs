@@ -59,3 +59,38 @@ export function appendDictation(draft: string, transcript: string): string {
   if (!spoken) return draft;
   return draft.trim() ? `${draft.trimEnd()} ${spoken}` : spoken;
 }
+
+// What the live dictation modal tells the user (DictationModal.tsx).
+/** Shown when the browser has no speech service. */
+export const NO_SPEECH_NOTICE =
+  "The waveform is live, but this browser has no speech service, so no text will appear.";
+/**
+ * Why the live modal can turn no speech into text, most pressing first, or nothing while it
+ * can. It takes the standing warning's place at the top while it lasts (Ethan).
+ */
+export function liveNotice(state: {
+  microphoneError: string | undefined;
+  supported: boolean;
+  failure: string | undefined;
+}): string | undefined {
+  if (state.microphoneError !== undefined) return state.microphoneError;
+  if (!state.supported) return NO_SPEECH_NOTICE;
+  return state.failure;
+}
+
+/**
+ * The live modal's standing warning, shown the whole time it records (Ethan): the browser's
+ * speech service hears only the system's default input (the Web Speech API takes no device),
+ * so a chosen input that is not it moves the waveform and turns no speech into text.
+ */
+export const DEFAULT_MIC_WARNING = "Speech to Text only offered via system's default microphone.";
+
+/**
+ * What a live input does, under its name in the picker: the system's default turns speech into
+ * text, every other input only draws the waveform (the Web Speech API takes no device). A
+ * simulated recording transcribes whichever is picked, so it says nothing.
+ */
+export function deviceHint(id: string, live: boolean): string | undefined {
+  if (!live) return undefined;
+  return id === "default" ? "Turns speech into text" : "Waveform only";
+}

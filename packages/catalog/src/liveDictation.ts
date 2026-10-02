@@ -29,7 +29,7 @@ type MicrophoneSink = {
   onError: (message: string) => void;
 };
 
-// Where the speech service reports to while it listens.
+// Where the speech service reports to while it listens: the words, and a failure that ends it.
 type SpeechSink = {
   onText: (text: string) => void;
   onFailure: (message: string) => void;
@@ -79,17 +79,48 @@ function microphoneError(reason: unknown): string {
     : "No microphone could be opened.";
 }
 
-// The inputs to pick from, named for the picker; unnamed ones are numbered.
-function audioInputs(all: MediaDeviceInfo[]): AudioDevice[] {
-  return all
-    .filter((device) => device.kind === "audioinput")
+/**
+ * An input's name without the USB vendor and product ids Chrome appends ("Razer BlackShark V2 X
+ * USB (1532:0557)"), which read as noise (Ethan); words in brackets, "(Built-in)" or
+ * "(Virtual)", stay.
+ */
+export function inputName(browserLabel: string): string {
+  return browserLabel.replace(/\s*\([0-9a-f]{4}:[0-9a-f]{4}\)\s*$/i, "").trim();
+}
+
+// The device the system's default is now, by name, from the browser's label for it
+// ("Default - MacBook Pro Microphone"); empty where the browser does not say.
+const defaultDevice = (browserLabel: string): string =>
+  inputName(browserLabel.replace(/^Default\s*-\s*/, ""));
+
+/**
+ * The picker's name for the system's default input, with the device it is now where the browser
+ * says, since the speech service always hears that one.
+ */
+export function defaultLabel(browserLabel: string): string {
+  const device = defaultDevice(browserLabel);
+  return device === "" ? "System Default" : `System Default (${device})`;
+}
+
+/**
+ * The inputs to pick from, named for the picker: the system's default first as the browser
+ * lists it, then every other input but the one the default is now, which would only repeat it
+ * (Ethan); unnamed inputs are numbered.
+ */
+export function pickableInputs(
+  all: Pick<MediaDeviceInfo, "deviceId" | "kind" | "label">[],
+): AudioDevice[] {
+  const inputs = all.filter((device) => device.kind === "audioinput");
+  const current = defaultDevice(inputs.find((each) => each.deviceId === "default")?.label ?? "");
+  return inputs
     .map((device, index) => ({
       id: device.deviceId,
       label:
         device.deviceId === "default"
-          ? "System Default"
-          : device.label || `Microphone ${index + 1}`,
-    }));
+          ? defaultLabel(device.label)
+          : inputName(device.label) || `Microphone ${index + 1}`,
+    }))
+    .filter((device) => device.id === "default" || current === "" || device.label !== current);
 }
 
 /** The browser's speech recognizer, prefixed or not, or undefined where there is none. */
@@ -132,7 +163,7 @@ export function listenToMicrophone(deviceId: string, sink: MicrophoneSink): () =
       };
       measure();
       const all = await navigator.mediaDevices.enumerateDevices(); // → MediaDeviceInfo[]
-      sink.onDevices(audioInputs(all)); // → AudioDevice[]
+      sink.onDevices(pickableInputs(all)); // → AudioDevice[]
     } catch (reason: unknown) {
       sink.onError(microphoneError(reason));
     }
@@ -147,6 +178,15 @@ export function listenToMicrophone(deviceId: string, sink: MicrophoneSink): () =
     });
     void context?.close();
   };
+}
+
+// A recognizer that keeps listening and reports words as they form, in the browser's language.
+function continuousRecognizer(Recognizer: SpeechRecognizerClass): SpeechRecognizer {
+  const recognizer = new Recognizer();
+  recognizer.continuous = true;
+  recognizer.interimResults = true;
+  recognizer.lang = navigator.language || "en-US";
+  return recognizer;
 }
 
 /**
@@ -167,10 +207,7 @@ export function transcribe(Recognizer: SpeechRecognizerClass, sink: SpeechSink):
     failed = true;
     sink.onFailure(message);
   };
-  const recognizer = new Recognizer();
-  recognizer.continuous = true;
-  recognizer.interimResults = true;
-  recognizer.lang = navigator.language || "en-US";
+  const recognizer = continuousRecognizer(Recognizer);
   recognizer.addEventListener("start", () => {
     answered = true;
   });

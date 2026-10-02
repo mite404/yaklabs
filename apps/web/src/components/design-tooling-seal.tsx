@@ -1,5 +1,6 @@
 import { useId } from "react";
 import { Link } from "react-router";
+import { SEAL_WORDS } from "./seal-words";
 
 // The page about the verify-ui-drift tooling (ADR-160), which the seal leads to.
 const TOOLING_PATH = "/verify-ui-tooling";
@@ -128,18 +129,20 @@ export function Seal({ size = 112, className }: { size?: number; className?: str
   );
 }
 
-// The ribbon's words: the link's name, and what the ribbon carries in capitals.
-const RIBBON_WORDS = "Now with design tooling!";
+/** The ribbon's words: the link's name, and what the ribbon carries in capitals (seal-words.ts). */
+export const RIBBON_WORDS = "Now with design tooling!";
 
 // The welcome's seal in CSS pixels, as the HTML ribbon it replaces measured: a 112px medal
 // centred on a 230px ribbon, 27px deep (8px above and below 11px words), its ends notched 8px.
-// The words fill the 186px they take with the ribbon's 0.1em tracking (160.5px of Inter 600
-// capitals and 23 gaps of 1.1px), whatever the font's metrics, and sit on a baseline that
-// centres their capitals (Inter's cap height, 0.727em).
+// The words are Inter 600 at 11px drawn as outlines (seal-words.ts), 186px wide with the ribbon's
+// 0.1em tracking, centred on a baseline that centres their capitals (Inter's cap height,
+// 0.727em). Outlines, not text: Chrome redraws the grown seal at its new size once the hover
+// settles and rounds text to whole pixels there, so live words jumped up against the ribbon
+// (Ethan); a shape is never rounded, so it scales with the ribbon exactly.
 const LINK = { width: 230, height: 112 };
 const MEDAL = { size: 112, x: (LINK.width - 112) / 2 };
 const RIBBON = { top: 42.5, depth: 27, notch: 8 };
-const WORDS = { size: 11, length: 186, baseline: 56 + (11 * 0.727) / 2 };
+const WORDS = { x: (LINK.width - SEAL_WORDS.width) / 2, baseline: 56 + (11 * 0.727) / 2 };
 
 // The ribbon's outline: a band across the link's width with a notch cut into either end.
 const ribbonPoints = (): string => {
@@ -153,17 +156,11 @@ function Ribbon() {
   return (
     <g className="seal-ribbon">
       <polygon points={ribbonPoints()} />
-      <text
-        x={LINK.width / 2}
-        y={WORDS.baseline}
-        fontSize={WORDS.size}
-        textAnchor="middle"
-        textLength={WORDS.length}
-        lengthAdjust="spacing"
-        textRendering="geometricPrecision"
-      >
-        {RIBBON_WORDS.toUpperCase()}
-      </text>
+      <path
+        className="seal-ribbon-words"
+        d={SEAL_WORDS.path}
+        transform={`translate(${WORDS.x} ${WORDS.baseline})`}
+      />
     </g>
   );
 }

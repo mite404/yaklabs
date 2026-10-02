@@ -8,6 +8,7 @@
 //   .agents/skills/verify-storybook-component/scripts/control-storybook.sh launch   # http://127.0.0.1:6106
 //   node apps/web/scripts/workspace-check.mjs [--base URL] [--storybook URL] [--only P1,P4] [--out dir]
 import { canvasChecks } from "./canvas-checks.mjs";
+import { chartResizeChecks } from "./chart-resize-checks.mjs";
 import { laneCollapseChecks } from "./lane-collapse-checks.mjs";
 import { collect, run } from "./lever.mjs";
 import { lightsChecks } from "./lights-checks.mjs";
@@ -29,5 +30,6 @@ await run(
     railChecks,
     lightsChecks,
     panelChecks,
+    chartResizeChecks,
   ),
 );

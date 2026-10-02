@@ -544,26 +544,24 @@ html[data-dragging="sidebar"] * {
     fill: var(--on-seal);
   }
   .seal-ribbon polygon,
-  .seal-ribbon text {
+  .seal-ribbon-words {
     transition: fill 150ms ease;
   }
   .seal-ribbon polygon {
     fill: var(--ink);
   }
-  .seal-ribbon text {
-    font-family: var(--font-text);
-    font-weight: 600;
+  .seal-ribbon-words {
     fill: var(--on-ink);
   }
   .seal-link:hover .seal-ribbon polygon {
     fill: var(--moss);
   }
-  .seal-link:hover .seal-ribbon text {
+  .seal-link:hover .seal-ribbon-words {
     fill: var(--on-accent);
   }
   @media (prefers-reduced-motion: reduce) {
     .seal-ribbon polygon,
-    .seal-ribbon text {
+    .seal-ribbon-words {
       transition: none;
     }
   }
