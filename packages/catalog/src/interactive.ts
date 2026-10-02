@@ -5,7 +5,7 @@ const rows = z
   .array(
     z.strictObject({
       label: z.string().min(1).max(40),
-      value: z.number().finite().min(-1e12).max(1e12),
+      value: z.number().min(-1e12).max(1e12),
     }),
   )
   .min(1)
@@ -132,6 +132,9 @@ export function summarize(stop: Stop, period: string): Record<Placeholder, strin
   };
 }
 
+/** A run of a filled sentence: the template's own words, or a live value the card emphasises. */
+export type SentencePart = { text: string; live: boolean };
+
 /**
  * Splits a sentence template into text and filled values, so the card can emphasise
  * the live numbers. The schema rejects unknown placeholders; should one reach here anyway,
@@ -140,8 +143,8 @@ export function summarize(stop: Stop, period: string): Record<Placeholder, strin
 export function fillSentence(
   template: string,
   values: Record<Placeholder, string>,
-): { text: string; live: boolean }[] {
-  const parts: { text: string; live: boolean }[] = [];
+): SentencePart[] {
+  const parts: SentencePart[] = [];
   let cursor = 0;
   for (const match of template.matchAll(PLACEHOLDER_PATTERN)) {
     const [whole, name] = match; // → "{total}", "total"

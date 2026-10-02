@@ -2,6 +2,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { CardHeader } from "./CardHeader";
 import { CatalogCard } from "./CatalogCard";
 import { ShareButton } from "./ShareButton";
+import type { SharedCard } from "./share";
 import {
   attachmentLabel,
   axisMax,
@@ -72,7 +73,7 @@ function InteractiveHeader({
   leading,
   trailing,
 }: InteractiveCardProps & { title: string }) {
-  const card = { v: 1, kind: "interactive", payload } as const;
+  const card = { v: 1, kind: "interactive", payload } satisfies SharedCard;
   return (
     <CardHeader
       title={title}

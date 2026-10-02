@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, type CSSProperties } from "react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { BAR_RADIUS } from "./CatalogCard";
-import { formatUsd, stopPlace, type fillSentence, type Stop } from "./interactive";
+import { formatUsd, stopPlace, type SentencePart, type Stop } from "./interactive";
 
 // The interactive card's parts (InteractiveCard.tsx): its sentence, chart, slider and steps.
 
@@ -9,7 +9,7 @@ import { formatUsd, stopPlace, type fillSentence, type Stop } from "./interactiv
 export const TRANSITION_MS = 300;
 
 // The agent's sentence with the shown stop's figures in it, read out as they change.
-export function LiveSentence({ parts }: { parts: ReturnType<typeof fillSentence> }) {
+export function LiveSentence({ parts }: { parts: SentencePart[] }) {
   return (
     <p className="live-sentence" aria-live="polite">
       {parts.map((part, i) =>
@@ -67,21 +67,22 @@ export function StopChart({ stop, max, animate }: { stop: Stop; max: number; ani
   );
 }
 
-// The stepped slider, a button for each stop under it, and the shown stop's description.
-export function StepSlider({
-  id,
-  label,
-  stops,
-  index,
-  onChoose,
-}: {
+// The track's filled share, as the custom property the slider's CSS reads (interactive.css).
+type TrackFill = CSSProperties & { "--fill": string };
+
+// What the slider shows, and where it reports a stop chosen.
+type StepSliderProps = {
   id: string;
   label: string;
   stops: Stop[];
   index: number;
   onChoose: (next: number) => void;
-}) {
-  const placeOf = (i: number) => stopPlace({ index: i, count: stops.length }); // → StopPlace
+};
+
+// The stepped slider, a button for each stop under it, and the shown stop's description.
+export function StepSlider({ id, label, stops, index, onChoose }: StepSliderProps) {
+  const places = stops.map((_, i) => stopPlace({ index: i, count: stops.length })); // → StopPlace[]
+  const fill: TrackFill = { "--fill": places[index].left };
   return (
     <div className="stepped">
       <label htmlFor={id}>{label}</label>
@@ -93,7 +94,7 @@ export function StepSlider({
         step={1}
         value={index}
         aria-valuetext={stops[index].label}
-        style={{ ["--fill" as string]: placeOf(index).left }}
+        style={fill}
         onChange={(event) => {
           onChoose(Number(event.target.value));
         }}
@@ -104,8 +105,8 @@ export function StepSlider({
             key={item.id}
             aria-pressed={i === index}
             tabIndex={-1}
-            data-edge={placeOf(i).edge}
-            style={{ left: placeOf(i).left }}
+            data-edge={places[i].edge}
+            style={{ left: places[i].left }}
             onClick={() => {
               onChoose(i);
             }}

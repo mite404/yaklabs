@@ -42,6 +42,12 @@ describe("resolveInteractive", () => {
     expect(resolveInteractive(broken).kind).toBe("rejected");
   });
 
+  it("rejects a value that is not a finite number", () => {
+    const infinite = card();
+    infinite.props.control.stops[0].rows[0].value = Number.POSITIVE_INFINITY;
+    expect(resolveInteractive(infinite).kind).toBe("rejected");
+  });
+
   it("rejects an initial stop that does not exist", () => {
     const broken = card();
     broken.props.control.initial = "revenue";
