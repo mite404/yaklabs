@@ -1,12 +1,10 @@
-import { useState, type ReactNode } from "react";
-import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { useEffect, useState, type ReactNode } from "react";
 import { CardHeader } from "./CardHeader";
-import { BAR_RADIUS, CatalogCard } from "./CatalogCard";
+import { CatalogCard } from "./CatalogCard";
 import { ShareButton } from "./ShareButton";
 import {
   attachmentLabel,
   fillSentence,
-  formatUsd,
   niceCeiling,
   resolveInteractive,
   summarize,
@@ -14,15 +12,18 @@ import {
   type InteractiveSelection,
   type Stop,
 } from "./interactive";
+import { LiveSentence, ShowWork, StepSlider, StopChart, TRANSITION_MS } from "./interactiveParts";
 import "./interactive.css";
-
-// Bars ease between stops so the eye can follow where the money went.
-const TRANSITION_MS = 300;
 
 function prefersReducedMotion(): boolean {
   // Runs during render, so it must survive environments without a window (server rendering, tests).
   if (typeof window === "undefined") return false;
   return window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
+}
+
+// The stops a resolved payload offers; none for one the catalog refused.
+function stopsOf(result: ReturnType<typeof resolveInteractive>): Stop[] {
+  return result.kind === "approved" ? result.selection.props.control.stops : [];
 }
 
 // The stop to show: the host's, by label, when it holds one the card has; else the card's own.
@@ -31,10 +32,85 @@ function shownIndex(stops: Stop[], measure: string | undefined, own: number): nu
   return held === -1 ? own : held;
 }
 
+// Whether the bars are easing from one stop to another: true from the moment the stop changes,
+// and as the card first draws, for TRANSITION_MS. Only then may Recharts animate. It animates any
+// change of the bars' geometry, so a pane dragged narrower restarted a 300ms slide on every frame
+// of the drag and left the last bar cut off at the chart's edge (Ethan); a resize now redraws at
+// once, as the cards without a slider always did.
+function useMorphing(index: number): boolean {
+  const [shown, setShown] = useState(index);
+  const [easingTo, setEasingTo] = useState<number | null>(index); // → the stop the bars ease to
+  if (shown !== index) {
+    // Stored from the render before (React's pattern for state that follows a prop).
+    setShown(index);
+    setEasingTo(index);
+  }
+  // A stop chosen mid-ease names a new target, so the clock starts again for it.
+  useEffect(() => {
+    const settle =
+      easingTo === null
+        ? undefined
+        : window.setTimeout(() => {
+            setEasingTo(null);
+          }, TRANSITION_MS);
+    return () => {
+      window.clearTimeout(settle);
+    };
+  }, [easingTo]);
+  return easingTo !== null;
+}
+
 // One axis for every stop: rescaling per stop would make net look as tall as gross.
 function sharedMax(selection: InteractiveSelection): number {
   return niceCeiling(
     Math.max(...selection.props.control.stops.flatMap((stop) => stop.rows.map((row) => row.value))),
+  );
+}
+
+// The stop a payload opens on: its `initial`, by id, or the first for a refused one.
+function initialIndex(result: ReturnType<typeof resolveInteractive>): number {
+  if (result.kind !== "approved") return 0;
+  const { control } = result.selection.props;
+  return control.stops.findIndex((stop) => stop.id === control.initial);
+}
+
+/** What an interactive card takes; `InteractiveCard` says what each does. */
+export type InteractiveCardProps = {
+  payload: unknown;
+  turnId: string;
+  onChoose: (attachment: CardAttachment) => void;
+  measure?: string;
+  shareable?: boolean;
+  /** Let the header carry the card out, as onto the compose canvas (ADR-089). */
+  draggable?: boolean;
+  leading?: ReactNode;
+  trailing?: ReactNode;
+};
+
+// The card's title bar: the share button and a host's controls, and the drag that carries it.
+function InteractiveHeader({
+  title,
+  payload,
+  shareable = true,
+  draggable = false,
+  leading,
+  trailing,
+}: InteractiveCardProps & { title: string }) {
+  const card = { v: 1, kind: "interactive", payload } as const;
+  return (
+    <CardHeader
+      title={title}
+      leading={leading}
+      actions={
+        (shareable || trailing !== undefined) && (
+          <>
+            {shareable && <ShareButton card={card} />}
+            {trailing}
+          </>
+        )
+      }
+      drag={draggable ? { card, title } : undefined}
+    />
   );
 }
 
@@ -49,46 +125,25 @@ function sharedMax(selection: InteractiveSelection): number {
  * @param trailing A host's control at the title bar's far end, after the share button, such as
  * a lane's close.
  */
-export function InteractiveCard({
-  payload,
-  turnId,
-  onChoose,
-  measure,
-  shareable = true,
-  draggable = false,
-  leading,
-  trailing,
-}: {
-  payload: unknown;
-  turnId: string;
-  onChoose: (attachment: CardAttachment) => void;
-  measure?: string;
-  shareable?: boolean;
-  /** Let the header carry the card out, as onto the compose canvas (ADR-089). */
-  draggable?: boolean;
-  leading?: ReactNode;
-  trailing?: ReactNode;
-}) {
+export function InteractiveCard(card: InteractiveCardProps) {
+  const { payload, turnId, onChoose, measure } = card;
   const result = resolveInteractive(payload);
-  const initial =
-    result.kind === "approved"
-      ? result.selection.props.control.stops.findIndex(
-          (stop) => stop.id === result.selection.props.control.initial,
-        )
-      : 0;
-  const [own, setIndex] = useState(initial);
-  // Always starts collapsed: the answer earns trust on its own, the steps are there on demand (ADR-036).
-  const [showWork, setShowWork] = useState(false);
+  const [own, setIndex] = useState(initialIndex(result));
+  const morphing = useMorphing(shownIndex(stopsOf(result), measure, own));
   // An invalid payload gets the same honest catalog-limit card as any other rejection.
   if (result.kind === "rejected")
-    return <CatalogCard payload={null} context="thread" leading={leading} trailing={trailing} />;
+    return (
+      <CatalogCard
+        payload={null}
+        context="thread"
+        leading={card.leading}
+        trailing={card.trailing}
+      />
+    );
 
   const { props } = result.selection;
   const stops = props.control.stops;
   const index = shownIndex(stops, measure, own);
-  const stop = stops[index];
-  const sentence = fillSentence(props.sentence, summarize(stop, props.period));
-  const animate = !prefersReducedMotion();
 
   function choose(next: number) {
     setIndex(next);
@@ -101,127 +156,21 @@ export function InteractiveCard({
 
   return (
     <section className="card interactive-card" data-context="thread">
-      <CardHeader
-        title={props.title}
-        leading={leading}
-        actions={
-          (shareable || trailing !== undefined) && (
-            <>
-              {shareable && <ShareButton card={{ v: 1, kind: "interactive", payload }} />}
-              {trailing}
-            </>
-          )
-        }
-        drag={
-          draggable
-            ? { card: { v: 1, kind: "interactive", payload }, title: props.title }
-            : undefined
-        }
+      <InteractiveHeader {...card} title={props.title} />
+      <LiveSentence parts={fillSentence(props.sentence, summarize(stops[index], props.period))} />
+      <StopChart
+        stop={stops[index]}
+        max={sharedMax(result.selection)}
+        animate={morphing && !prefersReducedMotion()}
       />
-
-      <p className="live-sentence" aria-live="polite">
-        {sentence.map((part, i) =>
-          part.live ? (
-            <strong key={`${i}-${part.text}`} className="live-value">
-              {part.text}
-            </strong>
-          ) : (
-            <span key={i}>{part.text}</span>
-          ),
-        )}
-      </p>
-
-      <div className="chart">
-        <ResponsiveContainer width="100%" height="100%" minWidth={0}>
-          <BarChart
-            data={stop.rows}
-            margin={{ top: 12, right: 16, bottom: 4, left: 0 }}
-            accessibilityLayer
-          >
-            <CartesianGrid vertical={false} stroke="var(--hairline)" />
-            <XAxis
-              dataKey="label"
-              tickLine={false}
-              axisLine={false}
-              tick={{ fill: "var(--soft-ink)", fontSize: 12 }}
-            />
-            <YAxis
-              domain={[0, sharedMax(result.selection)]}
-              tickFormatter={formatUsd}
-              tickLine={false}
-              axisLine={false}
-              width={52}
-              tick={{ fill: "var(--soft-ink)", fontSize: 12 }}
-            />
-            <Tooltip
-              formatter={(value) => [formatUsd(Number(value)), stop.label]}
-              cursor={{ fill: "var(--paper-deep)" }}
-            />
-            <Bar
-              dataKey="value"
-              fill="var(--data)"
-              radius={[BAR_RADIUS, BAR_RADIUS, 0, 0]}
-              isAnimationActive={animate}
-              animationDuration={TRANSITION_MS}
-            />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-
-      <div className="stepped">
-        <label htmlFor={`${turnId}-measure`}>{props.control.label}</label>
-        <input
-          id={`${turnId}-measure`}
-          type="range"
-          min={0}
-          max={stops.length - 1}
-          step={1}
-          value={index}
-          aria-valuetext={stop.label}
-          style={{ ["--fill" as string]: `${(index / (stops.length - 1)) * 100}%` }}
-          onChange={(event) => {
-            choose(Number(event.target.value));
-          }}
-        />
-        <div className="stops">
-          {stops.map((item, i) => (
-            <button
-              key={item.id}
-              aria-pressed={i === index}
-              tabIndex={-1}
-              data-edge={i === 0 ? "start" : i === stops.length - 1 ? "end" : undefined}
-              style={{ left: `${(i / (stops.length - 1)) * 100}%` }}
-              onClick={() => {
-                choose(i);
-              }}
-            >
-              {item.label}
-            </button>
-          ))}
-        </div>
-        <p className="stop-description">{stop.description}</p>
-      </div>
-
-      {showWork && (
-        <ol className="work-steps" aria-label="How I got this">
-          {props.steps.map((step) => (
-            <li key={step}>{step}</li>
-          ))}
-        </ol>
-      )}
-
-      <footer>
-        <span>{props.source}</span>
-        <button
-          className="btn btn-sm card-toggle"
-          aria-expanded={showWork}
-          onClick={() => {
-            setShowWork(!showWork);
-          }}
-        >
-          {showWork ? "Hide my work" : "Show my work"}
-        </button>
-      </footer>
+      <StepSlider
+        id={`${turnId}-measure`}
+        label={props.control.label}
+        stops={stops}
+        index={index}
+        onChoose={choose}
+      />
+      <ShowWork steps={props.steps} source={props.source} />
     </section>
   );
 }
