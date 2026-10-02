@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { BAR_RADIUS } from "./CatalogCard";
-import { formatUsd, type fillSentence, type Stop } from "./interactive";
+import { formatUsd, stopPlace, type fillSentence, type Stop } from "./interactive";
 
 // The interactive card's parts (InteractiveCard.tsx): its sentence, chart, slider and steps.
 
@@ -67,12 +67,6 @@ export function StopChart({ stop, max, animate }: { stop: Stop; max: number; ani
   );
 }
 
-// Where a stop's button sits along the track: "start" and "end" at the ends, else nothing.
-const edgeOf = (i: number, count: number): "start" | "end" | undefined => {
-  if (i === 0) return "start";
-  return i === count - 1 ? "end" : undefined;
-};
-
 // The stepped slider, a button for each stop under it, and the shown stop's description.
 export function StepSlider({
   id,
@@ -87,7 +81,7 @@ export function StepSlider({
   index: number;
   onChoose: (next: number) => void;
 }) {
-  const at = (i: number) => `${(i / (stops.length - 1)) * 100}%`; // → a stop's place on the track
+  const placeOf = (i: number) => stopPlace({ index: i, count: stops.length }); // → StopPlace
   return (
     <div className="stepped">
       <label htmlFor={id}>{label}</label>
@@ -99,7 +93,7 @@ export function StepSlider({
         step={1}
         value={index}
         aria-valuetext={stops[index].label}
-        style={{ ["--fill" as string]: at(index) }}
+        style={{ ["--fill" as string]: placeOf(index).left }}
         onChange={(event) => {
           onChoose(Number(event.target.value));
         }}
@@ -110,8 +104,8 @@ export function StepSlider({
             key={item.id}
             aria-pressed={i === index}
             tabIndex={-1}
-            data-edge={edgeOf(i, stops.length)}
-            style={{ left: at(i) }}
+            data-edge={placeOf(i).edge}
+            style={{ left: placeOf(i).left }}
             onClick={() => {
               onChoose(i);
             }}

@@ -4,13 +4,14 @@ import { CatalogCard } from "./CatalogCard";
 import { ShareButton } from "./ShareButton";
 import {
   attachmentLabel,
+  axisMax,
   fillSentence,
-  niceCeiling,
+  initialStopIndex,
   resolveInteractive,
+  shownStopIndex,
   summarize,
   type CardAttachment,
   type InteractiveSelection,
-  type Stop,
 } from "./interactive";
 import { LiveSentence, ShowWork, StepSlider, StopChart, TRANSITION_MS } from "./interactiveParts";
 import "./interactive.css";
@@ -19,12 +20,6 @@ function prefersReducedMotion(): boolean {
   // Runs during render, so it must survive environments without a window (server rendering, tests).
   if (typeof window === "undefined") return false;
   return window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
-}
-
-// The stop to show: the host's, by label, when it holds one the card has; else the card's own.
-function shownIndex(stops: Stop[], measure: string | undefined, own: number): number {
-  const held = measure === undefined ? -1 : stops.findIndex((each) => each.label === measure);
-  return held === -1 ? own : held;
 }
 
 // Whether the bars are easing from one stop to another: true from the moment the stop changes,
@@ -53,19 +48,6 @@ function useMorphing(index: number): boolean {
     };
   }, [easingTo]);
   return easingTo !== null;
-}
-
-// One axis for every stop: rescaling per stop would make net look as tall as gross.
-function sharedMax(selection: InteractiveSelection): number {
-  return niceCeiling(
-    Math.max(...selection.props.control.stops.flatMap((stop) => stop.rows.map((row) => row.value))),
-  );
-}
-
-// The stop a payload opens on: its `initial`, by id, which the schema holds to be one of its stops.
-function initialIndex(selection: InteractiveSelection): number {
-  const { control } = selection.props;
-  return control.stops.findIndex((stop) => stop.id === control.initial);
 }
 
 /** What an interactive card takes; `InteractiveCard` says what each does. */
@@ -115,8 +97,8 @@ function ApprovedCard({
 }: InteractiveCardProps & { selection: InteractiveSelection }) {
   const { props } = selection;
   const stops = props.control.stops;
-  const [own, setIndex] = useState(initialIndex(selection));
-  const index = shownIndex(stops, card.measure, own);
+  const [own, setIndex] = useState(initialStopIndex(selection));
+  const index = shownStopIndex({ stops, measure: card.measure, own });
   const morphing = useMorphing(index);
 
   function choose(next: number) {
@@ -134,7 +116,7 @@ function ApprovedCard({
       <LiveSentence parts={fillSentence(props.sentence, summarize(stops[index], props.period))} />
       <StopChart
         stop={stops[index]}
-        max={sharedMax(selection)}
+        max={axisMax(selection)}
         animate={morphing && !prefersReducedMotion()}
       />
       <StepSlider

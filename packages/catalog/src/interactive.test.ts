@@ -1,10 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
   attachmentLabel,
+  axisMax,
   fillSentence,
   formatUsd,
+  initialStopIndex,
   niceCeiling,
   resolveInteractive,
+  shownStopIndex,
+  stopPlace,
   summarize,
   type InteractiveSelection,
 } from "./interactive";
@@ -99,4 +103,36 @@ it("rounds axis maxima up to round numbers", () => {
   expect(niceCeiling(57)).toBe(60);
   expect(niceCeiling(1_000)).toBe(1_000);
   expect(niceCeiling(0)).toBe(1);
+});
+
+describe("shownStopIndex", () => {
+  const { stops } = card().props.control;
+
+  it("shows the stop the host holds, by its label", () => {
+    expect(shownStopIndex({ stops, measure: "Net profit", own: 0 })).toBe(2);
+  });
+
+  it("keeps the card's own stop when the host holds none, or one the card lacks", () => {
+    expect(shownStopIndex({ stops, measure: undefined, own: 1 })).toBe(1);
+    expect(shownStopIndex({ stops, measure: "Not a stop", own: 1 })).toBe(1);
+  });
+});
+
+it("opens a card on the stop its payload names as initial", () => {
+  const opening = card();
+  expect(initialStopIndex(opening)).toBe(0);
+  opening.props.control.initial = "net";
+  expect(initialStopIndex(opening)).toBe(2);
+});
+
+it("gives every stop one axis, topped by the largest value of any stop", () => {
+  expect(axisMax(card())).toBe(12_000);
+});
+
+it("places each stop along the slider's track, marking the two ends", () => {
+  expect([0, 1, 2].map((index) => stopPlace({ index, count: 3 }))).toEqual([
+    { left: "0%", edge: "start" },
+    { left: "50%", edge: undefined },
+    { left: "100%", edge: "end" },
+  ]);
 });

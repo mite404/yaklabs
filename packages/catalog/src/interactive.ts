@@ -155,6 +155,42 @@ export function fillSentence(
   return parts;
 }
 
+/** One axis for every stop: rescaling per stop would make net look as tall as gross. */
+export function axisMax(selection: InteractiveSelection): number {
+  const values = selection.props.control.stops.flatMap((stop) => stop.rows.map((row) => row.value));
+  return niceCeiling(Math.max(...values));
+}
+
+/** The stop a card opens on: its `initial`, by id, which the schema holds to be one of its stops. */
+export function initialStopIndex(selection: InteractiveSelection): number {
+  const { control } = selection.props;
+  return control.stops.findIndex((stop) => stop.id === control.initial);
+}
+
+/** The stop a card shows: the host's, by its label, when it holds one the card has; else its own. */
+export function shownStopIndex({
+  stops,
+  measure,
+  own,
+}: {
+  stops: Stop[];
+  measure: string | undefined;
+  own: number;
+}): number {
+  const held = stops.findIndex((each) => each.label === measure); // → -1 when none is held
+  return held === -1 ? own : held;
+}
+
+/** Where a stop sits along the slider's track, and whether it is one of the track's two ends. */
+export type StopPlace = { left: string; edge: "start" | "end" | undefined };
+
+/** A stop's place on the track; the schema holds two stops or more, so the span is never zero. */
+export function stopPlace({ index, count }: { index: number; count: number }): StopPlace {
+  const left = `${(index / (count - 1)) * 100}%`;
+  if (index === 0) return { left, edge: "start" };
+  return { left, edge: index === count - 1 ? "end" : undefined };
+}
+
 /** The chip label for a card choice, e.g. "Net profit · Sep 14–20". */
 export function attachmentLabel(stop: Stop, period: string): string {
   return `${stop.label} · ${period}`;
