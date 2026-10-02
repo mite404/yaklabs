@@ -419,6 +419,31 @@ export const threads: Record<string, Thread> = {
       },
     ],
   },
+  /** The demo's model budget spent mid-visit: the app is fine, the meter is empty, no Try again. */
+  credit: {
+    title: "Live numbers",
+    messages: [
+      {
+        id: "u1",
+        role: "user",
+        time: "11:05",
+        text: "Pull this week's numbers from the live model.",
+      },
+      {
+        id: "a1",
+        role: "agent",
+        time: "11:05",
+        text: "",
+        ended: "failed",
+        failure: {
+          title: "The live model is out of credit",
+          detail:
+            "This demo's model budget is spent, so live answers are paused. Nothing is broken - the meter is empty. The scripted Demo beside it still plays.",
+          retry: false,
+        },
+      },
+    ],
+  },
   /** A reply the user stopped: what finished is kept, what was running says it stopped. */
   cancelled: {
     title: "Refund audit",
