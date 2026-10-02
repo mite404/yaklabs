@@ -15,8 +15,13 @@ import {
   type TurnState,
 } from "./playgroundTools";
 
-/** The model the playground talks to and its per-round budget; the app passes its own. */
-export type PlaygroundUpstream = { client: Anthropic; model: string; maxTokens: number };
+/** The model the playground talks to and its per-round budgets; the app passes its own. */
+export type PlaygroundUpstream = {
+  client: Anthropic;
+  model: string;
+  maxTokens: number;
+  thinking: Anthropic.ThinkingConfigParam;
+};
 
 type Messages = Anthropic.MessageParam[];
 type UpstreamEvents = AsyncIterable<Anthropic.RawMessageStreamEvent>;
@@ -112,6 +117,7 @@ const openRound = (
     {
       model: upstream.model,
       max_tokens: upstream.maxTokens,
+      thinking: upstream.thinking,
       system: SYSTEM_PROMPT,
       tools: toolsFor(state), // → the catalog's tools, minus the ones failures retired
       messages,

@@ -17,6 +17,7 @@ import {
 const upstreamBodySchema = z.strictObject({
   model: z.string(),
   max_tokens: z.number(),
+  thinking: z.strictObject({ type: z.literal("enabled"), budget_tokens: z.number() }),
   system: z.string(),
   tools: z.array(z.looseObject({ name: z.string() })),
   messages: z.array(z.unknown()),
@@ -90,13 +91,18 @@ describe("POST /api/playground streams", () => {
 });
 
 describe("POST /api/playground sends upstream", () => {
-  it("the gateway's prompt, tools and budget", async () => {
+  it("the gateway's prompt, tools and budgets", async () => {
     const { app, requests } = playgroundApp(answer);
 
     await readEvents(await postPlayground(app, say("Which day?")));
 
     const body = upstreamBodySchema.parse(await requests[0]?.clone().json());
-    expect(body).toMatchObject({ model: "moonshotai/kimi-k2.6", max_tokens: 8192, stream: true });
+    expect(body).toMatchObject({
+      model: "moonshotai/kimi-k2.6",
+      max_tokens: 8192,
+      thinking: { type: "enabled", budget_tokens: 1024 },
+      stream: true,
+    });
     expect(body.system).toContain("you must call report_failure");
     expect(await sentMessages(requests, 0)).toEqual([
       { role: "user", content: [{ type: "text", text: "Which day?" }] },
