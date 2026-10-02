@@ -12,8 +12,12 @@ Decisions behind these rules live in `docs/adr/adr.md` (ADR-033 to ADR-035); tok
 
 ## Colour
 
-The site is light only (ADR-161). The dark values in these rules belong to the catalog, whose
-dark theme stays for its stories and the design tooling.
+The site has two themes, light and dark, and follows the visitor's system until they pick one
+in the account menu (ADR-162). Dark is Umbralkai: Andrew Sen's Zed theme, mapped onto these
+roles in Ethan's Figma (yak-ui-tests, the Theme collection's Umbralkai mode), marked **Zed**
+where the theme names the value. Its neutrals are warm greys, not olive, so rules 1 to 3 hold for
+the light theme; the brand's greens stay in dark for what they mark (the agent glyphs, the
+slider, the button hover). The design tooling page is light in either theme (ADR-160).
 
 ### 1. There is no black: neutrals are olive-tinted
 
@@ -138,10 +142,10 @@ The rail checks' P23 and P25 measure all of this in both themes.
 
 | Property | Value | Source |
 | --- | --- | --- |
-| Glyph and name | `--faint-ink`, an archived row's: 5.17:1 on paper, 5.46:1 dark | derived |
+| Glyph and name | `--faint-ink`, an archived row's: 5.17:1 on paper, 5.35:1 dark | derived |
 | Hover | none: no fill, no step to ink, the arrow cursor | derived |
 | Words | "Out of demo scope", the same in the pill, the drawer row and to a screen reader | Ethan |
-| Pill | name, then "· Out of demo scope", `--on-ink` 72% over `--ink` (rule 4): 7.6:1, 6.9:1 | derived |
+| Pill | name, then "· Out of demo scope", `--on-ink` 72% over `--ink` (rule 4): 7.6:1, 7.29:1 dark | derived |
 | Drawer row | the words after the name, 12px, as the thread count sits | derived |
 | Screen reader | a button, `aria-disabled`, described by the words | derived |
 
@@ -197,9 +201,10 @@ label is a caution orange pill (ADR-067, ADR-068).
 | Question card rest / hover | no fill / `--paper-deep` (`#e4e4df`), ink 12.0:1, soft-ink 5.8:1 | Ethan |
 | Question label | `--yak-orange` (`#d19456`) with `--yak-brown-ink` (`#3b2612`), 5.5:1 | Ethan |
 | Focus (light) | ink ring, 10.4:1 (the page's grey ring is 2.3:1 here) | derived |
-| Surface (dark) | `#62625d`, paper text 5.3:1 | Ethan |
-| Tiles (dark) | 18% night on the surface, paper 6.6:1 | derived |
-| Hover (dark) | 50% night on the surface (`#3a3b37`), paper 9.8:1 | derived |
+| Surface (dark) | `#302e2f`, one step above the paper; `#dedede` text 10.02:1, `#aeaeae` 6.08:1 | Ethan (Umbralkai) |
+| Tiles (dark) | Zed's panel `#1e1c1d`, 1.26:1 against the card; `#dedede` 12.6:1, `#aeaeae` 7.64:1 | Zed |
+| Hover (dark) | Zed's element grey `#3e4044`, text to `#fff7ed` at 9.78:1 | Zed |
+| Focus (dark) | Zed's focused border `#16c3dd`, the page's ring too: 7.44:1 on the paper | Zed |
 
 ### 28. A hover label is an ink pill
 
@@ -219,8 +224,8 @@ the vendored shadcn tooltip. P23 reads the rail's pills in both themes.
 
 | Property | Value | Source |
 | --- | --- | --- |
-| Fill / text | `--ink` / `--on-ink`: 13.3:1 light, 16.1:1 dark | derived (ADR-144) |
-| Secondary words | `--on-ink` 72% over `--ink` (rule 4): 7.6:1, 6.9:1 | derived (ADR-144) |
+| Fill / text | `--ink` / `--on-ink`: 13.3:1 light, 17.61:1 dark | derived (ADR-144) |
+| Secondary words | `--on-ink` 72% over `--ink` (rule 4): 7.6:1, 7.29:1 dark | derived (ADR-144) |
 | Type | Inter 13px, medium, 16px line, one line unless a name must wrap (up to 320px) | derived |
 | Padding | 4px × 10px | derived |
 | Corners | 12px: half the one-line pill's 24px, a capsule on one line | derived |
@@ -246,7 +251,7 @@ landing at its own time.
 | Property | Value | Source |
 | --- | --- | --- |
 | Face | `--seal-gold` (`--yak-orange`, `#d19456`), lit from the top left to `--seal-gold-glint` | derived (Ethan's example seal) |
-| Edge | `--seal-gold-deep` (`--rust`, `#a86f36`): 3.5:1 on the light paper, 6.6:1 dark, so the silhouette clears 3:1 | derived |
+| Edge | `--seal-gold-deep` (`--rust`, `#a86f36`): 3.5:1 on the light paper, 3.76:1 dark, so the silhouette clears 3:1 | derived |
 | Ring words | `--on-seal` (`--yak-brown-ink`, `#3b2612`): 5.5:1 on the face, the orange pill's pair | derived (rule 13) |
 | Ribbon | `--ink` with `--on-ink`, 230px × 27px across the 112px medal, notched 8px at both ends; 11px 600 upper case, "NOW WITH DESIGN TOOLING!", set to the 186px the 0.1em tracking gives, drawn as Inter outlines (`seal-words.ts`, from `scripts/seal-words.mjs`) rather than live text, so the words never shift against the ribbon when Chrome redraws the grown seal | derived (rule 28's pill), Ethan |
 | Ribbon hover | fills `--moss` with `--on-accent` over 150ms `ease`, as the outline button | css (rule 8) |

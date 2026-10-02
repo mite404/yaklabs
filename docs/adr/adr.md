@@ -1308,7 +1308,8 @@ from greyscale to subpixel smoothing in Chromium. An avatar with no picture show
 the full cream (7.21:1 on its fill), not the soft ink (4.47:1), and shadcn's half-strength ghost
 hover in dark mode is set back to the full fill, so the bar is the same picture hovered too.
 Amended 2026-10-01: built as `--chrome` in `packages/catalog/src/tokens.css`, where the hex is
-still flagged for confirmation (Q3). The app is light only since ADR-161.
+still flagged for confirmation (Q3). The app was light only from ADR-161 to ADR-162; since
+ADR-162 the dark bar is Umbralkai's grey, not this green, with the same cream pill.
 
 ## ADR-111 - The window sits on a desk of its own, 16px in
 
@@ -2608,9 +2609,9 @@ its drawn size, so the ring's smaller words read.
 
 ## ADR-161 - The site is light only
 
-2026-10-01 - Accepted (Ethan: "i never tweaked dark mode. let's delete it ... i don't want
-someone to view something i didn't finesse"). Amends ADR-046 and ADR-090, whose dark mode
-for every surface now stays in the catalog.
+2026-10-01 - Superseded by ADR-162 (Ethan: "i never tweaked dark mode. let's delete it ... i
+don't want someone to view something i didn't finesse"). Amends ADR-046 and ADR-090, whose dark
+mode for every surface now stays in the catalog.
 The app shows the light theme to every visitor, whatever the OS or the browser prefers. The
 account menu's Theme choice is gone, with the hook that followed the OS, the script that set
 the theme before React loaded and the remembered choice; nothing in the app sets
@@ -2625,3 +2626,43 @@ were, and so are the landing page's pictures and rows that show dark.
 Alternatives weighed: deleting dark from the catalog as well, which would have taken the
 tooling's dark captures and baselines with it; and keeping the code behind a switch that is
 never offered, which leaves untested paths a visitor's browser could still reach.
+
+## ADR-162 - Dark mode is Umbralkai, chosen in the account menu, the system's by default
+
+2026-10-02 - Accepted (Ethan: "lets impl umbralkai as our dark mode so there's a light and
+umbralkai as the dark 2 themes total", "set the default theme mode to be 'system'").
+Supersedes ADR-161; amends ADR-090 and ADR-110.
+The site has two themes again. Dark is Umbralkai, Andrew Sen's theme for the Zed editor, which
+Ethan mapped onto the token roles in Figma (yak-ui-tests, the Theme collection's Umbralkai mode)
+and tuned there: the paper lifted to `#242223` from Zed's panel grey, the ink to Zed's
+`#fff7ed` and the recap to `#302e2f`. `tokens.css` takes those values under
+`:root[data-theme="dark"]`, each marked Zed, Ethan or derived, every ratio measured against the
+dark paper and checked by `tokens.test.ts`.
+Three values move off the Figma mapping, because a guard the tests hold would fail: the hover and
+inset fill steps up to `#302e2f`, since at Zed's `#2a2829` it was the compose box's own colour and
+the send button and every menu hover vanished (1.0:1); the bar's hover fill takes the same grey,
+since Zed's elevated grey is 1.16:1 against the bar and a skeleton tab needs 1.2:1; and the pill
+that marks the active tab and the pressed layout is Zed's own selected colour, `#fff7ed`, with
+the page's near-black on it, since Zed's darker active tab is 1.1:1 against the bar and a pill
+must clear 3:1. That keeps ADR-110's shape, a cream pill on the bar in both themes. The bar
+itself is Zed's title bar grey in dark, not the light theme's green, so the demo's title, drawn in
+the bar's green, takes the ink there. The brand's greens stay for what they mark: the agent
+glyphs keep their dark ramp, the slider keeps `#8e9d6f` and the button hover keeps moss, where
+the Figma mode had Zed's green and grey.
+Zed's muted `#636363` is 2.6:1 on the paper, so the archived ink is Zed's hint grey, `#969696`.
+The account menu's Theme group comes back under the divider below Sign out (below the sign-in
+note in a build without sign-in): Light, Dark and System. System is the default, follows the OS
+or browser and moves when it changes; a choice is remembered on the device. A script in the
+prerendered head sets the theme before React loads, so a dark system never sees the light page
+first, and the root names its `color-scheme` in either theme, so scrollbars and fields follow
+the theme rather than the OS. What ADR-161 removed with dark mode is back: the welcome says
+good evening in the dark, the bar's ghost buttons hover at full strength, and the `dark:`
+utilities that keep the tab, the address fields, the quiet button and the sidebar toggle off
+shadcn's dark fills. The design tooling page is drawn for light alone, so it holds the root on
+light while it is open and gives the visitor's choice back on leaving, as ADR-160 amended.
+The catalog's 15 dark references in verify-ui-drift change with the tokens and wait for Ethan's
+approval; CI cannot approve them.
+Alternatives weighed: Umbralkai's values exactly as mapped, which fail the pill, the bar's hover
+and the menu hover; and a third theme beside the old dark, which keeps a theme Ethan never
+finessed.
+

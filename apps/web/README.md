@@ -110,9 +110,10 @@ pnpm --filter web build      # build/client, served by the gateway Worker as sta
 `catalog` cascade layer between Tailwind's preflight and its utilities, so the catalog keeps
 its element styles while a class on a shadcn primitive still wins (ADR-082). Where the catalog
 styles a bare `button` or `a`, the components layer puts preflight back for any element shadcn
-renders (it carries a `data-slot`), so a shadcn control shows only its own classes. The site is
-light only (ADR-161): nothing sets the root's `data-theme`, and the root declares
-`color-scheme: only light`.
+renders (it carries a `data-slot`), so a shadcn control shows only its own classes. The theme is
+the root's `data-theme`, light or dark (Umbralkai, ADR-162): `src/theme.ts` sets it before React
+loads from the account menu's choice, or from the system's when the visitor has none, and the
+root's `color-scheme` follows it. The design tooling page holds it on light while open.
 
 ## Prove it in a browser
 
