@@ -23,11 +23,9 @@ function readPalette(el: HTMLElement): Palette {
 
 function drawBar(ctx: CanvasRenderingContext2D, x: number, mid: number, height: number) {
   const y = mid - height / 2;
-  if (ctx.roundRect) {
-    ctx.beginPath();
-    ctx.roundRect(x, y, BAR, height, BAR / 2);
-    ctx.fill();
-  } else ctx.fillRect(x, y, BAR, height);
+  ctx.beginPath();
+  ctx.roundRect(x, y, BAR, height, BAR / 2);
+  ctx.fill();
 }
 
 /**
