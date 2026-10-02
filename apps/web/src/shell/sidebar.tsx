@@ -49,6 +49,7 @@ export type SidebarWidth = { width: number; onWidth: (px: number) => void };
  * @param rail The desktop's rail, where the pointer may rest for the panel to peek.
  */
 export function AppSidebar({
+  theme,
   chrome,
   width,
   onWidth,
@@ -82,7 +83,7 @@ export function AppSidebar({
         </div>
         <PhoneOnly>
           <SidebarFooter>
-            <Account chrome={chrome} side="top" align="start" />
+            <Account theme={theme} chrome={chrome} side="top" align="start" />
           </SidebarFooter>
         </PhoneOnly>
         <SidebarResizeHandle width={width} onWidth={onWidth} controls={SIDEBAR_ID} />

@@ -81,7 +81,7 @@ function Lead() {
  * scrolls on top, Collapse all among them, with a "⋯" for the thread and project; below, the
  * views, Thread, Canvas and Browser.
  */
-export function TitleBar({ chrome }: Looks) {
+export function TitleBar({ chrome }: Pick<Looks, "chrome">) {
   const shell = useShell();
   const starting = useRuntimeState().kind === "starting";
   const { isMobile, openMobile } = useSidebar();

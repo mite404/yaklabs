@@ -1,5 +1,6 @@
 import { Band, Bento, Closing, Question } from "../components/landing-blocks";
 import { Bar, Hero, Ticker } from "../components/landing-hero";
+import { useLightOnly } from "../theme";
 import "../verify-ui-tooling.css";
 
 export function meta() {
@@ -11,9 +12,10 @@ export function meta() {
  * Ethan's copy over the tool's own evidence. The run's terminal opens
  * it under the headline, then the verdicts roll by, the question, a bento of what a run gives,
  * the band with the second headline, and the seal. Public, outside the shell, and reached from
- * the welcome's seal.
+ * the welcome's seal. It is drawn for the light theme alone and holds the root on it while open.
  */
 export default function VerifyUiToolingPage() {
+  useLightOnly();
   return (
     <main className="tooling">
       <Bar />

@@ -1,4 +1,4 @@
-import { Outlet } from "react-router";
+import { Outlet, useOutletContext } from "react-router";
 import { RuntimeProvider } from "../runtime";
 import { RequireSession } from "../session";
 import { Deck } from "../shell/deck";
@@ -6,6 +6,7 @@ import { ShellProvider, useShell } from "../shell/model";
 import { Window } from "../shell/window";
 import { DemoOverlay } from "../world/provider";
 import { ShowBar } from "../world/ShowBar";
+import type { ThemeChoice } from "../theme";
 
 // The route's own page, drawn only while no tab is on screen. The deck shows the tab an address
 // is on its way to at once, and the router keeps the page it is leaving until the next route
@@ -23,12 +24,13 @@ function Page() {
  * on screen. A show's controls take the banner row while one of its threads is on screen.
  */
 export default function Protected() {
+  const theme = useOutletContext<ThemeChoice>();
   return (
     <RequireSession>
       <RuntimeProvider>
         <DemoOverlay>
           <ShellProvider>
-            <Window banner={<ShowBar />}>
+            <Window theme={theme} banner={<ShowBar />}>
               <Deck />
               <Page />
             </Window>
