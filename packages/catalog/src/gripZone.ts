@@ -1,5 +1,6 @@
-// The grip on a lane's title bar (index.css): where it sits and how far from it a press takes
-// hold of the lane, so the grab hand and the lift agree on one place (Ethan).
+// The six-dot grip in the middle of a lane's title bar (the web app's index.css) and of a card's
+// header in a thread (primitives.css): where it sits and how far from it the pointer wakes it,
+// so the dots, the grab hand and a lane's lift agree on one place (Ethan).
 
 /** How far from the grip's centre the grab hand shows and a press takes the lane, in px. */
 export const GRIP_RADIUS = 25;

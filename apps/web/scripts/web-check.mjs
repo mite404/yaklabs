@@ -533,7 +533,7 @@ try {
   const titleBar = canvas.locator("article").first().locator(".thread-header");
   const titleBox = await titleBar.boundingBox();
   const laneBox = await canvas.locator("article").first().boundingBox();
-  // The grip, the one place on the bar that shows the hand and takes the lane (grip-zone.ts).
+  // The grip, the one place on the bar that shows the hand and takes the lane (the catalog's gripZone.ts).
   const grip = { x: titleBox.x + titleBox.width / 2, y: titleBox.y + titleBox.height / 2 - 2 };
   await page.mouse.move(grip.x, grip.y);
   await page.waitForTimeout(250);
@@ -610,7 +610,7 @@ try {
   const threadLanes = canvas.locator("article").filter({ has: page.locator(".thread-header") });
   await threadLanes.first().scrollIntoViewIfNeeded();
   const firstBar = await threadLanes.first().locator(".thread-header").boundingBox();
-  // The grip, the one place on the bar that takes the lane (grip-zone.ts).
+  // The grip, the one place on the bar that takes the lane (the catalog's gripZone.ts).
   const firstGrip = { x: firstBar.x + firstBar.width / 2, y: firstBar.y + firstBar.height / 2 - 2 };
   await page.mouse.move(firstGrip.x, firstGrip.y);
   await page.mouse.down();
@@ -1126,7 +1126,7 @@ try {
   const failedBar = failedCanvas.locator("article .thread-header").last();
   const failedBox = (await failedBar.count()) === 0 ? null : await failedBar.boundingBox();
   if (failedBox !== null) {
-    // The grip, the one place on the bar that takes the lane (grip-zone.ts).
+    // The grip, the one place on the bar that takes the lane (the catalog's gripZone.ts).
     const failedGrip = {
       x: failedBox.x + failedBox.width / 2,
       y: failedBox.y + failedBox.height / 2 - 2,

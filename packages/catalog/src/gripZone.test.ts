@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { GRIP_RADIUS, inGripZone } from "./grip-zone";
+import { GRIP_RADIUS, inGripZone } from "./gripZone";
 
 // A lane's title bar, 400px wide and 54px tall, its grip at (200, 25).
 const bar = { left: 0, top: 0, width: 400, height: 54 };

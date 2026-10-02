@@ -1,7 +1,7 @@
+import { inGripZone } from "@yaklabs/catalog/gripZone";
 import type { LaneId } from "@yaklabs/runtime";
 import { useEffect, useRef, useState, type PointerEvent } from "react";
 import { landingIndex, shiftFor, slotLeft, type Slot } from "../canvas";
-import { inGripZone } from "./grip-zone";
 
 // How far a grip travels before its lane lifts, so a click stays a click.
 const LIFT_PX = 6;

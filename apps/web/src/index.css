@@ -817,7 +817,7 @@ html[data-dragging="sidebar"] * {
      its middle 47px, so the faded letters stop 16px either side of the 15px dots (Ethan). The
      dots sit on the collapse's line, the title's capitals, 2px above the bar's middle, rather
      than down on its baseline. The grip is the only place that takes the lane (Ethan): a 50px
-     circle about the dots, 25px every way from their centre (grip-zone.ts holds the same
+     circle about the dots, 25px every way from their centre (the catalog's gripZone.ts holds the same
      radius for the press and the mark), shows the hand and takes the press; the veil only
      paints. The floating copy of a lane in flight (lane-reorder.ts) keeps the grip up the
      whole way, so the hand still holds what it took. */
