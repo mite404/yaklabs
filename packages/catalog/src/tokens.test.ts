@@ -68,7 +68,7 @@ const FAINT: Record<"light" | "dark", Pair[]> = {
     ["--faint-ink", "--paper-deep", 4.67, 4.5],
   ],
   dark: [
-    ["--faint-ink", "--paper", 5.35, 4.5],
+    ["--faint-ink", "--paper", 6.19, 4.5],
     ["--faint-ink", "--paper-deep", 4.56, 4.5],
   ],
 };

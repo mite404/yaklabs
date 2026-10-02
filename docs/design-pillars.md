@@ -142,7 +142,7 @@ The rail checks' P23 and P25 measure all of this in both themes.
 
 | Property | Value | Source |
 | --- | --- | --- |
-| Glyph and name | `--faint-ink`, an archived row's: 5.17:1 on paper, 5.35:1 dark | derived |
+| Glyph and name | `--faint-ink`, an archived row's: 5.17:1 on paper, 6.19:1 dark | derived |
 | Hover | none: no fill, no step to ink, the arrow cursor | derived |
 | Words | "Out of demo scope", the same in the pill, the drawer row and to a screen reader | Ethan |
 | Pill | name, then "· Out of demo scope", `--on-ink` 72% over `--ink` (rule 4): 7.6:1, 7.29:1 dark | derived |

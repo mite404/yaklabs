@@ -82,6 +82,8 @@
      the offset moves it down, the negative spread pulls its blur in from the sides, and the
      long blur gives the slow fall-off. Both themes read the same --shadow token. */
   --edge-shadow: 2px 13px 22px -12px var(--shadow);
+  /* The compose box's own, so dark can lay it flat (ADR-162). */
+  --compose-shadow: var(--edge-shadow);
   /* derived from --edge-shadow for a small floating control, such as the reading tools' bar: the
      same fall down and to the right, none above, scaled to a 34px bar, whose 22px blur the
      edge shadow's -12px spread would swallow; the strong shadow, since the box below it hides
@@ -317,18 +319,21 @@ button:hover {
   color-scheme: dark;
   --bg: #131212; /* Zed: background, the page and the workspace */
   --paper: #242223; /* Ethan: the app surface, lifted from Zed's panel #1e1c1d; 1.18:1 on the bg */
-  /* derived: the hover and inset fill one step past Zed's elevated grey, which the compose box
-     and menus take, so a fill on them still shows (1.09:1); Ethan's recap grey */
-  --paper-deep: #302e2f;
-  --compose-bg: #2a2829; /* Zed: elevated surface, the compose box and menus */
+  /* derived: the hover and inset fill a step past the compose box and menus, so a fill on them
+     still shows (1.13:1; light's is 1.2:1, which would take the archived ink up to the body's);
+     1.36:1 on the paper */
+  --paper-deep: #3a3839;
+  --compose-bg: #323031; /* Ethan: the compose box and menus, 1.21:1 on the paper */
   --control-bg: #2a2829;
   --ink: #fff7ed; /* Ethan: Zed's selected ink; 14.89:1, 17.61:1 on the bg */
-  --soft-ink: #aeaeae; /* Zed: text; 7.13:1, 6.08:1 on paper-deep */
-  /* archived (ADR-129): Zed's hint, since its muted #636363 is 2.6:1 here and fails text;
-     5.35:1 on paper, 4.56:1 on paper-deep */
-  --faint-ink: #969696;
+  --soft-ink: #aeaeae; /* Zed: text; 7.13:1, 5.24:1 on paper-deep */
+  /* archived (ADR-129): derived, Zed's hint lifted to clear the inset fill, since its muted
+     #636363 is 2.6:1 here and fails text; 6.19:1 on paper, 4.56:1 on paper-deep */
+  --faint-ink: #a2a2a2;
   --rule: color-mix(in srgb, #aeaeae 72%, transparent);
-  --hairline: color-mix(in srgb, #3e4044 44%, transparent); /* Zed: border, #3e404470 */
+  /* Ethan: the dividing lines at the old dark theme's strength, the cream at 18%, 1.71:1 on the
+     paper (1.7:1 before, 1.64:1 in light); Zed's border was 1.19:1 and read thinner */
+  --hairline: color-mix(in srgb, var(--yak-cream) 18%, transparent);
   /* the slider's accent keeps the brand's green, lifted to clear 3:1: 5.42:1 */
   --olive: #8e9d6f;
   /* Zed: element background as the desk: 1.52:1 against the paper, 1.63:1 against the bar */
@@ -343,6 +348,7 @@ button:hover {
   --bubble-line: #4f5257; /* 2.02:1 */
   --shadow: color-mix(in srgb, black 50%, transparent);
   --shadow-strong: color-mix(in srgb, black 70%, transparent);
+  --compose-shadow: none; /* Ethan: the compose box is flat, as it reads in light */
   /* the paintings show a step more on the dark paper (20%), where a daylight picture sits back
      anyway; Atlas is the ink at 26%, 2.29:1 off the dark paper */
   --splash-wash: color-mix(in srgb, var(--paper) 80%, transparent);

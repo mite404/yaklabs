@@ -2639,8 +2639,9 @@ and tuned there: the paper lifted to `#242223` from Zed's panel grey, the ink to
 `:root[data-theme="dark"]`, each marked Zed, Ethan or derived, every ratio measured against the
 dark paper and checked by `tokens.test.ts`.
 Three values move off the Figma mapping, because a guard the tests hold would fail: the hover and
-inset fill steps up to `#302e2f`, since at Zed's `#2a2829` it was the compose box's own colour and
-the send button and every menu hover vanished (1.0:1); the bar's hover fill takes the same grey,
+inset fill steps up to `#3a3839`, a step past the compose box and menus (1.13:1), since at Zed's
+`#2a2829` it was the compose box's own colour and the send button and every menu hover vanished
+(1.0:1); the bar's hover fill takes Ethan's recap grey, `#302e2f`,
 since Zed's elevated grey is 1.16:1 against the bar and a skeleton tab needs 1.2:1; and the pill
 that marks the active tab and the pressed layout is Zed's own selected colour, `#fff7ed`, with
 the page's near-black on it, since Zed's darker active tab is 1.1:1 against the bar and a pill
@@ -2649,7 +2650,8 @@ itself is Zed's title bar grey in dark, not the light theme's green, so the demo
 the bar's green, takes the ink there. The brand's greens stay for what they mark: the agent
 glyphs keep their dark ramp, the slider keeps `#8e9d6f` and the button hover keeps moss, where
 the Figma mode had Zed's green and grey.
-Zed's muted `#636363` is 2.6:1 on the paper, so the archived ink is Zed's hint grey, `#969696`.
+Zed's muted `#636363` is 2.6:1 on the paper, so the archived ink is Zed's hint grey lifted to
+`#a2a2a2`, 4.56:1 on the inset fill and still a step under the body's `#aeaeae`.
 The account menu's Theme group comes back under the divider below Sign out (below the sign-in
 note in a build without sign-in): Light, Dark and System. System is the default, follows the OS
 or browser and moves when it changes; a choice is remembered on the device. A script in the
@@ -2665,4 +2667,8 @@ approval; CI cannot approve them.
 Alternatives weighed: Umbralkai's values exactly as mapped, which fail the pill, the bar's hover
 and the menu hover; and a third theme beside the old dark, which keeps a theme Ethan never
 finessed.
-
+Amended 2026-10-02 (Ethan): the compose box and menus are `#323031`, and the compose box lies
+flat in dark, with no edge shadow (`--compose-shadow`), as it reads in light. The dividing lines
+are the old dark theme's cream at 18%, 1.71:1 on the paper (1.7:1 before, 1.64:1 in light), where
+Zed's border at 1.19:1 read thinner. The send button is the same in a main thread and a child
+lane: soft ink on the inset fill while there is nothing to send, cream on olive once there is.
