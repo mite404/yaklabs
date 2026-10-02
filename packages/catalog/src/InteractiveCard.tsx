@@ -21,11 +21,6 @@ function prefersReducedMotion(): boolean {
   return window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
 }
 
-// The stops a resolved payload offers; none for one the catalog refused.
-function stopsOf(result: ReturnType<typeof resolveInteractive>): Stop[] {
-  return result.kind === "approved" ? result.selection.props.control.stops : [];
-}
-
 // The stop to show: the host's, by label, when it holds one the card has; else the card's own.
 function shownIndex(stops: Stop[], measure: string | undefined, own: number): number {
   const held = measure === undefined ? -1 : stops.findIndex((each) => each.label === measure);
@@ -67,10 +62,9 @@ function sharedMax(selection: InteractiveSelection): number {
   );
 }
 
-// The stop a payload opens on: its `initial`, by id, or the first for a refused one.
-function initialIndex(result: ReturnType<typeof resolveInteractive>): number {
-  if (result.kind !== "approved") return 0;
-  const { control } = result.selection.props;
+// The stop a payload opens on: its `initial`, by id, which the schema holds to be one of its stops.
+function initialIndex(selection: InteractiveSelection): number {
+  const { control } = selection.props;
   return control.stops.findIndex((stop) => stop.id === control.initial);
 }
 
@@ -114,6 +108,47 @@ function InteractiveHeader({
   );
 }
 
+// A card the catalog approved: its stop, the host's when it holds one, and the controls over it.
+function ApprovedCard({
+  selection,
+  ...card
+}: InteractiveCardProps & { selection: InteractiveSelection }) {
+  const { props } = selection;
+  const stops = props.control.stops;
+  const [own, setIndex] = useState(initialIndex(selection));
+  const index = shownIndex(stops, card.measure, own);
+  const morphing = useMorphing(index);
+
+  function choose(next: number) {
+    setIndex(next);
+    card.onChoose({
+      turnId: card.turnId,
+      label: attachmentLabel(stops[next], props.period),
+      state: { measure: stops[next].label },
+    });
+  }
+
+  return (
+    <section className="card interactive-card" data-context="thread">
+      <InteractiveHeader {...card} title={props.title} />
+      <LiveSentence parts={fillSentence(props.sentence, summarize(stops[index], props.period))} />
+      <StopChart
+        stop={stops[index]}
+        max={sharedMax(selection)}
+        animate={morphing && !prefersReducedMotion()}
+      />
+      <StepSlider
+        id={`${card.turnId}-measure`}
+        label={props.control.label}
+        stops={stops}
+        index={index}
+        onChoose={choose}
+      />
+      <ShowWork steps={props.steps} source={props.source} />
+    </section>
+  );
+}
+
 /**
  * An interactive catalog card (ADR-029): a stepped slider switches the measure, and the
  * chart and the agent's sentence update instantly without calling the model. Each choice
@@ -126,10 +161,7 @@ function InteractiveHeader({
  * a lane's close.
  */
 export function InteractiveCard(card: InteractiveCardProps) {
-  const { payload, turnId, onChoose, measure } = card;
-  const result = resolveInteractive(payload);
-  const [own, setIndex] = useState(initialIndex(result));
-  const morphing = useMorphing(shownIndex(stopsOf(result), measure, own));
+  const result = resolveInteractive(card.payload);
   // An invalid payload gets the same honest catalog-limit card as any other rejection.
   if (result.kind === "rejected")
     return (
@@ -140,37 +172,5 @@ export function InteractiveCard(card: InteractiveCardProps) {
         trailing={card.trailing}
       />
     );
-
-  const { props } = result.selection;
-  const stops = props.control.stops;
-  const index = shownIndex(stops, measure, own);
-
-  function choose(next: number) {
-    setIndex(next);
-    onChoose({
-      turnId,
-      label: attachmentLabel(stops[next], props.period),
-      state: { measure: stops[next].label },
-    });
-  }
-
-  return (
-    <section className="card interactive-card" data-context="thread">
-      <InteractiveHeader {...card} title={props.title} />
-      <LiveSentence parts={fillSentence(props.sentence, summarize(stops[index], props.period))} />
-      <StopChart
-        stop={stops[index]}
-        max={sharedMax(result.selection)}
-        animate={morphing && !prefersReducedMotion()}
-      />
-      <StepSlider
-        id={`${turnId}-measure`}
-        label={props.control.label}
-        stops={stops}
-        index={index}
-        onChoose={choose}
-      />
-      <ShowWork steps={props.steps} source={props.source} />
-    </section>
-  );
+  return <ApprovedCard {...card} selection={result.selection} />;
 }
