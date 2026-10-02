@@ -122,16 +122,13 @@ function WorkOsAccount({ chrome, side, align }: Looks & Placement) {
   );
 }
 
-// A build without sign-in: Kay's face, the one person who is always there (ADR-114), and a
-// menu that says sign-in is off. A signed-in account keeps its own face.
+// A build without sign-in: a person glyph, since there is no account to picture (ADR-114,
+// amended), and a menu that says sign-in is off. A signed-in account keeps its own face.
 function LocalAccount({ chrome, side, align }: Looks & Placement) {
   const face = (
-    <>
-      <AvatarImage src="/kay/kay-face.webp" alt="" />
-      <AvatarFallback className="text-ink">
-        <UserRound className="size-3.5" />
-      </AvatarFallback>
-    </>
+    <AvatarFallback className="text-ink">
+      <UserRound className="size-3.5" />
+    </AvatarFallback>
   );
   return (
     <AccountMenu face={face} side={side} align={align}>

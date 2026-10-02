@@ -1,6 +1,6 @@
-// The shell polish's acceptance predicates, one check per section of
-// docs/reference/shell-polish/tasks.md (A to K). Each returns { ok, detail } and runs in its
-// own contexts, so one failure never hides another.
+// The shell polish's acceptance predicates, one check per section (A to K) of its task list, which
+// is in git history at docs/reference/shell-polish/tasks.md. Each returns { ok, detail } and runs
+// in its own contexts, so one failure never hides another.
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import path from "node:path";
@@ -658,11 +658,9 @@ export const polishChecks = {
       await painted.context.close();
     }
     // E1 for a signed-in account (at the rail's foot) with no picture: the same fallback, holding
-    // initials, as a WorkOS user's is. The local face is blocked so the fallback shows.
+    // initials, as a WorkOS user's is. A build without sign-in always draws the fallback.
     for (const variant of VARIANTS) {
       const bare = await openScenario(browser, { query: query(variant), ready: false });
-      await bare.context.route("**/kay/kay-face.webp", (route) => route.abort());
-      await bare.page.reload();
       await sidebarDrawn(bare.page);
       const fallback = rail(bare.page).locator('[data-slot="avatar-fallback"]');
       await fallback.waitFor();
@@ -876,14 +874,15 @@ export const polishChecks = {
     };
   },
 
-  // Section 8: Kay. The mascot left the canvas (ADR-135); only the avatar's face remains (H5).
+  // Section 8: Kay. The mascot left the canvas (ADR-135), and Kay's face left the avatar (ADR-114,
+  // amended): H5 is the person glyph, with no picture.
   async H(browser) {
     const { page, context } = await openScenario(browser, {});
     await toEmpty(page);
-    const avatar = rail(page).getByRole("button", { name: "Account" }).locator("img");
+    const account = rail(page).getByRole("button", { name: "Account" });
     const h5 =
-      (await avatar.getAttribute("src"))?.includes("kay-face") === true &&
-      (await avatar.getAttribute("alt")) === "";
+      (await account.locator("img").count()) === 0 &&
+      (await account.locator('[data-slot="avatar-fallback"] svg').count()) === 1;
     const gone = (await shown(page).locator('[data-slot="kay-mascot"]').count()) === 0;
     await context.close();
     return { ok: h5 && gone, detail: `H5 ${h5}; mascot gone ${gone}` };

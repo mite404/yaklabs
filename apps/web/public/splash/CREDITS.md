@@ -1,7 +1,6 @@
 # The canvas splash and the welcome's paintings
 
-Ethan supplied every picture here. Their origin and licence are still to be confirmed (Q11 in
-`docs/reference/shell-polish/tasks.md`).
+Ethan supplied every picture here. Their origin and licence are still to be confirmed.
 
 - `landscape.webp` (1280x853, about 267 KB) is Ethan's oil painting of a river valley, resized
   from his 1536x1024 file and re-encoded at quality 78. It sits behind a new thread's welcome

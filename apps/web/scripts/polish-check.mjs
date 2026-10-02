@@ -1,6 +1,5 @@
 #!/usr/bin/env node
-// Measures the shell polish's acceptance predicates (docs/reference/shell-polish/tasks.md) on
-// the real app. `--capture` records the 0.6 baseline instead, on the commit before the polish.
+// Measures the shell polish's acceptance predicates on the real app. `--capture` records the 0.6 baseline instead, on the commit before the polish.
 //
 //   pnpm dev:web                                                   # http://127.0.0.1:5173
 //   node apps/web/scripts/polish-check.mjs --capture               # once, on the base
