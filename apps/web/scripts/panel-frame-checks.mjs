@@ -4,7 +4,7 @@
 // oxlint-disable no-await-in-loop -- one pointer drives one page, so each step waits for the last
 import { differShare, openDesk } from "./sidebar-checks.mjs";
 
-const THEMES = ["light"];
+const THEMES = ["light", "dark"];
 // The rail's box at 1440x900, the window 16px in behind its 1px border (window.tsx, rail.tsx),
 // and how close the account keeps to its foot.
 const RAIL_AT = { x: 17, width: 56 };

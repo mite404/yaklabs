@@ -22,8 +22,8 @@ export const laneNamed = (page, title) =>
 
 // The app in a fresh context with the Live Playground's canvas on screen. The context is the
 // page's own, so a reload keeps what the device stored and nothing else sees it.
-export async function openThemed(browser) {
-  const page = await openCanvas(browser);
+export async function openThemed(browser, theme = "light") {
+  const page = await openCanvas(browser, { theme });
   return { page, close: () => page.context().close() };
 }
 

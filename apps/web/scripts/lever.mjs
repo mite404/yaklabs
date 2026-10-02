@@ -44,10 +44,16 @@ export function sidebarDrawn(page, options = {}) {
  * a thread panel, or `ready` when given, is on screen. `seed` asks the dev build to seed the
  * device first: "demo-store" for the Demo store's profit thread at /t/profit.
  */
-export async function openApp(browser, url = `${BASE}/`, { ready = ".thread-panel", seed } = {}) {
+export async function openApp(
+  browser,
+  url = `${BASE}/`,
+  { ready = ".thread-panel", seed, theme = "light" } = {},
+) {
+  // The system's scheme is the theme: the app follows it until a visitor picks one (ADR-162).
   const page = await browser.newPage({
     viewport: { width: 1440, height: 900 },
     reducedMotion: "reduce",
+    colorScheme: theme,
   });
   if (seed !== undefined) {
     await page.addInitScript((name) => {

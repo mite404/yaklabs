@@ -44,7 +44,7 @@ function SidebarToggle() {
       aria-label="Toggle sidebar"
       aria-expanded={isMobile ? openMobile : open}
       aria-controls={SIDEBAR_ID}
-      className="shrink-0 text-soft-ink hover:text-ink aria-expanded:bg-transparent aria-expanded:text-soft-ink aria-expanded:hover:bg-muted aria-expanded:hover:text-ink"
+      className="shrink-0 text-soft-ink hover:text-ink aria-expanded:bg-transparent aria-expanded:text-soft-ink aria-expanded:hover:bg-muted aria-expanded:hover:text-ink dark:aria-expanded:hover:bg-muted"
     />
   );
 }
@@ -81,7 +81,7 @@ function Lead() {
  * scrolls on top, Collapse all among them, with a "⋯" for the thread and project; below, the
  * views, Thread, Canvas and Browser.
  */
-export function TitleBar({ chrome }: Looks) {
+export function TitleBar({ chrome }: Pick<Looks, "chrome">) {
   const shell = useShell();
   const starting = useRuntimeState().kind === "starting";
   const { isMobile, openMobile } = useSidebar();

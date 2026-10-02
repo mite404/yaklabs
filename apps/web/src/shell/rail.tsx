@@ -14,7 +14,7 @@ const PLACES_BOX = "min-h-0 overflow-y-auto [scrollbar-width:none]";
  * outside it (ADR-121). It is drawn in every state and never moves: the projects panel docks
  * beside it or slides out from behind its edge. A phone has none; its drawer lists the places.
  */
-export function Rail({ chrome, ref }: Looks & { ref: Ref<HTMLDivElement> }) {
+export function Rail({ theme, chrome, ref }: Looks & { ref: Ref<HTMLDivElement> }) {
   const { isMobile } = useSidebar();
   if (isMobile) return null;
   return (
@@ -32,7 +32,7 @@ export function Rail({ chrome, ref }: Looks & { ref: Ref<HTMLDivElement> }) {
         <RailPlaces look="square" />
       </div>
       <SidebarFooter className="mt-auto shrink-0">
-        <Account chrome={chrome} side="top" align="start" />
+        <Account theme={theme} chrome={chrome} side="top" align="start" />
       </SidebarFooter>
     </div>
   );

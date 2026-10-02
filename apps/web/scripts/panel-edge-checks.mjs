@@ -6,7 +6,7 @@ import { BASE } from "./lever.mjs";
 import { throughPeek, WIDTHS } from "./panel-frame-checks.mjs";
 import { openDesk, PANEL_EASE, PIN_MS } from "./sidebar-checks.mjs";
 
-const THEMES = ["light"];
+const THEMES = ["light", "dark"];
 // The tabs start this far past the docked panel's edge, and right after the toggle with it
 // closed (title-bar.tsx); the panel's default width (sidebar-width.ts).
 const TAB_INSET = 4;

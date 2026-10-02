@@ -136,8 +136,8 @@ async function showCanvas(page) {
  * The app with its canvas on screen: Home opens the Live Playground's blank main thread
  * (ADR-159), shown here beside its canvas.
  */
-export async function openCanvas(browser) {
-  const { page } = await openApp(browser);
+export async function openCanvas(browser, { theme } = {}) {
+  const { page } = await openApp(browser, undefined, { theme });
   return showCanvas(page);
 }
 

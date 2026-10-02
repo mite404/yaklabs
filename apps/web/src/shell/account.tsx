@@ -16,10 +16,16 @@ import { UserRound } from "lucide-react";
 import type { ReactNode } from "react";
 import { env } from "../env";
 import type { ChromeChoice, ChromeStyle } from "../chrome";
+import type { ThemeChoice, ThemePreference } from "../theme";
 
-// What the account menu lets the visitor change: the title bar's look. The site is light only
-// (ADR-161), so there is no theme to choose.
-export type Looks = { chrome: ChromeChoice };
+// What the account menu lets the visitor change: the theme and the title bar's look.
+export type Looks = { theme: ThemeChoice; chrome: ChromeChoice };
+
+const THEMES: { value: ThemePreference; label: string }[] = [
+  { value: "light", label: "Light" },
+  { value: "dark", label: "Dark" },
+  { value: "system", label: "System" },
+];
 
 const CHROMES: { value: ChromeStyle; label: string }[] = [
   { value: "solid", label: "Solid" },
@@ -30,6 +36,28 @@ const CHROMES: { value: ChromeStyle; label: string }[] = [
 function initialsOf(names: (string | null)[], email: string): string {
   const letters = names.map((name) => name?.charAt(0) ?? "").join("");
   return (letters === "" ? email.charAt(0) : letters).toUpperCase();
+}
+
+// Light, dark, or whatever the OS or browser prefers, the default (ADR-162).
+function ThemeChoices({ theme }: { theme: ThemeChoice }) {
+  return (
+    <DropdownMenuGroup>
+      <DropdownMenuLabel>Theme</DropdownMenuLabel>
+      <DropdownMenuRadioGroup
+        value={theme.preference}
+        onValueChange={(value) => {
+          const chosen = THEMES.find((each) => each.value === value);
+          if (chosen) theme.choose(chosen.value);
+        }}
+      >
+        {THEMES.map(({ value, label }) => (
+          <DropdownMenuRadioItem key={value} value={value}>
+            {label}
+          </DropdownMenuRadioItem>
+        ))}
+      </DropdownMenuRadioGroup>
+    </DropdownMenuGroup>
+  );
 }
 
 // The title bar's flat green or its painting (ADR-115), while Ethan chooses between them.
@@ -92,7 +120,7 @@ function AccountMenu({
 }
 
 // Signed in with WorkOS (ADR-084): the picture or initials, the email, and the way out.
-function WorkOsAccount({ chrome, side, align }: Looks & Placement) {
+function WorkOsAccount({ theme, chrome, side, align }: Looks & Placement) {
   const { user, signOut } = useAuth();
   if (user === null) return null;
   const face = (
@@ -117,6 +145,8 @@ function WorkOsAccount({ chrome, side, align }: Looks & Placement) {
         </DropdownMenuItem>
       </DropdownMenuGroup>
       <DropdownMenuSeparator />
+      <ThemeChoices theme={theme} />
+      <DropdownMenuSeparator />
       <ChromeChoices chrome={chrome} />
     </AccountMenu>
   );
@@ -124,7 +154,7 @@ function WorkOsAccount({ chrome, side, align }: Looks & Placement) {
 
 // A build without sign-in: a person glyph, since there is no account to picture (ADR-114,
 // amended), and a menu that says sign-in is off. A signed-in account keeps its own face.
-function LocalAccount({ chrome, side, align }: Looks & Placement) {
+function LocalAccount({ theme, chrome, side, align }: Looks & Placement) {
   const face = (
     <AvatarFallback className="text-ink">
       <UserRound className="size-3.5" />
@@ -138,13 +168,15 @@ function LocalAccount({ chrome, side, align }: Looks & Placement) {
         </DropdownMenuLabel>
       </DropdownMenuGroup>
       <DropdownMenuSeparator />
+      <ThemeChoices theme={theme} />
+      <DropdownMenuSeparator />
       <ChromeChoices chrome={chrome} />
     </AccountMenu>
   );
 }
 
 /**
- * The account, with the bar's look; WorkOS's user when the build signs in. The
+ * The account, with the theme and the bar's look; WorkOS's user when the build signs in. The
  * sidebar places it at its foot, opening upward so its menu stays on screen (ADR-121).
  * @param side Which side of the trigger the menu opens on.
  * @param align Which end of the trigger the menu aligns to.

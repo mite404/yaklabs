@@ -192,12 +192,14 @@
   cursor: grabbing;
 }
 /* In a thread, a card that carries shows the grip a lane's title bar shows (index.css, ADR-089):
-   six dots fading up in the middle of its header while the pointer is on it, over a veil in the
-   header's own paper, so the card says it can be picked up (Ethan). The title and the actions
-   keep their own hover and hide the grip, as on a lane's bar. Its picture in flight keeps the
-   grip up the whole way, so the hand still holds what it took (Ethan). The same measures as the
-   lane's: an 86px veil, solid for its middle 47px, 16px clear either side of the 15px dots,
-   which sit 2px above the header's middle. */
+   six dots fading up in the middle of its header over a veil in the header's own paper, so the
+   card says it can be picked up (Ethan). They wake while the pointer is within 25px of them, as
+   a lane's do (CardHeader.tsx marks data-grip-near by gripZone.ts), never by what the pointer is
+   over: a title wrapped to fill a narrow header left only gaps between its words to wake them,
+   so they flickered (Ethan). Its picture in flight keeps the grip up the whole way, so the hand
+   still holds what it took (Ethan). The same measures as the lane's: an 86px veil, solid for its
+   middle 47px, 16px clear either side of the 15px dots, which sit 2px above the header's
+   middle. */
 :is(.thread-scroll, .carry-ghost) .card-heading[data-carry] {
   position: relative;
 }
@@ -229,15 +231,11 @@
   transform: translate(-50%, -50%);
   background: radial-gradient(circle, var(--soft-ink) 1.25px, transparent 1.75px) 0 0 / 5px 5px;
 }
-.thread-scroll .card-heading[data-carry]:hover::before,
-.thread-scroll .card-heading[data-carry]:hover::after,
+.thread-scroll .card-heading[data-carry][data-grip-near]::before,
+.thread-scroll .card-heading[data-carry][data-grip-near]::after,
 .carry-ghost .card-heading[data-carry]::before,
 .carry-ghost .card-heading[data-carry]::after {
   opacity: 1;
-}
-.thread-scroll .card-heading[data-carry]:has(.card-heading-text:hover, .card-actions:hover)::before,
-.thread-scroll .card-heading[data-carry]:has(.card-heading-text:hover, .card-actions:hover)::after {
-  opacity: 0;
 }
 @media (prefers-reduced-motion: reduce) {
   .thread-scroll .card-heading[data-carry]::before,

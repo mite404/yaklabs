@@ -8,15 +8,15 @@ import path from "node:path";
 import { openSharing } from "./share-checks.mjs";
 import { menuButtonOf, openThread, pick } from "./thread-actions-checks.mjs";
 
-const THEMES = ["light"];
+const THEMES = ["light", "dark"];
 const PHONE = { width: 390, height: 844 };
 const SERVICE_DESK = "Service desk weekly review";
 const PINNED = "Last week's sales";
 
 // A fresh context on the demo, with the share server stood in and the clipboard open, once the
 // sidebar's rows and the page's fonts are in.
-async function openThemed(browser) {
-  const { context, page } = await openSharing(browser);
+async function openThemed(browser, theme) {
+  const { context, page } = await openSharing(browser, { theme });
   await page.locator('[data-slot="sidebar"] [data-thread]').first().waitFor({ timeout: 20_000 });
   await page.evaluate(() => document.fonts.ready);
   return { context, page };
@@ -73,7 +73,7 @@ async function stage(page, card) {
 // The desktop: the snooze card, the window with every mark, the pinned thread's title bar, the
 // menu, the Share submenu while public, and the public page a reader opens.
 async function desktop(browser, theme, file) {
-  const { context, page } = await openThemed(browser);
+  const { context, page } = await openThemed(browser, theme);
   const link = await stage(page, file(`desktop-snooze-card-${theme}`));
   await page.screenshot({ path: file(`desktop-${theme}`) });
   await openShare(page);
@@ -101,7 +101,7 @@ async function desktop(browser, theme, file) {
 
 // The phone: its bar with the one "⋯", that menu open, and its sidebar with the marks.
 async function phone(browser, theme, file) {
-  const { context, page } = await openThemed(browser);
+  const { context, page } = await openThemed(browser, theme);
   await stage(page);
   await page.setViewportSize(PHONE);
   await page.waitForTimeout(400);

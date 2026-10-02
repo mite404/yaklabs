@@ -12,8 +12,12 @@ Decisions behind these rules live in `docs/adr/adr.md` (ADR-033 to ADR-035); tok
 
 ## Colour
 
-The site is light only (ADR-161). The dark values in these rules belong to the catalog, whose
-dark theme stays for its stories and the design tooling.
+The site has two themes, light and dark, and follows the visitor's system until they pick one
+in the account menu (ADR-162). Dark is Umbralkai: Andrew Sen's Zed theme, mapped onto these
+roles in Ethan's Figma (yak-ui-tests, the Theme collection's Umbralkai mode), marked **Zed**
+where the theme names the value. Its neutrals are warm greys, not olive, so rules 1 to 3 hold for
+the light theme; the brand's greens stay in dark for what they mark (the agent glyphs, the
+slider, the button hover). The design tooling page is light in either theme (ADR-160).
 
 ### 1. There is no black: neutrals are olive-tinted
 
@@ -138,10 +142,10 @@ The rail checks' P23 and P25 measure all of this in both themes.
 
 | Property | Value | Source |
 | --- | --- | --- |
-| Glyph and name | `--faint-ink`, an archived row's: 5.17:1 on paper, 5.46:1 dark | derived |
+| Glyph and name | `--faint-ink`, an archived row's: 5.17:1 on paper, 6.19:1 dark | derived |
 | Hover | none: no fill, no step to ink, the arrow cursor | derived |
 | Words | "Out of demo scope", the same in the pill, the drawer row and to a screen reader | Ethan |
-| Pill | name, then "· Out of demo scope", `--on-ink` 72% over `--ink` (rule 4): 7.6:1, 6.9:1 | derived |
+| Pill | name, then "· Out of demo scope", `--on-ink` 72% over `--ink` (rule 4): 7.6:1, 7.29:1 dark | derived |
 | Drawer row | the words after the name, 12px, as the thread count sits | derived |
 | Screen reader | a button, `aria-disabled`, described by the words | derived |
 
@@ -197,9 +201,10 @@ label is a caution orange pill (ADR-067, ADR-068).
 | Question card rest / hover | no fill / `--paper-deep` (`#e4e4df`), ink 12.0:1, soft-ink 5.8:1 | Ethan |
 | Question label | `--yak-orange` (`#d19456`) with `--yak-brown-ink` (`#3b2612`), 5.5:1 | Ethan |
 | Focus (light) | ink ring, 10.4:1 (the page's grey ring is 2.3:1 here) | derived |
-| Surface (dark) | `#62625d`, paper text 5.3:1 | Ethan |
-| Tiles (dark) | 18% night on the surface, paper 6.6:1 | derived |
-| Hover (dark) | 50% night on the surface (`#3a3b37`), paper 9.8:1 | derived |
+| Surface (dark) | `#302e2f`, one step above the paper; `#dedede` text 10.02:1, `#aeaeae` 6.08:1 | Ethan (Umbralkai) |
+| Tiles (dark) | Zed's panel `#1e1c1d`, 1.26:1 against the card; `#dedede` 12.6:1, `#aeaeae` 7.64:1 | Zed |
+| Hover (dark) | Zed's element grey `#3e4044`, text to `#fff7ed` at 9.78:1 | Zed |
+| Focus (dark) | the cream ring, 11.71:1 on the surface; the page's own ring stays the light theme's grey `#8a8a85` (4.56:1 on the dark paper), not Zed's cyan | Ethan |
 
 ### 28. A hover label is an ink pill
 
@@ -219,8 +224,8 @@ the vendored shadcn tooltip. P23 reads the rail's pills in both themes.
 
 | Property | Value | Source |
 | --- | --- | --- |
-| Fill / text | `--ink` / `--on-ink`: 13.3:1 light, 16.1:1 dark | derived (ADR-144) |
-| Secondary words | `--on-ink` 72% over `--ink` (rule 4): 7.6:1, 6.9:1 | derived (ADR-144) |
+| Fill / text | `--ink` / `--on-ink`: 13.3:1 light, 17.61:1 dark | derived (ADR-144) |
+| Secondary words | `--on-ink` 72% over `--ink` (rule 4): 7.6:1, 7.29:1 dark | derived (ADR-144) |
 | Type | Inter 13px, medium, 16px line, one line unless a name must wrap (up to 320px) | derived |
 | Padding | 4px × 10px | derived |
 | Corners | 12px: half the one-line pill's 24px, a capsule on one line | derived |
@@ -246,7 +251,7 @@ landing at its own time.
 | Property | Value | Source |
 | --- | --- | --- |
 | Face | `--seal-gold` (`--yak-orange`, `#d19456`), lit from the top left to `--seal-gold-glint` | derived (Ethan's example seal) |
-| Edge | `--seal-gold-deep` (`--rust`, `#a86f36`): 3.5:1 on the light paper, 6.6:1 dark, so the silhouette clears 3:1 | derived |
+| Edge | `--seal-gold-deep` (`--rust`, `#a86f36`): 3.5:1 on the light paper, 3.76:1 dark, so the silhouette clears 3:1 | derived |
 | Ring words | `--on-seal` (`--yak-brown-ink`, `#3b2612`): 5.5:1 on the face, the orange pill's pair | derived (rule 13) |
 | Ribbon | `--ink` with `--on-ink`, 230px × 27px across the 112px medal, notched 8px at both ends; 11px 600 upper case, "NOW WITH DESIGN TOOLING!", set to the 186px the 0.1em tracking gives, drawn as Inter outlines (`seal-words.ts`, from `scripts/seal-words.mjs`) rather than live text, so the words never shift against the ribbon when Chrome redraws the grown seal | derived (rule 28's pill), Ethan |
 | Ribbon hover | fills `--moss` with `--on-accent` over 150ms `ease`, as the outline button | css (rule 8) |
@@ -512,7 +517,7 @@ ADR-150).
 | Kay's mark | the bonsai's three pills on a 12-unit grid, `currentColor`, in the rail's 20px box | Ethan (ADR-094, amended) |
 | Reading tools at rest | the bookmark alone on `--scrim` (paper at 72%), glyph opaque; clear until the pointer is over the thread's turns, up over 300ms on the strong ease-out; Search unfolds over 220ms on the panel ease, the drawer's slide | Ethan (ADR-143, amended) |
 | Reading tools open | `--paper`, solid, over 150ms on the strong ease-out; the list of requests on `--scrim` with an 8px blur | Ethan (ADR-143, amended) |
-| Reading tools shadow | `--float-shadow` (`2px 8px 14px -6px` of `--shadow-strong`): down and to the right as the compose box's `--edge-shadow`, none above (ADR-069), scaled to the 34px bar; it passes under the compose box, which stands over the dock | derived (`--edge-shadow`), Ethan |
+| Reading tools shadow | `--float-shadow` (`2px 8px 14px -6px` of `--shadow-strong`): down and to the right as the cards' `--edge-shadow`, none above (ADR-069), scaled to the 34px bar; it passes under the compose box, which stands over the dock and casts none of its own (ADR-162) | derived (`--edge-shadow`), Ethan |
 | Toast | a menu's shape, since both float over the page: `rounded-xl` (8px) corners, 1px `--border`, `--popup-shadow` (`0 8px 24px` of `--shadow-strong`, the catalog Menu's shadow, which the shadcn menu and dialog share); Inter, rule 7, over Sonner's system stack | derived (`.menu`), Ethan |
 | Snooze note | the snooze toast's words stay in the bell as a note on the thread, written with the snooze or not at all, and counted read, since its reader is the one who snoozed | Ethan (ADR-128, amended) |
 | Dictation warning and picker | one warning, the modal's only notice (Ethan), in `--warn-bg` and `--warn-ink`, 14px under the header and 14px over the waveform: while speech cannot become text, why (blocked, unreachable, no service, no answer); otherwise with the live microphone "Speech to Text only offered via system's default microphone.", since the browser's speech service hears only the system's default; in the Demo's simulated recording "Choose Live Playground to test Speech to Text". In the live picker each input says under its name what it does in 12px `--soft-ink`: System Default "Turns speech into text", naming the device it is, the rest "Waveform only"; the device the default is now is not listed twice, and no input shows the USB ids Chrome appends ("(1532:0557)"), while "(Built-in)" and "(Virtual)" stay | Ethan |
