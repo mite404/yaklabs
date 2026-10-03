@@ -2728,8 +2728,11 @@ turns each `thinking` block and `thinking_delta` into a `thinking` event under t
 counts do not change. A reply that only thought is still empty, and the gateway still ends it as
 "I finished without an answer." The reasoning is stored on the turn, so a reload shows it. It is
 never replayed upstream: neither the gateway's next round nor the page's request carries it.
-In the thread it sits in a Thinking disclosure, collapsed, mounted above Work details and the
-words as soon as the first reasoning arrives, so it never appears over text being read. While
+In the thread it sits in a Thinking disclosure, collapsed. When reasoning arrives first, it
+mounts above Work details and the words. Reasoning first received after content appears mounts
+below that content instead. Its position is chosen on the first delta and stays fixed for the
+mounted turn, so later rounds never insert a toggle above text being read. Saved reasoning is
+shown above the answer on a reloaded turn's first paint. While
 the reply has nothing else to show, its summary is the old wait (the working glyph and
 "Thinking…"), now clickable. Once work or words arrive it settles to a plain "Thinking". The
 reasoning is set as written, not as Markdown, in the narration's 13px on 20px `--soft-ink`

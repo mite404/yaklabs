@@ -3886,3 +3886,17 @@ network chunks. The browser test interleaves two replies and checks that each di
 only its own reasoning, even when folded. Removing thinking delivery or replacing accumulated
 reasoning with the newest delta makes those tests fail. A finished screenshot cannot catch
 either mistake: it shows the final cut, not whether the rehearsal arrived live.
+
+The merge review caught a timing assumption: reasoning normally arrives before the answer,
+but another model round can start thinking after words or a card are already on screen. Always
+inserting its toggle at the top moved the reader's content. The turn now chooses the fold's
+position when reasoning first arrives and holds that choice: above an empty reply, below content
+already being read. A loaded turn still shows its saved reasoning above the answer from the
+first paint. Four browser regressions cover saved turns and late reasoning after words, work,
+or a card. The late cases measure the content's position before and after opening the fold and
+streaming another delta; checking only the toggle's existence would miss the jump.
+
+Three fresh real-model runs returned first thinking at 0.62, 0.48, and 0.59 seconds, while charts
+took 19.95, 51.12, and 15.88 seconds. All rounds returned HTTP 200 and all turns completed. Like
+a rehearsal feed starting promptly while the final edit takes longer, early feedback and a fast
+answer are separate promises. This fix delivers the former; it does not guarantee the latter.

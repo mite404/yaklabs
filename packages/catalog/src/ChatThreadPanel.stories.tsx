@@ -504,6 +504,32 @@ export const ReplyStreamsThinking: Story = {
   },
 };
 
+/** Reasoning from a later model round stays below the answer already being read. */
+export const ReplyThinksAfterWords: Story = {
+  args: {
+    thread: threads.trend,
+    agent: scriptedAgent(
+      [
+        "Tuesday leads with seven commits.",
+        { kind: "thinking", text: "Check the supplied totals. " },
+        { kind: "thinking", text: "Tuesday's seven exceeds Monday's three and Wednesday's two." },
+      ],
+      600,
+    ),
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.type(canvas.getByRole("textbox", { name: "Message" }), "Which day?{Enter}");
+    const answer = await canvas.findByText("Tuesday leads with seven commits.");
+    const toggle = await canvas.findByRole("button", { name: "Thinking" });
+    await expect(
+      answer.compareDocumentPosition(toggle) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).not.toBe(0);
+    await userEvent.click(toggle);
+    await expect(await canvas.findByText(/Check the supplied totals\./)).toBeVisible();
+  },
+};
+
 // Highlights the first agent paragraph and rests the pointer on it until the thread shows the
 // open hand.
 async function readyHighlight(canvasElement: HTMLElement) {
