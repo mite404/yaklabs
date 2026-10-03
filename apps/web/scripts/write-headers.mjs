@@ -87,14 +87,18 @@ function htmlFilesIn(directory) {
   });
 }
 
-const buildDirectory = process.env.WEB_BUILD_DIRECTORY ?? "build";
-const client = path.join(process.cwd(), buildDirectory, "client");
-const scripts = htmlFilesIn(client).flatMap((file) => inlineScriptsIn(readFileSync(file, "utf8")));
-const missing = BOOT_MARKS.filter((mark) => !scripts.some((script) => script.includes(mark)));
-if (missing.length > 0) {
-  console.error(`write-headers: no boot script with ${missing.join(", ")} under ${client}`);
-  process.exit(1);
+if (import.meta.main === true) {
+  const buildDirectory = process.env.WEB_BUILD_DIRECTORY ?? "build";
+  const client = path.join(process.cwd(), buildDirectory, "client");
+  const scripts = htmlFilesIn(client).flatMap((file) =>
+    inlineScriptsIn(readFileSync(file, "utf8")),
+  );
+  const missing = BOOT_MARKS.filter((mark) => !scripts.some((script) => script.includes(mark)));
+  if (missing.length > 0) {
+    console.error(`write-headers: no boot script with ${missing.join(", ")} under ${client}`);
+    process.exit(1);
+  }
+  const out = path.join(client, "_headers");
+  writeFileSync(out, headersFile(contentSecurityPolicy(scriptHashes(scripts))));
+  console.log(`write-headers: ${scripts.length} inline scripts pinned in ${out}`);
 }
-const out = path.join(client, "_headers");
-writeFileSync(out, headersFile(contentSecurityPolicy(scriptHashes(scripts))));
-console.log(`write-headers: ${scripts.length} inline scripts pinned in ${out}`);
