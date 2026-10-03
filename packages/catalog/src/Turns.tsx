@@ -9,7 +9,6 @@ import {
 import { AgentTree } from "./AgentTree";
 import { CatalogCard } from "./CatalogCard";
 import { ChartGlyph } from "./ComposeBox";
-import { Disclosure } from "./Disclosure";
 import { InteractiveCard } from "./InteractiveCard";
 import type { CardAttachment } from "./interactive";
 import { Prose, type Recover } from "./QuietProse";
@@ -40,26 +39,6 @@ const ENDED_LABELS: Record<Ended, string> = {
 const RETRYABLE: Record<Ended, boolean> = { interrupted: true, failed: true, cancelled: false };
 const retryable = (message: AgentMessage, ended: Ended): boolean =>
   RETRYABLE[ended] && message.failure?.retry !== false;
-
-// Whether the reply has reasoning to show (ADR-166).
-const thought = (message: AgentMessage): boolean => (message.thinking ?? "") !== "";
-
-// Content someone can already be reading, independent of the reasoning or wait indicator.
-const hasContent = (message: AgentMessage): boolean =>
-  hasWork(message) ||
-  blocksOf(message).length > 0 ||
-  message.payload !== undefined ||
-  message.interactive !== undefined;
-
-// Choose on the first reasoning delta, before paint; never move an open disclosure later.
-function useThinkingPlacement(thinking: boolean, reading: boolean): "above" | "below" {
-  const [placement, setPlacement] = useState<"above" | "below" | undefined>(
-    thinking ? "above" : undefined,
-  );
-  const position = placement ?? (reading ? "below" : "above");
-  if (thinking && placement === undefined) setPlacement(position);
-  return position;
-}
 
 // Calls `onChange` with whether `el`'s content runs taller than `maxPx`, now and as it resizes
 // (a narrower panel wraps more lines). Returns the function that stops watching.
@@ -181,38 +160,6 @@ function Waiting({ activity }: { activity: string | undefined }) {
   );
 }
 
-// The model's reasoning, folded above an empty reply or below content already being read
-// (ADR-166). While the reply has nothing else to show, its
-// summary is the wait itself, the working glyph and "Thinking…"; after, a plain "Thinking".
-// The reasoning is set as it came, never as Markdown: it is not the answer.
-function Thinking({ thinking = "", live }: { thinking: AgentMessage["thinking"]; live: boolean }) {
-  const [open, setOpen] = useState(false);
-  if (thinking === "") return null;
-  return (
-    <div className="turn-thinking">
-      <Disclosure
-        summary={
-          live ? (
-            <span className="work-live">
-              {/* The glyph's label announces the state; the words beside it are for the eye. */}
-              <AgentTree label="Thinking" />
-              <span aria-hidden="true">Thinking…</span>
-            </span>
-          ) : (
-            "Thinking"
-          )
-        }
-        open={open}
-        onToggle={() => {
-          setOpen(!open);
-        }}
-      >
-        <p className="turn-thinking-text">{thinking}</p>
-      </Disclosure>
-    </div>
-  );
-}
-
 // What a streaming reply is doing now, quietly under its words (ADR-139).
 function Activity({ activity }: { activity: string }) {
   return (
@@ -224,8 +171,7 @@ function Activity({ activity }: { activity: string }) {
 }
 
 // The reply's words, or its placeholder while it has none, and what it is doing now; a reply
-// whose disclosure carries its activity (`quiet`) shows neither placeholder nor line here, and
-// one that is thinking shows no placeholder: its Thinking summary is the wait.
+// whose disclosure carries its activity (`quiet`) shows neither placeholder nor line here.
 function Words({
   message,
   cardsCarry,
@@ -242,8 +188,7 @@ function Words({
   const blocks = blocksOf(message); // → Block[]
   const { streaming, activity } = message;
   const narrates = streaming === true && !quiet;
-  if (blocks.length === 0)
-    return narrates && !thought(message) && !hasContent(message) && <Waiting activity={activity} />;
+  if (blocks.length === 0) return narrates && <Waiting activity={activity} />;
   return (
     <>
       <Prose
@@ -288,14 +233,12 @@ function EndedNote({
 }
 
 /**
- * The agent's turn: its reasoning folded at the top when it arrives first, below existing
- * content otherwise (ADR-166); one
- * restrained disclosure above the words once there is work, mounted as the work starts and
- * carrying what the reply is doing now and then what it amounted to (ADR-139, amended); Quiet
- * prose with any cards between its paragraphs (ADR-140); how it ended when it stopped short. A
- * reply with no work narrates under its words instead, and one with no words or reasoning yet is
- * its own placeholder. While a reply is still streaming in, the turn is marked busy for
- * assistive technology.
+ * The agent's turn: one restrained disclosure above the words once there is work, mounted as
+ * the work starts and carrying what the reply is doing now and then what it amounted to
+ * (ADR-139, amended); Quiet prose with any cards between its paragraphs (ADR-140); how it ended
+ * when it stopped short. A reply with no work narrates under its words instead, and one with no
+ * words yet is its own placeholder. While a reply is still streaming in, the turn is marked busy
+ * for assistive technology.
  * @param cardsCarry Whether a card's header carries it out onto the canvas (ADR-089).
  * @param shareable Whether a card offers its own share link; not on a page already shared
  * (ADR-064, ADR-131).
@@ -329,21 +272,14 @@ export function AgentTurn({
   const carries = cardsCarry !== false;
   const { ended } = message;
   const worked = hasWork(message);
-  const reading = hasContent(message);
-  const thinking = thought(message);
-  const placement = useThinkingPlacement(thinking, reading);
-  // The reasoning is the reply's live line until work or words take over.
-  const thinkingLive = message.streaming === true && !reading;
-  const reasoning = <Thinking thinking={message.thinking} live={thinkingLive} />;
   return (
     <article
       ref={ref}
       className="turn turn-agent"
       data-turn-id={message.id}
       aria-label="Agent"
-      aria-busy={message.streaming === true || undefined}
+      aria-busy={message.streaming === true ? true : undefined}
     >
-      {placement === "above" && reasoning}
       {worked && (
         <WorkDetails work={message.work} label={workLabel(message)} cardsCarry={cardsCarry} />
       )}
@@ -372,7 +308,6 @@ export function AgentTurn({
           shareable={shareable}
         />
       )}
-      {placement === "below" && reasoning}
       {ended !== undefined && <EndedNote message={message} ended={ended} onRetry={onRetry} />}
       {stamp !== undefined && <time className="turn-stamp">{stamp}</time>}
     </article>

@@ -101,18 +101,14 @@ export const text = (index: number, ...chunks: string[]): StreamEvent[] => [
   { type: "content_block_stop", index },
 ];
 
-/** A thinking block streamed in `chunks`, which the gateway shows but never sends back. */
-export const thinking = (index: number, ...chunks: string[]): StreamEvent[] => [
+/** A thinking block, which the gateway must never show or send back. */
+export const thinking = (index: number): StreamEvent[] => [
   {
     type: "content_block_start",
     index,
     content_block: { type: "thinking", thinking: "", signature: "" },
   },
-  ...chunks.map((chunk): StreamEvent => ({
-    type: "content_block_delta",
-    index,
-    delta: { type: "thinking_delta", thinking: chunk },
-  })),
+  { type: "content_block_delta", index, delta: { type: "thinking_delta", thinking: "Hmm." } },
   { type: "content_block_stop", index },
 ];
 

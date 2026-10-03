@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { eventsFor, rawRound, round, text, thinking, tool } from "./playgroundTestKit";
+import { eventsFor, rawRound, round, text, tool } from "./playgroundTestKit";
 
 const running = { workId: "sum", label: "Adding up the week", status: "running" };
 // A turn that stops short ends with its reason and line in one event.
@@ -15,13 +15,6 @@ describe("a turn never ends silently", () => {
     const { events } = await eventsFor("Which day?", round("end_turn", text(0, " ")));
 
     expect(events).toEqual([emptyAnswer]);
-  });
-
-  it("when the reply only thought", async () => {
-    const { events } = await eventsFor("Which day?", round("end_turn", thinking(0, "Hmm.")));
-
-    expect(events.map(({ type }) => type)).toEqual(["thinking", "end"]);
-    expect(events.at(-1)).toEqual(emptyAnswer);
   });
 
   it("and adds nothing to a reply that answered", async () => {

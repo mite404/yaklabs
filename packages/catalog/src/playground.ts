@@ -14,21 +14,20 @@ const workStatus = z.enum(["running", "done", "failed"]);
  * Wire version of the playground stream; bump on any breaking change to the event union. A
  * page on one version fails the `start` event of a gateway on another.
  */
-export const PLAYGROUND_PROTOCOL = 3;
+export const PLAYGROUND_PROTOCOL = 2;
 
 /**
  * One NDJSON line of the gateway's /api/playground stream. The gateway emits only events that
  * parse here, and the page rejects any line that does not; unknown keys are rejected.
  *
  * Every event means what it says when it arrives, and nothing is relabelled after emission:
- * `text` is answer prose from its first delta, `thinking` is the model's reasoning and never
- * the answer, progress reaches the page only through `work` labels, and `end` carries the closing failure's sentence in `line` (for `limit` and
+ * `text` is answer prose from its first delta, progress reaches the page only through `work`
+ * labels, and `end` carries the closing failure's sentence in `line` (for `limit` and
  * `upstream`), so a reader never has to look one event ahead.
  */
 export const playgroundEventSchema = z.discriminatedUnion("type", [
   z.strictObject({ type: z.literal("start"), seq, v: z.literal(PLAYGROUND_PROTOCOL) }),
   z.strictObject({ type: z.literal("text"), seq, blockId: id, delta: z.string() }),
-  z.strictObject({ type: z.literal("thinking"), seq, blockId: id, delta: z.string() }),
   z.strictObject({ type: z.literal("work"), seq, workId: slug, label: line, status: workStatus }),
   z.strictObject({
     type: z.literal("card"),

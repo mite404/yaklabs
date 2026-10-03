@@ -15,13 +15,8 @@ import {
   type TurnState,
 } from "./playgroundTools";
 
-/** The model the playground talks to and its per-round budgets; the app passes its own. */
-export type PlaygroundUpstream = {
-  client: Anthropic;
-  model: string;
-  maxTokens: number;
-  thinking: Anthropic.ThinkingConfigParam;
-};
+/** The model the playground talks to and its per-round budget; the app passes its own. */
+export type PlaygroundUpstream = { client: Anthropic; model: string; maxTokens: number };
 
 type Messages = Anthropic.MessageParam[];
 type UpstreamEvents = AsyncIterable<Anthropic.RawMessageStreamEvent>;
@@ -117,7 +112,6 @@ const openRound = (
     {
       model: upstream.model,
       max_tokens: upstream.maxTokens,
-      thinking: upstream.thinking,
       system: SYSTEM_PROMPT,
       tools: toolsFor(state), // → the catalog's tools, minus the ones failures retired
       messages,
@@ -131,12 +125,8 @@ const advance = (
   end: RoundEnd,
   event: Anthropic.RawMessageStreamEvent,
 ): { end: RoundEnd; events: PlaygroundEvent[] } => {
-  const step = readEvent(end.round, event); // → { round, text?, thinking?, tool? }
-  const drafts: EventDraft[] = [
-    ...(step.thinking === undefined ? [] : [{ type: "thinking" as const, ...step.thinking }]),
-    ...(step.text === undefined ? [] : [{ type: "text" as const, ...step.text }]),
-  ];
-  const text = stamp(end.state, drafts); // → { state, events }
+  const step = readEvent(end.round, event); // → { round, text?, tool? }
+  const text = stamp(end.state, step.text === undefined ? [] : [{ type: "text", ...step.text }]);
   const read: RoundEnd = { ...end, round: step.round, state: text.state };
   if (step.tool === undefined) return { end: read, events: text.events };
   const { state, events, result } = translateToolUse(read.state, step.tool); // → Translation

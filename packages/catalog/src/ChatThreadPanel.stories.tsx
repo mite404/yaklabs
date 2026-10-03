@@ -480,56 +480,6 @@ export const ReplyThinking: Story = {
   },
 };
 
-// A reply that thinks for a while before it answers, as the Live Playground's model does: the
-// reasoning streams in, then the words.
-const thinkingStream: ReplyChunk[] = [
-  { kind: "thinking", text: "They want next week's cases. " },
-  { kind: "thinking", text: "The trend rose four weeks running, " },
-  { kind: "thinking", text: "so a flat guess would undersell it.\n\nSay it plainly." },
-  "Next week should land a little above this one, ",
-  { kind: "text", text: "if the rise holds." },
-];
-
-/** A reply whose model thinks first (ADR-166): the wait is a Thinking toggle, folded, that
- *  holds the reasoning as it streams, and settles to a plain "Thinking" once the words come. */
-export const ReplyStreamsThinking: Story = {
-  args: { thread: threads.trend, agent: scriptedAgent(thinkingStream, 600) },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.type(canvas.getByRole("textbox", { name: "Message" }), "And next week?{Enter}");
-    const toggle = await canvas.findByRole("button", { name: "Thinking" });
-    await expect(toggle).toHaveAttribute("aria-expanded", "false");
-    await userEvent.click(toggle);
-    await expect(await canvas.findByText(/They want next week's cases\./)).toBeVisible();
-  },
-};
-
-/** Reasoning from a later model round stays below the answer already being read. */
-export const ReplyThinksAfterWords: Story = {
-  args: {
-    thread: threads.trend,
-    agent: scriptedAgent(
-      [
-        "Tuesday leads with seven commits.",
-        { kind: "thinking", text: "Check the supplied totals. " },
-        { kind: "thinking", text: "Tuesday's seven exceeds Monday's three and Wednesday's two." },
-      ],
-      600,
-    ),
-  },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement);
-    await userEvent.type(canvas.getByRole("textbox", { name: "Message" }), "Which day?{Enter}");
-    const answer = await canvas.findByText("Tuesday leads with seven commits.");
-    const toggle = await canvas.findByRole("button", { name: "Thinking" });
-    await expect(
-      answer.compareDocumentPosition(toggle) & Node.DOCUMENT_POSITION_FOLLOWING,
-    ).not.toBe(0);
-    await userEvent.click(toggle);
-    await expect(await canvas.findByText(/Check the supplied totals\./)).toBeVisible();
-  },
-};
-
 // Highlights the first agent paragraph and rests the pointer on it until the thread shows the
 // open hand.
 async function readyHighlight(canvasElement: HTMLElement) {

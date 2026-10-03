@@ -15,7 +15,6 @@ import {
   round,
   say,
   text,
-  thinking,
   tool,
 } from "../../../apps/gateway/src/playgroundTestKit";
 import { COPY } from "./playgroundCopy";
@@ -105,20 +104,6 @@ describe("planRequest projects folded turns", () => {
     const later = [user("u1", "Go."), asked, user("u2", "Cost", QUESTION.question)];
     const past = sent(planRequest([...later, await replyTo("a2", toolReply)], message("More.")));
     expect(past.exchanges[1]?.user).toEqual({ kind: "answer", questionId: "q0", text: "Cost" });
-  });
-});
-
-describe("planRequest leaves the thinking behind", () => {
-  it("keeping a reply's reasoning on its turn but never sending it back", async () => {
-    const thought = "They want the busiest day.";
-    const reply = await replyTo("a1", [
-      round("end_turn", thinking(0, thought), text(1, "Friday.")),
-    ]);
-    expect(reply.thinking).toBe(thought);
-    const request = sent(planRequest([user("u1", "Go."), reply], message("Why?")));
-    expect(request.exchanges[0]?.agent?.text).toBe("Friday.");
-    expect(JSON.stringify(request)).not.toContain(thought);
-    expect(JSON.stringify(toUpstreamMessages(request))).not.toContain(thought);
   });
 });
 

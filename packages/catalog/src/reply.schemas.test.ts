@@ -21,7 +21,6 @@ import {
 // One of every event the seam carries, in an order a reply might send them.
 const events: ReplyEvent[] = [
   { kind: "activity", text: "Reading the tickets." },
-  { kind: "thinking", text: "The backlog is the queue at close." },
   { kind: "step", step: { id: "s1", label: "Count cases", status: "running" } },
   { kind: "block", block: "heading" },
   { kind: "text", text: "Backlog", mark: "strong" },

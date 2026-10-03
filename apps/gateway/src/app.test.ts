@@ -77,7 +77,6 @@ const sseBody = helloWorld
 const upstreamBodySchema = z.strictObject({
   model: z.string(),
   max_tokens: z.number(),
-  thinking: z.strictObject({ type: z.literal("enabled"), budget_tokens: z.number() }),
   system: z.string().optional(),
   messages: z.array(z.unknown()),
   stream: z.boolean(),
@@ -214,7 +213,6 @@ describe("POST /api/messages sends upstream", () => {
     expect(body).toEqual({
       model: "moonshotai/kimi-k2.6",
       max_tokens: 8192,
-      thinking: { type: "enabled", budget_tokens: 1024 },
       system: SYSTEM,
       messages: turns,
       stream: true,

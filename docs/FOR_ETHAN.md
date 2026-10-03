@@ -3867,36 +3867,3 @@ snoozed, so the badge stays quiet. The film version: the clapperboard is written
 team at the moment of the take, on the same slate, so a take never exists without its label.
 Senior-engineer takeaway: when one action must leave a record, make the record part of the
 action's write, not a second call that can succeed or fail on its own.
-
-### Show the rehearsal without confusing it with the performance
-
-The Live Playground now keeps the model's reasoning in a folded Thinking disclosure. Think of
-it as rehearsal footage: useful for seeing how the answer develops, but not part of the final
-cut. Gateway `thinking` events become reply chunks, then `AgentMessage.thinking`. Answer prose
-and work counts stay separate, and the saved reasoning never goes back into the model's request.
-
-On October 3, three real OpenRouter runs delivered the first thinking delta in 0.96, 0.43, and
-0.45 seconds. All met the 10-second check. Charts arrived in 9.09, 3.43, and 16.30 seconds, so
-early feedback does not mean an early answer. These measurements start at the in-process gateway
-request, not at a signed-in browser's Send click. They are samples, not a latency guarantee.
-
-Two tests guard against convincing but broken streaming. The runtime test leaves the response
-open and requires each thinking delta before the answer ends, including a line split across
-network chunks. The browser test interleaves two replies and checks that each disclosure keeps
-only its own reasoning, even when folded. Removing thinking delivery or replacing accumulated
-reasoning with the newest delta makes those tests fail. A finished screenshot cannot catch
-either mistake: it shows the final cut, not whether the rehearsal arrived live.
-
-The merge review caught a timing assumption: reasoning normally arrives before the answer,
-but another model round can start thinking after words or a card are already on screen. Always
-inserting its toggle at the top moved the reader's content. The turn now chooses the fold's
-position when reasoning first arrives and holds that choice: above an empty reply, below content
-already being read. A loaded turn still shows its saved reasoning above the answer from the
-first paint. Four browser regressions cover saved turns and late reasoning after words, work,
-or a card. The late cases measure the content's position before and after opening the fold and
-streaming another delta; checking only the toggle's existence would miss the jump.
-
-Three fresh real-model runs returned first thinking at 0.62, 0.48, and 0.59 seconds, while charts
-took 19.95, 51.12, and 15.88 seconds. All rounds returned HTTP 200 and all turns completed. Like
-a rehearsal feed starting promptly while the final edit takes longer, early feedback and a fast
-answer are separate promises. This fix delivers the former; it does not guarantee the latter.

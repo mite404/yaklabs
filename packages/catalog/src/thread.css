@@ -563,10 +563,8 @@
 /* The one disclosure above a reply (ADR-139, amended; WorkDetails.tsx): its header pulled back
    onto the text column, so its label starts where the prose does and its hover fill reaches 8px
    into the gutter, as a card's rows reach into its padding. Live, the label sits beside the
-   working glyph, as the sidebar's rows do. The nested Technical details match, and so does the
-   reasoning's fold above it (ADR-166). */
-.work-details .disclosure-header,
-.turn-thinking .disclosure-header {
+   working glyph, as the sidebar's rows do. The nested Technical details match. */
+.work-details .disclosure-header {
   width: calc(100% + 16px);
   margin: 0 -8px;
   font-size: 13px;
@@ -581,29 +579,12 @@
 /* The fold's chevron leads the label here, as a numbered list's marker would: at the header's
    far right it sat under the reading tools, which float over the newest turn's bottom-right
    corner (ADR-143), and a control hidden under a control is worse than a word covered. */
-.work-details .disclosure-header > .disclosure-chevron,
-.turn-thinking .disclosure-header > .disclosure-chevron {
+.work-details .disclosure-header > .disclosure-chevron {
   order: -1;
   margin: 0;
 }
-.work-details .disclosure-body,
-.turn-thinking .disclosure-body {
+.work-details .disclosure-body {
   padding-top: 12px;
-}
-/* The model's reasoning (ADR-166): its fold in the wait's muted ink (.turn-pending), since it is
-   how the reply got there, never the reply; folded open, the reasoning as it came, set as the
-   narration under a streaming reply (pillar 29), at the prose's measure. */
-.turn-thinking .disclosure-header {
-  color: var(--soft-ink);
-}
-.turn-thinking-text {
-  max-width: 510px; /* the prose's measure */
-  margin: 0;
-  color: var(--soft-ink);
-  font-size: 13px;
-  line-height: 20px;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
 }
 .work-list {
   display: grid;

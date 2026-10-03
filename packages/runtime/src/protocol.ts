@@ -70,7 +70,6 @@ export const threadMessageSchema = z.discriminatedUnion("role", [
     blocks: z.array(blockSchema).optional(),
     work: workSchema.optional(),
     activity: z.string().optional(),
-    thinking: z.string().optional(),
     ended: endedSchema.optional(),
     failure: failureSchema.optional(),
     asks: z.unknown().optional(),
