@@ -21,21 +21,22 @@ const question = {
   answer: { placeholder: "Name a week" },
 };
 const events = [
-  { type: "start", seq: 0, v: 2 },
-  { type: "text", seq: 1, blockId: "r0b1", delta: "Here" },
-  { type: "work", seq: 2, workId: "chart", label: "Totalling cases", status: "running" },
-  { type: "card", seq: 3, cardId: "cases", selection, note: "Shown as a table" },
-  { type: "question", seq: 4, questionId: "functions.ask_question:1", question },
-  { type: "outcome", seq: 5, workId: "chart", result: "Charted", evidence: ["2 teams"] },
+  { type: "start", seq: 0, v: 3 },
+  { type: "thinking", seq: 1, blockId: "r0b0", delta: "They want cases by team." },
+  { type: "text", seq: 2, blockId: "r0b1", delta: "Here" },
+  { type: "work", seq: 3, workId: "chart", label: "Totalling cases", status: "running" },
+  { type: "card", seq: 4, cardId: "cases", selection, note: "Shown as a table" },
+  { type: "question", seq: 5, questionId: "functions.ask_question:1", question },
+  { type: "outcome", seq: 6, workId: "chart", result: "Charted", evidence: ["2 teams"] },
   {
     type: "failure",
-    seq: 6,
+    seq: 7,
     workId: null,
     limitation: "I cannot fetch real data.",
     recovery: { label: "Send this", prompt: "Chart these numbers: 3, 5" },
   },
-  { type: "end", seq: 7, reason: "answered" },
-  { type: "end", seq: 8, reason: "limit", line: "I stopped before finishing this reply." },
+  { type: "end", seq: 8, reason: "answered" },
+  { type: "end", seq: 9, reason: "limit", line: "I stopped before finishing this reply." },
 ];
 
 const skip = (questionId: string) => ({ exchanges: [{ user: { kind: "skip", questionId } }] });
@@ -58,7 +59,7 @@ describe("playground contract", () => {
     expect(playgroundEventSchema.safeParse({ ...event, extra: true }).success).toBe(false);
   });
   it("rejects a card event whose selection is outside the catalog", () => {
-    const card = { ...events[3], selection: { ...selection, component: "PieChart" } };
+    const card = { ...events[4], selection: { ...selection, component: "PieChart" } };
     expect(playgroundEventSchema.safeParse(card).success).toBe(false);
   });
   it("accepts a two-exchange history with a card and an answered question", () => {
@@ -88,9 +89,9 @@ describe("playground contract", () => {
   });
 });
 
-describe("playground protocol 2", () => {
+describe("playground protocol 3", () => {
   it("rejects a start event from another protocol version", () => {
-    expect(playgroundEventSchema.safeParse({ type: "start", seq: 0, v: 1 }).success).toBe(false);
+    expect(playgroundEventSchema.safeParse({ type: "start", seq: 0, v: 2 }).success).toBe(false);
   });
   it("has no event that relabels streamed text", () => {
     const relabel = { type: "narration", seq: 2, blockId: "r0b1", workId: "chart" };

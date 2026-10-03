@@ -74,7 +74,7 @@ describe("POST /api/playground streams", () => {
     expect(response.status).toBe(200);
     expect(response.headers.get("Content-Type")).toBe("application/x-ndjson");
     expect(events.map((event) => event.seq)).toEqual(events.map((_, index) => index));
-    expect(events.at(0)).toEqual({ type: "start", seq: 0, v: 2 });
+    expect(events.at(0)).toEqual({ type: "start", seq: 0, v: 3 });
     expect(events.at(-1)).toEqual({ type: "end", seq: events.length - 1, reason: "answered" });
   });
 

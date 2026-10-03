@@ -8,7 +8,7 @@ import { z } from "zod";
 import { closeMarkdown, newEmitter, writeMarkdown, type MarkdownEmitter } from "./markdownEmitter";
 import { COPY } from "./playgroundCopy";
 
-// The gateway's stream (ADR-155, protocol 2) read as the reply seam's chunks (ADR-147). Pure:
+// The gateway's stream (ADR-155, protocol 3) read as the reply seam's chunks (ADR-147). Pure:
 // one event in, the chunks it yields out, so the same stream always builds the same turn.
 
 // A `start` line of any protocol version, so a mismatch is named rather than unreadable.
@@ -85,6 +85,12 @@ function onText(state: ReplyState, event: EventOf<"text">): Receipt {
   return { state: { ...closed.state, prose }, chunks: [...closed.chunks, ...written.chunks] };
 }
 
+// Reasoning as it streams. It is not the answer, so the open block of words stays open.
+const onThinking = (state: ReplyState, event: EventOf<"thinking">): Receipt => ({
+  state,
+  chunks: [{ kind: "thinking", text: event.delta }],
+});
+
 // A card under its cardId, so showing that id again replaces it where the reader saw it; the
 // gateway's note on it is a technical line.
 function showCard(event: EventOf<"card">): ReplyChunk[] {
@@ -142,7 +148,10 @@ function onEnd(state: ReplyState, event: EventOf<"end">): Receipt {
 }
 
 // Every event after `start`, once the open text block is closed.
-function onEvent(state: ReplyState, event: Exclude<Received, { type: "text" }>): Receipt {
+function onEvent(
+  state: ReplyState,
+  event: Exclude<Received, { type: "text" | "thinking" }>,
+): Receipt {
   switch (event.type) {
     case "start": // a second start: the stream is not one reply
       return endShort(state, COPY.cutOff);
@@ -196,10 +205,11 @@ export function readLine(line: string): Received | undefined {
 /**
  * Folds one event of the gateway's stream into the reply's chunks. A replayed `seq` changes
  * nothing; a skipped one means a line was lost, and the reply ends cut off. Text streams
- * through the Markdown emitter; a work item becomes a step; a card, a card chunk under its id;
- * an outcome settles its step with its basis and sums up the work; a limitation fails its step
- * and reaches the words with its recovery; a question docks and ends the reply; `end` ends it, short with a failure for a limit or an
- * upstream that stopped.
+ * through the Markdown emitter; reasoning becomes thinking without closing the words; a work
+ * item becomes a step; a card, a card chunk under its id; an outcome settles its step with its
+ * basis and sums up the work; a limitation fails its step and reaches the words with its
+ * recovery; a question docks and ends the reply; `end` ends it, short with a failure for a
+ * limit or an upstream that stopped.
  */
 export function receive(state: ReplyState, event: Received): Receipt {
   if (state.phase === "over") return { state, chunks: [], done: true };
@@ -208,6 +218,7 @@ export function receive(state: ReplyState, event: Received): Receipt {
   const counted: ReplyState = { ...state, next: state.next + 1 };
   if (state.phase === "waiting") return begin(counted, event);
   if (event.type === "text") return onText(counted, event);
+  if (event.type === "thinking") return onThinking(counted, event);
   const closed = closeProse(counted);
   const handled = onEvent(closed.state, event);
   return { ...handled, chunks: [...closed.chunks, ...handled.chunks] };

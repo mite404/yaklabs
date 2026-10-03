@@ -33,7 +33,7 @@ function body(lines: string[], { open = false } = {}): ReadableStream<Uint8Array
 }
 
 const ndjson = (...events: object[]): string[] => events.map((e) => `${JSON.stringify(e)}\n`);
-const start = { type: "start", seq: 0, v: 2 };
+const start = { type: "start", seq: 0, v: 3 };
 
 // A gateway that answers every request with `status` and `lines`.
 const answering = (status: number, lines: string[] = [], open = false) =>
