@@ -3867,3 +3867,22 @@ snoozed, so the badge stays quiet. The film version: the clapperboard is written
 team at the moment of the take, on the same slate, so a take never exists without its label.
 Senior-engineer takeaway: when one action must leave a record, make the record part of the
 action's write, not a second call that can succeed or fail on its own.
+
+### Show the rehearsal without confusing it with the performance
+
+The Live Playground now keeps the model's reasoning in a folded Thinking disclosure. Think of
+it as rehearsal footage: useful for seeing how the answer develops, but not part of the final
+cut. Gateway `thinking` events become reply chunks, then `AgentMessage.thinking`. Answer prose
+and work counts stay separate, and the saved reasoning never goes back into the model's request.
+
+On October 3, three real OpenRouter runs delivered the first thinking delta in 0.96, 0.43, and
+0.45 seconds. All met the 10-second check. Charts arrived in 9.09, 3.43, and 16.30 seconds, so
+early feedback does not mean an early answer. These measurements start at the in-process gateway
+request, not at a signed-in browser's Send click. They are samples, not a latency guarantee.
+
+Two tests guard against convincing but broken streaming. The runtime test leaves the response
+open and requires each thinking delta before the answer ends, including a line split across
+network chunks. The browser test interleaves two replies and checks that each disclosure keeps
+only its own reasoning, even when folded. Removing thinking delivery or replacing accumulated
+reasoning with the newest delta makes those tests fail. A finished screenshot cannot catch
+either mistake: it shows the final cut, not whether the rehearsal arrived live.
