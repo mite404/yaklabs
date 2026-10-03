@@ -1,4 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
+import { expect, userEvent, within } from "storybook/test";
 import { CatalogCard } from "./CatalogCard";
 import { App } from "./App";
 import { scenarios } from "./fixtures";
@@ -43,6 +44,40 @@ export const Snapshot: Story = {
 };
 export const Comparison: Story = {
   args: { payload: scenarios.comparison.payload },
+};
+export const Commits: Story = {
+  args: {
+    context: "thread",
+    payload: {
+      catalogVersion: "1",
+      component: "BarChart",
+      props: {
+        title: "This week's commits",
+        source: "Supplied commit counts",
+        unit: " commits ",
+        variant: "comparison",
+        rows: [
+          { label: "Mon", value: 3 },
+          { label: "Tue", value: 7 },
+          { label: "Wed", value: 2 },
+        ],
+      },
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(canvas.getByText("commits", { exact: true })).toBeVisible();
+    await expect(canvas.queryByText("cases", { exact: true })).not.toBeInTheDocument();
+    await expect(
+      canvas.getByRole("img", { name: "This week's commits. Values available in the data table." }),
+    ).toBeVisible();
+    await userEvent.click(canvas.getByRole("button", { name: "View data table" }));
+    await expect(canvas.getByRole("columnheader", { name: "Value (commits)" })).toBeVisible();
+    await expect(canvas.getByRole("row", { name: "Mon 3" })).toBeVisible();
+    await expect(canvas.getByRole("row", { name: "Tue 7" })).toBeVisible();
+    await expect(canvas.getByRole("row", { name: "Wed 2" })).toBeVisible();
+    await userEvent.click(canvas.getByRole("button", { name: "Show chart" }));
+  },
 };
 export const ExactValues: Story = {
   args: { payload: scenarios.table.payload },
