@@ -9,6 +9,7 @@ import {
 import { AgentTree } from "./AgentTree";
 import { CatalogCard } from "./CatalogCard";
 import { ChartGlyph } from "./ComposeBox";
+import { Disclosure } from "./Disclosure";
 import { InteractiveCard } from "./InteractiveCard";
 import type { CardAttachment } from "./interactive";
 import { Prose, type Recover } from "./QuietProse";
@@ -39,6 +40,9 @@ const ENDED_LABELS: Record<Ended, string> = {
 const RETRYABLE: Record<Ended, boolean> = { interrupted: true, failed: true, cancelled: false };
 const retryable = (message: AgentMessage, ended: Ended): boolean =>
   RETRYABLE[ended] && message.failure?.retry !== false;
+
+// Whether the reply has reasoning to show (ADR-166).
+const thought = (message: AgentMessage): boolean => (message.thinking ?? "") !== "";
 
 // Calls `onChange` with whether `el`'s content runs taller than `maxPx`, now and as it resizes
 // (a narrower panel wraps more lines). Returns the function that stops watching.
@@ -160,6 +164,37 @@ function Waiting({ activity }: { activity: string | undefined }) {
   );
 }
 
+// The model's reasoning, folded above the reply (ADR-166), mounted as the reasoning starts so it
+// never appears over text someone is reading. While the reply has nothing else to show, its
+// summary is the wait itself, the working glyph and "Thinking…"; after, a plain "Thinking".
+// The reasoning is set as it came, never as Markdown: it is not the answer.
+function Thinking({ thinking, live }: { thinking: string; live: boolean }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="turn-thinking">
+      <Disclosure
+        summary={
+          live ? (
+            <span className="work-live">
+              {/* The glyph's label announces the state; the words beside it are for the eye. */}
+              <AgentTree label="Thinking" />
+              <span aria-hidden="true">Thinking…</span>
+            </span>
+          ) : (
+            "Thinking"
+          )
+        }
+        open={open}
+        onToggle={() => {
+          setOpen(!open);
+        }}
+      >
+        <p className="turn-thinking-text">{thinking}</p>
+      </Disclosure>
+    </div>
+  );
+}
+
 // What a streaming reply is doing now, quietly under its words (ADR-139).
 function Activity({ activity }: { activity: string }) {
   return (
@@ -171,7 +206,8 @@ function Activity({ activity }: { activity: string }) {
 }
 
 // The reply's words, or its placeholder while it has none, and what it is doing now; a reply
-// whose disclosure carries its activity (`quiet`) shows neither placeholder nor line here.
+// whose disclosure carries its activity (`quiet`) shows neither placeholder nor line here, and
+// one that is thinking shows no placeholder: its Thinking summary is the wait.
 function Words({
   message,
   cardsCarry,
@@ -188,7 +224,7 @@ function Words({
   const blocks = blocksOf(message); // → Block[]
   const { streaming, activity } = message;
   const narrates = streaming === true && !quiet;
-  if (blocks.length === 0) return narrates && <Waiting activity={activity} />;
+  if (blocks.length === 0) return narrates && !thought(message) && <Waiting activity={activity} />;
   return (
     <>
       <Prose
@@ -233,12 +269,13 @@ function EndedNote({
 }
 
 /**
- * The agent's turn: one restrained disclosure above the words once there is work, mounted as
- * the work starts and carrying what the reply is doing now and then what it amounted to
- * (ADR-139, amended); Quiet prose with any cards between its paragraphs (ADR-140); how it ended
- * when it stopped short. A reply with no work narrates under its words instead, and one with no
- * words yet is its own placeholder. While a reply is still streaming in, the turn is marked busy
- * for assistive technology.
+ * The agent's turn: its reasoning folded at the top once the model thinks (ADR-166); one
+ * restrained disclosure above the words once there is work, mounted as the work starts and
+ * carrying what the reply is doing now and then what it amounted to (ADR-139, amended); Quiet
+ * prose with any cards between its paragraphs (ADR-140); how it ended when it stopped short. A
+ * reply with no work narrates under its words instead, and one with no words or reasoning yet is
+ * its own placeholder. While a reply is still streaming in, the turn is marked busy for
+ * assistive technology.
  * @param cardsCarry Whether a card's header carries it out onto the canvas (ADR-089).
  * @param shareable Whether a card offers its own share link; not on a page already shared
  * (ADR-064, ADR-131).
@@ -272,6 +309,8 @@ export function AgentTurn({
   const carries = cardsCarry !== false;
   const { ended } = message;
   const worked = hasWork(message);
+  // The reasoning is the reply's live line until work or words take over.
+  const thinkingLive = message.streaming === true && !worked && blocksOf(message).length === 0;
   return (
     <article
       ref={ref}
@@ -280,6 +319,7 @@ export function AgentTurn({
       aria-label="Agent"
       aria-busy={message.streaming === true ? true : undefined}
     >
+      {thought(message) && <Thinking thinking={message.thinking ?? ""} live={thinkingLive} />}
       {worked && (
         <WorkDetails work={message.work} label={workLabel(message)} cardsCarry={cardsCarry} />
       )}

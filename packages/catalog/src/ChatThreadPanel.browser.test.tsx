@@ -60,6 +60,12 @@ function pendingRows(): HTMLElement[] {
   return [...host.querySelectorAll<HTMLElement>(".turn-pending")];
 }
 
+function thinkingToggle(): HTMLButtonElement {
+  const found = host.querySelector<HTMLButtonElement>(".turn-thinking .disclosure-header");
+  if (!found) throw new Error("no Thinking toggle");
+  return found;
+}
+
 function field(): HTMLTextAreaElement {
   const found = host.querySelector<HTMLTextAreaElement>('textarea[aria-label="Message"]');
   if (!found) throw new Error("no compose box");
@@ -84,6 +90,38 @@ it("shows a quiet Thinking indicator while a reply is pending, and clears it on 
     expect(pendingRows()).toHaveLength(0);
   });
   expect(host.textContent).toContain("Saturday leads.");
+  replies[0]?.finish();
+});
+
+it("folds streamed reasoning behind a Thinking toggle that is the wait until words come", async () => {
+  const { agent, replies } = controlledAgent();
+  flushSync(() => {
+    root.render(<ChatThreadPanel thread={threads.trend} agent={agent} />);
+  });
+
+  await userEvent.type(field(), "And next week?{Enter}");
+  await vi.waitFor(() => {
+    expect(pendingRows()).toHaveLength(1);
+  });
+  replies[0]?.chunk({ kind: "thinking", text: "They want " });
+  const toggle = await vi.waitFor(thinkingToggle);
+  expect(pendingRows()).toHaveLength(0);
+  expect(toggle.getAttribute("aria-expanded")).toBe("false");
+  expect(toggle.textContent).toContain("Thinking…");
+  expect(toggle.querySelector(".agent-tree")).not.toBeNull();
+  expect(host.querySelector(".turn-thinking-text")).toBeNull();
+
+  await userEvent.click(toggle);
+  replies[0]?.chunk({ kind: "thinking", text: "next week." });
+  await vi.waitFor(() => {
+    expect(host.querySelector(".turn-thinking-text")?.textContent).toBe("They want next week.");
+  });
+
+  replies[0]?.chunk("Saturday leads.");
+  await vi.waitFor(() => {
+    expect(toggle.querySelector(".agent-tree")).toBeNull();
+  });
+  expect(toggle.textContent).toBe("Thinking");
   replies[0]?.finish();
 });
 
