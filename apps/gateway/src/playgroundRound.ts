@@ -102,16 +102,33 @@ const stopBlock = (round: Round, index: number, block: ToolBlock): RoundStep => 
 
 const applyDelta = (round: Round, event: Anthropic.RawContentBlockDeltaEvent): RoundStep => {
   const block = round.blocks[event.index];
+  if (block === undefined) return { round };
   const { delta } = event;
-  if (block?.kind === "text" && delta.type === "text_delta")
-    return appendText(round, event.index, block, delta.text);
-  if (block?.kind === "thinking" && delta.type === "thinking_delta")
-    return appendThinking(round, block, delta.thinking);
-  if (block?.kind === "tool" && delta.type === "input_json_delta")
-    return {
-      round: withBlock(round, event.index, { ...block, json: block.json + delta.partial_json }),
-    };
-  return { round };
+  switch (block.kind) {
+    case "text":
+      return delta.type === "text_delta"
+        ? appendText(round, event.index, block, delta.text)
+        : { round };
+    case "thinking":
+      return delta.type === "thinking_delta"
+        ? appendThinking(round, block, delta.thinking)
+        : { round };
+    case "tool":
+      return delta.type === "input_json_delta"
+        ? {
+            round: withBlock(round, event.index, {
+              ...block,
+              json: block.json + delta.partial_json,
+            }),
+          }
+        : { round };
+    case "other":
+      return { round };
+    default: {
+      const unhandled: never = block;
+      return unhandled;
+    }
+  }
 };
 
 /** A round before its first event. */
