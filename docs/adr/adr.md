@@ -2391,6 +2391,8 @@ worker (`packages/runtime/src/playgroundAgent.ts`) and answers the Live Playgrou
 `ChatThreadPanel`; the standalone page and all of `apps/web/src/playground` are deleted, and
 `/playground` redirects to `/t/playground`. So the thread, its store and the worker protocol did
 change after all, which is what ADR-156 decided.
+Amended 2026-10-03 (ADR-166): protocol 3 adds a `thinking` event that streams the model's
+reasoning, which the page shows folded and never treats as the answer.
 
 ## ADR-156 - One shell hosts the Demo and the live model
 
@@ -2713,3 +2715,31 @@ Alternatives weighed: the model's default, which costs the page its first impres
 `{ type: "disabled" }`, which Kimi may refuse and which spends the reasoning the tool calls
 lean on; and streaming the reasoning itself to the page, a protocol change not worth taking on
 before the interviews.
+Amended 2026-10-03 (ADR-166): the reasoning now streams to the page after all, behind a folded
+Thinking toggle. The budget stays at the floor.
+
+## ADR-166 - Stream the model's thinking behind a folded toggle
+
+2026-10-03 - Accepted. Amends ADR-155 and ADR-165.
+The Live Playground now streams the model's reasoning to the page as it arrives. The gateway
+turns each `thinking` block and `thinking_delta` into a `thinking` event under the block's
+`r{round}b{index}` id, and `PLAYGROUND_PROTOCOL` is 3. The page folds the deltas into
+`AgentMessage.thinking`, apart from the words and the Work record, so `hasWork`, work labels and
+counts do not change. A reply that only thought is still empty, and the gateway still ends it as
+"I finished without an answer." The reasoning is stored on the turn, so a reload shows it. It is
+never replayed upstream: neither the gateway's next round nor the page's request carries it.
+In the thread it sits in a Thinking disclosure, collapsed, mounted above Work details and the
+words as soon as the first reasoning arrives, so it never appears over text being read. While
+the reply has nothing else to show, its summary is the old wait (the working glyph and
+"Thinking…"), now clickable. Once work or words arrive it settles to a plain "Thinking". The
+reasoning is set as written, not as Markdown, in the narration's 13px on 20px `--soft-ink`
+(design pillar 29). The lab agent and the Demo never think, so they keep the old placeholder.
+This reverses ADR-165's call that streaming the reasoning was not worth taking on before the
+interviews. A static placeholder for 14 to 30 seconds reads as a broken app, and the first
+thinking token arrives in under 2 seconds: measured 2026-10-02 through OpenRouter for kimi-k2.6
+and kimi-k3. In the signed-in browser on PR #54 as it stood, the chart arrived at 14.2 seconds
+after a static "Thinking".
+Alternatives weighed: keeping the static placeholder, which is what reads as broken; showing the
+reasoning open by default, which puts a draft above the answer and pushes it down as it grows;
+and folding the reasoning into Work details, which would change its label and count, and make
+work out of a reply that did none.
