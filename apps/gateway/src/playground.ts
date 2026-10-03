@@ -131,8 +131,12 @@ const advance = (
   end: RoundEnd,
   event: Anthropic.RawMessageStreamEvent,
 ): { end: RoundEnd; events: PlaygroundEvent[] } => {
-  const step = readEvent(end.round, event); // → { round, text?, tool? }
-  const text = stamp(end.state, step.text === undefined ? [] : [{ type: "text", ...step.text }]);
+  const step = readEvent(end.round, event); // → { round, text?, thinking?, tool? }
+  const drafts: EventDraft[] = [
+    ...(step.thinking === undefined ? [] : [{ type: "thinking" as const, ...step.thinking }]),
+    ...(step.text === undefined ? [] : [{ type: "text" as const, ...step.text }]),
+  ];
+  const text = stamp(end.state, drafts); // → { state, events }
   const read: RoundEnd = { ...end, round: step.round, state: text.state };
   if (step.tool === undefined) return { end: read, events: text.events };
   const { state, events, result } = translateToolUse(read.state, step.tool); // → Translation
