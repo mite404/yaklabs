@@ -3900,3 +3900,24 @@ Three fresh real-model runs returned first thinking at 0.62, 0.48, and 0.59 seco
 took 19.95, 51.12, and 15.88 seconds. All rounds returned HTTP 200 and all turns completed. Like
 a rehearsal feed starting promptly while the final edit takes longer, early feedback and a fast
 answer are separate promises. This fix delivers the former; it does not guarantee the latter.
+
+### Give the audience an editor's note, not the rehearsal transcript
+
+Thinking now shows a short explanation of the current approach. The gateway sends recent private
+deliberation to a separate non-thinking request using the same Kimi model. Think of that request
+as a continuity editor. It describes the plan without declaring that the scene was successfully
+shot. Cards, outcomes, and limitations still carry the evidence of execution.
+
+The first live experiment exposed a budget mistake. Eight summary requests all went to the first
+round's repeated debate. Later steps had none left. The scheduler now reserves two requests per
+round and holds longer windows for follow-ups. Each new summary replaces the previous one,
+bounded to 70 words and 480 characters. This is Model the Domain applied to the display. The
+thing we want is one current explanation, not a transcript with an ever-growing tail.
+
+In the revised browser sample, animated feedback appeared at 29 milliseconds, raw reasoning at
+1.12 seconds, and the summary at 3.18 seconds. Seven completed summaries cost $0.00245. The
+cards kept W2-W4 unknown, left Escalations empty, and replaced Hours in place. Zendesk remained
+unavailable. That run still reached the tool loop's eight-round limit at 152.92 seconds. Making
+the plan legible did not make execution fast or guarantee completion. An earlier sample even
+reported 5357 thinking tokens despite asking for 1024, so we must call that a requested budget,
+not a proven cap. ADR-167 records the mechanism, limits, and unchanged execution contract.
