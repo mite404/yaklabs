@@ -261,7 +261,7 @@ export const JumpToARequest: Story = {
     const list = within(document.body).getByRole("menu", { name: "Your requests" });
     const items = within(list).getAllByRole("menuitem");
     await expect(items).toHaveLength(ASKED.length);
-    await expect(items[1]).toHaveTextContent("Which day had the best margin?9:04");
+    await expect(items[1]).toHaveTextContent("Which day had the best margin?9:04 AM");
     const outOfView = standBefore(scroller, "ask-1");
     await expect(outOfView.wasInView).toBe(false);
     await userEvent.click(items[1]);
