@@ -194,9 +194,9 @@ function usePointerIn(bar: RefObject<HTMLElement | null>) {
  * (thread.css): clear until the pointer is over the thread's turns, fading up as it leaves the
  * compose box and back as it leaves the thread, so across a canvas of lanes one bar shows at a
  * time. At rest it is one bookmark on a translucent fill; with the pointer on it, a keyboard in
- * it, or either tool open, it unfolds leftward to show Search too, and open it fills solid and
- * stays. Search the thread's words and step through each place they occur, as an editor's find
- * does, or jump back to any request the user sent, listed by its first 15 characters and its
+ * it, or either tool open, it unfolds leftward to show Search too and keeps its translucent fill.
+ * Search the thread's words and step through each place they occur, as an editor's find
+ * does, or jump back to any request the user sent, listed by its first 48 characters and its
  * time. An Alt-click on the bookmark goes straight to the latest request. Where a jump lands, and
  * how a match shows, is the host's.
  * @param messages The thread's turns as they stand now, including ones sent since it opened.

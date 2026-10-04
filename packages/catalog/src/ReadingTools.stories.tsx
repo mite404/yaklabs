@@ -5,7 +5,11 @@ import type { Thread, ThreadMessage } from "./thread";
 
 // A morning of questions, long enough that the first ones scroll out of sight.
 const ASKED = [
-  ["9:02", "How did profit do last week?", "Profit rose 12% on the week, led by Saturday."],
+  [
+    "9:02",
+    "How did profit do last week across the warehouses, compared with September?",
+    "Profit rose 12% on the week, led by Saturday.",
+  ],
   ["9:04", "Which day had the best margin?", "Saturday: 41% margin on the highest sales."],
   ["9:07", "Show me refunds by day", "Refunds peaked on Monday at 3.1% of sales."],
   ["9:11", "Why was Monday so high?", "A late shipment was refunded in one batch on Monday."],
@@ -181,10 +185,10 @@ export const FoldsToTheBookmark: Story = {
 };
 
 /**
- * Translucent until it is opened: the bar's wash lets the turn under it read through, only its
- * glyph opaque; the list of requests is the same wash. Opening either tool fills the bar solid.
+ * The bar and its request list keep their translucent wash when opened, with opaque glyphs
+ * and a blur behind the list so the conversation does not compete with its words.
  */
-export const OpensSolid: Story = {
+export const StaysTranslucent: Story = {
   play: async ({ canvasElement }) => {
     const { bar, tools } = await parts(canvasElement);
     await expect(alphaOf(getComputedStyle(bar).backgroundColor)).toBeLessThan(1);
@@ -192,12 +196,13 @@ export const OpensSolid: Story = {
     const list = within(document.body).getByRole("menu", { name: "Your requests" });
     await expect(alphaOf(getComputedStyle(list).backgroundColor)).toBeLessThan(1);
     await waitFor(async () => {
-      await expect(alphaOf(getComputedStyle(bar).backgroundColor)).toBe(1);
+      await expect(opacity(bar)).toBe(1);
     });
+    await expect(alphaOf(getComputedStyle(bar).backgroundColor)).toBeLessThan(1);
     await userEvent.keyboard("{Escape}");
-    await waitFor(async () => {
-      await expect(alphaOf(getComputedStyle(bar).backgroundColor)).toBeLessThan(1);
-    });
+    await userEvent.click(await unfold(tools));
+    await expect(tools.getByRole("searchbox", { name: "Search this thread" })).toHaveFocus();
+    await expect(alphaOf(getComputedStyle(bar).backgroundColor)).toBeLessThan(1);
   },
 };
 
@@ -244,7 +249,7 @@ export const FollowsThePointer: Story = {
 };
 
 /**
- * The bookmark lists every request the user sent by its first 15 characters and its time; the
+ * The bookmark lists every request the user sent by its first 48 characters and its time; the
  * full request shows on hover. Picking one centers that turn and makes it glow, and the bar folds
  * back to the bookmark once the pointer moves on.
  */
@@ -256,7 +261,7 @@ export const JumpToARequest: Story = {
     const list = within(document.body).getByRole("menu", { name: "Your requests" });
     const items = within(list).getAllByRole("menuitem");
     await expect(items).toHaveLength(ASKED.length);
-    await expect(items[1]).toHaveTextContent("Which day had t…9:04");
+    await expect(items[1]).toHaveTextContent("Which day had the best margin?9:04");
     const outOfView = standBefore(scroller, "ask-1");
     await expect(outOfView.wasInView).toBe(false);
     await userEvent.click(items[1]);
