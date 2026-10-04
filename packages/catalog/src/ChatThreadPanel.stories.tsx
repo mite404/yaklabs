@@ -480,18 +480,22 @@ export const ReplyThinking: Story = {
   },
 };
 
-// A reply that thinks for a while before it answers, as the Live Playground's model does: the
-// reasoning streams in, then the words.
+// Approach snapshots arrive before answer prose, as in the Live Playground.
 const thinkingStream: ReplyChunk[] = [
-  { kind: "thinking", text: "They want next week's cases. " },
-  { kind: "thinking", text: "The trend rose four weeks running, " },
-  { kind: "thinking", text: "so a flat guess would undersell it.\n\nSay it plainly." },
+  { kind: "thinking", text: "They want next week's cases." },
+  {
+    kind: "thinking",
+    text: "They want next week's cases. I plan to account for the rising trend.",
+  },
+  {
+    kind: "thinking",
+    text: "They want next week's cases. I plan to use the rising trend, with a caveat that it may not hold.",
+  },
   "Next week should land a little above this one, ",
   { kind: "text", text: "if the rise holds." },
 ];
 
-/** A reply whose model thinks first (ADR-166): the wait is a Thinking toggle, folded, that
- *  holds the reasoning as it streams, and settles to a plain "Thinking" once the words come. */
+/** Approach summaries (ADR-167) stay folded and settle to plain "Thinking" once words arrive. */
 export const ReplyStreamsThinking: Story = {
   args: { thread: threads.trend, agent: scriptedAgent(thinkingStream, 600) },
   play: async ({ canvasElement }) => {
@@ -504,15 +508,18 @@ export const ReplyStreamsThinking: Story = {
   },
 };
 
-/** Reasoning from a later model round stays below the answer already being read. */
+/** Summaries from a later model round stay below the answer already being read. */
 export const ReplyThinksAfterWords: Story = {
   args: {
     thread: threads.trend,
     agent: scriptedAgent(
       [
         "Tuesday leads with seven commits.",
-        { kind: "thinking", text: "Check the supplied totals. " },
-        { kind: "thinking", text: "Tuesday's seven exceeds Monday's three and Wednesday's two." },
+        { kind: "thinking", text: "Check the supplied totals." },
+        {
+          kind: "thinking",
+          text: "Check the supplied totals. I plan to compare Tuesday's seven with Monday's three and Wednesday's two.",
+        },
       ],
       600,
     ),

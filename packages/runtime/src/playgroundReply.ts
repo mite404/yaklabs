@@ -8,7 +8,7 @@ import { z } from "zod";
 import { closeMarkdown, newEmitter, writeMarkdown, type MarkdownEmitter } from "./markdownEmitter";
 import { COPY } from "./playgroundCopy";
 
-// The gateway's stream (ADR-155, protocol 3) read as the reply seam's chunks (ADR-147). Pure:
+// The gateway's stream (ADR-155, protocol 4) read as the reply seam's chunks (ADR-147). Pure:
 // one event in, the chunks it yields out, so the same stream always builds the same turn.
 
 // A `start` line of any protocol version, so a mismatch is named rather than unreadable.
@@ -85,7 +85,7 @@ function onText(state: ReplyState, event: EventOf<"text">): Receipt {
   return { state: { ...closed.state, prose }, chunks: [...closed.chunks, ...written.chunks] };
 }
 
-// Reasoning as it streams. It is not the answer, so the open block of words stays open.
+// An approach snapshot replaces the previous one without closing the answer's open block.
 const onThinking = (state: ReplyState, event: EventOf<"thinking">): Receipt => ({
   state,
   chunks: [{ kind: "thinking", text: event.delta }],
@@ -205,7 +205,7 @@ export function readLine(line: string): Received | undefined {
 /**
  * Folds one event of the gateway's stream into the reply's chunks. A replayed `seq` changes
  * nothing; a skipped one means a line was lost, and the reply ends cut off. Text streams
- * through the Markdown emitter; reasoning becomes thinking without closing the words; a work
+ * through the Markdown emitter; approach summaries replace thinking without closing the words; a work
  * item becomes a step; a card, a card chunk under its id; an outcome settles its step with its
  * basis and sums up the work; a limitation fails its step and reaches the words with its
  * recovery; a question docks and ends the reply; `end` ends it, short with a failure for a

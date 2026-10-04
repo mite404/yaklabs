@@ -154,13 +154,13 @@ describe("applyChunk", () => {
     expect(turn.work?.narration).toEqual(["Thinking.", "Selecting the support records."]);
   });
 
-  it("appends reasoning to the turn's thinking, apart from its words and its work", () => {
+  it("replaces the thinking summary, apart from its words and its work", () => {
     const turn = fold([
-      { kind: "thinking", text: "The user wants " },
+      { kind: "thinking", text: "I plan to compare the days." },
       "Friday.",
-      { kind: "thinking", text: "the busiest day." },
+      { kind: "thinking", text: "I plan to compare the known weekdays without filling gaps." },
     ]);
-    expect(turn.thinking).toBe("The user wants the busiest day.");
+    expect(turn.thinking).toBe("I plan to compare the known weekdays without filling gaps.");
     expect(turn.text).toBe("Friday.");
     expect(turn.work).toBeUndefined();
     expect(hasWork(turn)).toBe(false);
