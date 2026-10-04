@@ -1992,6 +1992,14 @@ Amended 2026-09-30 (Ethan: "the storytool needs to have the same speed slide out
 drawer. right now its too instant"). Search unfolds from the bookmark over 220ms on the panel
 ease, the projects drawer's own slide (pillar 26), rather than 150ms on the strong ease-out.
 
+Amended 2026-10-04 (Ethan): request excerpts need more context before the ellipsis, and the
+bookmark and search buttons must keep the semi-opaque surface even when opened. This supersedes
+the 15-character excerpt and solid-open fill above. Excerpts now keep up to 48 code points, a
+derived tuning choice rather than a number specified by Ethan, with earlier visual truncation
+on narrow screens so timestamps remain visible. The bar keeps `--scrim` and the request menu's
+8px backdrop blur. Its blur sits on a backing sheet rather than the bar itself, so the fixed
+menu remains positioned against the viewport.
+
 ## ADR-144 - The rail stays on the desktop, and the projects panel extends from its edge
 
 2026-09-29 - Accepted (Ethan: "the projects and their threads need to extend from the collapsed

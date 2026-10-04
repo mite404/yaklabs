@@ -22,7 +22,7 @@ function Workspace({ children }: { children: ReactNode }) {
       role={onLab ? undefined : "main"}
       // Pushed aside by the phone's drawer, it shows at the edge but takes no focus (ADR-121).
       inert={isMobile && openMobile}
-      className="relative grid min-h-0 w-full min-w-0 flex-1 overflow-hidden bg-background *:[grid-area:1/1] md:rounded-tl-[10px] md:border-t md:border-l md:border-hairline"
+      className="relative grid min-h-0 w-full min-w-0 flex-1 overflow-hidden bg-background *:[grid-area:1/1] md:rounded-tl-(--workspace-radius) md:border-t md:border-l md:border-hairline"
     >
       {children}
     </div>

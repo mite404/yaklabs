@@ -14,12 +14,26 @@ describe("bookmarkLabel", () => {
     expect(bookmarkLabel("Show revenue")).toBe("Show revenue");
   });
 
-  it("cuts a long request at 15 characters and marks the cut", () => {
-    expect(bookmarkLabel("How did profit do last week?")).toBe("How did profit…");
+  it("keeps enough context to distinguish requests with the same opening", () => {
+    expect(bookmarkLabel("Show me refunds by warehouse for September")).toBe(
+      "Show me refunds by warehouse for September",
+    );
+    expect(bookmarkLabel("Show me refunds by agent for September")).toBe(
+      "Show me refunds by agent for September",
+    );
+  });
+
+  it("marks a cut only beyond 48 characters", () => {
+    expect(bookmarkLabel("123456789012345678901234567890123456789012345678")).toBe(
+      "123456789012345678901234567890123456789012345678",
+    );
+    expect(bookmarkLabel("1234567890123456789012345678901234567890123456789")).toBe(
+      "123456789012345678901234567890123456789012345678…",
+    );
   });
 
   it("never splits an emoji, and folds line breaks into spaces", () => {
-    expect(bookmarkLabel("📈📈📈📈📈📈📈📈📈📈📈📈📈📈📈📈")).toBe(`${"📈".repeat(15)}…`);
+    expect(bookmarkLabel("📈".repeat(49))).toBe(`${"📈".repeat(48)}…`);
     expect(bookmarkLabel("  two\n\nlines ")).toBe("two lines");
   });
 });
@@ -27,7 +41,10 @@ describe("bookmarkLabel", () => {
 describe("requestsOf", () => {
   it("lists only the user's turns, oldest first", () => {
     expect(requestsOf(messages).map((request) => request.id)).toEqual(["u1", "u2"]);
-    expect(requestsOf(messages)[0]).toMatchObject({ label: "How did profit…", time: "9:02" });
+    expect(requestsOf(messages)[0]).toMatchObject({
+      label: "How did profit do last week?",
+      time: "9:02",
+    });
   });
 
   it("leaves out an answer to a docked question, which is not a request", () => {
