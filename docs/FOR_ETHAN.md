@@ -1867,6 +1867,49 @@ draws); a resize redraws at once. Measuring the bars themselves this time: 207 o
 overran by up to 221px before, none after. Lesson: measure the thing the eye sees, the bars,
 not the frame around them.
 
+### The policy that knew nothing about SQLite
+
+Before the repo went in front of an employer, a security pass read every render path for
+cross-injection and every server route for data that could cross between users. It found the
+render paths honest (a reply's words are text nodes, card payloads pass a closed zod catalog,
+links may only be http, https or mailto) and the gateway holding nothing per user but sealed
+shares - but the site answered with no security headers at all. The fix is a build step,
+`write-headers.mjs`, that hashes every inline script the build prerendered and writes a
+Content-Security-Policy naming each hash into `_headers` (ADR-163). First run against
+`wrangler dev`, serving the way production serves: the splash opened, the console was clean,
+and the sidebar read "Your threads could not be opened." The runtime's worker compiles SQLite
+from WebAssembly, and to a policy, `WebAssembly.instantiate()` is an eval: refused without
+`'wasm-unsafe-eval'`. Typecheck green, unit tests green, lint green, and the site could not
+open a thread; only driving the real serving path saw it. One keyword admitted exactly the one
+compiler the runtime needs, and the demo and the public share page both render under the
+policy. Lesson: a header that serves is not a header that runs - open the build the way
+production serves it before you believe it.
+
+The next browser check found a quieter violation. Zod tried `new Function` to see whether its
+fast compiler was available, caught the refusal, and validated without that compiler. The
+browser still recorded the forbidden attempt. Like a rehearsal that trips the alarm even
+though the crew carries on, catching the error does not erase the security event. The web
+build now resolves `zod` through `src/zod.ts`, which sets `jitless` before schemas are built
+in either the page or the worker. An entry-only setting failed because imported schemas ran
+first. The policy still refuses plain eval, and validation still accepts valid objects and
+rejects invalid ones. A browser regression checks the actual served hashes and headers,
+sends a lab message, and reloads its saved reply. Separately, importing the header helpers in
+an empty directory neither scans missing build files nor writes anything; only the build's
+direct invocation generates `_headers`.
+
+Review found two contracts that needed to agree. React Router accepts absolute build paths,
+but joining that path onto the current directory made the header generator look in the wrong
+place. It now resolves the path the same way React Router does. A production build also
+refuses an external gateway setting, because the site's policy and one-Worker deployment
+require the API on the site's own origin. Local development can still use an external gateway.
+The security check now listens inside the worker before its original module starts, and keeps
+all events outside the page so reload cannot erase evidence. Its fixture deliberately tries
+the forbidden compiler in both places and checks the events survive a reload. The observer is
+a first dependency, not a replacement module: Demo's child modules can still import the
+worker's original exports. The fixture and real Demo check both exercise that link. Like
+keeping the alarm's recording outside the theater, this tests the alarm rather than trusting
+a quiet screen after the scene has changed.
+
 ## 5. Director's Commentary
 
 ### The agent only states intent; the design system does the rest

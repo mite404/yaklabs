@@ -16,7 +16,7 @@ export async function buildApp(run: string, directory: string) {
     WEB_BUILD_DIRECTORY: build,
     VITE_AUTH: "none",
     VITE_AGENT: "lab",
-    VITE_GATEWAY_URL: "http://127.0.0.1:8787",
+    VITE_GATEWAY_URL: undefined,
     VITE_WORKOS_CLIENT_ID: "local-verification",
     VITE_WORKOS_REDIRECT_URI: "http://127.0.0.1:5173/auth/callback",
   });

@@ -2688,6 +2688,49 @@ The focus ring stays the light theme's warm grey `#8a8a85` in dark (Ethan: "the 
 be blue"), 4.56:1 on the dark paper and 3.78:1 on the compose box, and the recap's ring stays
 the cream, 11.71:1; Zed's cyan `#16c3dd` is gone from the theme.
 
+## ADR-163 - The build writes the site's security headers, hashed per build
+
+2026-10-02 - Accepted. Amends ADR-086, whose one Worker now also answers the static security
+headers.
+Every page answers with `X-Content-Type-Options: nosniff`, `Referrer-Policy:
+strict-origin-when-cross-origin`, a `Permissions-Policy` that lends the camera and geolocation to
+no one and the microphone to the page alone, and a Content-Security-Policy. The policy lets
+scripts run from the site's own files, from the SHA-256 of each inline script the build
+prerendered (the theme and chrome boots, React Router's hydration), and from `wasm-unsafe-eval`,
+which the runtime's SQLite needs to compile in its worker (ADR-083) while plain eval stays
+refused. Styles may be inline, since the charts and overlays lay themselves out in style
+attributes; images may come from any secure origin, since WorkOS hands back avatars it does not
+host; connections may leave for `api.workos.com` alone, the AuthKit session calls. Objects, the
+base tag and framing are refused, and forms may post only to the site.
+A static SPA has no server to mint a per-response nonce, so the inline scripts are named by hash,
+and the set changes with every build; a hand-kept header would break the boots on the first edit
+or go silently stale. `write-headers.mjs` runs as the second half of `pnpm --filter web build`,
+reads every prerendered HTML file, hashes each inline script and writes `_headers` beside it,
+failing the build when the boots are not among the scripts it pinned. Its test holds the policy's
+words and the hash of a known script, and the serving check ran against `wrangler dev`, which
+answers with the same headers the deployed Worker does; that check is what caught the SQLite
+compile the first policy refused.
+Alternatives weighed: `'unsafe-inline'` for scripts, which is no policy at all; moving the boots
+into files, which would flash the wrong theme on a dark system before the file arrived; and
+`'unsafe-eval'`, where `'wasm-unsafe-eval'` admits exactly the one compiler the runtime needs.
+Amended 2026-10-03: the browser build resolves `zod` through `src/zod.ts`, which configures
+`jitless` before exporting Zod to any schema, including the SQLite worker's schemas. Zod's
+caught dynamic-compilation probe still emits a CSP violation; disabling its compiler avoids
+the probe without weakening the policy or skipping validation. Configuring only the client
+entry is too late when its dependencies construct schemas first. The header generator scans
+and writes only when invoked directly, so importing its helpers needs no existing build.
+Run `pnpm --filter @yaklabs/runtime test:security <wrangler-url>` against a built lab app
+to check served headers, inline hashes, public cards and a persisted worker round trip. The
+observer retains document and worker CSP events outside the page across navigation. Its
+test-only first dependency preserves served headers and the worker's original URL and exports,
+and installs the observer before the application's dependencies evaluate. The negative-control
+fixture checks caught compilation probes and a child module importing the worker's exports.
+The header generator resolves relative and absolute build directories exactly as React Router
+does. Production builds require the same-origin gateway from ADR-086 and reject
+`VITE_GATEWAY_URL` from the effective Vite environment, including mode-specific env files;
+the override remains available in local development. The policy is not widened for a build
+setting that contradicts the deployment architecture.
+
 ## ADR-164 - Name the out-of-credit refusal
 
 2026-10-02 - Accepted. Amends ADR-155.
