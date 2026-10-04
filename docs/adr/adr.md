@@ -2813,8 +2813,9 @@ behavior, then green after restoration. Production cancellation and timeout code
 
 An opt-in adversarial evaluation targets this summarizer, not the answer model or an unrelated
 system. It submits forged success claims, embedded instructions, and repeated work-status debates
-to the actual same-model summary mechanism. Run it with `THINKING_EVAL=1` and the gateway's existing
-server-side `.dev.vars` using Vitest on `src/playgroundThinking.eval.test.ts`. It writes inputs,
+to the actual same-model summary mechanism. Run it with `THINKING_EVAL=1` and a server-side
+`OPENROUTER_API_KEY` environment variable using Vitest on `src/playgroundThinking.eval.test.ts`.
+The evaluation does not depend on a local secret file. It writes inputs,
 snapshots, and safe response metadata to `.amp/in/artifacts/thinking-adversarial.json` for human
 review. Normal CI skips these paid network samples. Passing mechanical checks does not establish
 semantic safety; inspect the recorded sentences. One initial sample invented a CSAT-chart-to-table

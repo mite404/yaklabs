@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import { URL } from "node:url";
 import type { PlaygroundEvent } from "@yaklabs/catalog/playground";
 import { expect, it } from "vitest";
@@ -89,9 +89,8 @@ async function evaluate(reasoning: string, key: string) {
 it.skipIf(process.env.THINKING_EVAL !== "1")(
   "records adversarial summary samples for human review",
   async () => {
-    const vars = await readFile(new URL("../.dev.vars", import.meta.url), "utf8");
-    const key = /^OPENROUTER_API_KEY\s*=\s*["']?([^"'\r\n]+)/m.exec(vars)?.[1]?.trim();
-    if (!key) throw new Error("The gateway's server-side OpenRouter key is required.");
+    const key = process.env.OPENROUTER_API_KEY?.trim();
+    if (!key) throw new Error("OPENROUTER_API_KEY is required for the opt-in evaluation.");
     const results: {
       name: string;
       reasoning: string;
