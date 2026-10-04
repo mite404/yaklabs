@@ -89,7 +89,7 @@ function htmlFilesIn(directory) {
 
 if (import.meta.main) {
   const buildDirectory = process.env.WEB_BUILD_DIRECTORY ?? "build";
-  const client = path.join(process.cwd(), buildDirectory, "client");
+  const client = path.resolve(process.cwd(), buildDirectory, "client");
   const scripts = htmlFilesIn(client).flatMap((file) =>
     inlineScriptsIn(readFileSync(file, "utf8")),
   );
