@@ -154,6 +154,18 @@ describe("applyChunk", () => {
     expect(turn.work?.narration).toEqual(["Thinking.", "Selecting the support records."]);
   });
 
+  it("appends reasoning to the turn's thinking, apart from its words and its work", () => {
+    const turn = fold([
+      { kind: "thinking", text: "The user wants " },
+      "Friday.",
+      { kind: "thinking", text: "the busiest day." },
+    ]);
+    expect(turn.thinking).toBe("The user wants the busiest day.");
+    expect(turn.text).toBe("Friday.");
+    expect(turn.work).toBeUndefined();
+    expect(hasWork(turn)).toBe(false);
+  });
+
   it("upserts steps by id in the order they first appeared", () => {
     const turn = fold([
       { kind: "step", step: { id: "a", label: "Workload", status: "running" } },
@@ -249,9 +261,10 @@ describe("failReply", () => {
 });
 
 describe("isEmptyReply", () => {
-  it("calls a reply empty until it holds words, a card, work or an ending", () => {
+  it("calls a reply empty until it holds words, a card, work or an ending, however it thought", () => {
     expect(isEmptyReply(fold([]))).toBe(true);
     expect(isEmptyReply(fold([{ kind: "activity", text: "Thinking." }]))).toBe(true);
+    expect(isEmptyReply(fold([{ kind: "thinking", text: "Hmm." }]))).toBe(true);
     expect(isEmptyReply(fold(["Done."]))).toBe(false);
     expect(isEmptyReply(fold([{ kind: "card", payload: {} }]))).toBe(false);
     expect(isEmptyReply(fold([{ kind: "log", text: "check ok" }]))).toBe(false);

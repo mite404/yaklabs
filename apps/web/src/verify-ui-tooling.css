@@ -568,7 +568,7 @@
   }
 
   /* The band: the window chrome's green from edge to edge, the same in both themes, with the
-     contrast table framed at its right and the lenses as chips. */
+     contrast table framed at its right. */
   .land-band {
     margin-top: 72px;
     padding: 72px 0 96px;
@@ -599,26 +599,6 @@
   .land-band p {
     font-size: 15px;
     color: var(--on-chrome-soft);
-  }
-  .land-lenses {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin: 18px 0 0;
-    padding: 0;
-    list-style: none;
-    font-size: 13px;
-  }
-  .land-lenses li {
-    padding: 5px 12px;
-    border: 1px solid var(--chrome-line);
-    border-radius: 4px;
-    color: var(--on-chrome);
-  }
-  .land-lenses li[data-on] {
-    border-color: var(--chrome-pill);
-    background: var(--chrome-pill);
-    color: var(--on-chrome-pill);
   }
   .land-shots {
     position: relative;

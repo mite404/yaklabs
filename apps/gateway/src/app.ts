@@ -15,10 +15,14 @@ type Dependencies = { verifyToken: TokenVerifier; upstream: Anthropic; shares: S
 
 // The gateway owns the model and every request setting (ADR-085); the browser sends only turns.
 // Kimi K2.6 through OpenRouter, for its price (ADR-146). It reasons before it answers, and the
-// browser shows only the answer's text.
+// playground shows that reasoning in a folded disclosure, apart from the answer (ADR-166).
 const MODEL = "moonshotai/kimi-k2.6";
 // A cost cap for one chat reply, reasoning included.
 const MAX_TOKENS = 8192;
+// A cap on how long K2.6 reasons before it answers, so the page is not left waiting on the
+// model's default, which ran to half a minute (ADR-165). The API's floor, and it shares the
+// reply's own budget, which stays well clear of it.
+const THINKING: Anthropic.ThinkingConfigParam = { type: "enabled", budget_tokens: 1024 };
 // `MessageStream.toReadableStream()` writes one JSON event per line, which the browser reads
 // back with `MessageStream.fromReadableStream()`.
 const NDJSON = "application/x-ndjson";
@@ -51,6 +55,7 @@ const openReply = async (
   const reply = upstream.messages.stream({
     model: MODEL,
     max_tokens: MAX_TOKENS,
+    thinking: THINKING,
     ...(system === "" ? {} : { system }), // an empty prompt is no prompt
     messages,
   }); // → MessageStream, request in flight
@@ -61,15 +66,17 @@ const openReply = async (
 };
 
 // An upstream refusal as a 502 carrying the status alone: the upstream's body could echo the
-// request, and the key stays here. A network failure has no status. Anything else is a bug and
-// is thrown on.
+// request, and the key stays here. Out of credit keeps its status so the page can name it
+// (ADR-164), still with a bare marker. A network failure has no status. Anything else is a bug
+// and is thrown on.
 function upstreamFailure(c: Context, error: unknown): Response {
   if (!(error instanceof APIError)) throw error;
   const status = typeof error.status === "number" ? error.status : null; // → number | null
+  if (status === 402) return c.json({ error: "credit" }, 402);
   return c.json({ error: "upstream", status }, 502);
 }
 
-// The reply `open` starts, streamed as NDJSON, or the upstream's refusal as a 502.
+// The reply `open` starts, streamed as NDJSON, or the upstream's refusal as an error response.
 async function ndjsonReply(c: Context, open: () => Promise<ReadableStream>): Promise<Response> {
   try {
     return c.body(await open(), 200, { "Content-Type": NDJSON });
@@ -141,7 +148,7 @@ export const createApp = ({ verifyToken, upstream, shares }: Dependencies) => {
       .post("/api/playground", requireSession, playgroundBody, (c) =>
         ndjsonReply(c, () =>
           openPlayground(
-            { client: upstream, model: MODEL, maxTokens: MAX_TOKENS },
+            { client: upstream, model: MODEL, maxTokens: MAX_TOKENS, thinking: THINKING },
             c.req.valid("json"),
             c.req.raw.signal,
           ),

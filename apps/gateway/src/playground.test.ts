@@ -17,13 +17,19 @@ import {
 const upstreamBodySchema = z.strictObject({
   model: z.string(),
   max_tokens: z.number(),
+  thinking: z.strictObject({ type: z.literal("enabled"), budget_tokens: z.number() }),
   system: z.string(),
   tools: z.array(z.looseObject({ name: z.string() })),
   messages: z.array(z.unknown()),
   stream: z.boolean(),
 });
 
-const answer = round("end_turn", thinking(0), text(1, " "), text(2, "Tuesday", " was busiest."));
+const answer = round(
+  "end_turn",
+  thinking(0, "Hmm."),
+  text(1, " "),
+  text(2, "Tuesday", " was busiest."),
+);
 
 describe("POST /api/playground refuses", () => {
   it("a request with no Authorization header", async () => {
@@ -73,30 +79,59 @@ describe("POST /api/playground streams", () => {
     expect(response.status).toBe(200);
     expect(response.headers.get("Content-Type")).toBe("application/x-ndjson");
     expect(events.map((event) => event.seq)).toEqual(events.map((_, index) => index));
-    expect(events.at(0)).toEqual({ type: "start", seq: 0, v: 2 });
+    expect(events.at(0)).toEqual({ type: "start", seq: 0, v: 3 });
     expect(events.at(-1)).toEqual({ type: "end", seq: events.length - 1, reason: "answered" });
   });
 
-  it("answer text without thinking or whitespace-only blocks", async () => {
+  it("answer text after the thinking, without whitespace-only blocks", async () => {
     const { app } = playgroundApp(answer);
 
     const events = await readEvents(await postPlayground(app, say("Which day?")));
 
-    expect(events.filter((event) => event.type === "text")).toEqual([
-      { type: "text", seq: 1, blockId: "r1b2", delta: "Tuesday" },
-      { type: "text", seq: 2, blockId: "r1b2", delta: " was busiest." },
+    expect(events.slice(1, -1)).toEqual([
+      { type: "thinking", seq: 1, blockId: "r1b0", delta: "Hmm." },
+      { type: "text", seq: 2, blockId: "r1b2", delta: "Tuesday" },
+      { type: "text", seq: 3, blockId: "r1b2", delta: " was busiest." },
     ]);
   });
 });
 
+describe("POST /api/playground streams thinking", () => {
+  it("deltas as they arrive, without sending them back next round", async () => {
+    const work = { workId: "sum", label: "Adding up", status: "running" };
+    const { app, requests } = playgroundApp(
+      round("tool_use", thinking(0, "They want ", "", "a total."), tool(1, "update_work", work)),
+      round("end_turn", thinking(0, "Done."), text(1, "Twelve.")),
+    );
+
+    const events = await readEvents(await postPlayground(app, say("Add these up.")));
+
+    expect(events.filter((event) => event.type === "thinking")).toEqual([
+      { type: "thinking", seq: 1, blockId: "r1b0", delta: "They want " },
+      { type: "thinking", seq: 2, blockId: "r1b0", delta: "a total." },
+      { type: "thinking", seq: 4, blockId: "r2b0", delta: "Done." },
+    ]);
+    const [, assistant] = await sentMessages(requests, 1);
+    expect(assistant).toEqual({
+      role: "assistant",
+      content: [{ type: "tool_use", id: "t1_1", name: "update_work", input: work }],
+    });
+  });
+});
+
 describe("POST /api/playground sends upstream", () => {
-  it("the gateway's prompt, tools and budget", async () => {
+  it("the gateway's prompt, tools and budgets", async () => {
     const { app, requests } = playgroundApp(answer);
 
     await readEvents(await postPlayground(app, say("Which day?")));
 
     const body = upstreamBodySchema.parse(await requests[0]?.clone().json());
-    expect(body).toMatchObject({ model: "moonshotai/kimi-k2.6", max_tokens: 8192, stream: true });
+    expect(body).toMatchObject({
+      model: "moonshotai/kimi-k2.6",
+      max_tokens: 8192,
+      thinking: { type: "enabled", budget_tokens: 1024 },
+      stream: true,
+    });
     expect(body.system).toContain("you must call report_failure");
     expect(await sentMessages(requests, 0)).toEqual([
       { role: "user", content: [{ type: "text", text: "Which day?" }] },

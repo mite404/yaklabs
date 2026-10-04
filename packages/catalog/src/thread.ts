@@ -52,6 +52,8 @@ export type ThreadMessage =
       work?: Work;
       /** What the agent is doing right now, while the reply streams. */
       activity?: string;
+      /** The model's reasoning as it streamed, shown folded above the reply; never sent back. */
+      thinking?: string;
       /** How the reply stopped short; absent for one that completed or is still streaming. */
       ended?: Ended;
       /** Why it stopped, when the agent said. */
@@ -414,6 +416,31 @@ export const threads: Record<string, Thread> = {
         failure: {
           title: "Sign-in needed",
           detail: "The live model answers signed-in users only. Nothing was sent.",
+          retry: false,
+        },
+      },
+    ],
+  },
+  /** The POC's model budget spent mid-visit: live answers pause, the Demos still play, no Try again. */
+  credit: {
+    title: "Live numbers",
+    messages: [
+      {
+        id: "u1",
+        role: "user",
+        time: "11:05",
+        text: "Pull this week's numbers from the live model.",
+      },
+      {
+        id: "a1",
+        role: "agent",
+        time: "11:05",
+        text: "",
+        ended: "failed",
+        failure: {
+          title: "The live model is out of credit",
+          detail:
+            "This POC's model budget is spent, so live answers are paused. The 3 scripted Demos still play.",
           retry: false,
         },
       },

@@ -31,6 +31,7 @@ const refused = (failure: Failure): Opened => ({ kind: "refused", failure });
 function refusalOf(status: number): Failure {
   if (status === 401) return COPY.expired;
   if (status === 400) return COPY.rejected;
+  if (status === 402) return COPY.credit;
   return COPY.unavailable;
 }
 

@@ -54,6 +54,8 @@ export type Ended = "interrupted" | "failed" | "cancelled";
 export type ReplyEvent =
   /** Progress narration: quiet, brief, factual; supersedes the last one (ADR-139). */
   | { kind: "activity"; text: string }
+  /** The model's reasoning as it streams, appended; shown folded, never as the answer (ADR-166). */
+  | { kind: "thinking"; text: string }
   /** Words for the current block, set as `mark` says; runs of one mark join up. */
   | { kind: "text"; text: string; mark?: Mark }
   | { kind: "link"; text: string; href: string }
@@ -124,6 +126,7 @@ export const endedSchema = z.enum(["interrupted", "failed", "cancelled"]);
 /** Parses a `ReplyEvent`. */
 export const replyEventSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("activity"), text: z.string() }),
+  z.object({ kind: z.literal("thinking"), text: z.string() }),
   z.object({ kind: z.literal("text"), text: z.string(), mark: markSchema.optional() }),
   z.object({ kind: z.literal("link"), text: z.string(), href: z.string() }),
   z.object({
@@ -246,9 +249,10 @@ function endedBy(message: AgentMessage): Ended {
  * Folds one chunk of a reply into the agent's turn: pure, so the same stream always builds the
  * same turn. Text grows the plain `text` always and the `blocks` once the reply has structure;
  * a card with an earlier card's id takes its place; a limitation is said in the words and the
- * reply goes on; narration supersedes and is kept; a failure ends the turn as interrupted or
- * failed. A `question` is kept on the turn as what it asks, so the dock can be read back from
- * the record; the host docks it as it streams.
+ * reply goes on; narration supersedes and is kept; reasoning appends to `thinking`, apart from
+ * the words and the work; a failure ends the turn as interrupted or failed. A `question` is
+ * kept on the turn as what it asks, so the dock can be read back from the record; the host
+ * docks it as it streams.
  */
 export function applyChunk(message: AgentMessage, chunk: ReplyChunk): AgentMessage {
   if (typeof chunk === "string") return appendText(message, { text: chunk });
@@ -278,6 +282,8 @@ export function applyChunk(message: AgentMessage, chunk: ReplyChunk): AgentMessa
       };
     case "activity":
       return narrate(message, work, chunk.text);
+    case "thinking":
+      return { ...message, thinking: (message.thinking ?? "") + chunk.text };
     case "step":
       return { ...message, work: { ...work, steps: upsertStep(work.steps, chunk.step) } };
     case "log":

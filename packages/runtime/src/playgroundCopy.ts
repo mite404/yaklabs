@@ -30,6 +30,13 @@ export const COPY = {
     title: "The live model is unavailable",
     detail: "The live model could not be reached just now. Try again in a moment.",
   },
+  /** The POC's model budget is spent: live answers pause, the scripted Demos still play. */
+  credit: {
+    title: "The live model is out of credit",
+    detail:
+      "This POC's model budget is spent, so live answers are paused. The 3 scripted Demos still play.",
+    retry: false,
+  },
   /** The stream broke: an unreadable or missing line, or a body that closed before `end`. */
   cutOff: {
     title: "Reply cut off",

@@ -77,6 +77,7 @@ const sseBody = helloWorld
 const upstreamBodySchema = z.strictObject({
   model: z.string(),
   max_tokens: z.number(),
+  thinking: z.strictObject({ type: z.literal("enabled"), budget_tokens: z.number() }),
   system: z.string().optional(),
   messages: z.array(z.unknown()),
   stream: z.boolean(),
@@ -104,6 +105,12 @@ const overloadedUpstream = (): Response =>
   Response.json(
     { type: "error", error: { type: "overloaded_error", message: "Overloaded" } },
     { status: 529 },
+  );
+
+const creditUpstream = (): Response =>
+  Response.json(
+    { type: "error", error: { type: "payment_required", message: "Insufficient credits" } },
+    { status: 402 },
   );
 
 // Posts a turn as the browser would; `authorization: null` sends no Authorization header.
@@ -207,6 +214,7 @@ describe("POST /api/messages sends upstream", () => {
     expect(body).toEqual({
       model: "moonshotai/kimi-k2.6",
       max_tokens: 8192,
+      thinking: { type: "enabled", budget_tokens: 1024 },
       system: SYSTEM,
       messages: turns,
       stream: true,
@@ -232,5 +240,14 @@ describe("POST /api/messages reports", () => {
 
     expect(response.status).toBe(502);
     expect(await response.json()).toEqual({ error: "upstream", status: 529 });
+  });
+
+  it("an out-of-credit refusal as a 402 with only its marker", async () => {
+    const { app } = appWithUpstream(creditUpstream);
+
+    const response = await postMessages(app, { system: SYSTEM, messages: turns });
+
+    expect(response.status).toBe(402);
+    expect(await response.json()).toEqual({ error: "credit" });
   });
 });

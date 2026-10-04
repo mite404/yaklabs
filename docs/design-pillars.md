@@ -483,6 +483,7 @@ a run of text, set as `<strong>`, `<em>` or `<code>`.
 | Card between paragraphs | 16px above and below | derived (the paragraph gap) |
 | Code | 13px on 20px, ui-monospace, on `--paper-deep`, 3px corners | derived |
 | Narration under a streaming reply | 13px on 20px, `--soft-ink`, the working glyph before it | derived (ADR-139) |
+| Reasoning around a reply | a fold mounted as the model starts thinking, above the work's when it arrives first, below existing content when late; its position stays fixed while mounted: its header as that disclosure's (13px 500, chevron first) in `--soft-ink`; live, while nothing else shows, the working glyph then "Thinking…"; after, "Thinking"; open, the reasoning as written, 13px on 20px `--soft-ink`, pre-wrapped, at the 510px measure | derived (ADR-166; the narration row) |
 | A reply that stopped short | its label in 600 `--ink`, why in `--soft-ink`, a 2px `--hairline` rule at the left | derived (ADR-139) |
 | A limitation in the words | reads as prose, never a warning colour: the sentence in the body's `--soft-ink`, the request it offers quoted in `--ink`, then the compact outline button (`.btn .btn-sm`) that sends it, held while a reply streams and absent where nothing can be sent; the stopped reply's 2px `--hairline` rule at the left, 16px inset and 8px between parts; the paragraph gap around it, the text's 510px measure | derived (ADR-147, widened; the row above) |
 
