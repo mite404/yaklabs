@@ -4,9 +4,30 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
 import { chromium } from "playwright";
+import { observeCsp } from "./observe-csp.mjs";
 
 const origin = process.argv[2];
 assert.ok(origin, "Pass the URL of the built app served by Wrangler");
+const sharedCard = Buffer.from(
+  JSON.stringify({
+    v: 1,
+    kind: "catalog",
+    payload: {
+      catalogVersion: "1",
+      component: "DataTable",
+      props: {
+        title: "Security check",
+        source: "Verification",
+        unit: "USD",
+        variant: "audit",
+        rows: [
+          { label: "North", value: 7 },
+          { label: "South", value: 13 },
+        ],
+      },
+    },
+  }),
+).toString("base64url");
 const browser = await chromium.launch();
 try {
   const page = await browser.newPage();
@@ -15,14 +36,15 @@ try {
   page.on("console", (message) => {
     if (message.type() === "error") errors.console.push(message.text());
   });
-  await page.addInitScript(() => {
-    const violations = [];
-    document.addEventListener("securitypolicyviolation", (event) => {
-      violations.push({ directive: event.violatedDirective, blocked: event.blockedURI });
-      document.documentElement.dataset.cspViolations = JSON.stringify(violations);
-    });
-  });
-  for (const route of ["/", "/t/playground"]) {
+  const { violations, workers } = await observeCsp(page);
+  for (const route of [
+    "/share.html",
+    `/share.html#c=${sharedCard}`,
+    "/?scenario=demo",
+    "/",
+    "/t/playground",
+  ]) {
+    await page.goto("about:blank");
     const response = await page.goto(new URL(route, origin).href);
     assert.equal(response.status(), 200);
     const headers = response.headers();
@@ -49,15 +71,19 @@ try {
     assert.ok(hashes.length > 0);
     for (const hash of hashes)
       assert.ok(scriptPolicy.includes(hash), `Unpinned inline script ${hash}`);
-    await page.getByRole("textbox", { name: "Message", exact: true }).waitFor();
-    assert.deepEqual(
-      JSON.parse(await page.evaluate(() => document.documentElement.dataset.cspViolations ?? "[]")),
-      [],
-      `${route} CSP violations`,
-    );
+    if (route === "/share.html") {
+      await page.getByRole("heading", { name: "This link doesn’t contain a card." }).waitFor();
+    } else if (route.startsWith("/share.html#")) {
+      await page.getByText("Security check", { exact: true }).waitFor();
+      await page.getByRole("cell", { name: "13", exact: true }).waitFor();
+    } else {
+      await page.getByRole("textbox", { name: "Message", exact: true }).waitFor();
+      assert.ok(workers.length > 0, "The runtime worker must be instrumented");
+    }
+    assert.deepEqual(violations, [], `${route} page or worker CSP violations`);
     assert.deepEqual(errors, { page: [], console: [] }, `${route} browser errors`);
     console.log(
-      `${route}: security headers, ${hashes.length} inline hashes, hydration and CSP passed`,
+      `${route.split("#")[0]}: security headers, ${hashes.length} inline hashes, hydration and CSP passed`,
     );
   }
   await page
@@ -67,13 +93,12 @@ try {
   const reply =
     "Noted. In the lab I answer from a script, so a real agent would take it from here.";
   await page.getByText(reply, { exact: true }).waitFor();
+  assert.deepEqual(violations, [], "Message round-trip page or worker CSP violations");
+  const workersBeforeReload = workers.length;
   await page.reload();
   await page.getByText(reply, { exact: true }).waitFor();
-  assert.deepEqual(
-    JSON.parse(await page.evaluate(() => document.documentElement.dataset.cspViolations ?? "[]")),
-    [],
-    "Reload CSP violations",
-  );
+  assert.ok(workers.length > workersBeforeReload, "The reloaded worker must be instrumented");
+  assert.deepEqual(violations, [], "Page or worker CSP violations retained across reload");
   assert.deepEqual(errors, { page: [], console: [] }, "Runtime browser errors");
   console.log("SQLite worker: message, streamed lab reply and persisted reload passed");
 } finally {
