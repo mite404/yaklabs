@@ -1897,6 +1897,19 @@ sends a lab message, and reloads its saved reply. Separately, importing the head
 an empty directory neither scans missing build files nor writes anything; only the build's
 direct invocation generates `_headers`.
 
+Review found two contracts that needed to agree. React Router accepts absolute build paths,
+but joining that path onto the current directory made the header generator look in the wrong
+place. It now resolves the path the same way React Router does. A production build also
+refuses an external gateway setting, because the site's policy and one-Worker deployment
+require the API on the site's own origin. Local development can still use an external gateway.
+The security check now listens inside the worker before its original module starts, and keeps
+all events outside the page so reload cannot erase evidence. Its fixture deliberately tries
+the forbidden compiler in both places and checks the events survive a reload. The observer is
+a first dependency, not a replacement module: Demo's child modules can still import the
+worker's original exports. The fixture and real Demo check both exercise that link. Like
+keeping the alarm's recording outside the theater, this tests the alarm rather than trusting
+a quiet screen after the scene has changed.
+
 ## 5. Director's Commentary
 
 ### The agent only states intent; the design system does the rest

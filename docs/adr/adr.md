@@ -2719,8 +2719,17 @@ caught dynamic-compilation probe still emits a CSP violation; disabling its comp
 the probe without weakening the policy or skipping validation. Configuring only the client
 entry is too late when its dependencies construct schemas first. The header generator scans
 and writes only when invoked directly, so importing its helpers needs no existing build.
-Run `node packages/runtime/scripts/verify-security.mjs <wrangler-url>` against a built lab app
-to check served headers, inline hashes, startup violations and a persisted worker round trip.
+Run `pnpm --filter @yaklabs/runtime test:security <wrangler-url>` against a built lab app
+to check served headers, inline hashes, public cards and a persisted worker round trip. The
+observer retains document and worker CSP events outside the page across navigation. Its
+test-only first dependency preserves served headers and the worker's original URL and exports,
+and installs the observer before the application's dependencies evaluate. The negative-control
+fixture checks caught compilation probes and a child module importing the worker's exports.
+The header generator resolves relative and absolute build directories exactly as React Router
+does. Production builds require the same-origin gateway from ADR-086 and reject
+`VITE_GATEWAY_URL` from the effective Vite environment, including mode-specific env files;
+the override remains available in local development. The policy is not widened for a build
+setting that contradicts the deployment architecture.
 
 ## ADR-164 - Name the out-of-credit refusal
 
