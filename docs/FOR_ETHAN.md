@@ -1885,6 +1885,18 @@ compiler the runtime needs, and the demo and the public share page both render u
 policy. Lesson: a header that serves is not a header that runs - open the build the way
 production serves it before you believe it.
 
+The next browser check found a quieter violation. Zod tried `new Function` to see whether its
+fast compiler was available, caught the refusal, and validated without that compiler. The
+browser still recorded the forbidden attempt. Like a rehearsal that trips the alarm even
+though the crew carries on, catching the error does not erase the security event. The web
+build now resolves `zod` through `src/zod.ts`, which sets `jitless` before schemas are built
+in either the page or the worker. An entry-only setting failed because imported schemas ran
+first. The policy still refuses plain eval, and validation still accepts valid objects and
+rejects invalid ones. A browser regression checks the actual served hashes and headers,
+sends a lab message, and reloads its saved reply. Separately, importing the header helpers in
+an empty directory neither scans missing build files nor writes anything; only the build's
+direct invocation generates `_headers`.
+
 ## 5. Director's Commentary
 
 ### The agent only states intent; the design system does the rest

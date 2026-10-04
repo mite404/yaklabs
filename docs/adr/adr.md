@@ -2713,6 +2713,14 @@ compile the first policy refused.
 Alternatives weighed: `'unsafe-inline'` for scripts, which is no policy at all; moving the boots
 into files, which would flash the wrong theme on a dark system before the file arrived; and
 `'unsafe-eval'`, where `'wasm-unsafe-eval'` admits exactly the one compiler the runtime needs.
+Amended 2026-10-03: the browser build resolves `zod` through `src/zod.ts`, which configures
+`jitless` before exporting Zod to any schema, including the SQLite worker's schemas. Zod's
+caught dynamic-compilation probe still emits a CSP violation; disabling its compiler avoids
+the probe without weakening the policy or skipping validation. Configuring only the client
+entry is too late when its dependencies construct schemas first. The header generator scans
+and writes only when invoked directly, so importing its helpers needs no existing build.
+Run `node packages/runtime/scripts/verify-security.mjs <wrangler-url>` against a built lab app
+to check served headers, inline hashes, startup violations and a persisted worker round trip.
 
 ## ADR-164 - Name the out-of-credit refusal
 
