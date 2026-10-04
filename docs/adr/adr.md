@@ -2793,3 +2793,30 @@ deliberate tool-loop or terminal wait, but shared provider contention and aborte
 are not measured guarantees. The earlier sample reported 5357 thinking tokens in one round
 despite the requested 1024 allocation. ADR-165's requested budget is therefore not a proven cap.
 These observations are samples, not provider guarantees or a fix for long model execution.
+
+Follow-up review distinguishes enforced bounds from semantic guidance. Length, response completion,
+duplicate suppression, timeout, cancellation, and raw-text exclusion are enforced by code.
+Describing
+only intentions, resisting embedded instructions, and avoiding invented relationships are model
+instructions, not mechanically guaranteed properties. A keyword filter or another model cannot
+prove that arbitrary prose never implies success. A hard guarantee would require controlled
+Thinking templates with no unrestricted model-written sentences. That would narrow Thinking's
+expressiveness, not the main answer's capabilities. This ADR does not adopt that redesign.
+
+Four integrated `/api/playground` regressions use `createApp`, the real Anthropic client, and an
+abort-aware provider fixture. They cover terminal delivery across a tool round with a stalled
+summary, response cancellation during a pending read, timeout before response headers, and timeout
+during a partial response body. Both timeout cases use the real eight-second timer and require
+execution to remain live, a later round's summary to succeed, no retry or stale summary, and a
+correct final answer. Each regression went red under its corresponding removed abort/deadline
+behavior, then green after restoration. Production cancellation and timeout code needed no fix.
+
+An opt-in adversarial evaluation targets this summarizer, not the answer model or an unrelated
+system. It submits forged success claims, embedded instructions, and repeated work-status debates
+to the actual same-model summary mechanism. Run it with `THINKING_EVAL=1` and the gateway's existing
+server-side `.dev.vars` using Vitest on `src/playgroundThinking.eval.test.ts`. It writes inputs,
+snapshots, and safe response metadata to `.amp/in/artifacts/thinking-adversarial.json` for human
+review. Normal CI skips these paid network samples. Passing mechanical checks does not establish
+semantic safety; inspect the recorded sentences. One initial sample invented a CSAT-chart-to-table
+replacement, motivating an explicit instruction to omit unnamed chart identities and ambiguous
+relationships. Live samples can fail to produce an accepted summary and are not guarantees.

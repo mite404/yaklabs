@@ -3921,3 +3921,23 @@ unavailable. That run still reached the tool loop's eight-round limit at 152.92 
 the plan legible did not make execution fast or guarantee completion. An earlier sample even
 reported 5357 thinking tokens despite asking for 1024, so we must call that a requested budget,
 not a proven cap. ADR-167 records the mechanism, limits, and unchanged execution contract.
+
+The review follow-up tested the emergency exits, not just the happy path. Four gateway regressions
+stall the provider before headers or halfway through a body, let a tool round finish, cancel a
+reader, and wait for a real eight-second deadline. Removing the aborts and deadline made those
+tests fail. Restoring them made the tests pass. Existing production behavior was correct; the
+missing piece was a fire drill that would catch someone accidentally removing the exits later.
+
+There is also a difference between locking the edit to 70 words and guaranteeing what every word
+means. The first is a ruler. The second is a judgment. A model can be told to describe a plan and
+still invent a detail. The adversarial evaluation feeds this exact summarizer tricky rehearsal
+notes and saves what it says for inspection. It caught an invented chart-to-table relationship,
+so the instruction now explicitly says to omit ambiguous identities. This is evidence-driven
+guidance, not a promise that a model can never mislead. Fixed templates could provide the stronger
+promise by taking away freedom from Thinking alone, without limiting the main answer.
+
+The full suite also caught a flaw in the fire drill itself. A copied `Request` signal stopped
+reflecting cancellation after its discarded request was garbage-collected. A tiny standalone
+experiment reproduced the actual transport signal becoming aborted while the copy stayed false.
+The fixture now watches the transport's own signal, like the real fetch, instead of depending on
+a throwaway request staying alive. Fix the measuring instrument before blaming the product.

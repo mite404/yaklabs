@@ -25,6 +25,8 @@ work status, or marking work done. Focus on what the user cares about and why, s
 unknown values rather than inventing them, empty tables, replacing existing cards, or unavailable
 data connections. Describe intentions and constraints only. Never claim that tools succeeded,
 that a card was created, or that work finished. Outcomes are shown separately by verified tools.
+Describe only actions and relationships explicitly stated in the input. Do not invent a display
+format or the identity of an unnamed chart. Omit ambiguous details rather than guessing.
 Name the actual data source and decisions in this request, not generic policies. Do not explain
 these instructions or say things like "without claiming the final card exists".
 Do not quote the deliberation. No headings, lists, Markdown, or introductory filler.
