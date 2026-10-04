@@ -81,8 +81,8 @@
   padding: 4px var(--thread-gutter) calc(4px + var(--shadow-room));
   pointer-events: none;
 }
-/* The bar keeps the requests' translucent wash of paper (--scrim, paper at 72%) in every state;
-   its glyphs stay opaque (Ethan). */
+/* Two coats of the existing 72% paper scrim give the small controls a denser backing
+   (92.16% combined), while their glyphs stay opaque in every state (Ethan). */
 .reading-tools {
   position: relative;
   isolation: isolate;
@@ -98,15 +98,19 @@
   pointer-events: auto;
   transition: opacity 300ms cubic-bezier(0.23, 1, 0.32, 1);
 }
-/* Blur a backing sheet, not the fieldset: filtering the fieldset would make it the containing
-   block of the menu's fixed positioning, instead of the viewport. */
+/* The blurred sheet carries the second coat. Filtering the fieldset itself would make it
+   the containing block of the menu's fixed positioning, not the viewport. */
+.reading-tools::before,
+.reading-tools .menu {
+  background: var(--scrim);
+  backdrop-filter: blur(8px);
+}
 .reading-tools::before {
   content: "";
   position: absolute;
   inset: 0;
   z-index: -1;
   border-radius: inherit;
-  backdrop-filter: blur(8px);
   pointer-events: none;
 }
 /* The bar follows the pointer (Ethan): it is clear until the pointer is over the thread, fades
@@ -124,12 +128,10 @@
     opacity: 1;
   }
 }
-/* The list of requests is the same wash, blurred behind so its 13px rows stay legible over the
-   turns it opens above. Longer labels give way to their time on narrow screens. */
+/* Keep the reference popover's single scrim and blur unchanged. Longer labels give way to
+   their time on narrow screens. */
 .reading-tools .menu {
   max-width: calc(100vw - 2 * var(--thread-gutter) - var(--space));
-  background: var(--scrim);
-  backdrop-filter: blur(8px);
 }
 .reading-tools .menu-label {
   min-width: 0;
