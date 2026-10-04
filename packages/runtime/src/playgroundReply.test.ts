@@ -5,7 +5,7 @@ import { describe, expect, it } from "vitest";
 import { COPY } from "./playgroundCopy";
 import { endShort, newReply, readLine, receive, type Received } from "./playgroundReply";
 
-// Events without their seq; `play` numbers them from 0, after a `start` of protocol 3.
+// Events without their seq; `play` numbers them from 0, after a `start` of protocol 4.
 type Draft = Received extends infer E ? (E extends Received ? Omit<E, "seq"> : never) : never;
 
 const SELECTION: Selection = {
@@ -25,7 +25,7 @@ const QUESTION = {
   answer: { placeholder: "Something else" },
 };
 
-const start: Draft = { type: "start", v: 3 };
+const start: Draft = { type: "start", v: 4 };
 const working: Draft = { type: "work", workId: "sum", label: "Adding up", status: "running" };
 
 const numbered = (drafts: Draft[]): Received[] => drafts.map((draft, seq) => ({ ...draft, seq }));
@@ -70,17 +70,21 @@ describe("receive streams text", () => {
 });
 
 describe("receive streams thinking", () => {
-  it("folds reasoning into the turn's thinking without closing the words it interrupts", () => {
+  it("replaces the approach summary without closing the words it interrupts", () => {
     const { chunks } = play(
-      { type: "thinking", blockId: "r1b0", delta: "They want " },
-      { type: "thinking", blockId: "r1b0", delta: "the busiest day." },
+      { type: "thinking", blockId: "approach", delta: "I plan to compare the days." },
+      { type: "thinking", blockId: "approach", delta: "I plan to compare known weekdays." },
       { type: "text", blockId: "r1b1", delta: "Friday was " },
-      { type: "thinking", blockId: "r1b2", delta: " Check it." },
+      {
+        type: "thinking",
+        blockId: "approach",
+        delta: "I plan to compare weekdays without filling gaps.",
+      },
       { type: "text", blockId: "r1b1", delta: "busiest." },
       { type: "end", reason: "answered" },
     );
     const turn = turnOf(chunks);
-    expect(turn.thinking).toBe("They want the busiest day. Check it.");
+    expect(turn.thinking).toBe("I plan to compare weekdays without filling gaps.");
     expect(turn.blocks).toEqual([paragraph([text("Friday was busiest.")])]);
     expect(turn.work).toBeUndefined();
   });

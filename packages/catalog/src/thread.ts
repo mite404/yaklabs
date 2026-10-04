@@ -52,7 +52,7 @@ export type ThreadMessage =
       work?: Work;
       /** What the agent is doing right now, while the reply streams. */
       activity?: string;
-      /** The model's reasoning as it streamed, shown folded above the reply; never sent back. */
+      /** The latest approach summary, shown folded apart from the reply; never sent back. */
       thinking?: string;
       /** How the reply stopped short; absent for one that completed or is still streaming. */
       ended?: Ended;

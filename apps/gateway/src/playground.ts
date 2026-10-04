@@ -6,6 +6,7 @@ import {
 } from "@yaklabs/catalog/playground";
 import { toUpstreamMessages } from "./playgroundHistory";
 import { assistantContent, newRound, readEvent, type Round } from "./playgroundRound";
+import { summarizeThinking } from "./playgroundThinking";
 import {
   initialTurn,
   stamp,
@@ -264,7 +265,13 @@ export async function openPlayground(
   request: PlaygroundRequest,
   signal: AbortSignal,
 ): Promise<ReadableStream<Uint8Array>> {
-  const events = playgroundEvents(upstream, request, signal); // → AsyncGenerator<PlaygroundEvent>
+  const stop = new AbortController();
+  const readingSignal = AbortSignal.any([signal, stop.signal]);
+  const events = summarizeThinking(
+    upstream,
+    playgroundEvents(upstream, request, readingSignal),
+    readingSignal,
+  );
   const first = await events.next(); // → the `start` event, or throws the first round's refusal
   return new ReadableStream<Uint8Array>({
     start(controller) {
@@ -277,6 +284,7 @@ export async function openPlayground(
       else controller.enqueue(ndjsonLine(next.value));
     },
     async cancel() {
+      stop.abort();
       await events.return();
     },
   });

@@ -21,7 +21,7 @@ const question = {
   answer: { placeholder: "Name a week" },
 };
 const events = [
-  { type: "start", seq: 0, v: 3 },
+  { type: "start", seq: 0, v: 4 },
   { type: "thinking", seq: 1, blockId: "r0b0", delta: "They want cases by team." },
   { type: "text", seq: 2, blockId: "r0b1", delta: "Here" },
   { type: "work", seq: 3, workId: "chart", label: "Totalling cases", status: "running" },
@@ -89,7 +89,7 @@ describe("playground contract", () => {
   });
 });
 
-describe("playground protocol 3", () => {
+describe("playground protocol 4", () => {
   it("rejects a start event from another protocol version", () => {
     expect(playgroundEventSchema.safeParse({ type: "start", seq: 0, v: 2 }).success).toBe(false);
   });

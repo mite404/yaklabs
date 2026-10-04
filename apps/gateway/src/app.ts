@@ -15,7 +15,7 @@ type Dependencies = { verifyToken: TokenVerifier; upstream: Anthropic; shares: S
 
 // The gateway owns the model and every request setting (ADR-085); the browser sends only turns.
 // Kimi K2.6 through OpenRouter, for its price (ADR-146). It reasons before it answers, and the
-// playground shows that reasoning in a folded disclosure, apart from the answer (ADR-166).
+// playground summarizes that reasoning in a folded disclosure, apart from the answer (ADR-167).
 const MODEL = "moonshotai/kimi-k2.6";
 // A cost cap for one chat reply, reasoning included.
 const MAX_TOKENS = 8192;

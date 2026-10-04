@@ -93,7 +93,7 @@ it("shows a quiet Thinking indicator while a reply is pending, and clears it on 
   replies[0]?.finish();
 });
 
-it("folds streamed reasoning behind a Thinking toggle that is the wait until words come", async () => {
+it("replaces streamed summaries behind a Thinking toggle that is the wait until words come", async () => {
   const { agent, replies } = controlledAgent();
   flushSync(() => {
     root.render(<ChatThreadPanel thread={threads.trend} agent={agent} />);
@@ -103,7 +103,7 @@ it("folds streamed reasoning behind a Thinking toggle that is the wait until wor
   await vi.waitFor(() => {
     expect(pendingRows()).toHaveLength(1);
   });
-  replies[0]?.chunk({ kind: "thinking", text: "They want " });
+  replies[0]?.chunk({ kind: "thinking", text: "Check the trend." });
   const toggle = await vi.waitFor(thinkingToggle);
   expect(pendingRows()).toHaveLength(0);
   expect(toggle.getAttribute("aria-expanded")).toBe("false");
@@ -112,7 +112,7 @@ it("folds streamed reasoning behind a Thinking toggle that is the wait until wor
   expect(host.querySelector(".turn-thinking-text")).toBeNull();
 
   await userEvent.click(toggle);
-  replies[0]?.chunk({ kind: "thinking", text: "next week." });
+  replies[0]?.chunk({ kind: "thinking", text: "They want next week." });
   await vi.waitFor(() => {
     expect(host.querySelector(".turn-thinking-text")?.textContent).toBe("They want next week.");
   });
@@ -148,7 +148,7 @@ it("keeps interleaved thinking on its own reply, including updates while folded"
   await vi.waitFor(() => {
     expect(host.querySelectorAll(".turn-thinking")).toHaveLength(1);
   });
-  replies[0]?.chunk({ kind: "thinking", text: "First " });
+  replies[0]?.chunk({ kind: "thinking", text: "First plan." });
   await vi.waitFor(() => {
     expect(host.querySelectorAll(".turn-thinking")).toHaveLength(2);
   });
@@ -163,7 +163,7 @@ it("keeps interleaved thinking on its own reply, including updates while folded"
     expect(first.closest(".turn-thinking")?.textContent).toContain("First ");
   });
   await userEvent.click(first);
-  replies[0]?.chunk({ kind: "thinking", text: "only." });
+  replies[0]?.chunk({ kind: "thinking", text: "First only." });
   await userEvent.click(second);
   expect(second.closest(".turn-thinking")?.querySelector("p")?.textContent).toBe("Second only.");
   await userEvent.click(first);

@@ -20,7 +20,7 @@ describe("a turn never ends silently", () => {
   it("when the reply only thought", async () => {
     const { events } = await eventsFor("Which day?", round("end_turn", thinking(0, "Hmm.")));
 
-    expect(events.map(({ type }) => type)).toEqual(["thinking", "end"]);
+    expect(events.map(({ type }) => type)).toEqual(["end"]);
     expect(events.at(-1)).toEqual(emptyAnswer);
   });
 

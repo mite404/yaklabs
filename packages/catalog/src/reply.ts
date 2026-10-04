@@ -54,7 +54,7 @@ export type Ended = "interrupted" | "failed" | "cancelled";
 export type ReplyEvent =
   /** Progress narration: quiet, brief, factual; supersedes the last one (ADR-139). */
   | { kind: "activity"; text: string }
-  /** The model's reasoning as it streams, appended; shown folded, never as the answer (ADR-166). */
+  /** A current approach summary, replacing the previous one; folded, never the answer. */
   | { kind: "thinking"; text: string }
   /** Words for the current block, set as `mark` says; runs of one mark join up. */
   | { kind: "text"; text: string; mark?: Mark }
@@ -249,7 +249,7 @@ function endedBy(message: AgentMessage): Ended {
  * Folds one chunk of a reply into the agent's turn: pure, so the same stream always builds the
  * same turn. Text grows the plain `text` always and the `blocks` once the reply has structure;
  * a card with an earlier card's id takes its place; a limitation is said in the words and the
- * reply goes on; narration supersedes and is kept; reasoning appends to `thinking`, apart from
+ * reply goes on; narration supersedes and is kept; a summary replaces `thinking`, apart from
  * the words and the work; a failure ends the turn as interrupted or failed. A `question` is
  * kept on the turn as what it asks, so the dock can be read back from the record; the host
  * docks it as it streams.
@@ -283,7 +283,7 @@ export function applyChunk(message: AgentMessage, chunk: ReplyChunk): AgentMessa
     case "activity":
       return narrate(message, work, chunk.text);
     case "thinking":
-      return { ...message, thinking: (message.thinking ?? "") + chunk.text };
+      return { ...message, thinking: chunk.text };
     case "step":
       return { ...message, work: { ...work, steps: upsertStep(work.steps, chunk.step) } };
     case "log":

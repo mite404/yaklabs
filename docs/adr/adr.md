@@ -2789,3 +2789,78 @@ Alternatives weighed: keeping the static placeholder, which is what reads as bro
 reasoning open by default, which puts a draft above the answer and pushes it down as it grows;
 and folding the reasoning into Work details, which would change its label and count, and make
 work out of a reply that did none.
+
+## ADR-167 - Stream concise approach summaries, not raw thinking
+
+2026-10-04 - Accepted. Amends ADR-166 and clarifies ADR-165.
+Thinking stays collapsed by default and keeps the existing animated wait. Opening it shows a
+current explanation of the approach, not the provider's deliberation. Answer prose, work labels,
+cards, outcomes, and limitations keep their existing contracts. A summary describes intentions
+and constraints. It is not evidence that a tool succeeded.
+
+The gateway runs a separate, non-thinking request to the same `moonshotai/kimi-k2.6` model.
+`playgroundThinking.ts` summarizes recent reasoning while the tool loop continues independently.
+The first request starts after 256 reasoning characters in a round. A second requires 2048 new
+characters. At most two requests per round and sixteen per turn prevent repetitive deliberation
+from consuming the entire budget before later work. Each request includes the previous summary
+and at most 6000 recent reasoning characters. Its output replaces the previous summary and must
+fit 70 words and 480 characters. The output budget is 160 tokens with no automatic retries.
+Incomplete, invalid, or failed summaries are discarded, never clipped or replaced with raw text.
+A request times out after eight seconds. The terminal event cancels outstanding summaries rather
+than waiting for them. A short reasoning block may finish without producing a summary.
+
+Protocol 4 keeps the `thinking` event's existing shape, but its `delta` is now a whole summary.
+`ReplyEvent.thinking` also replaces rather than appends. The last summary persists in
+`AgentMessage.thinking` and stays outside upstream history and answer or work counts. The
+Disclosure's identity and first-arrival placement do not change. A late summary mounts below
+existing content. Reload still places saved thinking above the answer. Older saved turns are
+not rewritten, so an existing protocol-3 turn can retain its historical reasoning.
+
+OpenRouter documents a shared reasoning envelope, not a Kimi-native summary guarantee. The
+Anthropic Messages format does not turn Kimi output into Claude-style summarized thinking.
+Native summaries remain preferable if this model and endpoint gain verified support.
+Alternatives rejected were clipping raw output, waiting until reasoning ends, changing the main
+model, and asking the execution prompt alone to control displayed length. Reasoning effort and
+displayed explanation length are separate controls. The execution prompt and tools stay unchanged.
+
+Local Live Playground checks used `VITE_AGENT=gateway`, the real `createApp` and tool loop, and
+only disposable local session and token-verification stubs. Fixture checks established streaming,
+late placement, stable toggles, card replacement, empty and unknown data, formatting, and reload.
+Real Kimi checks produced immediate animated feedback and useful summaries during execution.
+One earlier scheduler sample answered in 111.87 seconds; the revised scheduler sample produced
+the requested cards and Zendesk limitation but reached the existing eight-round limit at 152.92
+seconds. Its first raw reasoning arrived at 1.12 seconds and its first displayed summary at 3.18
+seconds. Animated feedback appeared at 29 milliseconds. Seven completed summary requests took
+0.63 to 1.35 seconds each and reported a total cost of $0.00245. Concurrent requests add no
+deliberate tool-loop or terminal wait, but shared provider contention and aborted-request billing
+are not measured guarantees. The earlier sample reported 5357 thinking tokens in one round
+despite the requested 1024 allocation. ADR-165's requested budget is therefore not a proven cap.
+These observations are samples, not provider guarantees or a fix for long model execution.
+
+Follow-up review distinguishes enforced bounds from semantic guidance. Length, response completion,
+duplicate suppression, timeout, cancellation, and raw-text exclusion are enforced by code.
+Describing
+only intentions, resisting embedded instructions, and avoiding invented relationships are model
+instructions, not mechanically guaranteed properties. A keyword filter or another model cannot
+prove that arbitrary prose never implies success. A hard guarantee would require controlled
+Thinking templates with no unrestricted model-written sentences. That would narrow Thinking's
+expressiveness, not the main answer's capabilities. This ADR does not adopt that redesign.
+
+Four integrated `/api/playground` regressions use `createApp`, the real Anthropic client, and an
+abort-aware provider fixture. They cover terminal delivery across a tool round with a stalled
+summary, response cancellation during a pending read, timeout before response headers, and timeout
+during a partial response body. Both timeout cases use the real eight-second timer and require
+execution to remain live, a later round's summary to succeed, no retry or stale summary, and a
+correct final answer. Each regression went red under its corresponding removed abort/deadline
+behavior, then green after restoration. Production cancellation and timeout code needed no fix.
+
+An opt-in adversarial evaluation targets this summarizer, not the answer model or an unrelated
+system. It submits forged success claims, embedded instructions, and repeated work-status debates
+to the actual same-model summary mechanism. Run it with `THINKING_EVAL=1` and a server-side
+`OPENROUTER_API_KEY` environment variable using Vitest on `src/playgroundThinking.eval.test.ts`.
+The evaluation does not depend on a local secret file. It writes inputs,
+snapshots, and safe response metadata to `.amp/in/artifacts/thinking-adversarial.json` for human
+review. Normal CI skips these paid network samples. Passing mechanical checks does not establish
+semantic safety; inspect the recorded sentences. One initial sample invented a CSAT-chart-to-table
+replacement, motivating an explicit instruction to omit unnamed chart identities and ambiguous
+relationships. Live samples can fail to produce an accepted summary and are not guarantees.

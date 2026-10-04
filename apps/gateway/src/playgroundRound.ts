@@ -13,7 +13,7 @@ type ToolBlock = {
   startInput: unknown;
   input: ToolCall["input"] | null;
 };
-// A thinking block: its reasoning goes to the page as it streams and is never kept.
+// Raw reasoning is transient input to the gateway's summarizer, never the page or history.
 type ThinkingBlock = { kind: "thinking"; blockId: string };
 type Block = TextBlock | ThinkingBlock | ToolBlock | { kind: "other" };
 
@@ -165,7 +165,7 @@ const ordered = (round: Round): Block[] =>
 
 /**
  * The round as the assistant message the model reads back next round: visible text and the
- * finished tool calls, in order. Thinking is dropped: the page showed it, and the model never
+ * finished tool calls, in order. Thinking is dropped: only a summary reaches the page, and the model never
  * reads it back, which Kimi accepts. A call whose input is not an object is sent with an empty
  * one beside its error result.
  */

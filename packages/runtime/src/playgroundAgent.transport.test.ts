@@ -33,7 +33,7 @@ function body(lines: string[], { open = false } = {}): ReadableStream<Uint8Array
 }
 
 const ndjson = (...events: object[]): string[] => events.map((e) => `${JSON.stringify(e)}\n`);
-const start = { type: "start", seq: 0, v: 3 };
+const start = { type: "start", seq: 0, v: 4 };
 
 // A gateway that answers every request with `status` and `lines`.
 const answering = (status: number, lines: string[] = [], open = false) =>
@@ -76,12 +76,12 @@ it("yields fragmented thinking deltas before the gateway finishes its reply", as
   await vi.waitFor(() => {
     expect(chunks).toEqual([{ kind: "thinking", text: "Compare " }]);
   });
-  const second = { type: "thinking", seq: 2, blockId: "r1b0", delta: "the days." };
+  const second = { type: "thinking", seq: 2, blockId: "r1b0", delta: "Compare the days." };
   send?.enqueue(encoder.encode(ndjson(second).join("")));
   await vi.waitFor(() => {
     expect(chunks).toEqual([
       { kind: "thinking", text: "Compare " },
-      { kind: "thinking", text: "the days." },
+      { kind: "thinking", text: "Compare the days." },
     ]);
   });
   send?.enqueue(

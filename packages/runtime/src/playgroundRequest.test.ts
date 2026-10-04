@@ -15,7 +15,6 @@ import {
   round,
   say,
   text,
-  thinking,
   tool,
 } from "../../../apps/gateway/src/playgroundTestKit";
 import { COPY } from "./playgroundCopy";
@@ -111,9 +110,10 @@ describe("planRequest projects folded turns", () => {
 describe("planRequest leaves the thinking behind", () => {
   it("keeping a reply's reasoning on its turn but never sending it back", async () => {
     const thought = "They want the busiest day.";
-    const reply = await replyTo("a1", [
-      round("end_turn", thinking(0, thought), text(1, "Friday.")),
-    ]);
+    const reply = applyChunk(await replyTo("a1", [round("end_turn", text(1, "Friday."))]), {
+      kind: "thinking",
+      text: thought,
+    });
     expect(reply.thinking).toBe(thought);
     const request = sent(planRequest([user("u1", "Go."), reply], message("Why?")));
     expect(request.exchanges[0]?.agent?.text).toBe("Friday.");
