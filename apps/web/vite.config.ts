@@ -10,7 +10,20 @@ export default defineConfig({
       { find: /^zod$/, replacement: fileURLToPath(new URL("./src/zod.ts", import.meta.url)) },
     ],
   },
-  plugins: [tailwindcss(), reactRouter()],
+  plugins: [
+    {
+      name: "same-origin-production",
+      configResolved(config) {
+        if (config.command === "build" && config.env.VITE_GATEWAY_URL !== undefined) {
+          throw new Error(
+            "Production builds require the gateway on the site's own origin. Unset VITE_GATEWAY_URL; it is for local development only.",
+          );
+        }
+      },
+    },
+    tailwindcss(),
+    reactRouter(),
+  ],
   optimizeDeps: {
     // The worker loads sqlite-wasm's wasm and helper files itself; pre-bundling breaks them.
     exclude: ["@sqlite.org/sqlite-wasm"],
