@@ -13,7 +13,9 @@ type ToolBlock = {
   startInput: unknown;
   input: ToolCall["input"] | null;
 };
-type Block = TextBlock | ToolBlock | { kind: "other" };
+// A thinking block: its reasoning goes to the page as it streams and is never kept.
+type ThinkingBlock = { kind: "thinking"; blockId: string };
+type Block = TextBlock | ThinkingBlock | ToolBlock | { kind: "other" };
 
 /** One model round as read so far: its content blocks by stream index and why it stopped. */
 export type Round = Readonly<{
@@ -22,10 +24,11 @@ export type Round = Readonly<{
   stop: Anthropic.StopReason | null;
 }>;
 
-/** What one stream event changed: the round, plus text to show or a finished tool call. */
+/** What one stream event changed: the round, plus words or reasoning to show or a finished call. */
 export type RoundStep = {
   round: Round;
   text?: { blockId: string; delta: string };
+  thinking?: { blockId: string; delta: string };
   tool?: ToolCall;
 };
 
@@ -58,13 +61,21 @@ const appendText = (round: Round, index: number, block: TextBlock, delta: string
   return out === "" ? step : { ...step, text: { blockId: next.blockId, delta: out } };
 };
 
-// A block's opening. Ids are the gateway's own (text `r{round}b{index}`, tool calls
-// `t{round}_{index}`), unique across the turn whatever the model mints.
+// A thinking block's new reasoning; an empty delta shows nothing.
+const appendThinking = (round: Round, block: ThinkingBlock, delta: string): RoundStep =>
+  delta === "" ? { round } : { round, thinking: { blockId: block.blockId, delta } };
+
+// A block's opening. Ids are the gateway's own (text and thinking `r{round}b{index}`, tool
+// calls `t{round}_{index}`), unique across the turn whatever the model mints.
 const startBlock = (round: Round, index: number, content: Anthropic.ContentBlock): RoundStep => {
+  const blockId = `r${round.number}b${index}`;
   if (content.type === "text") {
-    const blockId = `r${round.number}b${index}`;
     const block: TextBlock = { kind: "text", blockId, text: "", held: "", started: false };
     return appendText(round, index, block, content.text);
+  }
+  if (content.type === "thinking") {
+    const block: ThinkingBlock = { kind: "thinking", blockId };
+    return appendThinking(withBlock(round, index, block), block, content.thinking);
   }
   if (content.type !== "tool_use") return { round: withBlock(round, index, { kind: "other" }) };
   const id = `t${round.number}_${index}`;
@@ -91,14 +102,33 @@ const stopBlock = (round: Round, index: number, block: ToolBlock): RoundStep => 
 
 const applyDelta = (round: Round, event: Anthropic.RawContentBlockDeltaEvent): RoundStep => {
   const block = round.blocks[event.index];
+  if (block === undefined) return { round };
   const { delta } = event;
-  if (block?.kind === "text" && delta.type === "text_delta")
-    return appendText(round, event.index, block, delta.text);
-  if (block?.kind === "tool" && delta.type === "input_json_delta")
-    return {
-      round: withBlock(round, event.index, { ...block, json: block.json + delta.partial_json }),
-    };
-  return { round };
+  switch (block.kind) {
+    case "text":
+      return delta.type === "text_delta"
+        ? appendText(round, event.index, block, delta.text)
+        : { round };
+    case "thinking":
+      return delta.type === "thinking_delta"
+        ? appendThinking(round, block, delta.thinking)
+        : { round };
+    case "tool":
+      return delta.type === "input_json_delta"
+        ? {
+            round: withBlock(round, event.index, {
+              ...block,
+              json: block.json + delta.partial_json,
+            }),
+          }
+        : { round };
+    case "other":
+      return { round };
+    default: {
+      const unhandled: never = block;
+      return unhandled;
+    }
+  }
 };
 
 /** A round before its first event. */
@@ -135,8 +165,9 @@ const ordered = (round: Round): Block[] =>
 
 /**
  * The round as the assistant message the model reads back next round: visible text and the
- * finished tool calls, in order. Thinking is dropped, which Kimi accepts; a call whose input
- * is not an object is sent with an empty one beside its error result.
+ * finished tool calls, in order. Thinking is dropped: the page showed it, and the model never
+ * reads it back, which Kimi accepts. A call whose input is not an object is sent with an empty
+ * one beside its error result.
  */
 export function assistantContent(round: Round): Anthropic.ContentBlockParam[] {
   return ordered(round).flatMap((block): Anthropic.ContentBlockParam[] => {

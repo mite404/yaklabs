@@ -60,6 +60,12 @@ function pendingRows(): HTMLElement[] {
   return [...host.querySelectorAll<HTMLElement>(".turn-pending")];
 }
 
+function thinkingToggle(): HTMLButtonElement {
+  const found = host.querySelector<HTMLButtonElement>(".turn-thinking .disclosure-header");
+  if (!found) throw new Error("no Thinking toggle");
+  return found;
+}
+
 function field(): HTMLTextAreaElement {
   const found = host.querySelector<HTMLTextAreaElement>('textarea[aria-label="Message"]');
   if (!found) throw new Error("no compose box");
@@ -85,6 +91,93 @@ it("shows a quiet Thinking indicator while a reply is pending, and clears it on 
   });
   expect(host.textContent).toContain("Saturday leads.");
   replies[0]?.finish();
+});
+
+it("folds streamed reasoning behind a Thinking toggle that is the wait until words come", async () => {
+  const { agent, replies } = controlledAgent();
+  flushSync(() => {
+    root.render(<ChatThreadPanel thread={threads.trend} agent={agent} />);
+  });
+
+  await userEvent.type(field(), "And next week?{Enter}");
+  await vi.waitFor(() => {
+    expect(pendingRows()).toHaveLength(1);
+  });
+  replies[0]?.chunk({ kind: "thinking", text: "They want " });
+  const toggle = await vi.waitFor(thinkingToggle);
+  expect(pendingRows()).toHaveLength(0);
+  expect(toggle.getAttribute("aria-expanded")).toBe("false");
+  expect(toggle.textContent).toContain("Thinking…");
+  expect(toggle.querySelector(".agent-tree")).not.toBeNull();
+  expect(host.querySelector(".turn-thinking-text")).toBeNull();
+
+  await userEvent.click(toggle);
+  replies[0]?.chunk({ kind: "thinking", text: "next week." });
+  await vi.waitFor(() => {
+    expect(host.querySelector(".turn-thinking-text")?.textContent).toBe("They want next week.");
+  });
+
+  replies[0]?.chunk("Saturday leads.");
+  await vi.waitFor(() => {
+    expect(toggle.querySelector(".agent-tree")).toBeNull();
+  });
+  expect(toggle.textContent).toBe("Thinking");
+  expect(thinkingToggle()).toBe(toggle);
+  expect(toggle.getAttribute("aria-expanded")).toBe("true");
+  expect(
+    host.querySelector(".turn-thinking")?.parentElement?.querySelector(".quiet-prose")?.textContent,
+  ).toBe("Saturday leads.");
+  replies[0]?.finish();
+  await vi.waitFor(() => {
+    expect(host.querySelector('[aria-busy="true"]')).toBeNull();
+  });
+  await userEvent.click(toggle);
+  expect(host.querySelector(".turn-thinking-text")).toBeNull();
+  await userEvent.click(toggle);
+  expect(host.querySelector(".turn-thinking-text")?.textContent).toBe("They want next week.");
+});
+
+it("keeps interleaved thinking on its own reply, including updates while folded", async () => {
+  const { agent, replies } = controlledAgent();
+  flushSync(() => {
+    root.render(<ChatThreadPanel thread={threads.trend} agent={agent} />);
+  });
+  await userEvent.type(field(), "First?{Enter}");
+  await userEvent.type(field(), "Second?{Enter}");
+  replies[1]?.chunk({ kind: "thinking", text: "Second only." });
+  await vi.waitFor(() => {
+    expect(host.querySelectorAll(".turn-thinking")).toHaveLength(1);
+  });
+  replies[0]?.chunk({ kind: "thinking", text: "First " });
+  await vi.waitFor(() => {
+    expect(host.querySelectorAll(".turn-thinking")).toHaveLength(2);
+  });
+  const toggles = [
+    ...host.querySelectorAll<HTMLButtonElement>(".turn-thinking .disclosure-header"),
+  ];
+  expect(toggles).toHaveLength(2);
+  const first = toggles[0];
+  const second = toggles[1];
+  await userEvent.click(first);
+  await vi.waitFor(() => {
+    expect(first.closest(".turn-thinking")?.textContent).toContain("First ");
+  });
+  await userEvent.click(first);
+  replies[0]?.chunk({ kind: "thinking", text: "only." });
+  await userEvent.click(second);
+  expect(second.closest(".turn-thinking")?.querySelector("p")?.textContent).toBe("Second only.");
+  await userEvent.click(first);
+  await vi.waitFor(() => {
+    expect(first.closest(".turn-thinking")?.querySelector("p")?.textContent).toBe("First only.");
+  });
+  replies[0]?.chunk("First answer.");
+  replies[1]?.chunk("Second answer.");
+  await vi.waitFor(() => {
+    expect(host.textContent).toContain("First answer.");
+    expect(host.textContent).toContain("Second answer.");
+  });
+  replies[0]?.finish();
+  replies[1]?.finish();
 });
 
 it("clears the indicator on a reply that fails before any content, leaving no stale animation", async () => {

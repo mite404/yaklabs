@@ -33,7 +33,7 @@ function body(lines: string[], { open = false } = {}): ReadableStream<Uint8Array
 }
 
 const ndjson = (...events: object[]): string[] => events.map((e) => `${JSON.stringify(e)}\n`);
-const start = { type: "start", seq: 0, v: 2 };
+const start = { type: "start", seq: 0, v: 3 };
 
 // A gateway that answers every request with `status` and `lines`.
 const answering = (status: number, lines: string[] = [], open = false) =>
@@ -50,6 +50,55 @@ async function reply(fetch: Fetch, { accessToken, event = ask }: Asking = signed
 
 const failureOf = (chunks: ReplyChunk[]) =>
   chunks.reduce((turn, chunk) => applyChunk(turn, chunk), startReply("r1", "10:00")).failure;
+
+it("yields fragmented thinking deltas before the gateway finishes its reply", async () => {
+  let send: ReadableStreamDefaultController<Uint8Array> | undefined;
+  const stream = new ReadableStream<Uint8Array>({
+    start(controller) {
+      send = controller;
+      controller.enqueue(encoder.encode(ndjson(start).join("")));
+    },
+  });
+  const agent = createPlaygroundAgent({
+    baseUrl: "http://g.test",
+    store,
+    threadId: live,
+    accessToken: "token",
+    fetch: () => Promise.resolve(new Response(stream)),
+  });
+  const chunks: ReplyChunk[] = [];
+  const reading = (async () => {
+    for await (const chunk of agent.respond(ask, new AbortController().signal)) chunks.push(chunk);
+  })();
+  const first = ndjson({ type: "thinking", seq: 1, blockId: "r1b0", delta: "Compare " }).join("");
+  send?.enqueue(encoder.encode(first.slice(0, 23)));
+  send?.enqueue(encoder.encode(first.slice(23)));
+  await vi.waitFor(() => {
+    expect(chunks).toEqual([{ kind: "thinking", text: "Compare " }]);
+  });
+  const second = { type: "thinking", seq: 2, blockId: "r1b0", delta: "the days." };
+  send?.enqueue(encoder.encode(ndjson(second).join("")));
+  await vi.waitFor(() => {
+    expect(chunks).toEqual([
+      { kind: "thinking", text: "Compare " },
+      { kind: "thinking", text: "the days." },
+    ]);
+  });
+  send?.enqueue(
+    encoder.encode(
+      ndjson(
+        { type: "text", seq: 3, blockId: "r1b1", delta: "Tuesday leads." },
+        { type: "end", seq: 4, reason: "answered" },
+      ).join(""),
+    ),
+  );
+  send?.close();
+  await reading;
+  const turn = chunks.reduce((t, chunk) => applyChunk(t, chunk), startReply("r1", "10:00"));
+  expect(turn.thinking).toBe("Compare the days.");
+  expect(turn.text).toBe("Tuesday leads.");
+  expect(turn.failure).toBeUndefined();
+});
 
 describe("the live agent refuses before sending", () => {
   it("with no token: sign-in is needed, Try again cannot help, and nothing is sent", async () => {
