@@ -366,12 +366,16 @@
   flex-direction: column;
   gap: 20px;
 }
-/* As with a cut sidebar label, turns fade before the edge clips them. The fade fits inside
+/* Feather both ends of the fade, leaving its upper edge lighter than a linear veil. It fits
    the resting padding so a last turn stays fully legible; empty welcome art keeps its edge. */
 .thread-scroll:not([data-empty]) {
+  --compose-fade: calc(var(--rest-gap) - var(--compose-inset));
   mask-image: linear-gradient(
     to bottom,
-    #000 calc(100% - (var(--rest-gap) - var(--compose-inset))),
+    #000 calc(100% - var(--compose-fade)),
+    rgb(0 0 0 / 85%) calc(100% - var(--compose-fade) * 0.75),
+    rgb(0 0 0 / 50%) calc(100% - var(--compose-fade) * 0.5),
+    rgb(0 0 0 / 15%) calc(100% - var(--compose-fade) * 0.25),
     transparent
   );
 }
