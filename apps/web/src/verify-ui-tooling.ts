@@ -17,10 +17,22 @@ export const STEPS = ["Capture", "Prove the camera", "Compare", "Check", "Decide
 
 /** How the tool works, in four steps, beside the Pixels picture. */
 export const HOW = [
-  "Capture screenshots in batch: one command renders every Storybook story in Chromium, Firefox and WebKit, light and dark.",
-  "Compare before and after pixel by pixel against an approved baseline, with a wipe and a 4x inspector that show exactly what moved.",
-  "Check contrast and accessibility across the three major browser engines: every token pair measured, axe run on every story.",
-  "Fail loudly. If pixels or colours land anywhere but the baseline, the run fails. A missing reference is never a pass, and only a person can approve a new one.",
+  {
+    lead: "Capture screenshots in batch",
+    rest: ". One command renders every Storybook story in Chromium, Firefox and WebKit, light and dark.",
+  },
+  {
+    lead: "Compare before and after",
+    rest: " pixel by pixel against an approved baseline, with a split wipe and a 4x inspector that show exactly what moved.",
+  },
+  {
+    lead: "Check contrast and accessibility",
+    rest: " across the three major browser engines. Every token pair measured, axe run on every story.",
+  },
+  {
+    lead: "Fail loudly",
+    rest: ". If pixels or colours land anywhere but the baseline, the run fails. A missing reference is never a pass, and only a person can approve a new one.",
+  },
 ];
 
 /** The shell the terminal picture showed: its window, its prompt bar, and the command typed. */

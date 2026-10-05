@@ -155,7 +155,12 @@ function How() {
       <p className="land-kicker">How it works</p>
       <ol>
         {HOW.map((step) => (
-          <li key={step}>{step}</li>
+          <li key={step.lead}>
+            <span>
+              <strong>{step.lead}</strong>
+              {step.rest}
+            </span>
+          </li>
         ))}
       </ol>
     </div>
