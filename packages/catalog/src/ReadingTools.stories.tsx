@@ -185,15 +185,24 @@ export const FoldsToTheBookmark: Story = {
 };
 
 /**
- * The bar and its request list keep their translucent wash when opened, with opaque glyphs
- * and a blur behind the list so the conversation does not compete with its words.
+ * The small bar keeps a denser translucent backing in every state, with opaque glyphs and
+ * the request list's blur so the conversation does not compete with the controls.
  */
 export const StaysTranslucent: Story = {
   play: async ({ canvasElement }) => {
     const { bar, tools } = await parts(canvasElement);
+    const collapsedBackground = getComputedStyle(bar, "::before").backgroundColor;
+    const collapsedBlur = getComputedStyle(bar, "::before").backdropFilter;
+    await expect(alphaOf(getComputedStyle(bar).backgroundColor)).toBeGreaterThan(0);
     await expect(alphaOf(getComputedStyle(bar).backgroundColor)).toBeLessThan(1);
     await userEvent.click(tools.getByRole("button", { name: "Your requests" }));
     const list = within(document.body).getByRole("menu", { name: "Your requests" });
+    const surface = getComputedStyle(list);
+    await expect(collapsedBackground).toBe(surface.backgroundColor);
+    await expect(collapsedBlur).toBe(surface.backdropFilter);
+    await expect(getComputedStyle(bar, "::before").backgroundColor).toBe(surface.backgroundColor);
+    const background = surface.backgroundColor;
+    const blur = surface.backdropFilter;
     await expect(alphaOf(getComputedStyle(list).backgroundColor)).toBeLessThan(1);
     await waitFor(async () => {
       await expect(opacity(bar)).toBe(1);
@@ -202,7 +211,10 @@ export const StaysTranslucent: Story = {
     await userEvent.keyboard("{Escape}");
     await userEvent.click(await unfold(tools));
     await expect(tools.getByRole("searchbox", { name: "Search this thread" })).toHaveFocus();
+    await expect(getComputedStyle(bar).backgroundColor).toBe(collapsedBackground);
     await expect(alphaOf(getComputedStyle(bar).backgroundColor)).toBeLessThan(1);
+    await expect(getComputedStyle(bar, "::before").backgroundColor).toBe(background);
+    await expect(getComputedStyle(bar, "::before").backdropFilter).toBe(blur);
   },
 };
 
