@@ -3984,3 +3984,24 @@ reflecting cancellation after its discarded request was garbage-collected. A tin
 experiment reproduced the actual transport signal becoming aborted while the copy stayed false.
 The fixture now watches the transport's own signal, like the real fetch, instead of depending on
 a throwaway request staying alive. Fix the measuring instrument before blaming the product.
+
+### The take report is not the delivery receipt
+
+An HTTP 200 says the gateway started a response, not that Kay finished answering. A model can
+lose credit in its next round while the existing stream still has a 200 status. The playground
+now keeps a take report: one `playground_turn` log with the terminal outcome, attempted round
+count, and elapsed gateway time. It uses the same reason the browser receives rather than
+trying to infer success from the HTTP status.
+
+The report records its outcome and time before yielding the terminal event. A browser that
+closes just after receiving that event must not turn an answered take into a cancelled one.
+The generator's final cleanup emits the record once, including first-round refusals and
+observed cancellation. Thinking-summary requests and SDK retries are not extra tool rounds.
+No dialogue, credentials, or raw errors go into this report.
+
+The tests run real gateway routes with a scripted provider and an independently controlled
+clock. They distinguish a two-round answer from a later refusal, and cancel both before the
+first response and during a later request. Another test advances the clock after the terminal
+event and then cancels; the recorded answer and elapsed time must stay unchanged. These are
+gateway-observed outcomes, not proof that the audience received every byte. If the Worker is
+terminated, its final report may never be written.

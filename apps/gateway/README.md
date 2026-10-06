@@ -110,6 +110,31 @@ body or turn. Cloudflare's invocation log still contains the request URL, includ
 never put credentials or conversation contents in URLs. Browser cancellation in the playground
 loop does not emit a failure record.
 
+### Playground turn summaries
+
+Each valid, authorized playground turn emits one `info` record named `playground_turn` when
+the loop closes, including first-round refusals and observed cancellation:
+
+```json
+{ "event": "playground_turn", "outcome": "answered", "rounds": 2, "elapsedMs": 500 }
+```
+
+`outcome` reuses the streamed terminal reason: `answered`, `asked`, `limit`, or `upstream`.
+An empty answer or broken round is `upstream`, matching what the browser receives. A turn
+cancelled before a terminal decision is `cancelled`; an unexpected exception that escapes the
+loop is `internal`. Cancellation after a terminal decision does not relabel that outcome.
+Malformed or unauthorized requests never start a turn and do not emit a summary.
+
+`rounds` counts attempted tool-loop rounds, including refusals, but not SDK retries or the
+separate thinking-summary requests. `elapsedMs` measures gateway wall time through the terminal
+decision or cancellation. It is neither CPU time nor the time until the browser paints the reply.
+The record contains no conversation content or identifiers. Cloudflare supplies invocation
+context, so no request IDs are threaded through the loop.
+
+Filter Events on the `event` field for `playground_turn`, even on HTTP 200 invocations.
+These are gateway-observed outcomes, not proof of client delivery; a terminated Worker may not
+emit a final record.
+
 ## Deploy with Workers Builds
 
 Create the Worker from the GitHub repository (Workers & Pages, Create, Import a repository). The
