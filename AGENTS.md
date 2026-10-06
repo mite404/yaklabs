@@ -77,16 +77,13 @@ line will not fit in 50 characters, that is usually the commit doing two things 
 - Say what and why. Never how - the diff already shows how.
 - Skip the body entirely when the subject fully covers the change.
 
-**Never** add an agent name as co-author.
-**Never** add a public link to the thread session -- that can be a security risk!
-
 ---
 
-## Interview scope
+## Prototype scope
 
-- The interview build is the deployed site, running the production runtime with sign-in:
+- The prototype build is the deployed site, running the production runtime with sign-in:
   `VITE_AUTH=workos` and `VITE_AGENT=gateway` (ADR-154 and ADR-156 in `docs/adr/adr.md`).
-  An interviewer signs in through AuthKit and lands on a splash with two projects. Demo plays
+  A user signs in through AuthKit and lands on a splash with two projects. Demo plays
   the scripted scenarios on its own clock. Live Playground is a real thread, persisted in the
   worker and answered by the model with tools through the gateway, so they can play with it.
 - The sandbox and the levers still run sign-in off, `VITE_AUTH=none` and `VITE_AGENT=lab`,
@@ -146,6 +143,6 @@ line will not fit in 50 characters, that is usually the commit doing two things 
 }
 ```
 
-- Rename Kay's own `--radius` before adding that mapping. It is 14px today and rounds the catalog
+- Rename Bonsai's own `--radius` before adding that mapping. It is 14px today and rounds the catalog
   card and the thread panel; shadcn reads `--radius` for its corners, so the mapping above would
   shrink both to 4px.
