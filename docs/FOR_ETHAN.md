@@ -3984,3 +3984,17 @@ reflecting cancellation after its discarded request was garbage-collected. A tin
 experiment reproduced the actual transport signal becoming aborted while the copy stayed false.
 The fixture now watches the transport's own signal, like the real fetch, instead of depending on
 a throwaway request staying alive. Fix the measuring instrument before blaming the product.
+
+### Lab becomes the component shelf
+
+The Lab link's pill says "Component Examples". The page opens the same five departments as
+Storybook: Foundations, Catalog, Motion, Thread, and Share. Its eleven entries render the real
+catalog components with synthetic examples; Lab omits Agent Working. Reading Tools starts with
+the visible bookmark alone instead of another chat panel.
+The old question evaluator, JSON editor, and session-only gap backlog are gone. Think of this as
+the prop shelf, not another screening of the demo: pick a component and try it in isolation.
+
+Storybook remains the place for detailed variants, controls, and automated checks. Lab imports
+the components directly rather than shipping Storybook's editor or its test utilities to visitors.
+The gallery's Storybook check walks every entry and tries the disclosure, menu, and modal. Its
+page scrolls inside the app's workspace so the last entry remains reachable on short screens.

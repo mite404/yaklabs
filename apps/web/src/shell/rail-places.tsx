@@ -139,6 +139,7 @@ function Face({ place, look }: { place: LivePlace; look: Look }) {
 // softer, so the pill says it opens a new tab as the row does. The gap is the one shadcn's
 // tooltip keeps between its words and a key (tooltip.tsx).
 function PillWords({ place }: { place: LivePlace }) {
+  if (place.kind === "route") return "Component Examples";
   if (place.kind !== "external") return place.label;
   return (
     <span className="inline-flex items-center gap-1.5">
