@@ -1,4 +1,4 @@
-import { APIError, type Anthropic } from "@anthropic-ai/sdk";
+import { APIError, APIUserAbortError, type Anthropic } from "@anthropic-ai/sdk";
 import {
   PLAYGROUND_PROTOCOL,
   type PlaygroundEvent,
@@ -148,13 +148,20 @@ const advance = (
   return { end: settled, events: [...text.events, ...events] };
 };
 
-// Only the upstream failing (an APIError, which covers a dropped connection and an abort)
-// means the model stopped responding. Anything else is a bug: it is logged, and the turn
-// still ends with the upstream failure so the page never hangs.
+// A round that failed, logged as a marker and the upstream's status alone: the raw error could
+// echo the turn or the key. An APIError (a refusal or a dropped connection) is the upstream
+// failing; anything else is a bug in the loop, and the turn still ends as an upstream failure
+// so the page never hangs. A closed browser is not a failure.
 const noteFailure = (error: unknown): void => {
-  if (error instanceof APIError) return;
-  // oxlint-disable-next-line eslint/no-console -- a bug in the loop must reach the Worker's logs
-  console.error("[playground] round failed:", error);
+  if (error instanceof APIUserAbortError) return;
+  if (error instanceof APIError) {
+    const status = typeof error.status === "number" ? error.status : null; // → number | null
+    // oxlint-disable-next-line eslint/no-console -- Workers Observability keeps console records
+    console.warn({ event: "playground_round_failed", cause: "upstream", status });
+    return;
+  }
+  // oxlint-disable-next-line eslint/no-console -- Workers Observability keeps console records
+  console.error({ event: "playground_round_failed", cause: "internal", status: null });
 };
 
 // Whether the upstream refused because its credit ran out.

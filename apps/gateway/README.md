@@ -83,6 +83,33 @@ Token checks accept the issuers WorkOS's hosted API mints: `https://api.workos.c
 environments and `https://api.workos.com/user_management/<clientId>` for ones created since
 mid-2025. A custom auth domain mints its own issuer, which `src/auth.ts` would need to accept.
 
+## Logs
+
+`observability` is on in `wrangler.jsonc`, so Cloudflare keeps an invocation log per request
+(method, URL, response status, timing) beside the Worker's own console records. The new failure
+records reach production after deployment; `wrangler dev` prints console records locally.
+
+- Stored logs: Cloudflare dashboard, Workers & Pages, `yaklabs`, Observability, Events. Filter
+  by `event` to find the gateway's records. Invocations shows the requests themselves.
+- Live logs: `pnpm --filter gateway exec wrangler tail` streams the deployed Worker's requests
+  and records as they happen. The gateway answers its own failures, so they show as records
+  on an `ok` invocation, not under `--status error`.
+
+The gateway logs four records, each a plain object Workers Logs indexes by field:
+
+| Record                                                                  | Level | When                                                             |
+| ----------------------------------------------------------------------- | ----- | ---------------------------------------------------------------- |
+| `{ event: "upstream_failure", status }`                                 | warn  | OpenRouter refuses `/api/messages` or a playground's first round |
+| `{ event: "playground_round_failed", cause: "upstream", status }`       | warn  | a later round is refused, or the upstream fails mid-round        |
+| `{ event: "playground_round_failed", cause: "internal", status: null }` | error | a bug in the playground loop ends the turn early                 |
+| `{ event: "gateway_error" }`                                            | error | any other error a route throws; it answers a bare 500            |
+
+`status` is the upstream's HTTP status, or `null` when there is none (a dropped connection, an
+error event mid-stream). These records contain no error message or stack, headers, token, key,
+body or turn. Cloudflare's invocation log still contains the request URL, including its query;
+never put credentials or conversation contents in URLs. Browser cancellation in the playground
+loop does not emit a failure record.
+
 ## Deploy with Workers Builds
 
 Create the Worker from the GitHub repository (Workers & Pages, Create, Import a repository). The

@@ -177,12 +177,14 @@ export const credit = (): Response =>
  * An app whose OpenRouter client answers each upstream request with the next scripted round,
  * recording the requests. A request past the script fails the test's upstream.
  */
-export const playgroundApp = (...rounds: (() => Response)[]) => {
+export const playgroundApp = (
+  ...rounds: ((init?: RequestInit) => Response | Promise<Response>)[]
+) => {
   const requests: Request[] = [];
   const fetch = vi.fn<Fetch>((input, init) => {
     requests.push(new Request(input, init));
     const respond = rounds[requests.length - 1] ?? overloaded;
-    return Promise.resolve(respond());
+    return Promise.resolve(respond(init));
   });
   const upstream = openRouterClient("sk-or-test-key", { fetch, maxRetries: 0 });
   const shares = { store: memoryShares(Date.now), now: () => new Date(), newToken: randomToken };
