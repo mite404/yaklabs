@@ -106,9 +106,9 @@ The gateway logs four records, each a plain object Workers Logs indexes by field
 
 `status` is the upstream's HTTP status, or `null` when there is none (a dropped connection, an
 error event mid-stream). These records contain no error message or stack, headers, token, key,
-body or turn. Cloudflare's invocation log still contains the request URL, including its query;
-never put credentials or conversation contents in URLs. Browser cancellation in the playground
-loop does not emit a failure record.
+body or turn. Cloudflare's invocation log still contains the request path; query-string
+redaction is enabled for logs and traces. Never put credentials or conversation contents in
+URLs. Browser cancellation in the playground loop does not emit a failure record.
 
 ### Playground turn summaries
 
@@ -134,6 +134,34 @@ context, so no request IDs are threaded through the loop.
 Filter Events on the `event` field for `playground_turn`, even on HTTP 200 invocations.
 These are gateway-observed outcomes, not proof of client delivery; a terminated Worker may not
 emit a final record.
+
+### Sampled native traces
+
+`observability.traces` enables Cloudflare's automatic tracing at a 5% invocation sample, while
+the existing log capture remains unchanged. It needs no SDK or extra application spans. Once
+deployed, open Observability, Traces to inspect outbound model requests, KV calls, and Worker
+timing. A sampled invocation can contain several spans; 5% is not a per-round sampling rate.
+At low traffic, seeing no trace after a few requests is expected. Seven-day trace retention
+and sampling make this a diagnostic view, not a complete count of turn outcomes.
+
+Native traces collect more metadata than our allowlisted console records. Cloudflare's
+documented fetch attributes include URLs, selected content and accept headers, status codes,
+and body sizes, not body contents or Authorization headers. `redact_query_string` removes
+query strings from logged and traced request URLs, not paths or explicitly logged text.
+Handler spans also include user-agent and geographic metadata. KV spans can include keys and
+metadata; for our shares, that includes expiration and the revocation hash, but not the raw
+revoke token or sealed thread bytes. Do not put secrets or conversation contents in URLs or
+KV metadata.
+
+Review sampled production attributes before treating the setup as privacy-verified. A local
+dry-run validates the configuration but cannot prove what the managed trace collector stores.
+Disable `observability.traces.enabled` and redeploy to stop trace collection without disabling
+logs. Cloudflare's [tracing docs][cf-traces] and [attribute reference][cf-attrs] describe
+collection,
+retention, and pricing; trace sampling does not sample the summary logs.
+
+[cf-traces]: https://developers.cloudflare.com/workers/observability/traces/
+[cf-attrs]: https://developers.cloudflare.com/workers/observability/traces/spans-and-attributes/
 
 ## Deploy with Workers Builds
 

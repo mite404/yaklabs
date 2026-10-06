@@ -4005,3 +4005,14 @@ first response and during a later request. Another test advances the clock after
 event and then cancels; the recorded answer and elapsed time must stay unchanged. These are
 gateway-observed outcomes, not proof that the audience received every byte. If the Worker is
 terminated, its final report may never be written.
+
+Cloudflare's native traces add the timing timeline without a new SDK. We sample 5% of Worker
+invocations, leaving log capture unchanged, and remove query strings from logged and traced
+URLs. The take report counts outcomes; the sampled timeline explains where selected requests
+spent time. Neither is a browser profiler or a CPU flame graph.
+
+Privacy is a collection contract, not a comforting label. Native traces can still hold paths,
+selected headers, geographic metadata, and KV keys and metadata. Our shares store expiration
+and a revocation hash as metadata, never the raw revoke token or readable conversation. A
+dry-run validates the configuration; inspecting actual production traces after deployment is
+the remaining check on the managed collector. No production deployment was performed here.
