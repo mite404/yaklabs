@@ -776,8 +776,6 @@
   position: relative;
 }
 
-/* Fixed-height compose box: typing never resizes or moves it (ADR-003).
-   Resets the lab's global textarea rule, which is sized for the JSON editor. */
 /* No divider: the compose box floats directly under the conversation. It stands over the
    reading dock, so the shadow the bar above it casts passes under the box, the two at one
    height, rather than across it. */
@@ -815,7 +813,9 @@
   display: block;
   width: 100%;
   height: 44px;
-  min-height: 0;
+  min-height: 44px;
+  max-height: 6lh;
+  overflow-y: auto;
   margin: 0;
   padding: 0 4px 0 0;
   border: none;

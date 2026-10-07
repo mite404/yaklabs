@@ -281,6 +281,13 @@ tells; on the strong surface a faint recessed fill keeps that greyer placeholder
 | Border (strong) | 60% paper, 3.5:1 | derived |
 | Hover and focus | border to full ink; focus adds the 2px ring | derived |
 
+The chat composer grows upward automatically as its draft wraps or gains new lines. Its bottom
+and send controls stay anchored. It keeps the existing 44px text area when empty or short, grows
+to six lines, then scrolls internally. It shrinks again on deletion or send. The six-line ceiling
+is `6lh`, derived from the existing 15px text at 1.45 line height (21.75px per line), giving about
+87px of extra room without a new spacing token. Source: Ethan's automatic expansion request;
+derived (four extra lines, ADR-003 amended).
+
 ### 15. The sage tint means "you"
 
 The user's bubble is the only place the sage-green tint appears, so it always means "this is what
