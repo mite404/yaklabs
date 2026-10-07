@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { expect, userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { CatalogCard } from "./CatalogCard";
 import { App } from "./App";
 import { scenarios } from "./fixtures";
@@ -97,9 +97,70 @@ export const UnsafeProps: Story = {
   ...rejectedCard,
   args: { payload: scenarios.unsafe.payload },
 };
-/** The whole evaluation app, which picks its own scenarios, so no card control reaches it. */
-export const ProductEvaluation: Story = {
+/** The Lab's component navigation renders each preview without Storybook controls. */
+export const ComponentGallery: Story = {
   args: { payload: scenarios.trend.payload },
   parameters: { controls: { disable: true } },
   render: () => <App />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    const nav = within(canvas.getByRole("navigation", { name: "Component catalog" }));
+    await expect(canvas.getByRole("link", { name: "Component Lab" })).toBeVisible();
+    await expect(nav.queryByRole("button", { name: /Agent working/i })).toBeNull();
+    for (const group of ["Foundations", "Catalog", "Motion", "Thread", "Share"]) {
+      await expect(nav.getByText(group, { exact: true })).toBeVisible();
+    }
+    for (const component of [
+      "Button",
+      "Disclosure",
+      "Icon Button",
+      "Menu",
+      "Modal",
+      "Text Field",
+      "Approved Answers",
+      "Agent Thinking Animation",
+      "Chat Thread Panel",
+      "Reading Tools",
+      "Public Share Page",
+    ]) {
+      const link = nav.getByRole("button", { name: component });
+      await userEvent.click(link);
+      await expect(link).toHaveAttribute("aria-current", "page");
+      const preview = within(canvas.getByRole("region", { name: `${component} preview` }));
+      await expect(preview.getByRole("heading", { name: component, level: 1 })).toBeVisible();
+      if (component === "Disclosure") {
+        await userEvent.click(preview.getByRole("button", { name: "How I got this" }));
+        await expect(preview.getByText(/Read last week's orders/)).toBeVisible();
+      }
+      if (component === "Menu") {
+        await userEvent.click(preview.getByRole("button", { name: "Open menu" }));
+        await userEvent.click(preview.getByRole("menuitem", { name: "Second item" }));
+        await expect(preview.getByText("Second item selected")).toBeVisible();
+      }
+      if (component === "Modal") {
+        await userEvent.click(preview.getByRole("button", { name: "Open modal" }));
+        await waitFor(() =>
+          expect(preview.getByRole("dialog", { name: "Pause the thread?" })).toBeVisible(),
+        );
+        await userEvent.keyboard("{Escape}");
+        await expect(preview.queryByRole("dialog")).toBeNull();
+      }
+      if (component === "Reading Tools") {
+        await userEvent.unhover(link);
+        const bookmark = preview.getByRole("button", { name: "Your requests" });
+        await expect(bookmark).toBeVisible();
+        await expect(preview.queryByRole("button", { name: "Search this thread" })).toBeNull();
+        await expect(preview.queryByRole("textbox", { name: "Message" })).toBeNull();
+        await userEvent.click(bookmark);
+        await waitFor(() =>
+          expect(preview.getByRole("menu", { name: "Your requests" })).toBeVisible(),
+        );
+        await userEvent.keyboard("{Escape}");
+      }
+      if (component === "Public Share Page") {
+        await expect(preview.getByText(/Only this view is shared/)).toBeVisible();
+      }
+    }
+    await userEvent.click(nav.getByRole("button", { name: "Button" }));
+  },
 };
