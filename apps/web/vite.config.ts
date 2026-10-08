@@ -28,6 +28,16 @@ export default defineConfig({
     // The worker loads sqlite-wasm's wasm and helper files itself; pre-bundling breaks them.
     exclude: ["@sqlite.org/sqlite-wasm"],
   },
+  // Local Claude Desktop demo only: the browser stays same-origin and the relay stays loopback.
+  server: {
+    proxy: {
+      "/mcp-bridge": {
+        target: `http://127.0.0.1:${process.env.BONSAI_MCP_PORT ?? "4318"}`,
+        changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/mcp-bridge/, ""),
+      },
+    },
+  },
   // A module worker (ADR-083), so the runtime's worker can import like any other module.
   worker: { format: "es" },
 });

@@ -1,13 +1,23 @@
 import { ChatThreadPanel } from "@yaklabs/catalog";
-import type { Runtime, ThreadSummary } from "@yaklabs/runtime";
+import type { ThreadHandle, ThreadMessage } from "@yaklabs/catalog/thread";
+import type { Runtime, RuntimeState, ThreadSummary } from "@yaklabs/runtime";
 import { useSidebar } from "@yaklabs/ui/components/sidebar";
-import { useEffect, useRef, type FocusEvent, type ReactNode, type RefObject } from "react";
-import { inBackground, useRuntime } from "../runtime";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  type FocusEvent,
+  type ReactNode,
+  type RefObject,
+} from "react";
+import { inBackground, useRuntime, useRuntimeState } from "../runtime";
 import { useSession } from "../session";
 import { useSnoozeCard } from "../shell/snooze-card";
 import { useDictation } from "../world/dictation";
+import { useScripted } from "../world/provider";
 import { ThreadHeaderActions } from "../shell/thread-actions-menu";
 import { ChildFootnote } from "./child-footnote";
+import { ExternalAgent } from "./external-agent";
 import { noting, useOutsideWork, usePanelRef, useTurns } from "./pane-turns";
 import { QuietButton } from "./quiet-button";
 import type { Turns } from "./turns";
@@ -181,6 +191,41 @@ function useHosting(thread: ThreadSummary) {
   return { hostAsk: useSnoozeCard(thread), dictation: useDictation(thread.id) };
 }
 
+// Only the device vault can keep an external card after reload.
+const persistsCards = (state: RuntimeState): boolean =>
+  state.kind === "ready" && state.source.kind === "device" && state.source.storage === "opfs";
+
+// Keep the mounted panel registered while giving the connection a stable receive callback.
+function useMcpPanel(runtime: Runtime, thread: ThreadSummary) {
+  const panelRef = usePanelRef(thread.id);
+  const panel = useRef<ThreadHandle | null>(null);
+  const attach = useCallback(
+    (handle: ThreadHandle | null) => {
+      panel.current = handle;
+      panelRef?.(handle);
+    },
+    [panelRef],
+  );
+  const receive = useCallback((message: ThreadMessage) => {
+    panel.current?.receive(message);
+  }, []);
+  const state = useRuntimeState();
+  const scripted = useScripted(thread.id);
+  if (!import.meta.env.DEV || scripted || !persistsCards(state))
+    return { attach, control: undefined };
+  return { attach, control: <ExternalAgent runtime={runtime} thread={thread} receive={receive} /> };
+}
+
+function footnoteOf(thread: ThreadSummary, connection: ReactNode) {
+  const child = thread.place.kind === "child" ? <ChildFootnote thread={thread} /> : undefined;
+  return child === undefined && connection === undefined ? undefined : (
+    <div className="flex flex-wrap items-center gap-2">
+      {child}
+      {connection}
+    </div>
+  );
+}
+
 /**
  * One thread in the catalog's panel, its turns loaded from the worker; one the snapshot says
  * holds none opens empty at once, with nothing to wait for. While they come, and when they
@@ -220,7 +265,7 @@ export function ThreadPane({
   const { isMobile } = useSidebar();
   const { turns, retry, reread, revision } = useTurns(thread);
   const note = useOutsideWork(thread, reread);
-  const panelRef = usePanelRef(thread.id);
+  const { attach, control } = useMcpPanel(runtime, thread);
   const host = useRef<HTMLDivElement>(null);
   const follow = useFocusFollows(host, turns);
   const hosting = useHosting(thread); // → the snooze card's ask and how dictation hears
@@ -231,7 +276,7 @@ export function ThreadPane({
       {turns.kind === "open" ? (
         <ChatThreadPanel
           key={revision}
-          ref={panelRef}
+          ref={attach}
           thread={{ title: thread.title, messages: turns.messages }}
           agent={noting(runtime.agent(thread.id, session), note)}
           initialDraft={thread.draft}
@@ -242,7 +287,7 @@ export function ThreadPane({
           leading={leading}
           empty={welcome}
           bare={bare}
-          footnote={thread.place.kind === "child" ? <ChildFootnote thread={thread} /> : undefined}
+          footnote={footnoteOf(thread, control)}
         />
       ) : (
         <PendingFrame thread={thread} leading={leading} actions={actions} bare={bare}>

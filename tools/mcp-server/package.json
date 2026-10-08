@@ -1,0 +1,27 @@
+{
+  "name": "@yaklabs/mcp-server",
+  "private": true,
+  "bin": {
+    "bonsai-mcp": "./dist/index.js"
+  },
+  "type": "module",
+  "scripts": {
+    "build": "node build.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:unit": "vitest run",
+    "test:browser": "node scripts/browser-check.mjs",
+    "smoke": "node dist/smoke.js"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.1",
+    "@types/node": "catalog:",
+    "@yaklabs/catalog": "workspace:*",
+    "@yaklabs/config": "workspace:*",
+    "esbuild": "^0.28.2",
+    "playwright": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:",
+    "zod": "catalog:"
+  }
+}

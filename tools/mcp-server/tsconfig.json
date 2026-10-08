@@ -1,0 +1,10 @@
+{
+  "extends": "@yaklabs/config/tsconfig.base.json",
+  "compilerOptions": {
+    "allowImportingTsExtensions": true,
+    "allowJs": true,
+    "checkJs": true,
+    "noEmit": true
+  },
+  "include": ["src", "scripts", "*.ts"]
+}
