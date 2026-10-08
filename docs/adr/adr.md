@@ -40,10 +40,12 @@ before the interview.
 
 ## ADR-003 - The user's input never moves
 
-2026-09-24 - Accepted.
-The compose field keeps its size and position while typing, dictating, or streaming, and streamed
-output never pushes the input down.
-People proofread as they type, so layout shifts break their place.
+2026-09-24 - Accepted; amended 2026-10-07 for automatic compose expansion.
+The compose field's bottom stays anchored, and streamed output never pushes the input down.
+Typing, pasting, or dictating a longer draft grows the field upward from its existing two-line
+height to six visible lines. Beyond six lines, the field scrolls internally. Removing text or
+sending returns the space to the conversation. No expansion control or setting is needed.
+People proofread as they type, so longer drafts should be readable without moving the send controls.
 
 ## ADR-004 - Recognition over recall for skills
 
@@ -252,8 +254,8 @@ top while scrolling a long answer.
 2026-09-25 - Accepted.
 Every chat compose field is the shared `ComposeBox`: a paperclip attach button on the far left, and
 a microphone for dictation directly left of the send button.
-It floats directly under the conversation with no divider line above it, and keeps a fixed height so
-typing never moves it (ADR-003).
+It floats directly under the conversation with no divider line above it. Its bottom stays anchored
+while longer drafts grow upward to six lines (ADR-003, amended).
 
 ## ADR-027 - Recap after ten idle minutes on an active thread
 

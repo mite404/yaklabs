@@ -4030,3 +4030,17 @@ Storybook remains the place for detailed variants, controls, and automated check
 the components directly rather than shipping Storybook's editor or its test utilities to visitors.
 The gallery's Storybook check walks every entry and tries the disclosure, menu, and modal. Its
 page scrolls inside the app's workspace so the last entry remains reachable on short screens.
+
+### Give the draft room without moving Send
+
+The composer now grows upward from two lines to six as you type, paste, or dictate. Think of a
+subtitle panel revealing more of the script while its controls stay on the same desk. Four extra
+lines at the existing 21.75px line height add about 87px. Longer drafts scroll inside the field,
+so a pasted document cannot swallow the conversation. Deleting or sending shrinks it again.
+
+`ComposeBox` measures the browser's actual wrapped text rather than counting characters. The same
+sentence needs more room in a narrow canvas lane than in a wide thread. A `ResizeObserver`
+remeasures when the field's width changes; CSS sets the minimum and six-line ceiling. No separate
+expanded state or setting has to stay in sync with the draft. The old fixed-height decision in
+ADR-003 now protects the bottom edge instead. Browser tests type, copy and paste, send, and change
+width to check the behavior against real layout rather than mocked measurements.
