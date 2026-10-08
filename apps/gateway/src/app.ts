@@ -2,6 +2,7 @@ import { APIError, type Anthropic } from "@anthropic-ai/sdk";
 import { Hono } from "hono";
 import type { Context } from "hono";
 import { createMiddleware } from "hono/factory";
+import { HTTPException } from "hono/http-exception";
 import { validator } from "hono/validator";
 import type { TokenVerifier } from "./auth";
 import { playgroundRequestSchema } from "@yaklabs/catalog/playground";
@@ -68,12 +69,26 @@ const openReply = async (
 // An upstream refusal as a 502 carrying the status alone: the upstream's body could echo the
 // request, and the key stays here. Out of credit keeps its status so the page can name it
 // (ADR-164), still with a bare marker. A network failure has no status. Anything else is a bug
-// and is thrown on.
+// and is thrown on. The Worker's log gets the same status and nothing else.
 function upstreamFailure(c: Context, error: unknown): Response {
   if (!(error instanceof APIError)) throw error;
   const status = typeof error.status === "number" ? error.status : null; // → number | null
+  // oxlint-disable-next-line eslint/no-console -- Workers Observability keeps console records
+  console.warn({ event: "upstream_failure", status });
   if (status === 402) return c.json({ error: "credit" }, 402);
   return c.json({ error: "upstream", status }, 502);
+}
+
+// Hono's default error handler, except a bug logs only a marker: the raw error could carry a
+// token, the key or a turn. The Worker's invocation log already names the request.
+function gatewayError(error: Error, c: Context): Response {
+  if (error instanceof HTTPException) {
+    const res = error.getResponse();
+    return c.newResponse(res.body, res);
+  }
+  // oxlint-disable-next-line eslint/no-console -- Workers Observability keeps console records
+  console.error({ event: "gateway_error" });
+  return c.text("Internal Server Error", 500);
 }
 
 // The reply `open` starts, streamed as NDJSON, or the upstream's refusal as an error response.
@@ -124,6 +139,7 @@ export const createApp = ({ verifyToken, upstream, shares }: Dependencies) => {
 
   return (
     new Hono()
+      .onError(gatewayError)
       .get("/api/health", (c) => c.json({ ok: true }))
       // A thread made public for a while (ADR-131): only a signed-in visitor may keep one, anyone
       // with the link may read it, and its revoke token takes it down early.

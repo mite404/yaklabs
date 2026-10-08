@@ -1,5 +1,16 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { eventsFor, rawRound, round, text, thinking, tool } from "./playgroundTestKit";
+import {
+  eventsFor,
+  playgroundApp,
+  postPlayground,
+  rawRound,
+  round,
+  say,
+  shape,
+  text,
+  thinking,
+  tool,
+} from "./playgroundTestKit";
 
 const running = { workId: "sum", label: "Adding up the week", status: "running" };
 // A turn that stops short ends with its reason and line in one event.
@@ -45,18 +56,20 @@ describe("a turn never ends silently", () => {
 });
 
 describe("a round that breaks", () => {
-  it("for a reason other than the upstream is logged, and still ends the turn", async () => {
+  it("for a reason other than the upstream is logged as a marker, and still ends the turn", async () => {
     const logged = vi.spyOn(console, "error").mockImplementation(() => {});
-    const garbled = rawRound("event: message_start\ndata: {not json\n\n");
+    const garbled = rawRound("event: message_start\ndata: {not json sk-or-test-key\n\n");
 
     const { events } = await eventsFor("Which day?", garbled);
 
     expect(events).toEqual([noResponse]);
-    expect(logged).toHaveBeenCalledWith("[playground] round failed:", expect.any(SyntaxError));
+    expect(logged.mock.calls).toEqual([
+      [{ event: "playground_round_failed", cause: "internal", status: null }],
+    ]);
   });
 
-  it("because the upstream sent an error is not logged", async () => {
-    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+  it("because the upstream sent an error is logged without its message", async () => {
+    const logged = vi.spyOn(console, "warn").mockImplementation(() => {});
     const busy = rawRound(
       'event: error\ndata: {"type":"error","error":{"type":"overloaded_error","message":"Busy"}}\n\n',
     );
@@ -64,6 +77,38 @@ describe("a round that breaks", () => {
     const { events } = await eventsFor("Which day?", busy);
 
     expect(events).toEqual([noResponse]);
+    expect(logged.mock.calls).toEqual([
+      [{ event: "playground_round_failed", cause: "upstream", status: null }],
+    ]);
+  });
+});
+
+describe("a round the browser leaves", () => {
+  it("while it opens is not logged as a failure", async () => {
+    const logged = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const opening = Promise.withResolvers<void>();
+    // The second round answers only by failing once its request is aborted.
+    const hanging = (init?: RequestInit): Promise<Response> => {
+      opening.resolve();
+      return new Promise((_, reject) => {
+        init?.signal?.addEventListener("abort", () => {
+          reject(new DOMException("", "AbortError"));
+        });
+      });
+    };
+    const { app, requests } = playgroundApp(
+      round("tool_use", tool(0, "update_work", running)),
+      hanging,
+    );
+    const browser = new AbortController();
+
+    const response = await postPlayground(app, say("Chart it."), { signal: browser.signal });
+    const events = shape(response);
+    await opening.promise;
+    browser.abort();
+
+    expect(await events).toEqual([{ type: "work", ...running }]);
+    expect(requests).toHaveLength(2);
     expect(logged).not.toHaveBeenCalled();
   });
 });

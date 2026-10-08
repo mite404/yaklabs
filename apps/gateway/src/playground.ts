@@ -1,10 +1,11 @@
-import { APIError, type Anthropic } from "@anthropic-ai/sdk";
+import { APIError, APIUserAbortError, type Anthropic } from "@anthropic-ai/sdk";
 import {
   PLAYGROUND_PROTOCOL,
   type PlaygroundEvent,
   type PlaygroundRequest,
 } from "@yaklabs/catalog/playground";
 import { toUpstreamMessages } from "./playgroundHistory";
+import { SYSTEM_PROMPT } from "./playgroundPrompt";
 import { assistantContent, newRound, readEvent, type Round } from "./playgroundRound";
 import { summarizeThinking } from "./playgroundThinking";
 import {
@@ -42,28 +43,9 @@ type EndDraft = Extract<EventDraft, { type: "end" }>;
 // What the loop does after a round: stop with the closing event, or send the results and go on.
 type Decision = { kind: "stop"; end: EndDraft } | { kind: "continue"; messages: Messages };
 
-// The playground's own prompt: the page sends only the user's turns.
-const SYSTEM_PROMPT = `You are Kay's assistant in a playground where people try out how you work.
-You cannot fetch real, live or external data. Chart only numbers the user gave you, or plainly \
-illustrative numbers whose source says they are illustrative.
-
-The user sees each tool call as its own part of the page, so tools carry the content:
-- Before each step of work, call update_work with a short factual label. Reuse its workId to \
-update it, and mark it done or failed when the step ends.
-- Never write prose before a tool call: the user reads every word of text as your answer the \
-moment you write it. Progress belongs in update_work labels, not in text.
-- Show numbers only with show_card. Reuse a cardId to replace that card.
-- When you need a decision only the user can make, call ask_question and then stop.
-- Settle each work item with report_outcome. Its evidence says how you got the result (the \
-inputs and the rule you used), never the same numbers the card already shows.
-- Whenever the user asks for something you cannot do, such as real or past data, you must call \
-report_failure with the limitation and a recovery prompt the user could send instead. Never \
-explain a limitation only in prose.
-
-Your final answer adds only what the cards, outcomes and failures do not already say: one to \
-three plain sentences, and "-" lists or **bold** only when they help. Never repeat a card's \
-numbers, an outcome or a failure in prose. After report_failure, close with one short sentence \
-that does not restate the limitation. No tables and no headings.`;
+// How a turn went, for its one summary log, and when that was known (`Date.now()`).
+type TurnOutcome = EndDraft["reason"] | "cancelled" | "internal";
+type Settled = { outcome: TurnOutcome; at: number };
 
 // Rounds one turn may take; Kimi was seen making one tool call per round.
 const MAX_ROUNDS = 8;
@@ -148,13 +130,20 @@ const advance = (
   return { end: settled, events: [...text.events, ...events] };
 };
 
-// Only the upstream failing (an APIError, which covers a dropped connection and an abort)
-// means the model stopped responding. Anything else is a bug: it is logged, and the turn
-// still ends with the upstream failure so the page never hangs.
+// A round that failed, logged as a marker and the upstream's status alone: the raw error could
+// echo the turn or the key. An APIError (a refusal or a dropped connection) is the upstream
+// failing; anything else is a bug in the loop, and the turn still ends as an upstream failure
+// so the page never hangs. A closed browser is not a failure.
 const noteFailure = (error: unknown): void => {
-  if (error instanceof APIError) return;
-  // oxlint-disable-next-line eslint/no-console -- a bug in the loop must reach the Worker's logs
-  console.error("[playground] round failed:", error);
+  if (error instanceof APIUserAbortError) return;
+  if (error instanceof APIError) {
+    const status = typeof error.status === "number" ? error.status : null; // → number | null
+    // oxlint-disable-next-line eslint/no-console -- Workers Observability keeps console records
+    console.warn({ event: "playground_round_failed", cause: "upstream", status });
+    return;
+  }
+  // oxlint-disable-next-line eslint/no-console -- Workers Observability keeps console records
+  console.error({ event: "playground_round_failed", cause: "internal", status: null });
 };
 
 // Whether the upstream refused because its credit ran out.
@@ -204,48 +193,67 @@ const tryOpenRound = async (
   }
 };
 
+// A thrown turn: a closed browser, the upstream refusing the first round, or a bug.
+const thrownOutcome = (error: unknown, signal: AbortSignal): TurnOutcome => {
+  if (signal.aborted) return "cancelled";
+  return error instanceof APIError ? "upstream" : "internal";
+};
+
 // The playground's tool loop, the only part that talks to the model: it opens a round, turns
 // each upstream event into page events, answers the tool calls and goes round again until the
 // model answers, asks, hits a limit or stops responding. The first event is `start`, the last
 // is `end`, and `seq` counts up from 0 without a gap. A closed browser (`signal`) stops it.
 // It throws the first round's `APIError` before `start`, so the route can answer before streaming.
+// However it ends, it logs one `playground_turn` record: counts and time only, never the turn.
 async function* playgroundEvents(
   upstream: PlaygroundUpstream,
   request: PlaygroundRequest,
   signal: AbortSignal,
 ): AsyncGenerator<PlaygroundEvent, void> {
-  let messages = toUpstreamMessages(request); // → MessageParam[]
-  // The first round opens before the turn has failed anything, so it offers every tool.
-  let events: UpstreamEvents | "credit" | undefined = await openRound(
-    upstream,
-    messages,
-    initialTurn,
-    signal,
-  );
-  const opened = stamp(initialTurn, [{ type: "start", v: PLAYGROUND_PROTOCOL }]);
-  let state = opened.state;
-  yield* opened.events;
-  while (events !== undefined && events !== "credit") {
-    const end: RoundEnd = yield* streamRound(events, { ...state, round: state.round + 1 });
-    if (signal.aborted) return;
-    const decision = decide(end, messages); // → stop | continue
-    if (decision.kind === "stop") {
-      yield* stamp(end.state, [decision.end]).events;
-      return;
+  const started = Date.now();
+  let rounds = 0;
+  // Set once, when the turn's outcome is known; a cancel after that keeps it.
+  let settled: Settled | undefined;
+  try {
+    let messages = toUpstreamMessages(request); // → MessageParam[]
+    rounds++;
+    // The first round opens before the turn has failed anything, so it offers every tool.
+    let events: UpstreamEvents | "credit" | undefined = await openRound(
+      upstream,
+      messages,
+      initialTurn,
+      signal,
+    );
+    const opened = stamp(initialTurn, [{ type: "start", v: PLAYGROUND_PROTOCOL }]);
+    let state = opened.state;
+    yield* opened.events;
+    while (events !== undefined && events !== "credit") {
+      const end: RoundEnd = yield* streamRound(events, { ...state, round: state.round + 1 });
+      if (signal.aborted) return;
+      const decision = decide(end, messages); // → stop | continue
+      if (decision.kind === "stop") {
+        settled = { outcome: decision.end.reason, at: Date.now() };
+        yield* stamp(end.state, [decision.end]).events;
+        return;
+      }
+      state = end.state;
+      messages = decision.messages;
+      rounds++;
+      // oxlint-disable-next-line no-await-in-loop -- each round needs the last round's tool results
+      events = await tryOpenRound(upstream, messages, state, signal);
     }
-    state = end.state;
-    messages = decision.messages;
-    // oxlint-disable-next-line no-await-in-loop -- each round needs the last round's tool results
-    events = await tryOpenRound(upstream, messages, state, signal);
+    if (signal.aborted) return;
+    const line = events === "credit" ? CREDIT_OUT : NO_RESPONSE;
+    settled = { outcome: "upstream", at: Date.now() };
+    yield* stamp(state, [{ type: "end", reason: "upstream", line }]).events;
+  } catch (error) {
+    settled = { outcome: thrownOutcome(error, signal), at: Date.now() };
+    throw error;
+  } finally {
+    const { outcome, at } = settled ?? { outcome: "cancelled", at: Date.now() };
+    // oxlint-disable-next-line eslint/no-console -- Workers Observability keeps console records
+    console.info({ event: "playground_turn", outcome, rounds, elapsedMs: at - started });
   }
-  if (signal.aborted) return;
-  yield* stamp(state, [
-    {
-      type: "end",
-      reason: "upstream",
-      line: events === "credit" ? CREDIT_OUT : NO_RESPONSE,
-    },
-  ]).events;
 }
 
 // One event per line, as the page reads them.

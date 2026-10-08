@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   BAR_CARD,
   QUESTION,
@@ -32,6 +32,10 @@ const creditOut = {
   reason: "upstream",
   line: "The model's credit ran out before it could finish.",
 };
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
 describe("the tool loop shows", () => {
   it("a valid card and tells the model it was shown", async () => {
     const card = { cardId: "week", card: BAR_CARD };
@@ -237,15 +241,25 @@ describe("the tool loop ends", () => {
 
 describe("the tool loop reports", () => {
   it("an upstream that refuses a later round, with its line in the end event", async () => {
+    const logged = vi.spyOn(console, "warn").mockImplementation(() => {});
+
     const { events } = await eventsFor("Chart it.", working, overloaded);
 
     expect(events).toEqual([{ type: "work", ...work("running") }, noResponse]);
+    expect(logged.mock.calls).toEqual([
+      [{ event: "playground_round_failed", cause: "upstream", status: 529 }],
+    ]);
   });
 
   it("credit running out before a later round, with its line in the end event", async () => {
+    const logged = vi.spyOn(console, "warn").mockImplementation(() => {});
+
     const { events } = await eventsFor("Chart it.", working, credit);
 
     expect(events).toEqual([{ type: "work", ...work("running") }, creditOut]);
+    expect(logged.mock.calls).toEqual([
+      [{ event: "playground_round_failed", cause: "upstream", status: 402 }],
+    ]);
   });
 
   it("a round's stream that ends before it says why", async () => {
@@ -257,6 +271,7 @@ describe("the tool loop reports", () => {
 
 describe("the tool loop cancels", () => {
   it("the upstream request when the browser goes away", async () => {
+    const warned = vi.spyOn(console, "warn").mockImplementation(() => {});
     const { app, requests } = playgroundApp(working, done);
     const browser = new AbortController();
 
@@ -268,5 +283,6 @@ describe("the tool loop cancels", () => {
     expect(requests).toHaveLength(1);
     // The fake's round was already buffered; the loop stops before a second one or an `end`.
     expect(events).toEqual([{ type: "work", ...work("running") }]);
+    expect(warned).not.toHaveBeenCalled();
   });
 });

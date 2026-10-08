@@ -123,7 +123,7 @@ export const ComponentGallery: Story = {
       "Reading Tools",
       "Public Share Page",
     ]) {
-      const link = nav.getByRole("button", { name: component, exact: true });
+      const link = nav.getByRole("button", { name: component });
       await userEvent.click(link);
       await expect(link).toHaveAttribute("aria-current", "page");
       const preview = within(canvas.getByRole("region", { name: `${component} preview` }));
@@ -161,6 +161,6 @@ export const ComponentGallery: Story = {
         await expect(preview.getByText(/Only this view is shared/)).toBeVisible();
       }
     }
-    await userEvent.click(nav.getByRole("button", { name: "Button", exact: true }));
+    await userEvent.click(nav.getByRole("button", { name: "Button" }));
   },
 };

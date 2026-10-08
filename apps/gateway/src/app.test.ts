@@ -1,6 +1,6 @@
 import type { Anthropic } from "@anthropic-ai/sdk";
 import { MessageStream } from "@anthropic-ai/sdk/lib/MessageStream";
-import { assert, describe, expect, it, vi } from "vitest";
+import { afterEach, assert, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { createApp } from "./app";
 import type { TokenVerifier } from "./auth";
@@ -233,21 +233,66 @@ describe("POST /api/messages sends upstream", () => {
 });
 
 describe("POST /api/messages reports", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it("an upstream failure as a 502 with only its status", async () => {
+    const logged = vi.spyOn(console, "warn").mockImplementation(() => {});
     const { app } = appWithUpstream(overloadedUpstream);
 
     const response = await postMessages(app, { system: SYSTEM, messages: turns });
 
     expect(response.status).toBe(502);
     expect(await response.json()).toEqual({ error: "upstream", status: 529 });
+    expect(logged.mock.calls).toEqual([[{ event: "upstream_failure", status: 529 }]]);
   });
 
   it("an out-of-credit refusal as a 402 with only its marker", async () => {
+    const logged = vi.spyOn(console, "warn").mockImplementation(() => {});
     const { app } = appWithUpstream(creditUpstream);
 
     const response = await postMessages(app, { system: SYSTEM, messages: turns });
 
     expect(response.status).toBe(402);
     expect(await response.json()).toEqual({ error: "credit" });
+    expect(logged.mock.calls).toEqual([[{ event: "upstream_failure", status: 402 }]]);
+  });
+
+  it("a malformed body as Hono's own 400, without logging it", async () => {
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { app } = appWithUpstream(streamingUpstream);
+
+    const response = await app.request("/api/messages", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${TOKEN}` },
+      body: "{not json",
+    });
+
+    expect(response.status).toBe(400);
+    expect(await response.text()).toBe("Malformed JSON in request body");
+    expect(logged).not.toHaveBeenCalled();
+  });
+});
+
+describe("an unexpected gateway error", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it("answers a bare 500 and logs only its marker", async () => {
+    const logged = vi.spyOn(console, "error").mockImplementation(() => {});
+    const leaky = `KV refused key ${API_KEY} for ${TOKEN}`;
+    const refuse = () => Promise.reject(new Error(leaky));
+    const store = { put: refuse, get: refuse, delete: refuse };
+    const shares = { store, now: () => new Date(), newToken: randomToken };
+    const upstream = openRouterClient(API_KEY, { maxRetries: 0 });
+    const app = createApp({ verifyToken, upstream, shares });
+
+    const response = await app.request(`/api/shares/${randomToken()}?q=${TOKEN}`);
+
+    expect(response.status).toBe(500);
+    expect(await response.text()).toBe("Internal Server Error");
+    expect(logged.mock.calls).toEqual([[{ event: "gateway_error" }]]);
   });
 });
