@@ -1079,6 +1079,11 @@ export function ChatThreadPanel({
 
   useImperativeHandle(ref, () => ({
     setDraft: editDraft,
+    receive: (message) => {
+      setMessages((current) =>
+        current.some((turn) => turn.id === message.id) ? current : [...current, message],
+      );
+    },
     send: () => {
       if (latest().trim() !== "" || outbox.attachments.length > 0) send();
     },

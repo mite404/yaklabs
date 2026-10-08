@@ -82,6 +82,8 @@ export function createWorld(spec: WorldSpec, deps: WorldDeps): World {
     subscribe: (listener) => stage.subscribe(listener),
     ...workspaceVerbs(stage),
     ...menuVerbs(stage),
+    // A show plays its script and keeps nothing, so it takes no external agent's card.
+    insertCard: () => Promise.reject(new Error("The scripted Demo takes no external cards")),
     agent: (id) => ({
       respond: (event, signal) => converse(stage, id, event, answererOf(seatOf(id)), signal),
     }),

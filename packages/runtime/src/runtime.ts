@@ -1,4 +1,5 @@
 import type { Agent } from "@yaklabs/catalog/agent";
+import type { Selection } from "@yaklabs/catalog/catalog";
 import type { ThreadMessage } from "@yaklabs/catalog/thread";
 import { z } from "zod";
 import {
@@ -80,6 +81,15 @@ export type Runtime = {
   share(share: ThreadShare): Promise<void>;
   /** Forgets a public share, once the page has taken it down or found it gone. */
   unshare(shareId: string): Promise<void>;
+  /**
+   * Saves an external agent's catalog card (MCP) as one agent turn at the end of the thread,
+   * labelled as external, and resolves once `state()` holds it. A retry under the same
+   * `insertionId` with the same card resolves with nothing new saved.
+   * @throws When the worker refuses it: a scenario, an unknown or deleted thread, a thread with a
+   *   reply in flight, or an `insertionId` that already holds another card; or the runtime is
+   *   broken.
+   */
+  insertCard(threadId: ThreadId, insertionId: string, card: Selection): Promise<void>;
   /** The thread's `Agent` (ADR-041); replies stream from the worker. */
   agent(id: ThreadId, session?: Session): Agent;
   /** Stops the worker; everything still waiting fails, and the state is broken. */
@@ -260,6 +270,17 @@ export function startRuntime(config: RuntimeConfig): Runtime {
       await ask(handle, post, command, withShell(shell));
     },
     ...menuVerbs(handle, post),
+    insertCard: async (threadId, insertionId, card) => {
+      const command: Command = {
+        kind: "insertCard",
+        requestId: newId(),
+        threadId,
+        insertionId,
+        card,
+      };
+      const answer = await ask(handle, post, command);
+      if (answer.kind !== "done") throw unexpected(answer);
+    },
     agent: (threadId, session) => agentFor(handle, post, threadId, session),
     dispose: () => {
       worker.terminate();

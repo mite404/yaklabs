@@ -1,4 +1,5 @@
 import type { Agent } from "@yaklabs/catalog/agent";
+import type { Selection } from "@yaklabs/catalog/catalog";
 import {
   threadIdSchema,
   type Place,
@@ -110,6 +111,7 @@ function loggingVerbs(
     restore: (threadId) => note("restore", threadId),
     share: (share) => note("share", share),
     unshare: (shareId) => note("unshare", shareId),
+    insertCard: (threadId, insertionId) => note("insertCard", [threadId, insertionId]),
     agent: (threadId) => {
       calls.push(`${name}.agent "${threadId}"`);
       return silent;
@@ -263,6 +265,21 @@ describe("composeRuntime's verbs", () => {
       "overlay.create",
       "overlay.create",
     ]);
+  });
+
+  it("inserts an external card through the worker, and refuses one for a Demo thread", async () => {
+    const { runtime, calls } = composed();
+    const card: Selection = {
+      catalogVersion: "1",
+      component: "BarChart",
+      props: { title: "T", source: "S", unit: "u", rows: [], variant: "comparison" },
+    };
+    const insertionId = "0b6f4f1e-3c1a-4d2e-9f3b-6a1c2d3e4f50";
+    await runtime.insertCard(LIVE, insertionId, card);
+    await expect(runtime.insertCard(BRIEF, insertionId, card)).rejects.toThrow(
+      "The scripted Demo takes no external cards",
+    );
+    expect(calls()).toEqual([`worker.insertCard ["playground","${insertionId}"]`]);
   });
 
   it("keeps the shell document through the worker alone, and disposes both", async () => {

@@ -130,6 +130,37 @@ describe("commandSchema checks the thread menu's writes (ADR-126)", () => {
   });
 });
 
+describe("commandSchema checks an external agent's card (MCP)", () => {
+  const card = {
+    catalogVersion: "1",
+    component: "BarChart",
+    props: {
+      title: "Closed cases by team",
+      source: "Service desk export",
+      unit: "cases",
+      rows: [{ label: "Support", value: 84 }],
+      variant: "comparison",
+    },
+  };
+  const insertCard = {
+    kind: "insertCard",
+    requestId: "r1",
+    threadId: "profit",
+    insertionId: "0b6f4f1e-3c1a-4d2e-9f3b-6a1c2d3e4f50",
+    card,
+  };
+
+  it("accepts a catalog card under a UUID insertion id", () => {
+    expect(commandSchema.parse(insertCard)).toEqual(insertCard);
+  });
+
+  it("refuses an insertion id that is not a UUID, and a card the catalog lacks", () => {
+    expect(accepts({ ...insertCard, insertionId: "a1" })).toBe(false);
+    expect(accepts({ ...insertCard, card: { ...card, component: "PieChart" } })).toBe(false);
+    expect(accepts({ ...insertCard, card: { ...card, html: "<b>x</b>" } })).toBe(false);
+  });
+});
+
 describe("noticeSchema", () => {
   it("carries a reply's words and its events in a chunk (ADR-147)", () => {
     expect(carries("Saturday leads")).toBe(true);
@@ -150,6 +181,16 @@ describe("noticeSchema", () => {
   it("keeps a stored reply's thinking, so a reload still shows it", () => {
     const messages = [
       { id: "a1", role: "agent", text: "Friday.", time: "9:00", thinking: "The busiest day." },
+    ];
+    expect(noticeSchema.parse({ kind: "opened", requestId: "r1", messages })).toMatchObject({
+      messages,
+    });
+  });
+
+  it("keeps a stored card's external attribution, so a reload still shows it", () => {
+    const external = { insertionId: "0b6f4f1e-3c1a-4d2e-9f3b-6a1c2d3e4f50" };
+    const messages = [
+      { id: `mcp:${external.insertionId}`, role: "agent", text: "Cases", time: "9:00", external },
     ];
     expect(noticeSchema.parse({ kind: "opened", requestId: "r1", messages })).toMatchObject({
       messages,

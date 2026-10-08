@@ -3,6 +3,7 @@ import { createLabAgent } from "@yaklabs/catalog/labAgent";
 import { applyChunk, isEmptyReply, startReply } from "@yaklabs/catalog/reply";
 import { z } from "zod";
 import { settleReply, withAgentTurn, type Stamp } from "./conversation";
+import { insertCard } from "./insertCard";
 import { createPlaygroundAgent } from "./playgroundAgent";
 import {
   commandSchema,
@@ -205,8 +206,11 @@ async function init(loop: Loop, { agent, data }: CommandOf<"init">): Promise<voi
   pushState(loop, session);
 }
 
-// Handles a command that names a request; whatever it throws fails that request alone.
-function handleRequest(loop: Loop, command: Exclude<Command, { kind: "init" }>): Promise<void> {
+// Workspace writes all publish their saved state before acknowledging the request.
+function writeRequest(
+  loop: Loop,
+  command: Exclude<Command, { kind: "init" | "open" | "send" | "abort" }>,
+): Promise<void> {
   if (isMenuWrite(command)) {
     return write(loop, (session) => {
       menuWrite(session, command);
@@ -214,8 +218,6 @@ function handleRequest(loop: Loop, command: Exclude<Command, { kind: "init" }>):
     });
   }
   switch (command.kind) {
-    case "open":
-      return open(loop, command);
     case "create":
       return write(loop, (session) => ({
         kind: "created",
@@ -238,16 +240,27 @@ function handleRequest(loop: Loop, command: Exclude<Command, { kind: "init" }>):
         store.saveShell(command.shell);
         return { kind: "done", requestId: command.requestId };
       });
-    case "send":
-      return send(loop, command);
-    case "abort":
-      loop.replies.get(command.requestId)?.stop.abort();
-      return Promise.resolve();
+    case "insertCard":
+      return write(loop, (session) => {
+        insertCard(session, command, loop.queues.has(command.threadId));
+        return { kind: "done", requestId: command.requestId };
+      });
     default: {
       const unhandled: never = command;
       return unhandled;
     }
   }
+}
+
+// Handles a command that names a request; whatever it throws fails that request alone.
+function handleRequest(loop: Loop, command: Exclude<Command, { kind: "init" }>): Promise<void> {
+  if (command.kind === "open") return open(loop, command);
+  if (command.kind === "send") return send(loop, command);
+  if (command.kind === "abort") {
+    loop.replies.get(command.requestId)?.stop.abort();
+    return Promise.resolve();
+  }
+  return writeRequest(loop, command);
 }
 
 async function handle(loop: Loop, command: Command): Promise<void> {

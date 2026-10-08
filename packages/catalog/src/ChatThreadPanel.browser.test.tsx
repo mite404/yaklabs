@@ -72,6 +72,33 @@ function field(): HTMLTextAreaElement {
   return found;
 }
 
+it("receives a saved external turn without sending or clearing the compose draft", async () => {
+  const ref = createRef<ThreadHandle>();
+  const { agent, replies } = controlledAgent();
+  flushSync(() => {
+    root.render(
+      <ChatThreadPanel ref={ref} thread={{ title: "MCP", messages: [] }} agent={agent} />,
+    );
+  });
+  await userEvent.type(field(), "Keep my unsent draft");
+  const turn = {
+    id: "mcp:0b6f4f1e-3c1a-4d2e-9f3b-6a1c2d3e4f50",
+    role: "agent" as const,
+    text: "Production budget",
+    time: "10:03",
+    external: { insertionId: "0b6f4f1e-3c1a-4d2e-9f3b-6a1c2d3e4f50" },
+  };
+  flushSync(() => {
+    ref.current?.receive(turn);
+    ref.current?.receive(turn);
+  });
+  expect(host.querySelectorAll('[aria-label="External agent via MCP"]')).toHaveLength(1);
+  expect(host.textContent).toContain("Production budget");
+  expect(field().value).toBe("Keep my unsent draft");
+  expect(replies).toHaveLength(0);
+  expect(host.querySelectorAll(".turn-user")).toHaveLength(0);
+});
+
 it("shows a quiet Thinking indicator while a reply is pending, and clears it on the first content", async () => {
   const { agent, replies } = controlledAgent();
   flushSync(() => {

@@ -79,6 +79,7 @@ function holding(shell: ShellState): { runtime: Runtime; saves: ShellState[] } {
     restore: unused,
     share: unused,
     unshare: unused,
+    insertCard: unused,
     agent: unused,
     dispose: () => {},
   };

@@ -1,4 +1,5 @@
 import type { AgentEvent, SharedFile } from "@yaklabs/catalog/agent";
+import { selectionSchema } from "@yaklabs/catalog/catalog";
 import type { CardAttachment } from "@yaklabs/catalog/interactive";
 import { blockSchema } from "@yaklabs/catalog/prose";
 import { endedSchema, failureSchema, replyChunkSchema, workSchema } from "@yaklabs/catalog/reply";
@@ -18,6 +19,8 @@ import { markNoteSchema, threadMarkSchema } from "./marks";
 // field the catalog adds or retypes fails to compile here until the schema learns it.
 const idSchema = z.string().min(1);
 const nameSchema = z.string().min(1);
+// The id an external agent mints once for one card and sends again on every retry (MCP).
+const insertionIdSchema = z.uuid();
 
 const cardAttachmentSchema: z.ZodType<CardAttachment> = z.object({
   turnId: z.string(),
@@ -74,6 +77,7 @@ export const threadMessageSchema = z.discriminatedUnion("role", [
     ended: endedSchema.optional(),
     failure: failureSchema.optional(),
     asks: z.unknown().optional(),
+    external: z.object({ insertionId: insertionIdSchema }).optional(),
   }),
 ]);
 
@@ -181,6 +185,15 @@ export const commandSchema = z.discriminatedUnion("kind", [
     accessToken: z.string().min(1).optional(),
   }),
   z.object({ kind: z.literal("abort"), requestId: idSchema }),
+  // A catalog card an external agent hands in over MCP, saved as one agent turn; a retry under
+  // the same insertion id with the same card is done already.
+  z.object({
+    kind: z.literal("insertCard"),
+    requestId: idSchema,
+    threadId: threadIdSchema,
+    insertionId: insertionIdSchema,
+    card: selectionSchema,
+  }),
 ]);
 
 /**

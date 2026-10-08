@@ -287,6 +287,20 @@ function EndedNote({
   );
 }
 
+// The MCP path is recorded by the runtime, not inferred from the reply's words.
+function attributionOf(message: AgentMessage) {
+  return message.external === undefined
+    ? { label: "Agent", stamp: undefined }
+    : {
+        label: "External agent via MCP",
+        stamp: (
+          <span className="turn-stamp" aria-hidden="true">
+            External · via MCP
+          </span>
+        ),
+      };
+}
+
 /**
  * The agent's turn: its reasoning folded at the top when it arrives first, below existing
  * content otherwise (ADR-166); one
@@ -295,7 +309,8 @@ function EndedNote({
  * prose with any cards between its paragraphs (ADR-140); how it ended when it stopped short. A
  * reply with no work narrates under its words instead, and one with no words or reasoning yet is
  * its own placeholder. While a reply is still streaming in, the turn is marked busy for
- * assistive technology.
+ * assistive technology. A turn an external agent inserted over MCP says so on a quiet line at
+ * its top, and in its name.
  * @param cardsCarry Whether a card's header carries it out onto the canvas (ADR-089).
  * @param shareable Whether a card offers its own share link; not on a page already shared
  * (ADR-064, ADR-131).
@@ -335,14 +350,17 @@ export function AgentTurn({
   // The reasoning is the reply's live line until work or words take over.
   const thinkingLive = message.streaming === true && !reading;
   const reasoning = <Thinking thinking={message.thinking} live={thinkingLive} />;
+  const attribution = attributionOf(message);
   return (
     <article
       ref={ref}
       className="turn turn-agent"
       data-turn-id={message.id}
-      aria-label="Agent"
+      aria-label={attribution.label}
       aria-busy={message.streaming === true || undefined}
     >
+      {/* The turn's own name says it to a screen reader; the line is for the eye. */}
+      {attribution.stamp}
       {placement === "above" && reasoning}
       {worked && (
         <WorkDetails work={message.work} label={workLabel(message)} cardsCarry={cardsCarry} />

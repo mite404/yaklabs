@@ -60,6 +60,11 @@ export type ThreadMessage =
       failure?: Failure;
       /** The question the reply ended on (ADR-039), kept in the record; the dock reads it. */
       asks?: unknown;
+      /**
+       * Set when an external agent inserted this turn's card over MCP, never by that agent:
+       * the runtime mints it from the insertion's id, and the thread labels the turn with it.
+       */
+      external?: { insertionId: string };
     };
 
 /**
@@ -69,6 +74,8 @@ export type ThreadMessage =
  */
 export type ThreadHandle = {
   setDraft(text: string): void;
+  /** Shows an already-persisted turn without sending a request or replacing the draft. */
+  receive(message: ThreadMessage): void;
   /** Sends the compose box's draft, as Enter would; nothing happens on an empty draft. */
   send(): void;
   /** Answers the docked question with a tile's label or typed text. */

@@ -9,6 +9,10 @@ export type Overlay = Runtime & {
 // Two states and what the page sees of them, kept so an unchanged pair gives the same object.
 type Merged = { worker: RuntimeState; overlay: RuntimeState; shown: RuntimeState };
 
+// Why the composed runtime refuses an external card for a Demo thread: the overlay plays a
+// script and keeps nothing, so a card inserted there would vanish on reload.
+const DEMO_REFUSAL = "The scripted Demo takes no external cards";
+
 // Newest first, as the workspace lists notifications.
 const newestFirst = (a: { at: string }, b: { at: string }) => b.at.localeCompare(a.at);
 
@@ -70,7 +74,8 @@ function mergedState(worker: RuntimeState, overlay: RuntimeState): RuntimeState 
  * worker's, with the overlay's projects, threads, lanes, notifications and shares added once the
  * worker is ready; every verb goes to the side that owns the id it names, a new project and the
  * shell document to the worker, and a thread's agent comes from the overlay when it owns the
- * thread. No record has two writers: each id lives on exactly one side, and the shell document
+ * thread. An external agent's card goes to the worker alone; one aimed at an overlay thread is
+ * refused, never inserted into the script. No record has two writers: each id lives on exactly one side, and the shell document
  * is written only through the worker.
  */
 export function composeRuntime(worker: Runtime, overlay: Overlay): Runtime {
@@ -102,6 +107,10 @@ export function composeRuntime(worker: Runtime, overlay: Overlay): Runtime {
     restore: (id) => sideOf(id).restore(id),
     share: (share) => sideOf(share.threadId).share(share),
     unshare: (shareId) => sideOf(shareId).unshare(shareId),
+    insertCard: (id, insertionId, card) =>
+      overlay.owns(id)
+        ? Promise.reject(new Error(DEMO_REFUSAL))
+        : worker.insertCard(id, insertionId, card),
     agent: (id, session) => sideOf(id).agent(id, session),
     dispose: () => {
       overlay.dispose();

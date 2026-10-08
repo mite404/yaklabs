@@ -3,7 +3,7 @@ import { createLabAgent } from "@yaklabs/catalog/labAgent";
 import { onTestFinished } from "vitest";
 import { createAgentLoop, type LoopHost } from "./agentLoop";
 import { fixedMint, type Mint } from "./mint";
-import type { Command, Notice } from "./protocol";
+import type { Command, Notice, Source } from "./protocol";
 import { openSqliteStore } from "./sqliteStore";
 import { seedThread, type Store } from "./store";
 import { netProfitChoice } from "./testing";
@@ -60,12 +60,13 @@ export function movableMint(start: Date = asked): { mint: Mint; clock: { at: Dat
 
 /**
  * A loop on a fresh memory store holding the profit thread, with every notice it
- * posts collected in order; the store closes when the test ends. Its settling timer never runs
- * on its own: `timer` holds the delay last asked for, and firing it runs the pass.
+ * posts collected in order, opened as `source` says; the store closes when the test ends. Its
+ * settling timer never runs on its own: `timer` holds the delay last asked for, and firing it runs the pass.
  */
 export async function startLoop(
   createAgent: LoopHost["createAgent"] = quickLab,
   mint: Mint = fixedMint(asked),
+  source: Source = { kind: "device", storage: "memory" },
 ) {
   const notices: Notice[] = [];
   const store = await openSqliteStore({ kind: "memory" });
@@ -84,8 +85,7 @@ export async function startLoop(
     post: (notice) => {
       notices.push(notice);
     },
-    open: () =>
-      Promise.resolve({ store, source: { kind: "device", storage: "memory" }, mint, faults: {} }),
+    open: () => Promise.resolve({ store, source, mint, faults: {} }),
     createAgent,
     schedule: (delay, callback) => {
       timer.delay = delay;

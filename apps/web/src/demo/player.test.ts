@@ -74,6 +74,7 @@ function fakePanel(world: World, main: Played["main"]): { handle: ThreadHandle; 
     setDraft: (text) => {
       draft = text;
     },
+    receive: () => {},
     send: () => {
       calls.push(`send ${draft}`);
       tell({ kind: "message", text: draft, attachments: [] });
