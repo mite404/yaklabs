@@ -3998,3 +3998,53 @@ Storybook remains the place for detailed variants, controls, and automated check
 the components directly rather than shipping Storybook's editor or its test utilities to visitors.
 The gallery's Storybook check walks every entry and tries the disclosure, menu, and modal. Its
 page scrolls inside the app's workspace so the last entry remains reachable on short screens.
+
+### Give a guest editor access to one scene
+
+The local MCP integration lets Claude Desktop discover the existing card catalog and send a card
+into a connected Bonsai thread. The catalog still owns the costume and blocking: the external
+agent supplies data, not arbitrary HTML or a new renderer. Bonsai's compose box stays untouched.
+The thread marks the saved turn "External · via MCP", and the attribution survives reload.
+
+The footage vault is still SQLite inside the browser, not the gateway. A local Node process
+therefore hands a validated card to the browser through a short-lived connection. The browser
+saves through the existing worker before acknowledging success. A successful MCP response means
+the save completed, not merely that somebody put JSON in a queue.
+
+The existing public runtime command is the handoff:
+
+```typescript
+// Send the validated card to the worker; resolve only after its transcript write.
+await runtime.insertCard(id, insertionId, card);
+// Read back the saved turn before updating the mounted thread panel.
+const messageId = `mcp:${insertionId}`;
+```
+
+```mermaid
+sequenceDiagram
+    participant Claude as Claude Desktop
+    participant MCP as Local MCP server
+    participant App as Bonsai browser
+    participant Vault as SQLite worker
+    Claude->>MCP: insert_card with connection code
+    App->>MCP: Poll for card
+    MCP-->>App: Validated catalog selection
+    App->>Vault: insertCard with stable insertion ID
+    Vault-->>App: Save complete
+    App->>MCP: Acknowledge saved message
+    MCP-->>Claude: Thread and message IDs
+```
+
+The guest gets a pass to one scene, not the whole footage library. Browser and agent credentials
+are separate, the server listens on loopback, and the app explicitly grants access to one thread.
+It exposes no transcript-reading tool. This revisits ADR-137's MCP cut for a local interview
+demo only; production sign-in is unchanged.
+
+A retry uses the same insertion ID. The worker finds the saved turn and refuses changed data
+under that ID rather than quietly treating a different card as the original. A timeout after
+delivery is honestly "unknown", because disconnecting cannot undo a save already in progress.
+
+The automated rehearsal uses a real stdio MCP client and real browser. It checks the empty
+compose, absence of a user message, saved ID, retry behavior, and reload. Claude Desktop itself
+still needs a rehearsal on Ethan's computer. An empty compose and a label alone do not prove
+which agent acted: show the external tool call and the matching saved result together.
