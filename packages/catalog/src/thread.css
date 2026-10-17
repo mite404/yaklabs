@@ -81,11 +81,11 @@
   padding: 4px var(--thread-gutter) calc(4px + var(--shadow-room));
   pointer-events: none;
 }
-/* At rest and under the pointer the bar is a translucent wash of the paper (--scrim, the paper at
-   72%) so the turn under it still reads through; only its glyph is opaque. Open, with search or
-   the list of requests up, it fills solid over 150ms on the strong ease-out, as a lane's menu
-   fades in (Ethan). */
+/* Two coats of the existing 72% paper scrim give the small controls a denser backing
+   (92.16% combined), while their glyphs stay opaque in every state (Ethan). */
 .reading-tools {
+  position: relative;
+  isolation: isolate;
   display: flex;
   align-items: center;
   min-inline-size: 0; /* a fieldset's default is its content's width */
@@ -96,12 +96,22 @@
   border-radius: 8px;
   box-shadow: var(--float-shadow);
   pointer-events: auto;
-  transition:
-    background-color 150ms cubic-bezier(0.23, 1, 0.32, 1),
-    opacity 300ms cubic-bezier(0.23, 1, 0.32, 1);
+  transition: opacity 300ms cubic-bezier(0.23, 1, 0.32, 1);
 }
-.reading-tools:is([data-open], :has([aria-expanded="true"])) {
-  background: var(--paper);
+/* The blurred sheet carries the second coat. Filtering the fieldset itself would make it
+   the containing block of the menu's fixed positioning, not the viewport. */
+.reading-tools::before,
+.reading-tools .menu {
+  background: var(--scrim);
+  backdrop-filter: blur(8px);
+}
+.reading-tools::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  pointer-events: none;
 }
 /* The bar follows the pointer (Ethan): it is clear until the pointer is over the thread, fades
    up over 300ms on the strong ease-out as the pointer leaves the compose box for the turns, and
@@ -118,11 +128,18 @@
     opacity: 1;
   }
 }
-/* The list of requests is the same wash, blurred behind so its 13px rows stay legible over the
-   turns it opens above; the bar's own solid fill anchors it. */
+/* Keep the reference popover's single scrim and blur unchanged. Longer labels give way to
+   their time on narrow screens. */
 .reading-tools .menu {
-  background: var(--scrim);
-  backdrop-filter: blur(8px);
+  max-width: calc(100vw - 2 * var(--thread-gutter) - var(--space));
+}
+.reading-tools .menu-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.reading-tools .menu-detail {
+  flex-shrink: 0;
 }
 .reading-search {
   display: flex;
@@ -351,6 +368,19 @@
   flex-direction: column;
   gap: 20px;
 }
+/* Feather both ends of the fade, leaving its upper edge lighter than a linear veil. It fits
+   the resting padding so a last turn stays fully legible; empty welcome art keeps its edge. */
+.thread-scroll:not([data-empty]) {
+  --compose-fade: calc(var(--rest-gap) - var(--compose-inset));
+  mask-image: linear-gradient(
+    to bottom,
+    #000 calc(100% - var(--compose-fade)),
+    rgb(0 0 0 / 85%) calc(100% - var(--compose-fade) * 0.75),
+    rgb(0 0 0 / 50%) calc(100% - var(--compose-fade) * 0.5),
+    rgb(0 0 0 / 15%) calc(100% - var(--compose-fade) * 0.25),
+    transparent
+  );
+}
 /* The turns take the focus so a keyboard can scroll them; the ring sits inside the edge the
    panel clips, as an awaiting tile's does. */
 .thread-scroll:focus-visible {
@@ -563,8 +593,10 @@
 /* The one disclosure above a reply (ADR-139, amended; WorkDetails.tsx): its header pulled back
    onto the text column, so its label starts where the prose does and its hover fill reaches 8px
    into the gutter, as a card's rows reach into its padding. Live, the label sits beside the
-   working glyph, as the sidebar's rows do. The nested Technical details match. */
-.work-details .disclosure-header {
+   working glyph, as the sidebar's rows do. The nested Technical details match, and so does the
+   reasoning's fold above it (ADR-166). */
+.work-details .disclosure-header,
+.turn-thinking .disclosure-header {
   width: calc(100% + 16px);
   margin: 0 -8px;
   font-size: 13px;
@@ -579,12 +611,29 @@
 /* The fold's chevron leads the label here, as a numbered list's marker would: at the header's
    far right it sat under the reading tools, which float over the newest turn's bottom-right
    corner (ADR-143), and a control hidden under a control is worse than a word covered. */
-.work-details .disclosure-header > .disclosure-chevron {
+.work-details .disclosure-header > .disclosure-chevron,
+.turn-thinking .disclosure-header > .disclosure-chevron {
   order: -1;
   margin: 0;
 }
-.work-details .disclosure-body {
+.work-details .disclosure-body,
+.turn-thinking .disclosure-body {
   padding-top: 12px;
+}
+/* The model's reasoning (ADR-166): its fold in the wait's muted ink (.turn-pending), since it is
+   how the reply got there, never the reply; folded open, the reasoning as it came, set as the
+   narration under a streaming reply (pillar 29), at the prose's measure. */
+.turn-thinking .disclosure-header {
+  color: var(--soft-ink);
+}
+.turn-thinking-text {
+  max-width: 510px; /* the prose's measure */
+  margin: 0;
+  color: var(--soft-ink);
+  font-size: 13px;
+  line-height: 20px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
 }
 .work-list {
   display: grid;
@@ -727,8 +776,6 @@
   position: relative;
 }
 
-/* Fixed-height compose box: typing never resizes or moves it (ADR-003).
-   Resets the lab's global textarea rule, which is sized for the JSON editor. */
 /* No divider: the compose box floats directly under the conversation. It stands over the
    reading dock, so the shadow the bar above it casts passes under the box, the two at one
    height, rather than across it. */
@@ -766,7 +813,9 @@
   display: block;
   width: 100%;
   height: 44px;
-  min-height: 0;
+  min-height: 44px;
+  max-height: 6lh;
+  overflow-y: auto;
   margin: 0;
   padding: 0 4px 0 0;
   border: none;

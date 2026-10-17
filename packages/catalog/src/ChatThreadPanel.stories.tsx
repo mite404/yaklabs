@@ -480,6 +480,63 @@ export const ReplyThinking: Story = {
   },
 };
 
+// Approach snapshots arrive before answer prose, as in the Live Playground.
+const thinkingStream: ReplyChunk[] = [
+  { kind: "thinking", text: "They want next week's cases." },
+  {
+    kind: "thinking",
+    text: "They want next week's cases. I plan to account for the rising trend.",
+  },
+  {
+    kind: "thinking",
+    text: "They want next week's cases. I plan to use the rising trend, with a caveat that it may not hold.",
+  },
+  "Next week should land a little above this one, ",
+  { kind: "text", text: "if the rise holds." },
+];
+
+/** Approach summaries (ADR-167) stay folded and settle to plain "Thinking" once words arrive. */
+export const ReplyStreamsThinking: Story = {
+  args: { thread: threads.trend, agent: scriptedAgent(thinkingStream, 600) },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.type(canvas.getByRole("textbox", { name: "Message" }), "And next week?{Enter}");
+    const toggle = await canvas.findByRole("button", { name: "Thinking" });
+    await expect(toggle).toHaveAttribute("aria-expanded", "false");
+    await userEvent.click(toggle);
+    await expect(await canvas.findByText(/They want next week's cases\./)).toBeVisible();
+  },
+};
+
+/** Summaries from a later model round stay below the answer already being read. */
+export const ReplyThinksAfterWords: Story = {
+  args: {
+    thread: threads.trend,
+    agent: scriptedAgent(
+      [
+        "Tuesday leads with seven commits.",
+        { kind: "thinking", text: "Check the supplied totals." },
+        {
+          kind: "thinking",
+          text: "Check the supplied totals. I plan to compare Tuesday's seven with Monday's three and Wednesday's two.",
+        },
+      ],
+      600,
+    ),
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.type(canvas.getByRole("textbox", { name: "Message" }), "Which day?{Enter}");
+    const answer = await canvas.findByText("Tuesday leads with seven commits.");
+    const toggle = await canvas.findByRole("button", { name: "Thinking" });
+    await expect(
+      answer.compareDocumentPosition(toggle) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).not.toBe(0);
+    await userEvent.click(toggle);
+    await expect(await canvas.findByText(/Check the supplied totals\./)).toBeVisible();
+  },
+};
+
 // Highlights the first agent paragraph and rests the pointer on it until the thread shows the
 // open hand.
 async function readyHighlight(canvasElement: HTMLElement) {

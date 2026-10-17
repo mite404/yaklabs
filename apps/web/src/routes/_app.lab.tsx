@@ -1,12 +1,13 @@
-import { App as Workbench } from "@yaklabs/catalog";
+import { App as ComponentGallery } from "@yaklabs/catalog";
 import { usePaths } from "../runtime";
 
+/** Browser title for the component lab. */
 export function meta() {
-  return [{ title: "Catalog lab" }];
+  return [{ title: "Component lab" }];
 }
 
-/** The evaluation workbench: fixtures through the same validation as the thread. */
+/** The catalog's components, grouped like Storybook. */
 export default function LabPage() {
   const { hrefTo } = usePaths();
-  return <Workbench home={hrefTo("/")} />;
+  return <ComponentGallery home={hrefTo("/")} />;
 }

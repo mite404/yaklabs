@@ -107,14 +107,14 @@ function FileGlyph() {
 
 /**
  * The one compose field every chat surface uses (ADR-026): attach on the far left,
- * dictate then send on the right, and a fixed height so typing never moves it (ADR-003).
+ * dictate then send on the right, growing upward to six lines while its bottom stays anchored.
  * The paperclip opens a menu (ADR-063): add images and files (⌘U), or take a screenshot,
  * the shortest path from "look at this" to the agent seeing it.
  * @param onAttachFiles Receives picked files and screenshots; the host shows them as chips.
  * @param onDictate Opens dictation; the host shows the dictation modal (ADR-028).
  * @param disabled Pauses typing, e.g. while dictation is recording.
  * @param attachments Card choices that will be sent with the next message (ADR-030); they
- * take the hint's place in the bar, so the box never changes height (ADR-003).
+ * take the hint's place in the bar without adding height.
  * @param busy A reply is streaming: a Stop button joins the bar, between Dictate and Send, and
  * sending stays open, so the user can keep talking while the agent works (ADR-142).
  * @param onStop Stops every reply in flight.
@@ -171,6 +171,25 @@ export function ComposeBox({
     // oxlint-disable-next-line jsx-a11y/no-noninteractive-element-interactions -- catches ⌘U bubbling from the box's own controls; jsx-a11y's docs say to disable for bubbled events
     <form className="compose-box" onSubmit={submit} onKeyDown={shortcut}>
       <textarea
+        ref={(field) => {
+          // oxlint-disable-next-line unicorn/no-useless-undefined -- consistent-return requires a value when the other path returns React's ref cleanup
+          if (!field) return undefined;
+          const resize = () => {
+            field.style.height = "0px";
+            field.style.height = `${field.scrollHeight}px`;
+          };
+          resize();
+          let frame = 0;
+          const observer = new ResizeObserver(() => {
+            cancelAnimationFrame(frame);
+            frame = requestAnimationFrame(resize);
+          });
+          observer.observe(field);
+          return () => {
+            observer.disconnect();
+            cancelAnimationFrame(frame);
+          };
+        }}
         aria-label="Message"
         placeholder={disabled ? "Recording…" : placeholder}
         disabled={disabled}

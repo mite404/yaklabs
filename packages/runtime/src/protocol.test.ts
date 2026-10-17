@@ -147,6 +147,15 @@ describe("noticeSchema", () => {
     expectTypeOf<z.infer<typeof threadMessageSchema>>().toEqualTypeOf<ThreadMessage>();
   });
 
+  it("keeps a stored reply's thinking, so a reload still shows it", () => {
+    const messages = [
+      { id: "a1", role: "agent", text: "Friday.", time: "9:00", thinking: "The busiest day." },
+    ];
+    expect(noticeSchema.parse({ kind: "opened", requestId: "r1", messages })).toMatchObject({
+      messages,
+    });
+  });
+
   it("rejects a stored turn with an unknown role", () => {
     const messages = [{ id: "s1", role: "system", text: "Hi", time: "9:00" }];
     expect(noticeSchema.safeParse({ kind: "opened", requestId: "r1", messages }).success).toBe(

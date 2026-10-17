@@ -30,8 +30,17 @@ describe("instantOf and stampOf", () => {
     expect(stampOf("9:02", AT)).toBe("9:02");
   });
 
-  it("labels a list with a clock reading whichever form the time was kept in", () => {
-    expect(timeLabel("9:02")).toBe("9:02");
-    expect(timeLabel("2026-09-30T09:07:00.000Z")).toMatch(/\d{1,2}:07/u);
+  it.each([
+    ["0:07", "12:07 AM"],
+    ["9:02", "9:02 AM"],
+    ["12:00", "12:00 PM"],
+    ["13:07", "1:07 PM"],
+    ["23:59", "11:59 PM"],
+  ])("labels stored clock %s as %s", (time, expected) => {
+    expect(timeLabel(time)).toBe(expected);
+  });
+
+  it("labels an instant on the reader's local 12-hour clock", () => {
+    expect(timeLabel(new Date(2026, 8, 30, 13, 7).toISOString())).toBe("1:07 PM");
   });
 });

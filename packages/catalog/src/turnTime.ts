@@ -36,12 +36,21 @@ export function stampOf(time: string, now: number): string {
   return at === undefined ? time : relativeStamp(at, now);
 }
 
-/** A turn's time as a clock reading ("9:02") for a list, whichever form it was kept in. */
+/** A turn's local 12-hour clock reading with AM/PM, whether stored as an instant or H:MM. */
 export function timeLabel(time: string): string {
   const at = instantOf(time);
-  if (at === undefined) return time;
-  // No locale and no zone named: the ambient ones, which are the reader's own. The app is a
-  // static page (ADR-083), so this runs only in the reader's browser, and a turn's stamp
-  // reading on the reader's clock is the point; a zone pinned here would lie to everyone else.
-  return new Date(at).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
+  let date: Date;
+  if (at === undefined) {
+    const clock = /^([01]?\d|2[0-3]):([0-5]\d)$/u.exec(time);
+    if (!clock) return time;
+    date = new Date(2000, 0, 1, Number(clock[1]), Number(clock[2]));
+  } else {
+    date = new Date(at);
+  }
+  // Keep the reader's time zone, but use the English UI's AM/PM clock in every locale.
+  return date.toLocaleTimeString("en-US", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
 }

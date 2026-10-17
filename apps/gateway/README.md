@@ -83,6 +83,86 @@ Token checks accept the issuers WorkOS's hosted API mints: `https://api.workos.c
 environments and `https://api.workos.com/user_management/<clientId>` for ones created since
 mid-2025. A custom auth domain mints its own issuer, which `src/auth.ts` would need to accept.
 
+## Logs
+
+`observability` is on in `wrangler.jsonc`, so Cloudflare keeps an invocation log per request
+(method, URL, response status, timing) beside the Worker's own console records. The new failure
+records reach production after deployment; `wrangler dev` prints console records locally.
+
+- Stored logs: Cloudflare dashboard, Workers & Pages, `yaklabs`, Observability, Events. Filter
+  by `event` to find the gateway's records. Invocations shows the requests themselves.
+- Live logs: `pnpm --filter gateway exec wrangler tail` streams the deployed Worker's requests
+  and records as they happen. The gateway answers its own failures, so they show as records
+  on an `ok` invocation, not under `--status error`.
+
+The gateway logs four records, each a plain object Workers Logs indexes by field:
+
+| Record                                                                  | Level | When                                                             |
+| ----------------------------------------------------------------------- | ----- | ---------------------------------------------------------------- |
+| `{ event: "upstream_failure", status }`                                 | warn  | OpenRouter refuses `/api/messages` or a playground's first round |
+| `{ event: "playground_round_failed", cause: "upstream", status }`       | warn  | a later round is refused, or the upstream fails mid-round        |
+| `{ event: "playground_round_failed", cause: "internal", status: null }` | error | a bug in the playground loop ends the turn early                 |
+| `{ event: "gateway_error" }`                                            | error | any other error a route throws; it answers a bare 500            |
+
+`status` is the upstream's HTTP status, or `null` when there is none (a dropped connection, an
+error event mid-stream). These records contain no error message or stack, headers, token, key,
+body or turn. Cloudflare's invocation log still contains the request path; query-string
+redaction is enabled for logs and traces. Never put credentials or conversation contents in
+URLs. Browser cancellation in the playground loop does not emit a failure record.
+
+### Playground turn summaries
+
+Each valid, authorized playground turn emits one `info` record named `playground_turn` when
+the loop closes, including first-round refusals and observed cancellation:
+
+```json
+{ "event": "playground_turn", "outcome": "answered", "rounds": 2, "elapsedMs": 500 }
+```
+
+`outcome` reuses the streamed terminal reason: `answered`, `asked`, `limit`, or `upstream`.
+An empty answer or broken round is `upstream`, matching what the browser receives. A turn
+cancelled before a terminal decision is `cancelled`; an unexpected exception that escapes the
+loop is `internal`. Cancellation after a terminal decision does not relabel that outcome.
+Malformed or unauthorized requests never start a turn and do not emit a summary.
+
+`rounds` counts attempted tool-loop rounds, including refusals, but not SDK retries or the
+separate thinking-summary requests. `elapsedMs` measures gateway wall time through the terminal
+decision or cancellation. It is neither CPU time nor the time until the browser paints the reply.
+The record contains no conversation content or identifiers. Cloudflare supplies invocation
+context, so no request IDs are threaded through the loop.
+
+Filter Events on the `event` field for `playground_turn`, even on HTTP 200 invocations.
+These are gateway-observed outcomes, not proof of client delivery; a terminated Worker may not
+emit a final record.
+
+### Sampled native traces
+
+`observability.traces` enables Cloudflare's automatic tracing at a 5% invocation sample, while
+the existing log capture remains unchanged. It needs no SDK or extra application spans. Once
+deployed, open Observability, Traces to inspect outbound model requests, KV calls, and Worker
+timing. A sampled invocation can contain several spans; 5% is not a per-round sampling rate.
+At low traffic, seeing no trace after a few requests is expected. Seven-day trace retention
+and sampling make this a diagnostic view, not a complete count of turn outcomes.
+
+Native traces collect more metadata than our allowlisted console records. Cloudflare's
+documented fetch attributes include URLs, selected content and accept headers, status codes,
+and body sizes, not body contents or Authorization headers. `redact_query_string` removes
+query strings from logged and traced request URLs, not paths or explicitly logged text.
+Handler spans also include user-agent and geographic metadata. KV spans can include keys and
+metadata; for our shares, that includes expiration and the revocation hash, but not the raw
+revoke token or sealed thread bytes. Do not put secrets or conversation contents in URLs or
+KV metadata.
+
+Review sampled production attributes before treating the setup as privacy-verified. A local
+dry-run validates the configuration but cannot prove what the managed trace collector stores.
+Disable `observability.traces.enabled` and redeploy to stop trace collection without disabling
+logs. Cloudflare's [tracing docs][cf-traces] and [attribute reference][cf-attrs] describe
+collection,
+retention, and pricing; trace sampling does not sample the summary logs.
+
+[cf-traces]: https://developers.cloudflare.com/workers/observability/traces/
+[cf-attrs]: https://developers.cloudflare.com/workers/observability/traces/spans-and-attributes/
+
 ## Deploy with Workers Builds
 
 Create the Worker from the GitHub repository (Workers & Pages, Create, Import a repository). The

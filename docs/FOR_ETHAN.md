@@ -1869,6 +1869,49 @@ draws); a resize redraws at once. Measuring the bars themselves this time: 207 o
 overran by up to 221px before, none after. Lesson: measure the thing the eye sees, the bars,
 not the frame around them.
 
+### The policy that knew nothing about SQLite
+
+Before the repo went in front of an employer, a security pass read every render path for
+cross-injection and every server route for data that could cross between users. It found the
+render paths honest (a reply's words are text nodes, card payloads pass a closed zod catalog,
+links may only be http, https or mailto) and the gateway holding nothing per user but sealed
+shares - but the site answered with no security headers at all. The fix is a build step,
+`write-headers.mjs`, that hashes every inline script the build prerendered and writes a
+Content-Security-Policy naming each hash into `_headers` (ADR-163). First run against
+`wrangler dev`, serving the way production serves: the splash opened, the console was clean,
+and the sidebar read "Your threads could not be opened." The runtime's worker compiles SQLite
+from WebAssembly, and to a policy, `WebAssembly.instantiate()` is an eval: refused without
+`'wasm-unsafe-eval'`. Typecheck green, unit tests green, lint green, and the site could not
+open a thread; only driving the real serving path saw it. One keyword admitted exactly the one
+compiler the runtime needs, and the demo and the public share page both render under the
+policy. Lesson: a header that serves is not a header that runs - open the build the way
+production serves it before you believe it.
+
+The next browser check found a quieter violation. Zod tried `new Function` to see whether its
+fast compiler was available, caught the refusal, and validated without that compiler. The
+browser still recorded the forbidden attempt. Like a rehearsal that trips the alarm even
+though the crew carries on, catching the error does not erase the security event. The web
+build now resolves `zod` through `src/zod.ts`, which sets `jitless` before schemas are built
+in either the page or the worker. An entry-only setting failed because imported schemas ran
+first. The policy still refuses plain eval, and validation still accepts valid objects and
+rejects invalid ones. A browser regression checks the actual served hashes and headers,
+sends a lab message, and reloads its saved reply. Separately, importing the header helpers in
+an empty directory neither scans missing build files nor writes anything; only the build's
+direct invocation generates `_headers`.
+
+Review found two contracts that needed to agree. React Router accepts absolute build paths,
+but joining that path onto the current directory made the header generator look in the wrong
+place. It now resolves the path the same way React Router does. A production build also
+refuses an external gateway setting, because the site's policy and one-Worker deployment
+require the API on the site's own origin. Local development can still use an external gateway.
+The security check now listens inside the worker before its original module starts, and keeps
+all events outside the page so reload cannot erase evidence. Its fixture deliberately tries
+the forbidden compiler in both places and checks the events survive a reload. The observer is
+a first dependency, not a replacement module: Demo's child modules can still import the
+worker's original exports. The fixture and real Demo check both exercise that link. Like
+keeping the alarm's recording outside the theater, this tests the alarm rather than trusting
+a quiet screen after the scene has changed.
+
 ## 5. Director's Commentary
 
 ### The agent only states intent; the design system does the rest
@@ -3885,3 +3928,137 @@ snoozed, so the badge stays quiet. The film version: the clapperboard is written
 team at the moment of the take, on the same slate, so a take never exists without its label.
 Senior-engineer takeaway: when one action must leave a record, make the record part of the
 action's write, not a second call that can succeed or fail on its own.
+
+### Show the rehearsal without confusing it with the performance
+
+The Live Playground now keeps the model's reasoning in a folded Thinking disclosure. Think of
+it as rehearsal footage: useful for seeing how the answer develops, but not part of the final
+cut. Gateway `thinking` events become reply chunks, then `AgentMessage.thinking`. Answer prose
+and work counts stay separate, and the saved reasoning never goes back into the model's request.
+
+On October 3, three real OpenRouter runs delivered the first thinking delta in 0.96, 0.43, and
+0.45 seconds. All met the 10-second check. Charts arrived in 9.09, 3.43, and 16.30 seconds, so
+early feedback does not mean an early answer. These measurements start at the in-process gateway
+request, not at a signed-in browser's Send click. They are samples, not a latency guarantee.
+
+Two tests guard against convincing but broken streaming. The runtime test leaves the response
+open and requires each thinking delta before the answer ends, including a line split across
+network chunks. The browser test interleaves two replies and checks that each disclosure keeps
+only its own reasoning, even when folded. Removing thinking delivery or replacing accumulated
+reasoning with the newest delta makes those tests fail. A finished screenshot cannot catch
+either mistake: it shows the final cut, not whether the rehearsal arrived live.
+
+The merge review caught a timing assumption: reasoning normally arrives before the answer,
+but another model round can start thinking after words or a card are already on screen. Always
+inserting its toggle at the top moved the reader's content. The turn now chooses the fold's
+position when reasoning first arrives and holds that choice: above an empty reply, below content
+already being read. A loaded turn still shows its saved reasoning above the answer from the
+first paint. Four browser regressions cover saved turns and late reasoning after words, work,
+or a card. The late cases measure the content's position before and after opening the fold and
+streaming another delta; checking only the toggle's existence would miss the jump.
+
+Three fresh real-model runs returned first thinking at 0.62, 0.48, and 0.59 seconds, while charts
+took 19.95, 51.12, and 15.88 seconds. All rounds returned HTTP 200 and all turns completed. Like
+a rehearsal feed starting promptly while the final edit takes longer, early feedback and a fast
+answer are separate promises. This fix delivers the former; it does not guarantee the latter.
+
+### Give the audience an editor's note, not the rehearsal transcript
+
+Thinking now shows a short explanation of the current approach. The gateway sends recent private
+deliberation to a separate non-thinking request using the same Kimi model. Think of that request
+as a continuity editor. It describes the plan without declaring that the scene was successfully
+shot. Cards, outcomes, and limitations still carry the evidence of execution.
+
+The first live experiment exposed a budget mistake. Eight summary requests all went to the first
+round's repeated debate. Later steps had none left. The scheduler now reserves two requests per
+round and holds longer windows for follow-ups. Each new summary replaces the previous one,
+bounded to 70 words and 480 characters. This is Model the Domain applied to the display. The
+thing we want is one current explanation, not a transcript with an ever-growing tail.
+
+In the revised browser sample, animated feedback appeared at 29 milliseconds, raw reasoning at
+1.12 seconds, and the summary at 3.18 seconds. Seven completed summaries cost $0.00245. The
+cards kept W2-W4 unknown, left Escalations empty, and replaced Hours in place. Zendesk remained
+unavailable. That run still reached the tool loop's eight-round limit at 152.92 seconds. Making
+the plan legible did not make execution fast or guarantee completion. An earlier sample even
+reported 5357 thinking tokens despite asking for 1024, so we must call that a requested budget,
+not a proven cap. ADR-167 records the mechanism, limits, and unchanged execution contract.
+
+The review follow-up tested the emergency exits, not just the happy path. Four gateway regressions
+stall the provider before headers or halfway through a body, let a tool round finish, cancel a
+reader, and wait for a real eight-second deadline. Removing the aborts and deadline made those
+tests fail. Restoring them made the tests pass. Existing production behavior was correct; the
+missing piece was a fire drill that would catch someone accidentally removing the exits later.
+
+There is also a difference between locking the edit to 70 words and guaranteeing what every word
+means. The first is a ruler. The second is a judgment. A model can be told to describe a plan and
+still invent a detail. The adversarial evaluation feeds this exact summarizer tricky rehearsal
+notes and saves what it says for inspection. It caught an invented chart-to-table relationship,
+so the instruction now explicitly says to omit ambiguous identities. This is evidence-driven
+guidance, not a promise that a model can never mislead. Fixed templates could provide the stronger
+promise by taking away freedom from Thinking alone, without limiting the main answer.
+
+The full suite also caught a flaw in the fire drill itself. A copied `Request` signal stopped
+reflecting cancellation after its discarded request was garbage-collected. A tiny standalone
+experiment reproduced the actual transport signal becoming aborted while the copy stayed false.
+The fixture now watches the transport's own signal, like the real fetch, instead of depending on
+a throwaway request staying alive. Fix the measuring instrument before blaming the product.
+
+### The take report is not the delivery receipt
+
+An HTTP 200 says the gateway started a response, not that Kay finished answering. A model can
+lose credit in its next round while the existing stream still has a 200 status. The playground
+now keeps a take report: one `playground_turn` log with the terminal outcome, attempted round
+count, and elapsed gateway time. It uses the same reason the browser receives rather than
+trying to infer success from the HTTP status.
+
+The report records its outcome and time before yielding the terminal event. A browser that
+closes just after receiving that event must not turn an answered take into a cancelled one.
+The generator's final cleanup emits the record once, including first-round refusals and
+observed cancellation. Thinking-summary requests and SDK retries are not extra tool rounds.
+No dialogue, credentials, or raw errors go into this report.
+
+The tests run real gateway routes with a scripted provider and an independently controlled
+clock. They distinguish a two-round answer from a later refusal, and cancel both before the
+first response and during a later request. Another test advances the clock after the terminal
+event and then cancels; the recorded answer and elapsed time must stay unchanged. These are
+gateway-observed outcomes, not proof that the audience received every byte. If the Worker is
+terminated, its final report may never be written.
+
+Cloudflare's native traces add the timing timeline without a new SDK. We sample 5% of Worker
+invocations, leaving log capture unchanged, and remove query strings from logged and traced
+URLs. The take report counts outcomes; the sampled timeline explains where selected requests
+spent time. Neither is a browser profiler or a CPU flame graph.
+
+Privacy is a collection contract, not a comforting label. Native traces can still hold paths,
+selected headers, geographic metadata, and KV keys and metadata. Our shares store expiration
+and a revocation hash as metadata, never the raw revoke token or readable conversation. A
+dry-run validates the configuration; inspecting actual production traces after deployment is
+the remaining check on the managed collector. No production deployment was performed here.
+
+### Lab becomes the component shelf
+
+The Lab link's pill says "Component Examples". The page opens the same five departments as
+Storybook: Foundations, Catalog, Motion, Thread, and Share. Its eleven entries render the real
+catalog components with synthetic examples; Lab omits Agent Working. Reading Tools starts with
+the visible bookmark alone instead of another chat panel.
+The old question evaluator, JSON editor, and session-only gap backlog are gone. Think of this as
+the prop shelf, not another screening of the demo: pick a component and try it in isolation.
+
+Storybook remains the place for detailed variants, controls, and automated checks. Lab imports
+the components directly rather than shipping Storybook's editor or its test utilities to visitors.
+The gallery's Storybook check walks every entry and tries the disclosure, menu, and modal. Its
+page scrolls inside the app's workspace so the last entry remains reachable on short screens.
+
+### Give the draft room without moving Send
+
+The composer now grows upward from two lines to six as you type, paste, or dictate. Think of a
+subtitle panel revealing more of the script while its controls stay on the same desk. Four extra
+lines at the existing 21.75px line height add about 87px. Longer drafts scroll inside the field,
+so a pasted document cannot swallow the conversation. Deleting or sending shrinks it again.
+
+`ComposeBox` measures the browser's actual wrapped text rather than counting characters. The same
+sentence needs more room in a narrow canvas lane than in a wide thread. A `ResizeObserver`
+remeasures when the field's width changes; CSS sets the minimum and six-line ceiling. No separate
+expanded state or setting has to stay in sync with the draft. The old fixed-height decision in
+ADR-003 now protects the bottom edge instead. Browser tests type, copy and paste, send, and change
+width to check the behavior against real layout rather than mocked measurements.

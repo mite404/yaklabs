@@ -47,7 +47,9 @@ async function pillOn(page, place, { focus = false } = {}) {
     const box = await target.boundingBox();
     await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2, { steps: 2 });
   }
-  const pill = page.locator('[data-slot="tooltip-content"]').filter({ hasText: place.name });
+  const pill = page.locator('[data-slot="tooltip-content"]').filter({
+    hasText: place.name === "Lab" ? "Component Examples" : place.name,
+  });
   await pill.waitFor({ timeout: 2000 });
   await page.waitForTimeout(200);
   const look = await pill.evaluate(readPill);
@@ -69,7 +71,8 @@ const opensElsewhere = (external, pill) =>
 
 // Whether a pill says what its place is, in the ink pill's look, legibly, clear of the rail.
 function pillReads({ name, outOfScope, external }, pill) {
-  const words = outOfScope === true ? `${name} · ${OUT_OF_SCOPE}` : name;
+  const label = name === "Lab" ? "Component Examples" : name;
+  const words = outOfScope === true ? `${label} · ${OUT_OF_SCOPE}` : label;
   return (
     pill.words === words &&
     pill.onText >= 7 &&

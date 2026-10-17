@@ -1,7 +1,7 @@
 import type { ThreadMessage } from "./thread";
 
 // How much of a request its bookmark shows: enough to tell requests apart at a glance.
-const BOOKMARK_CHARS = 15;
+const BOOKMARK_CHARS = 48;
 
 /** One request the user sent, as its bookmark shows it. */
 export type Request = { id: string; label: string; text: string; time: string };

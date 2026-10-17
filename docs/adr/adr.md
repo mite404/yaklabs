@@ -40,10 +40,12 @@ before the interview.
 
 ## ADR-003 - The user's input never moves
 
-2026-09-24 - Accepted.
-The compose field keeps its size and position while typing, dictating, or streaming, and streamed
-output never pushes the input down.
-People proofread as they type, so layout shifts break their place.
+2026-09-24 - Accepted; amended 2026-10-07 for automatic compose expansion.
+The compose field's bottom stays anchored, and streamed output never pushes the input down.
+Typing, pasting, or dictating a longer draft grows the field upward from its existing two-line
+height to six visible lines. Beyond six lines, the field scrolls internally. Removing text or
+sending returns the space to the conversation. No expansion control or setting is needed.
+People proofread as they type, so longer drafts should be readable without moving the send controls.
 
 ## ADR-004 - Recognition over recall for skills
 
@@ -252,8 +254,8 @@ top while scrolling a long answer.
 2026-09-25 - Accepted.
 Every chat compose field is the shared `ComposeBox`: a paperclip attach button on the far left, and
 a microphone for dictation directly left of the send button.
-It floats directly under the conversation with no divider line above it, and keeps a fixed height so
-typing never moves it (ADR-003).
+It floats directly under the conversation with no divider line above it. Its bottom stays anchored
+while longer drafts grow upward to six lines (ADR-003, amended).
 
 ## ADR-027 - Recap after ten idle minutes on an active thread
 
@@ -1992,6 +1994,14 @@ Amended 2026-09-30 (Ethan: "the storytool needs to have the same speed slide out
 drawer. right now its too instant"). Search unfolds from the bookmark over 220ms on the panel
 ease, the projects drawer's own slide (pillar 26), rather than 150ms on the strong ease-out.
 
+Amended 2026-10-04 (Ethan): request excerpts need more context before the ellipsis, and the
+bookmark and search buttons must keep the semi-opaque surface even when opened. This supersedes
+the 15-character excerpt and solid-open fill above. Excerpts now keep up to 48 code points, a
+derived tuning choice rather than a number specified by Ethan, with earlier visual truncation
+on narrow screens so timestamps remain visible. The bar keeps `--scrim` and the request menu's
+8px backdrop blur. Its blur sits on a backing sheet rather than the bar itself, so the fixed
+menu remains positioned against the viewport.
+
 ## ADR-144 - The rail stays on the desktop, and the projects panel extends from its edge
 
 2026-09-29 - Accepted (Ethan: "the projects and their threads need to extend from the collapsed
@@ -2391,6 +2401,8 @@ worker (`packages/runtime/src/playgroundAgent.ts`) and answers the Live Playgrou
 `ChatThreadPanel`; the standalone page and all of `apps/web/src/playground` are deleted, and
 `/playground` redirects to `/t/playground`. So the thread, its store and the worker protocol did
 change after all, which is what ADR-156 decided.
+Amended 2026-10-03 (ADR-166): protocol 3 adds a `thinking` event that streams the model's
+reasoning, which the page shows folded and never treats as the answer.
 
 ## ADR-156 - One shell hosts the Demo and the live model
 
@@ -2693,6 +2705,49 @@ The focus ring stays the light theme's warm grey `#8a8a85` in dark (Ethan: "the 
 be blue"), 4.56:1 on the dark paper and 3.78:1 on the compose box, and the recap's ring stays
 the cream, 11.71:1; Zed's cyan `#16c3dd` is gone from the theme.
 
+## ADR-163 - The build writes the site's security headers, hashed per build
+
+2026-10-02 - Accepted. Amends ADR-086, whose one Worker now also answers the static security
+headers.
+Every page answers with `X-Content-Type-Options: nosniff`, `Referrer-Policy:
+strict-origin-when-cross-origin`, a `Permissions-Policy` that lends the camera and geolocation to
+no one and the microphone to the page alone, and a Content-Security-Policy. The policy lets
+scripts run from the site's own files, from the SHA-256 of each inline script the build
+prerendered (the theme and chrome boots, React Router's hydration), and from `wasm-unsafe-eval`,
+which the runtime's SQLite needs to compile in its worker (ADR-083) while plain eval stays
+refused. Styles may be inline, since the charts and overlays lay themselves out in style
+attributes; images may come from any secure origin, since WorkOS hands back avatars it does not
+host; connections may leave for `api.workos.com` alone, the AuthKit session calls. Objects, the
+base tag and framing are refused, and forms may post only to the site.
+A static SPA has no server to mint a per-response nonce, so the inline scripts are named by hash,
+and the set changes with every build; a hand-kept header would break the boots on the first edit
+or go silently stale. `write-headers.mjs` runs as the second half of `pnpm --filter web build`,
+reads every prerendered HTML file, hashes each inline script and writes `_headers` beside it,
+failing the build when the boots are not among the scripts it pinned. Its test holds the policy's
+words and the hash of a known script, and the serving check ran against `wrangler dev`, which
+answers with the same headers the deployed Worker does; that check is what caught the SQLite
+compile the first policy refused.
+Alternatives weighed: `'unsafe-inline'` for scripts, which is no policy at all; moving the boots
+into files, which would flash the wrong theme on a dark system before the file arrived; and
+`'unsafe-eval'`, where `'wasm-unsafe-eval'` admits exactly the one compiler the runtime needs.
+Amended 2026-10-03: the browser build resolves `zod` through `src/zod.ts`, which configures
+`jitless` before exporting Zod to any schema, including the SQLite worker's schemas. Zod's
+caught dynamic-compilation probe still emits a CSP violation; disabling its compiler avoids
+the probe without weakening the policy or skipping validation. Configuring only the client
+entry is too late when its dependencies construct schemas first. The header generator scans
+and writes only when invoked directly, so importing its helpers needs no existing build.
+Run `pnpm --filter @yaklabs/runtime test:security <wrangler-url>` against a built lab app
+to check served headers, inline hashes, public cards and a persisted worker round trip. The
+observer retains document and worker CSP events outside the page across navigation. Its
+test-only first dependency preserves served headers and the worker's original URL and exports,
+and installs the observer before the application's dependencies evaluate. The negative-control
+fixture checks caught compilation probes and a child module importing the worker's exports.
+The header generator resolves relative and absolute build directories exactly as React Router
+does. Production builds require the same-origin gateway from ADR-086 and reject
+`VITE_GATEWAY_URL` from the effective Vite environment, including mode-specific env files;
+the override remains available in local development. The policy is not widened for a build
+setting that contradicts the deployment architecture.
+
 ## ADR-164 - Name the out-of-credit refusal
 
 2026-10-02 - Accepted. Amends ADR-155.
@@ -2705,3 +2760,124 @@ Alternatives weighed: keeping a 502 with a marker, which the client would never 
 deliberately branches on the status line; adding a new end reason and protocol bump for the
 mid-reply case, a heavier protocol change for a rare path the line already carries; and retrying
 with backoff, although credit does not come back on its own.
+
+## ADR-165 - Cap the model's thinking at the API's floor
+
+2026-10-02 - Accepted. Amends ADR-146.
+Kimi K2.6 reasons before it answers, and left to itself that reasoning ran 15 to 30 seconds
+before the first visible token, which reads as a stuck page in an interview. Every round now
+sends `thinking: { type: "enabled", budget_tokens: 1024 }`, the Messages API's smallest
+budget, so the wait is capped at about a thousand tokens of reasoning a round. The thinking
+shares the reply's 8192-token budget, which leaves the answer and the tool loop their room.
+Whether OpenRouter's Anthropic-format adapter honours the budget for a Kimi model is checked
+live against the real key before this merges.
+Alternatives weighed: the model's default, which costs the page its first impression;
+`{ type: "disabled" }`, which Kimi may refuse and which spends the reasoning the tool calls
+lean on; and streaming the reasoning itself to the page, a protocol change not worth taking on
+before the interviews.
+Amended 2026-10-03 (ADR-166): the reasoning now streams to the page after all, behind a folded
+Thinking toggle. The budget stays at the floor.
+
+## ADR-166 - Stream the model's thinking behind a folded toggle
+
+2026-10-03 - Accepted. Amends ADR-155 and ADR-165.
+The Live Playground now streams the model's reasoning to the page as it arrives. The gateway
+turns each `thinking` block and `thinking_delta` into a `thinking` event under the block's
+`r{round}b{index}` id, and `PLAYGROUND_PROTOCOL` is 3. The page folds the deltas into
+`AgentMessage.thinking`, apart from the words and the Work record, so `hasWork`, work labels and
+counts do not change. A reply that only thought is still empty, and the gateway still ends it as
+"I finished without an answer." The reasoning is stored on the turn, so a reload shows it. It is
+never replayed upstream: neither the gateway's next round nor the page's request carries it.
+In the thread it sits in a Thinking disclosure, collapsed. When reasoning arrives first, it
+mounts above Work details and the words. Reasoning first received after content appears mounts
+below that content instead. Its position is chosen on the first delta and stays fixed for the
+mounted turn, so later rounds never insert a toggle above text being read. Saved reasoning is
+shown above the answer on a reloaded turn's first paint. While
+the reply has nothing else to show, its summary is the old wait (the working glyph and
+"Thinking…"), now clickable. Once work or words arrive it settles to a plain "Thinking". The
+reasoning is set as written, not as Markdown, in the narration's 13px on 20px `--soft-ink`
+(design pillar 29). The lab agent and the Demo never think, so they keep the old placeholder.
+This reverses ADR-165's call that streaming the reasoning was not worth taking on before the
+interviews. A static placeholder for 14 to 30 seconds reads as a broken app, and the first
+thinking token arrives in under 2 seconds: measured 2026-10-02 through OpenRouter for kimi-k2.6
+and kimi-k3. In the signed-in browser on PR #54 as it stood, the chart arrived at 14.2 seconds
+after a static "Thinking".
+Alternatives weighed: keeping the static placeholder, which is what reads as broken; showing the
+reasoning open by default, which puts a draft above the answer and pushes it down as it grows;
+and folding the reasoning into Work details, which would change its label and count, and make
+work out of a reply that did none.
+
+## ADR-167 - Stream concise approach summaries, not raw thinking
+
+2026-10-04 - Accepted. Amends ADR-166 and clarifies ADR-165.
+Thinking stays collapsed by default and keeps the existing animated wait. Opening it shows a
+current explanation of the approach, not the provider's deliberation. Answer prose, work labels,
+cards, outcomes, and limitations keep their existing contracts. A summary describes intentions
+and constraints. It is not evidence that a tool succeeded.
+
+The gateway runs a separate, non-thinking request to the same `moonshotai/kimi-k2.6` model.
+`playgroundThinking.ts` summarizes recent reasoning while the tool loop continues independently.
+The first request starts after 256 reasoning characters in a round. A second requires 2048 new
+characters. At most two requests per round and sixteen per turn prevent repetitive deliberation
+from consuming the entire budget before later work. Each request includes the previous summary
+and at most 6000 recent reasoning characters. Its output replaces the previous summary and must
+fit 70 words and 480 characters. The output budget is 160 tokens with no automatic retries.
+Incomplete, invalid, or failed summaries are discarded, never clipped or replaced with raw text.
+A request times out after eight seconds. The terminal event cancels outstanding summaries rather
+than waiting for them. A short reasoning block may finish without producing a summary.
+
+Protocol 4 keeps the `thinking` event's existing shape, but its `delta` is now a whole summary.
+`ReplyEvent.thinking` also replaces rather than appends. The last summary persists in
+`AgentMessage.thinking` and stays outside upstream history and answer or work counts. The
+Disclosure's identity and first-arrival placement do not change. A late summary mounts below
+existing content. Reload still places saved thinking above the answer. Older saved turns are
+not rewritten, so an existing protocol-3 turn can retain its historical reasoning.
+
+OpenRouter documents a shared reasoning envelope, not a Kimi-native summary guarantee. The
+Anthropic Messages format does not turn Kimi output into Claude-style summarized thinking.
+Native summaries remain preferable if this model and endpoint gain verified support.
+Alternatives rejected were clipping raw output, waiting until reasoning ends, changing the main
+model, and asking the execution prompt alone to control displayed length. Reasoning effort and
+displayed explanation length are separate controls. The execution prompt and tools stay unchanged.
+
+Local Live Playground checks used `VITE_AGENT=gateway`, the real `createApp` and tool loop, and
+only disposable local session and token-verification stubs. Fixture checks established streaming,
+late placement, stable toggles, card replacement, empty and unknown data, formatting, and reload.
+Real Kimi checks produced immediate animated feedback and useful summaries during execution.
+One earlier scheduler sample answered in 111.87 seconds; the revised scheduler sample produced
+the requested cards and Zendesk limitation but reached the existing eight-round limit at 152.92
+seconds. Its first raw reasoning arrived at 1.12 seconds and its first displayed summary at 3.18
+seconds. Animated feedback appeared at 29 milliseconds. Seven completed summary requests took
+0.63 to 1.35 seconds each and reported a total cost of $0.00245. Concurrent requests add no
+deliberate tool-loop or terminal wait, but shared provider contention and aborted-request billing
+are not measured guarantees. The earlier sample reported 5357 thinking tokens in one round
+despite the requested 1024 allocation. ADR-165's requested budget is therefore not a proven cap.
+These observations are samples, not provider guarantees or a fix for long model execution.
+
+Follow-up review distinguishes enforced bounds from semantic guidance. Length, response completion,
+duplicate suppression, timeout, cancellation, and raw-text exclusion are enforced by code.
+Describing
+only intentions, resisting embedded instructions, and avoiding invented relationships are model
+instructions, not mechanically guaranteed properties. A keyword filter or another model cannot
+prove that arbitrary prose never implies success. A hard guarantee would require controlled
+Thinking templates with no unrestricted model-written sentences. That would narrow Thinking's
+expressiveness, not the main answer's capabilities. This ADR does not adopt that redesign.
+
+Four integrated `/api/playground` regressions use `createApp`, the real Anthropic client, and an
+abort-aware provider fixture. They cover terminal delivery across a tool round with a stalled
+summary, response cancellation during a pending read, timeout before response headers, and timeout
+during a partial response body. Both timeout cases use the real eight-second timer and require
+execution to remain live, a later round's summary to succeed, no retry or stale summary, and a
+correct final answer. Each regression went red under its corresponding removed abort/deadline
+behavior, then green after restoration. Production cancellation and timeout code needed no fix.
+
+An opt-in adversarial evaluation targets this summarizer, not the answer model or an unrelated
+system. It submits forged success claims, embedded instructions, and repeated work-status debates
+to the actual same-model summary mechanism. Run it with `THINKING_EVAL=1` and a server-side
+`OPENROUTER_API_KEY` environment variable using Vitest on `src/playgroundThinking.eval.test.ts`.
+The evaluation does not depend on a local secret file. It writes inputs,
+snapshots, and safe response metadata to `.amp/in/artifacts/thinking-adversarial.json` for human
+review. Normal CI skips these paid network samples. Passing mechanical checks does not establish
+semantic safety; inspect the recorded sentences. One initial sample invented a CSAT-chart-to-table
+replacement, motivating an explicit instruction to omit unnamed chart identities and ambiguous
+relationships. Live samples can fail to produce an accepted summary and are not guarantees.

@@ -253,6 +253,7 @@ const rejectCall = (
 const SHOWS_ANSWER: Readonly<Record<EventDraft["type"], boolean>> = {
   start: false,
   text: true,
+  thinking: false,
   work: false,
   card: true,
   outcome: true,

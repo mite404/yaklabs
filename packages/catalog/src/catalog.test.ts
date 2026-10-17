@@ -20,6 +20,29 @@ describe("agent contract", () => {
       selection: valid,
     });
   });
+  it.each(["commits", "cases", "hours", "USD", "percent", "x", "x".repeat(24)])(
+    "accepts unit %s without changing catalog version",
+    (unit) => {
+      expect(resolve({ ...valid, props: { ...props, unit } })).toMatchObject({
+        kind: "approved",
+        selection: { catalogVersion: "1", props: { unit } },
+      });
+    },
+  );
+  it.each([" commits ", ` ${"x".repeat(24)} `])("trims unit %s before validation", (unit) => {
+    expect(resolve({ ...valid, props: { ...props, unit } })).toMatchObject({
+      kind: "approved",
+      selection: { props: { unit: unit.trim() } },
+    });
+  });
+  it.each(["", " \t\n ", "x".repeat(25), null, 3, ["commits"]])(
+    "rejects empty, oversized or non-string unit %j",
+    (unit) => {
+      expect(resolve({ ...valid, props: { ...props, unit } })).toMatchObject({
+        kind: "rejected",
+      });
+    },
+  );
   it.each([
     { ...valid, component: "CustomChart" },
     { ...valid, children: [] },

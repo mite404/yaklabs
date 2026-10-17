@@ -82,6 +82,7 @@
    Effects example (its handles at 17% and 58% of the time). Half the travel is done by 13% of the
    time and 90% by 43%. The peek slides in 220ms, the pin by the toggle in 250ms (Ethan). */
 :root {
+  --workspace-radius: calc(var(--radius-card) - var(--btn-radius));
   --panel-ease: cubic-bezier(0.17, 1.02, 0.58, 1);
   --panel-peek: 220ms;
   --panel-pin: 250ms;
@@ -172,6 +173,7 @@
 [data-slot="sidebar"][data-peek] > [data-slot="sidebar-container"] {
   --peek-slide: transform var(--panel-peek) var(--panel-ease);
   z-index: 20;
+  border-radius: 0 var(--workspace-radius) var(--workspace-radius) 0;
   box-shadow:
     1px 0 0 var(--hairline),
     8px 0 24px -12px var(--shadow);
@@ -179,6 +181,12 @@
   transition:
     var(--peek-slide),
     opacity 120ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+/* The exposed peek corners match the docked workspace's curve; its rows clip inside the
+   paper, while the container's shadow remains free to fall past it. */
+[data-slot="sidebar"][data-peek] [data-slot="sidebar-inner"] {
+  border-radius: inherit;
+  overflow: clip;
 }
 [data-slot="sidebar"][data-peek="leaving"] > [data-slot="sidebar-container"] {
   transition:

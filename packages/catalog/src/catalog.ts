@@ -4,7 +4,7 @@ const text = z.string().trim().min(1).max(120);
 const shared = {
   title: text,
   source: text,
-  unit: z.enum(["cases", "hours", "USD", "percent"]),
+  unit: z.string().trim().min(1).max(24),
   rows: z
     .array(
       z.strictObject({

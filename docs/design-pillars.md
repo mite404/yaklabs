@@ -281,6 +281,13 @@ tells; on the strong surface a faint recessed fill keeps that greyer placeholder
 | Border (strong) | 60% paper, 3.5:1 | derived |
 | Hover and focus | border to full ink; focus adds the 2px ring | derived |
 
+The chat composer grows upward automatically as its draft wraps or gains new lines. Its bottom
+and send controls stay anchored. It keeps the existing 44px text area when empty or short, grows
+to six lines, then scrolls internally. It shrinks again on deletion or send. The six-line ceiling
+is `6lh`, derived from the existing 15px text at 1.45 line height (21.75px per line), giving about
+87px of extra room without a new spacing token. Source: Ethan's automatic expansion request;
+derived (four extra lines, ADR-003 amended).
+
 ### 15. The sage tint means "you"
 
 The user's bubble is the only place the sage-green tint appears, so it always means "this is what
@@ -483,6 +490,7 @@ a run of text, set as `<strong>`, `<em>` or `<code>`.
 | Card between paragraphs | 16px above and below | derived (the paragraph gap) |
 | Code | 13px on 20px, ui-monospace, on `--paper-deep`, 3px corners | derived |
 | Narration under a streaming reply | 13px on 20px, `--soft-ink`, the working glyph before it | derived (ADR-139) |
+| Thinking around a reply | a fold mounted when the approach summary arrives, above the work's when it arrives first, below existing content when late; its position stays fixed while mounted: its header as that disclosure's (13px 500, chevron first) in `--soft-ink`; live, while nothing else shows, the working glyph then "Thinking…"; after, "Thinking"; open, the current concise summary as plain text, 13px on 20px `--soft-ink`, pre-wrapped, at the 510px measure | derived (ADR-166, ADR-167; the narration row) |
 | A reply that stopped short | its label in 600 `--ink`, why in `--soft-ink`, a 2px `--hairline` rule at the left | derived (ADR-139) |
 | A limitation in the words | reads as prose, never a warning colour: the sentence in the body's `--soft-ink`, the request it offers quoted in `--ink`, then the compact outline button (`.btn .btn-sm`) that sends it, held while a reply streams and absent where nothing can be sent; the stopped reply's 2px `--hairline` rule at the left, 16px inset and 8px between parts; the paragraph gap around it, the text's 510px measure | derived (ADR-147, widened; the row above) |
 
@@ -507,6 +515,8 @@ ADR-150).
 | Canvas grid | every lane, strip, gap and the drop zone is a whole number of 18px steps, so each gap's column of dots sits centred between its lanes; a default lane is 31 steps, or as many as fit, rounded down; the drop zone is a default lane wide | Ethan (ADR-158) |
 | Search marks | every match tinted `--blue` at 40%, the one stepped to in `--blue` with `--on-blue` words (`--yak-night`, 8.0:1 in both themes, as text selection now is), as a text selection (`::highlight()`); a 2px `--blue` ring with a 5px halo around its words alone, widening and fading over 1.2s on the strong ease-out; reduced motion holds the 2px ring | Ethan (ADR-158) |
 | Cut sidebar title | fades to nothing over its last 24px (`--space`) instead of an ellipsis; a title that fits keeps every letter | Ethan (ADR-158) |
+| Conversation's compose edge | turns fade to nothing at the scroll area's lower edge, as sidebar titles do at their cut edge; a lighter upper veil and feathered ends replace the linear falloff; mask opacity at each quarter is 100%, 85%, 50%, 15%, 0% (rounded smoothstep samples); the fade fits the 16px resting padding (`--rest-gap` less `--compose-inset`), so the last turn stays fully visible at rest; empty welcome art has no mask | Ethan; derived (pillar 12 and smoothstep feathering) |
+| Peek drawer corners | exposed right corners take the docked workspace's 10px curve, shared as `--workspace-radius`: `--radius-card` (14px) less `--btn-radius` (4px) | Ethan; derived (existing workspace) |
 | Rail place fill | the hover and open fill takes the site's 4px button corners (`--radius`), as a sidebar row's does | Ethan (ADR-159) |
 | Play callout | each visit to a demo's thread that is not playing rings Play once in the canvas's lane flash: 3px `--olive`, fading over 1.2s, on the button's own corners; reduced motion holds the ring | Ethan (ADR-159) |
 | An answer given for the user | a demo shows it as a hand would: the tile hovered (700ms at 1x), selected (600ms), then Submit pressed (180ms: the moss hover fill and scale 0.96, which a real press gets too), then sent | Ethan (ADR-159) |
@@ -515,8 +525,8 @@ ADR-150).
 | Resize hint | full `--ink` for 40px either side of the pointer, gone by 70px | Ethan (ADR-159) |
 | Splash | each visit takes the next look: abstract, landscape, Vitruvian, then round again; the switch lists them in that order, then Bonsai | Ethan (ADR-159) |
 | Kay's mark | the bonsai's three pills on a 12-unit grid, `currentColor`, in the rail's 20px box | Ethan (ADR-094, amended) |
-| Reading tools at rest | the bookmark alone on `--scrim` (paper at 72%), glyph opaque; clear until the pointer is over the thread's turns, up over 300ms on the strong ease-out; Search unfolds over 220ms on the panel ease, the drawer's slide | Ethan (ADR-143, amended) |
-| Reading tools open | `--paper`, solid, over 150ms on the strong ease-out; the list of requests on `--scrim` with an 8px blur | Ethan (ADR-143, amended) |
+| Reading tools at rest | the bookmark alone on two coats of `--scrim` (paper at 72% each, 92.16% combined), glyph opaque, 8px backdrop blur; the denser small backing gives the popover's quiet, readable appearance over chart edges and text; clear until the pointer is over the thread's turns, up over 300ms on the strong ease-out; Search unfolds over 220ms on the panel ease, the drawer's slide | Ethan (less-transparent popover aesthetic, ADR-143, amended); derived (two coats of the existing scrim) |
+| Reading tools open | the unfolded buttons and expanded search keep the collapsed bar's denser backing and 8px blur, with opaque glyphs; blur stays on a backing sheet so the menu stays fixed to the viewport; the reference request list keeps its existing single `--scrim` and 8px blur; request labels show up to 48 characters, then an ellipsis, or cut earlier to fit a narrow viewport while keeping their time visible | Ethan (popover aesthetic, longer labels, ADR-143, amended); derived (48-character limit and request list's blur) |
 | Reading tools shadow | `--float-shadow` (`2px 8px 14px -6px` of `--shadow-strong`): down and to the right as the cards' `--edge-shadow`, none above (ADR-069), scaled to the 34px bar; it passes under the compose box, which stands over the dock and casts none of its own (ADR-162) | derived (`--edge-shadow`), Ethan |
 | Toast | a menu's shape, since both float over the page: `rounded-xl` (8px) corners, 1px `--border`, `--popup-shadow` (`0 8px 24px` of `--shadow-strong`, the catalog Menu's shadow, which the shadcn menu and dialog share); Inter, rule 7, over Sonner's system stack | derived (`.menu`), Ethan |
 | Snooze note | the snooze toast's words stay in the bell as a note on the thread, written with the snooze or not at all, and counted read, since its reader is the one who snoozed | Ethan (ADR-128, amended) |

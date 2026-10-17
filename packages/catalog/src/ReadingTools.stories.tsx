@@ -5,7 +5,11 @@ import type { Thread, ThreadMessage } from "./thread";
 
 // A morning of questions, long enough that the first ones scroll out of sight.
 const ASKED = [
-  ["9:02", "How did profit do last week?", "Profit rose 12% on the week, led by Saturday."],
+  [
+    "9:02",
+    "How did profit do last week across the warehouses, compared with September?",
+    "Profit rose 12% on the week, led by Saturday.",
+  ],
   ["9:04", "Which day had the best margin?", "Saturday: 41% margin on the highest sales."],
   ["9:07", "Show me refunds by day", "Refunds peaked on Monday at 3.1% of sales."],
   ["9:11", "Why was Monday so high?", "A late shipment was refunded in one batch on Monday."],
@@ -181,23 +185,36 @@ export const FoldsToTheBookmark: Story = {
 };
 
 /**
- * Translucent until it is opened: the bar's wash lets the turn under it read through, only its
- * glyph opaque; the list of requests is the same wash. Opening either tool fills the bar solid.
+ * The small bar keeps a denser translucent backing in every state, with opaque glyphs and
+ * the request list's blur so the conversation does not compete with the controls.
  */
-export const OpensSolid: Story = {
+export const StaysTranslucent: Story = {
   play: async ({ canvasElement }) => {
     const { bar, tools } = await parts(canvasElement);
+    const collapsedBackground = getComputedStyle(bar, "::before").backgroundColor;
+    const collapsedBlur = getComputedStyle(bar, "::before").backdropFilter;
+    await expect(alphaOf(getComputedStyle(bar).backgroundColor)).toBeGreaterThan(0);
     await expect(alphaOf(getComputedStyle(bar).backgroundColor)).toBeLessThan(1);
     await userEvent.click(tools.getByRole("button", { name: "Your requests" }));
     const list = within(document.body).getByRole("menu", { name: "Your requests" });
+    const surface = getComputedStyle(list);
+    await expect(collapsedBackground).toBe(surface.backgroundColor);
+    await expect(collapsedBlur).toBe(surface.backdropFilter);
+    await expect(getComputedStyle(bar, "::before").backgroundColor).toBe(surface.backgroundColor);
+    const background = surface.backgroundColor;
+    const blur = surface.backdropFilter;
     await expect(alphaOf(getComputedStyle(list).backgroundColor)).toBeLessThan(1);
     await waitFor(async () => {
-      await expect(alphaOf(getComputedStyle(bar).backgroundColor)).toBe(1);
+      await expect(opacity(bar)).toBe(1);
     });
+    await expect(alphaOf(getComputedStyle(bar).backgroundColor)).toBeLessThan(1);
     await userEvent.keyboard("{Escape}");
-    await waitFor(async () => {
-      await expect(alphaOf(getComputedStyle(bar).backgroundColor)).toBeLessThan(1);
-    });
+    await userEvent.click(await unfold(tools));
+    await expect(tools.getByRole("searchbox", { name: "Search this thread" })).toHaveFocus();
+    await expect(getComputedStyle(bar).backgroundColor).toBe(collapsedBackground);
+    await expect(alphaOf(getComputedStyle(bar).backgroundColor)).toBeLessThan(1);
+    await expect(getComputedStyle(bar, "::before").backgroundColor).toBe(background);
+    await expect(getComputedStyle(bar, "::before").backdropFilter).toBe(blur);
   },
 };
 
@@ -244,7 +261,7 @@ export const FollowsThePointer: Story = {
 };
 
 /**
- * The bookmark lists every request the user sent by its first 15 characters and its time; the
+ * The bookmark lists every request the user sent by its first 48 characters and its time; the
  * full request shows on hover. Picking one centers that turn and makes it glow, and the bar folds
  * back to the bookmark once the pointer moves on.
  */
@@ -256,7 +273,7 @@ export const JumpToARequest: Story = {
     const list = within(document.body).getByRole("menu", { name: "Your requests" });
     const items = within(list).getAllByRole("menuitem");
     await expect(items).toHaveLength(ASKED.length);
-    await expect(items[1]).toHaveTextContent("Which day had t…9:04");
+    await expect(items[1]).toHaveTextContent("Which day had the best margin?9:04 AM");
     const outOfView = standBefore(scroller, "ask-1");
     await expect(outOfView.wasInView).toBe(false);
     await userEvent.click(items[1]);
