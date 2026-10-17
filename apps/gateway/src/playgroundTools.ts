@@ -30,6 +30,8 @@ export type TurnState = Readonly<{
   cardIds: readonly string[];
   failures: Readonly<Record<string, number>>;
   shown: boolean;
+  /** Tool execution permission; recovery can never reopen tools. */
+  policy: "tools" | "recovery" | "proseOnly" | "stopped";
 }>;
 
 /** A tool call read whole from the stream; `input` is `{ ok: false }` when its JSON broke. */
@@ -57,6 +59,7 @@ export const initialTurn: TurnState = {
   cardIds: [],
   failures: {},
   shown: false,
+  policy: "tools",
 };
 
 // Tool calls one turn may make; Kimi was seen making one per round.
@@ -83,18 +86,17 @@ type ToolName = keyof typeof REMOVE_AFTER;
 // The table as a lookup: Map.get finds nothing inherited and needs no cast for a plain string.
 const REMOVAL_LIMITS: ReadonlyMap<string, number> = new Map(Object.entries(REMOVE_AFTER));
 
-// The failures that retire `name`, or undefined for a name the roster does not know.
-const removalLimit = (name: string): number | undefined => REMOVAL_LIMITS.get(name);
-
-// Whether `name`'s failures have retired it: no longer offered, and refused flat if called.
+// Whether `name`'s failures have retired it for this turn.
 const isRemoved = (state: TurnState, name: string): boolean => {
-  const limit = removalLimit(name); // → number | undefined
+  const limit = REMOVAL_LIMITS.get(name); // → number | undefined
   return limit !== undefined && (state.failures[name] ?? 0) >= limit;
 };
 
-/** The tools the next round offers: the catalog's five, minus the ones failures retired. */
+/** Available tools, excluding retired tools or all tools when execution is disabled. */
 export function toolsFor(state: TurnState): Anthropic.Tool[] {
-  return playgroundTools.filter((tool) => !isRemoved(state, tool.name));
+  return state.policy === "tools"
+    ? playgroundTools.filter((tool) => !isRemoved(state, tool.name))
+    : [];
 }
 
 // A handler's verdict. "invalid" counts toward the tool's validation failures; "refused" is a
@@ -225,18 +227,21 @@ const judge = (state: TurnState, { id, name, input }: ToolCall): Verdict => {
   return handler(state, input.value, id);
 };
 
-// A failed call. A limit, or a retired tool called anyway, goes back flat and counts nowhere;
-// an input mistake counts toward retiring its tool, and the failure that reaches the limit
-// asks for prose - the last error that tool returns this turn.
+// A retired-tool call requests recovery without increasing its failure count. Input mistakes
+// count toward retirement; resource refusals leave the policy alone.
 const rejectCall = (
   state: TurnState,
   call: ToolCall,
   verdict: Verdict & { reason: string },
 ): Translation => {
   if (verdict.kind === "refused" || verdict.kind === "removed")
-    return { state, events: [], result: toolResult(call.id, verdict.reason, true) };
+    return {
+      state: verdict.kind === "removed" ? { ...state, policy: "recovery" } : state,
+      events: [],
+      result: toolResult(call.id, verdict.reason, true),
+    };
   const count = (state.failures[call.name] ?? 0) + 1;
-  const limit = removalLimit(call.name) ?? 2; // an unknown name has no offer to lose
+  const limit = REMOVAL_LIMITS.get(call.name) ?? 2; // an unknown name has no offer to lose
   const reason = count >= limit ? `${verdict.reason} Answer in prose instead.` : verdict.reason;
   const next = { ...state, failures: { ...state.failures, [call.name]: count } };
   return { state: next, events: [], result: toolResult(call.id, reason, true) };
@@ -277,13 +282,20 @@ export function stamp(
  * Checks one tool call with the catalog's own validators and translates it into page events
  * plus the tool_result the model reads. Invalid input never reaches the page; its reason goes
  * back to the model as an error, and a tool's second failure in a turn asks for prose instead
- * and retires the tool: later rounds do not offer it, and a call to it anyway is refused flat.
+ * and retires the tool. A later call to it disables all tools and requests a final prose round.
+ * A tool call during that prose-only round stops the turn without executing the handler.
  */
 export function translateToolUse(state: TurnState, call: ToolCall): Translation {
+  if (state.policy !== "tools")
+    return {
+      state: state.policy === "proseOnly" ? { ...state, policy: "stopped" } : state,
+      events: [],
+      result: toolResult(call.id, "Tools are disabled for the rest of this turn.", true),
+    };
   const counted = { ...state, toolCalls: state.toolCalls + 1 };
   if (counted.toolCalls > MAX_TOOL_CALLS)
     return {
-      state: counted,
+      state: { ...counted, policy: "recovery" },
       events: [],
       result: toolResult(call.id, "Tool call limit reached. Answer in prose now.", true),
     };

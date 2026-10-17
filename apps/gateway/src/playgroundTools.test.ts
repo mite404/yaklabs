@@ -170,15 +170,13 @@ describe("translateToolUse retires", () => {
   });
 
   it("keeps the turn's other tools after one retires", () => {
-    const [, , third, fourth] = run([
-      call("show_card", {}),
+    const [, , third] = run([
       call("show_card", {}),
       call("show_card", {}),
       call("update_work", { workId: "sum", label: "Adding up", status: "running" }),
     ]);
 
-    expect(reply(third).text).toBe("show_card is no longer available this turn.");
-    expect(fourth?.events).toMatchObject([{ type: "work", workId: "sum", status: "running" }]);
+    expect(third?.events).toMatchObject([{ type: "work", workId: "sum", status: "running" }]);
   });
 });
 

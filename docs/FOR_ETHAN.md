@@ -1663,9 +1663,11 @@ round's request no longer offers the tool at all; `toolsFor(state)` in the gatew
 round's tools from the turn's failure counts. One trapdoor remained: the stream parser is
 tool-agnostic, so a model can hallucinate a call to a tool it was not offered. The gateway
 refuses that call flat ("show_card is no longer available this turn."), shows nothing, and
-counts nothing, so the hallucination cannot escalate. The drift guard is mechanical: a tool
-added to the policy table without a handler fails `tsc`, and a handler without a policy entry
-fails it too, so the roster and the policy cannot part ways silently.
+leaves its failure count unchanged. That call now revokes every tool and permits one final
+prose-only round. A tool call in that final round ends the turn without execution.
+The drift guard is mechanical: a tool added to the policy table without a handler fails `tsc`,
+and a handler without a policy entry fails it too, so the roster and policy cannot part ways
+silently.
 
 ### The props left over from an old take
 
@@ -3693,9 +3695,13 @@ token in the same step. The stale write then fails by itself, however late it ar
 Every defense that ends in text is a request. "Answer in prose instead" works until the model
 does not answer in prose, and the failure mode is invisible: nothing in the transcript says
 the constraint was even read. The durable version moves the constraint out of the words and
-into the request. After two validation failures the tool is not offered, so the illegal call
-is no longer representable, and the one gap the structure cannot close, a hallucinated call to
-a retired tool, gets a flat refusal that counts nothing.
+into the request. After two validation failures the tool is not offered. A model can still
+invent a call to that retired tool, so the gateway refuses it before execution and disables
+all tools for the rest of the turn. The next request is one final prose-only round, with
+`tools: []`, `tool_choice: { type: "none" }`, and instructions that no longer require tools.
+A tool call in that final round stops further output without executing the tool or opening
+another request. Prose already streamed remains visible, followed by the closing limit line.
+The eight-round ceiling still takes precedence over recovery.
 
 ```ts
 // apps/gateway/src/playgroundTools.ts: the policy table doubles as the roster
@@ -3709,8 +3715,8 @@ const REMOVE_AFTER = {
 type ToolName = keyof typeof REMOVE_AFTER;
 // HANDLERS: Readonly<Record<ToolName, Handler>> - a missing or extra key fails the build
 
-// apps/gateway/src/playground.ts: each round offers only what failures have not retired
-tools: toolsFor(state), // → the catalog's tools, minus the retired ones
+// apps/gateway/src/playground.ts: toolsFor owns availability, including disabled execution
+tools: toolsFor(state),
 ```
 
 ```mermaid
@@ -3727,17 +3733,29 @@ sequenceDiagram
   T-->>G: the other four only
   M->>G: show_card anyway (hallucinated)
   G-->>M: flat refusal, no events, count stays 2
+  G->>M: final request, no tools, tool_choice none
+  alt model answers in prose
+    M-->>G: explanation
+    G->>G: end answered
+  else model calls any tool
+    M-->>G: forbidden call
+    G->>G: end limit, no execution or next request
+  end
 ```
 
 The film version: the first breaker was a note on the call sheet asking the actor not to enter
 before the cue. The new one strikes the door from the set. An actor can still rattle the
-handle from the wings, and the stage manager says once, flatly, that there is no door, and the
-take goes on.
+handle from the wings. The stage manager then allows one closing voiceover, with no more
+access to the set. Another attempt to enter ends the take.
 
 Senior-engineer takeaway: a constraint that depends on its violator's cooperation is a
-request, not a constraint. Move it into the structure - the type, the request, the roster - so
-compliance is the only expressible state. Then spend exactly one backstop on the gap the
-structure cannot close, and make that backstop boring.
+request, not a constraint. Move permission into the gateway's typed policy, and check it
+before calling a handler. Keep the model's opportunity to explain separate from its
+permission to execute. Gateway tests send scripted streams through the real route and SDK,
+then inspect page events and outbound requests. They cover retirement within one round,
+continued use of healthy tools, and recovery calls that must never reach the page.
+The policy uses a literal union because its variants carry no extra data. Removing object
+wrappers and duplicate availability decisions keeps the same behavior with fewer branches.
 
 ### Point at the word, not the reel: marks that never touch the film
 
