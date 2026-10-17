@@ -41,12 +41,18 @@ type RoundEnd = {
 type EndDraft = Extract<EventDraft, { type: "end" }>;
 
 // What the loop does after a round: stop with the closing event, or send the results and go on.
-type Decision = { kind: "stop"; end: EndDraft } | { kind: "continue"; messages: Messages };
+type Decision =
+  | { kind: "stop"; end: EndDraft }
+  | { kind: "continue"; messages: Messages; state: TurnState };
 
 // How a turn went, for its one summary log, and when that was known (`Date.now()`).
 type TurnOutcome = EndDraft["reason"] | "cancelled" | "internal";
 type Settled = { outcome: TurnOutcome; at: number };
 
+const RECOVERY_PROMPT = `You are Kay's assistant. Tools are disabled for this final reply.
+Explain briefly in plain prose what could not finish and what the user can try next.
+Preserve results already shown. Do not claim that failed work succeeded or invent data.
+Do not call tools, repeat displayed results, or use tables or headings.`;
 // Rounds one turn may take; Kimi was seen making one tool call per round.
 const MAX_ROUNDS = 8;
 const CUT_SHORT = "I stopped before finishing this reply.";
@@ -69,15 +75,17 @@ const answered = (state: TurnState): Decision =>
     ? { kind: "stop", end: { type: "end", reason: "answered" } }
     : stoppedShort("upstream", NO_ANSWER);
 
-// The round's verdict. Pure: `messages` is what the next round sends when there is one.
 const decide = (
   { state, round, results, asked, broken }: RoundEnd,
   messages: Messages,
 ): Decision => {
   if (broken) return stoppedShort("upstream", NO_RESPONSE);
+  if (state.policy === "stopped") return stoppedShort("limit", CUT_SHORT);
   if (asked) return { kind: "stop", end: { type: "end", reason: "asked" } };
   if (round.stop === null) return stoppedShort("upstream", NO_RESPONSE);
   if (round.stop === "max_tokens") return stoppedShort("limit", CUT_SHORT);
+  if (state.policy === "proseOnly")
+    return round.stop === "tool_use" ? stoppedShort("limit", CUT_SHORT) : answered(state);
   if (round.stop !== "tool_use" || results.length === 0) return answered(state);
   if (state.round >= MAX_ROUNDS) return stoppedShort("limit", CUT_SHORT);
   const next: Messages = [
@@ -85,7 +93,11 @@ const decide = (
     { role: "assistant", content: assistantContent(round) },
     { role: "user", content: results },
   ];
-  return { kind: "continue", messages: next };
+  return {
+    kind: "continue",
+    messages: next,
+    state: toolsFor(state).length === 0 ? { ...state, policy: "proseOnly" } : state,
+  };
 };
 
 // Sends one round upstream with the tools the turn still offers; resolves once the upstream
@@ -101,8 +113,11 @@ const openRound = (
       model: upstream.model,
       max_tokens: upstream.maxTokens,
       thinking: upstream.thinking,
-      system: SYSTEM_PROMPT,
-      tools: toolsFor(state), // → the catalog's tools, minus the ones failures retired
+      system: state.policy === "proseOnly" ? RECOVERY_PROMPT : SYSTEM_PROMPT,
+      tools: toolsFor(state),
+      ...(state.policy === "proseOnly"
+        ? { tool_choice: { type: "none" } satisfies Anthropic.ToolChoiceNone }
+        : {}),
       messages,
       stream: true,
     },
@@ -168,8 +183,8 @@ async function* streamRound(
       const next = advance(end, event); // → { end, events }
       end = next.end;
       yield* next.events;
-      // A question ends the turn here; leaving the loop cancels the rest of the round.
-      if (end.asked) return end;
+      // A question or a forbidden recovery call cancels the rest of the round.
+      if (end.asked || end.state.policy === "stopped") return end;
     }
   } catch (error) {
     noteFailure(error);
@@ -236,7 +251,7 @@ async function* playgroundEvents(
         yield* stamp(end.state, [decision.end]).events;
         return;
       }
-      state = end.state;
+      state = decision.state;
       messages = decision.messages;
       rounds++;
       // oxlint-disable-next-line no-await-in-loop -- each round needs the last round's tool results

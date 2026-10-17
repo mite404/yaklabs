@@ -60,6 +60,12 @@ pnpm --filter gateway typecheck
 pnpm --filter gateway build       # wrangler deploy --dry-run into dist/, deploys nothing
 ```
 
+`pnpm --filter gateway test:coverage` runs the same tests with V8 coverage and writes
+`apps/gateway/coverage/coverage-final.json`. CI runs this before Fallow and passes that report
+with `--coverage`, so gateway scores use measured coverage rather than module-graph estimates.
+Other workspaces still use estimates. CI excludes gateway from the later test step to avoid
+running its tests twice. Vitest and its coverage provider share an exact version in the catalog.
+
 The build bundles the web build as the Worker's assets, so `apps/web/build/client` must exist:
 run `pnpm --filter web build` first. The root `pnpm build` orders the two through Turbo.
 

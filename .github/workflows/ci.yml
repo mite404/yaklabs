@@ -38,16 +38,20 @@ jobs:
         run: pnpm lint --format github
       - name: Typecheck
         run: pnpm typecheck
+      - name: Gateway tests with coverage
+        run: pnpm --filter gateway test:coverage
       - name: Fallow audit (findings this PR introduces)
         if: github.event_name == 'pull_request'
         env:
           BASE_REF: ${{ github.base_ref }}
-        run: pnpm fallow audit --base "origin/$BASE_REF" --format github-annotations
+        run: >-
+          pnpm fallow audit --base "origin/$BASE_REF"
+          --coverage apps/gateway/coverage/coverage-final.json --format github-annotations
 
       - name: Install Chromium for story tests
         run: pnpm --filter storybook exec playwright install --with-deps chromium
       - name: Unit and story tests
-        run: pnpm test
+        run: pnpm test --filter='!gateway'
       - name: Build
         run: pnpm build
       - name: Build Storybook

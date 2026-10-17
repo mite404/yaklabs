@@ -2467,6 +2467,13 @@ model at a retired one. The cost: a valid third attempt with the retired tool is
 for the rest of the turn, though other tools and prose remain. `decide`, the 8-round and
 16-call caps, and the empty-answer fallback are unchanged.
 
+2026-10-03 amendment - A call to a retired tool now disables all tools for the rest of the
+turn. The gateway allows one final prose-only round, with no offered tools and
+`tool_choice: { type: "none" }`. A tool call in that round terminates the stream without
+execution or another request. Exhausting the 16-call budget or retiring every tool also
+requests that final round. The 8-round ceiling still takes precedence. These transitions
+replace the unchanged-loop behavior described above; the retirement threshold remains two.
+
 ## ADR-158 - Find marks words, a recap lands on its evidence, the canvas snaps to its grid
 
 2026-10-01 - Accepted (Ethan, walking the Weekly brief and Refund audit on a laptop). Amends
