@@ -28,6 +28,9 @@ const SKELETON_WIDTHS = [168, 132, 150];
 type ShelfName = "Snoozed" | "Archived";
 const SHELF_NAMES: ShelfName[] = ["Snoozed", "Archived"];
 
+// The hairline after a section's name, across the rest of the panel: Projects and each shelf.
+const SECTION_LINE = <span aria-hidden="true" className="h-px min-w-4 flex-1 bg-hairline" />;
+
 type Main = ProjectNode["mains"][number];
 
 // Ids folded by hand: projects, and mains with their children. Nothing is folded at first.
@@ -176,12 +179,11 @@ function Shelf({
   folds: Folds;
 }) {
   const [open, setOpen] = useState(false);
-  const line = <span aria-hidden="true" className="h-px min-w-4 flex-1 bg-hairline" />;
   if (mains.length === 0) {
     return (
       <SidebarGroupLabel className="mt-2 gap-2 text-soft-ink">
         {name}
-        {line}
+        {SECTION_LINE}
       </SidebarGroupLabel>
     );
   }
@@ -197,7 +199,7 @@ function Shelf({
         }}
       >
         {name}
-        {line}
+        {SECTION_LINE}
         <span aria-hidden="true" className="tabular-nums">
           {mains.length}
         </span>
@@ -266,7 +268,10 @@ export function ProjectTree() {
   const { live, shelves } = shelve(tree);
   return (
     <SidebarGroup ref={group}>
-      <SidebarGroupLabel className="text-soft-ink">Projects</SidebarGroupLabel>
+      <SidebarGroupLabel className="gap-2 text-soft-ink">
+        Projects
+        {SECTION_LINE}
+      </SidebarGroupLabel>
       {shell === null || tree.length === 0 ? (
         <TreeState shell={shell} onNewProject={handOff} />
       ) : (
