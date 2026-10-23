@@ -2556,6 +2556,10 @@ dictation live microphone"): dictation in the device's own threads, the Live Pla
 listens to the visitor's microphone and the browser's speech service (ADR-028's live source);
 the Demo's threads and a scenario's keep the simulated recording, so a scripted take and a
 fixture sound the same every time.
+Amended 2026-10-23 (Ethan): the splash no longer cycles by visit. A visitor's first welcome is
+always abstract. Every later welcome, a new thread's or a returning visitor's first, rolls
+Abstract, Landscape or Vitruvian at random. `kay.splash.seen` marks the first welcome seen, and
+`kay.splash.turn` is retired. A `?splash=` still holds for the whole visit.
 
 ## ADR-160 - A public page tells the design tooling's story, sealed on the welcome
 

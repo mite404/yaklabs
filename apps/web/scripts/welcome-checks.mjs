@@ -23,9 +23,9 @@ const layoutButton = (page, name) =>
 const labelOf = (look) => look[0].toUpperCase() + look.slice(1);
 
 /**
- * The demo at a desktop size in a fresh context. `turn` is where the splash cycle stands before
- * the app boots (`kay.splash.turn`, null for a first visit), `retired` is what the retired
- * `kay.splash` key holds, `query` is added to the address, `motion` is the page's reduced-motion
+ * The demo at a desktop size in a fresh context. `seen` seeds `kay.splash.seen`, so the visit is
+ * a returning visitor's, `roll` fixes `Math.random` (null leaves it random), `retired` is what
+ * the retired `kay.splash` key holds, `query` is added to the address, `motion` is the page's reduced-motion
  * preference, and `prepare` gets the context before the page opens.
  */
 export async function openDemo(
@@ -33,7 +33,8 @@ export async function openDemo(
   {
     theme = "light",
     query = "",
-    turn = null,
+    seen = false,
+    roll = null,
     retired = null,
     motion = "reduce",
     prepare = async () => {},
@@ -46,19 +47,20 @@ export async function openDemo(
   });
   await prepare(context);
   await context.addInitScript(
-    ([before, look]) => {
+    ([returning, fixed, look]) => {
+      if (fixed !== null) Math.random = () => fixed;
       // Runs in every frame, and a sandboxed one has no storage to write to. Only before the
       // first load: a reload must see what the app itself wrote.
       try {
         if (sessionStorage.getItem("lever.seeded") !== null) return;
         sessionStorage.setItem("lever.seeded", "1");
-        if (before !== null) localStorage.setItem("kay.splash.turn", String(before));
+        if (returning) localStorage.setItem("kay.splash.seen", "1");
         if (look !== null) localStorage.setItem("kay.splash", look);
       } catch {
         // Nothing to seed there.
       }
     },
-    [turn, retired],
+    [seen, roll, retired],
   );
   const errors = [];
   context.on("weberror", (failure) => errors.push(String(failure.error())));
@@ -306,15 +308,15 @@ export const welcomeChecks = {
     };
   },
 
-  // W2: a first visit opens on the abstract painting; each look sets <html
-  // data-splash>, draws its own painting or sheet, changes the picture and labels the button;
-  // the next visit opens on landscape, the cycle's next look, whatever the switch picked.
+  // W2: a first visit's first welcome is abstract; each look sets <html data-splash>, draws its
+  // own painting or sheet, changes the picture and labels the button; a new thread's welcome
+  // rolls a look, and so does a returning visitor's first welcome.
   async W2(browser) {
     const { page, context, errors } = await openDemo(browser);
     await startThread(page);
     const first = await paintOf(page);
     const pictures = [await settledPicture(page)];
-    const notes = [`start ${first.attr}/${first.label}`];
+    const notes = [`first ${first.attr}/${first.label}`];
     let ok = first.attr === "abstract" && first.painting === "abstract" && !first.sheet;
     for (const look of ["landscape", "vitruvian", "abstract"]) {
       await pickLook(page, look);
@@ -337,26 +339,32 @@ export const welcomeChecks = {
     const differ =
       Buffer.compare(a, b) !== 0 && Buffer.compare(a, v) !== 0 && Buffer.compare(b, v) !== 0;
     const returns = Buffer.compare(a, again) === 0;
-    await pickLook(page, "vitruvian");
-    await page.screenshot({ path: shotPath("W2-vitruvian") });
-    const turned = await page.evaluate(() => localStorage.getItem("kay.splash.turn"));
+    await page.evaluate(() => {
+      Math.random = () => 0.5;
+    });
+    await startThread(page);
+    const rolled = await paintOf(page);
+    await page.screenshot({ path: shotPath("W2-new-thread") });
+    const seen = await page.evaluate(() => localStorage.getItem("kay.splash.seen"));
+    await page.addInitScript(() => {
+      Math.random = () => 0.9;
+    });
     await page.reload({ waitUntil: "load" });
     await sidebarDrawn(page);
     await startThread(page);
-    const drawn = await paintOf(page);
+    const back = await paintOf(page);
     await context.close();
-    ok &&= differ && returns && turned === "1" && drawn.attr === "landscape";
-    ok &&= errors.length === 0;
+    ok &&= differ && returns && rolled.attr === "landscape" && seen === "1";
+    ok &&= back.attr === "vitruvian" && errors.length === 0;
     return {
       ok,
-      detail: `${notes.join("; ")}; pictures differ ${differ}, abstract returns ${returns}; turn ${turned}; after a reload ${drawn.attr}; errors ${JSON.stringify(errors).slice(0, 300)}`,
+      detail: `${notes.join("; ")}; pictures differ ${differ}, abstract returns ${returns}; new thread at 0.5 ${rolled.attr}; seen ${seen}; after a reload at 0.9 ${back.attr}; errors ${JSON.stringify(errors).slice(0, 300)}`,
     };
   },
 
-  // W3: the menu lists the cycle's three looks in its order and nothing else; an unknown look in
-  // the address, Bonsai's included, falls back to where the cycle stands (abstract, landscape,
-  // Vitruvian), a look the address names wins, and a look the switch kept in an earlier build no
-  // longer stands in for the cycle.
+  // W3: the menu lists the three looks in its order and nothing else; a first visit opens on
+  // abstract whatever the address names unless it names a look, Bonsai's included; a retired key
+  // stands in for nothing; a returning visitor's first welcome takes the roll.
   async W3(browser) {
     const { page, context } = await openDemo(browser);
     await startThread(page);
@@ -365,22 +373,22 @@ export const welcomeChecks = {
     const listed = await page.getByRole("menuitemradio").allInnerTexts();
     await context.close();
     const cases = [
-      { query: "splash=bonsai", turn: null, retired: null, want: "abstract" },
-      { query: "splash=nonsense", turn: 1, retired: null, want: "landscape" },
-      { query: "", turn: 2, retired: "abstract", want: "vitruvian" },
-      { query: "splash=vitruvian", turn: 0, retired: null, want: "vitruvian" },
-      { query: "splash=abstract", turn: 2, retired: null, want: "abstract" },
+      { query: "splash=bonsai", seen: false, roll: 0.9, retired: null, want: "abstract" },
+      { query: "splash=nonsense", seen: false, roll: 0.9, retired: null, want: "abstract" },
+      { query: "", seen: false, roll: 0.9, retired: "vitruvian", want: "abstract" },
+      { query: "splash=vitruvian", seen: false, roll: 0, retired: null, want: "vitruvian" },
+      { query: "", seen: true, roll: 0.5, retired: null, want: "landscape" },
     ];
     const got = [];
-    for (const { query, turn, retired } of cases) {
-      const other = await openDemo(browser, { query, turn, retired });
+    for (const { query, seen, roll, retired } of cases) {
+      const other = await openDemo(browser, { query, seen, roll, retired });
       got.push(await other.page.evaluate(() => document.documentElement.dataset.splash));
       await other.context.close();
     }
     const fallbacks = cases.every((each, i) => got[i] === each.want);
     return {
       ok: listed.join("|") === "Abstract|Landscape|Vitruvian" && fallbacks,
-      detail: `menu ${JSON.stringify(listed)}; fallbacks ${JSON.stringify(got)} for ${JSON.stringify(cases.map((each) => each.want))}`,
+      detail: `menu ${JSON.stringify(listed)}; looks ${JSON.stringify(got)} for ${JSON.stringify(cases.map((each) => each.want))}`,
     };
   },
 
