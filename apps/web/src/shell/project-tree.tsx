@@ -1,13 +1,19 @@
-import { sidebarTree, type Located, type ProjectNode, type ThreadId } from "@yaklabs/runtime";
+import {
+  sidebarTree,
+  type Located,
+  type ProjectNode,
+  type ThreadId,
+  type ThreadSummary,
+} from "@yaklabs/runtime";
 import {
   SidebarGroup,
-  SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuAction,
   SidebarMenuItem,
   SidebarMenuSkeleton,
 } from "@yaklabs/ui/components/sidebar";
 import { Plus } from "lucide-react";
+import { SidebarSection } from "@yaklabs/ui/components/sidebar-section";
 import { useEffect, useRef, useState, type RefObject } from "react";
 import { QuietButton } from "../components/quiet-button";
 import { useRestart, useRuntimeState } from "../runtime";
@@ -16,6 +22,13 @@ import { ProjectButton, ThreadRow } from "./tree-rows";
 
 // Fixed widths, so a loading screenshot is the same every time.
 const SKELETON_WIDTHS = [168, 132, 150];
+
+// The shelves below the projects, in display order. A main carries one mark at most
+// (applyMark); if old data has both, Archived holds it.
+type ShelfName = "Snoozed" | "Archived";
+const SHELF_NAMES: ShelfName[] = ["Snoozed", "Archived"];
+
+type Main = ProjectNode["mains"][number];
 
 // Ids folded by hand: projects, and mains with their children. Nothing is folded at first.
 type Folds = { folded: Set<string>; toggle: (id: string) => void };
@@ -32,6 +45,30 @@ function useFolds(): Folds {
       });
     },
   };
+}
+
+// The shelf a main sits on, or null while it stays in its project.
+function shelfOf(main: ThreadSummary): ShelfName | null {
+  if (main.archivedAt !== null) return "Archived";
+  if (main.snoozedUntil !== null) return "Snoozed";
+  return null;
+}
+
+// The tree without its shelved mains, and each shelf's mains in project order, not by date.
+function shelve(tree: ProjectNode[]): {
+  live: ProjectNode[];
+  shelves: { name: ShelfName; mains: Main[] }[];
+} {
+  const live = tree.map((node) => ({
+    ...node,
+    mains: node.mains.filter((each) => shelfOf(each.main) === null),
+  })); // → ProjectNode[]
+  const all = tree.flatMap((node) => node.mains); // → Main[]
+  const shelves = SHELF_NAMES.map((name) => ({
+    name,
+    mains: all.filter((each) => shelfOf(each.main) === name),
+  })); // → { name, mains }[]
+  return { live, shelves };
 }
 
 // The thread the address names: a child, else its main.
@@ -58,15 +95,7 @@ function useHandOff(tree: RefObject<HTMLElement | null>, shell: Shell | null): (
 
 // A main thread and the children below it, folded by its own row's arrow when it has any. `at`
 // is the thread the address names, which is marked.
-function MainRows({
-  node,
-  at,
-  folds,
-}: {
-  node: ProjectNode["mains"][number];
-  at: ThreadId | null;
-  folds: Folds;
-}) {
+function MainRows({ node, at, folds }: { node: Main; at: ThreadId | null; folds: Folds }) {
   const { main, children } = node;
   const open = !folds.folded.has(main.id);
   const hasChildren = children.length > 0;
@@ -173,7 +202,9 @@ function TreeState({ shell, onNewProject }: { shell: Shell | null; onNewProject:
 /**
  * The projects, their main threads and each main's children (ADR-092, ADR-093), newest main
  * first and each main's children newest first, both by creation (ADR-125). Rows open threads by
- * address; the URL's thread is marked. It fills the projects panel beside the rail (ADR-144).
+ * address; the URL's thread is marked. Snoozed and archived mains leave their projects for the
+ * Snoozed and Archived shelves below them; Projects and each shelf fold as a
+ * {@link SidebarSection}. It fills the projects panel beside the rail (ADR-144).
  */
 export function ProjectTree() {
   const shell = useShell();
@@ -181,17 +212,37 @@ export function ProjectTree() {
   const group = useRef<HTMLDivElement>(null);
   const handOff = useHandOff(group, shell);
   const tree = shell === null ? [] : sidebarTree(shell.workspace);
+  const { live, shelves } = shelve(tree);
   return (
     <SidebarGroup ref={group}>
-      <SidebarGroupLabel className="text-soft-ink">Projects</SidebarGroupLabel>
       {shell === null || tree.length === 0 ? (
-        <TreeState shell={shell} onNewProject={handOff} />
+        <SidebarSection label="Projects" count={0} defaultOpen>
+          <TreeState shell={shell} onNewProject={handOff} />
+        </SidebarSection>
       ) : (
-        <SidebarMenu className="gap-2">
-          {tree.map((node) => (
-            <ProjectRows key={node.project.id} node={node} shell={shell} folds={folds} />
+        <>
+          <SidebarSection label="Projects" count={live.length} defaultOpen>
+            <SidebarMenu className="gap-2">
+              {live.map((node) => (
+                <ProjectRows key={node.project.id} node={node} shell={shell} folds={folds} />
+              ))}
+            </SidebarMenu>
+          </SidebarSection>
+          {shelves.map(({ name, mains }) => (
+            <SidebarSection key={name} label={name} count={mains.length} className="mt-2">
+              <SidebarMenu>
+                {mains.map((each) => (
+                  <MainRows
+                    key={each.main.id}
+                    node={each}
+                    at={threadOn(shell.active)}
+                    folds={folds}
+                  />
+                ))}
+              </SidebarMenu>
+            </SidebarSection>
           ))}
-        </SidebarMenu>
+        </>
       )}
     </SidebarGroup>
   );

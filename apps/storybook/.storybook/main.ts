@@ -1,8 +1,14 @@
 import type { StorybookConfig } from "@storybook/react-vite";
+import tailwindcss from "@tailwindcss/vite";
 
-// Stories stay beside their components in the catalog package; this app only hosts them.
+// Stories stay beside their components, in the catalog and the shadcn package; this app only
+// hosts them. Tailwind compiles the shadcn stories' stylesheet, which preview.ts loads only
+// for them.
 const config: StorybookConfig = {
-  stories: ["../../../packages/catalog/src/**/*.stories.tsx"],
+  stories: [
+    "../../../packages/catalog/src/**/*.stories.tsx",
+    "../../../packages/ui/src/**/*.stories.tsx",
+  ],
   framework: "@storybook/react-vite",
   addons: ["@storybook/addon-vitest", "@storybook/addon-a11y"],
   features: {
@@ -14,5 +20,6 @@ const config: StorybookConfig = {
     menuOnboardingChecklist: false,
   },
   core: { disableWhatsNewNotifications: true },
+  viteFinal: (vite) => ({ ...vite, plugins: [...(vite.plugins ?? []), tailwindcss()] }),
 };
 export default config;

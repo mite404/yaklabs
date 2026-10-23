@@ -263,24 +263,6 @@ html[data-dragging="sidebar"] * {
 }
 
 @layer components {
-  /* shadcn draws its controls with utilities on top of Tailwind's preflight, and the catalog
-     styles bare elements over that preflight (tokens.css): a button gets a paper fill, a
-     hairline border, 7px corners and padding, and a link turns olive. For an element shadcn
-     renders, which carries a data-slot, this puts preflight's values back, so it shows only
-     what its own classes say: a ghost button no box, a toggle no border of its own, a sidebar
-     link the sidebar's ink. This layer outranks the catalog's and yields to every utility. */
-  :where(button[data-slot]) {
-    border: 0 solid;
-    border-radius: 0;
-    background-color: transparent;
-    padding: 0;
-    color: inherit;
-    font-size: inherit;
-  }
-  :where(a[data-slot]) {
-    color: inherit;
-  }
-
   /* A thread narrower than its widest line lays out at its width instead of spilling past its
      own border: the panel's one grid column may shrink below its content's longest line, so
      a chart, a card and the compose hint fit the column. thread.css leaves the column's floor
