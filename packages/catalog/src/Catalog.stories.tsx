@@ -66,8 +66,6 @@ export const Commits: Story = {
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await expect(canvas.getByText("commits", { exact: true })).toBeVisible();
-    await expect(canvas.queryByText("cases", { exact: true })).not.toBeInTheDocument();
     await expect(
       canvas.getByRole("img", { name: "This week's commits. Values available in the data table." }),
     ).toBeVisible();

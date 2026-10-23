@@ -155,7 +155,7 @@ The rail checks' P23 and P25 measure all of this in both themes.
 
 Bars are one flat data colour with the button's 4px top corners; the darker eased base they used to
 have did not work with the colour scheme and was removed (ADR-055).
-Chart marks and their legend keys are graphite `#56564f` (6.4:1 on paper), a warm neutral, so green
+Chart marks are graphite `#56564f` (6.4:1 on paper), a warm neutral, so green
 stays for button hovers (ADR-058).
 
 ### 12. Cards come to rest 20px above the compose box

@@ -1394,9 +1394,6 @@
   letter-spacing: -0.2px;
   margin: 0;
 }
-.card[data-context="thread"] .measure {
-  padding: 0 16px 6px;
-}
 .card[data-context="thread"] .chart {
   height: 200px;
 }
