@@ -201,9 +201,6 @@ export function CatalogCard({
           <output>{result.reason}</output>
         </p>
       )}
-      <div className="measure">
-        <span className="legend-dot" /> {props.unit} <span className="muted">· supplied order</span>
-      </div>
       {selection.component === "DataTable" || showTable ? (
         <DataTable props={props} />
       ) : (

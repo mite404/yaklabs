@@ -155,7 +155,7 @@ The rail checks' P23 and P25 measure all of this in both themes.
 
 Bars are one flat data colour with the button's 4px top corners; the darker eased base they used to
 have did not work with the colour scheme and was removed (ADR-055).
-Chart marks and their legend keys are graphite `#56564f` (6.4:1 on paper), a warm neutral, so green
+Chart marks are graphite `#56564f` (6.4:1 on paper), a warm neutral, so green
 stays for button hovers (ADR-058).
 
 ### 12. Cards come to rest 20px above the compose box
@@ -523,7 +523,7 @@ ADR-150).
 | Jump framing | a target already wholly in view does not move, and only its glow says where it is; a user's message out of view lands centred; anything else out of view scrolls just into view, its top never cut off | Ethan (ADR-159) |
 | Reveal after a press | a control that opens something keeps itself in view: the thread rises to show what opened, and stops once the control reaches the top of the band | Ethan (ADR-159) |
 | Resize hint | full `--ink` for 40px either side of the pointer, gone by 70px | Ethan (ADR-159) |
-| Splash | each visit takes the next look: abstract, landscape, Vitruvian, then round again; the switch lists them in that order, then Bonsai | Ethan (ADR-159) |
+| Splash | a visitor's first welcome is abstract; every later welcome rolls abstract, landscape or Vitruvian at random; the switch lists them in that order | Ethan (ADR-159, amended) |
 | Kay's mark | the bonsai's three pills on a 12-unit grid, `currentColor`, in the rail's 20px box | Ethan (ADR-094, amended) |
 | Reading tools at rest | the bookmark alone on two coats of `--scrim` (paper at 72% each, 92.16% combined), glyph opaque, 8px backdrop blur; the denser small backing gives the popover's quiet, readable appearance over chart edges and text; clear until the pointer is over the thread's turns, up over 300ms on the strong ease-out; Search unfolds over 220ms on the panel ease, the drawer's slide | Ethan (less-transparent popover aesthetic, ADR-143, amended); derived (two coats of the existing scrim) |
 | Reading tools open | the unfolded buttons and expanded search keep the collapsed bar's denser backing and 8px blur, with opaque glyphs; blur stays on a backing sheet so the menu stays fixed to the viewport; the reference request list keeps its existing single `--scrim` and 8px blur; request labels show up to 48 characters, then an ellipsis, or cut earlier to fit a narrow viewport while keeping their time visible | Ethan (popover aesthetic, longer labels, ADR-143, amended); derived (48-character limit and request list's blur) |

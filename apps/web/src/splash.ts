@@ -1,52 +1,50 @@
 import { useSyncExternalStore } from "react";
 
 /** The painting behind a new thread's welcome (ADR-136), with a switch to look through the others. */
-export type SplashStyle = "landscape" | "abstract" | "vitruvian" | "bonsai";
+export type SplashStyle = "landscape" | "abstract" | "vitruvian";
 
-// One row per look. A look with no assets yet is listed but cannot be chosen.
-type SplashLook = { id: SplashStyle; label: string; available: boolean };
+type SplashLook = { id: SplashStyle; label: string };
 
-/** The looks the switch offers, in its order: the visit cycle's, then Bonsai, which waits for its assets. */
+/** The looks the switch offers, in its order. */
 export const SPLASH_LOOKS: readonly SplashLook[] = [
-  { id: "abstract", label: "Abstract", available: true },
-  { id: "landscape", label: "Landscape", available: true },
-  { id: "vitruvian", label: "Vitruvian", available: true },
-  { id: "bonsai", label: "Bonsai", available: false },
+  { id: "abstract", label: "Abstract" },
+  { id: "landscape", label: "Landscape" },
+  { id: "vitruvian", label: "Vitruvian" },
 ];
 
-// The looks visits take in turn, from a visitor's first (Ethan: "abstract first, painting,
-// vitruvian man"), then round again.
-const CYCLE: readonly SplashStyle[] = SPLASH_LOOKS.filter((look) => look.available).map(
-  (look) => look.id,
-);
-// Where the cycle stands: the place in CYCLE of the look the next visit opens with.
-const TURN_KEY = "kay.splash.turn";
+// Set once a welcome has been on screen, so only a visitor's very first welcome is sure to be
+// abstract (Ethan).
+const SEEN_KEY = "kay.splash.seen";
 // Keys earlier builds kept, read by nothing now and cleared: the switch's last pick, and the
-// mark of a first welcome seen.
-const RETIRED_KEYS = ["kay.splash", "kay.splash.seen"];
+// visit cycle's place.
+const RETIRED_KEYS = ["kay.splash", "kay.splash.turn"];
 const PARAM = "splash";
 
-// The choice for this visit, held above any remount. Null until the first read decides it.
+// The look on screen, held above any remount. Null until the first read decides it.
 let current: SplashStyle | null = null;
-// This visit's place in the cycle, and whether a welcome has moved the cycle on yet.
-let turn = 0;
-let advanced = false;
+// The look a `?splash=` asked for, which holds for the whole visit.
+let asked: SplashStyle | null = null;
+// The thread whose welcome last showed, so a remount of the same welcome keeps its look.
+let shownFor: string | null = null;
 const listeners = new Set<() => void>();
 
-/** The look a string names, or null for anything else: unknown, or listed but not available yet. */
+/** The look a string names, or null for anything else. */
 export const splashStyleOf = (value: string | null): SplashStyle | null =>
-  SPLASH_LOOKS.find((look) => look.available && look.id === value)?.id ?? null;
+  SPLASH_LOOKS.find((look) => look.id === value)?.id ?? null;
 
 /**
- * The look a visit opens with: the one the address asks for, else the cycle's look at `visits`
- * (abstract, landscape, Vitruvian, then round again).
- * @param visits How many visits have shown a welcome before this one; any whole number.
+ * The look a welcome opens with: the one the address asks for, else abstract for a visitor who
+ * has never seen a welcome, else the look `roll` lands on, each of the three equally likely.
+ * @param roll A number in [0, 1), such as `Math.random()`.
  */
-export function lookForVisit(asked: SplashStyle | null, visits: number): SplashStyle {
-  if (asked !== null) return asked;
-  const n = CYCLE.length;
-  const at = Number.isInteger(visits) ? ((visits % n) + n) % n : 0;
-  return CYCLE[at];
+export function pickLook(
+  fromUrl: SplashStyle | null,
+  firstEver: boolean,
+  roll: number,
+): SplashStyle {
+  if (fromUrl !== null) return fromUrl;
+  if (firstEver) return "abstract";
+  return SPLASH_LOOKS[Math.min(Math.floor(roll * SPLASH_LOOKS.length), SPLASH_LOOKS.length - 1)].id;
 }
 
 // The painting reaches the CSS as an attribute on <html>, as the title bar's look does: index.css
@@ -55,28 +53,14 @@ function apply(style: SplashStyle): void {
   document.documentElement.dataset.splash = style;
 }
 
-// The cycle's place for this visit, from the last visit's; 0 for a first visit or when storage
-// is refused, as in a private window.
-function storedTurn(): number {
+// Whether a welcome has been on screen in an earlier visit; true when storage is refused, as in
+// a private window, so such a visitor still gets the random pick.
+function seenBefore(): boolean {
   try {
     for (const key of RETIRED_KEYS) localStorage.removeItem(key);
-    return Number(localStorage.getItem(TURN_KEY) ?? 0) || 0;
+    return localStorage.getItem(SEEN_KEY) !== null;
   } catch {
-    return 0;
-  }
-}
-
-/**
- * Moves the cycle on once a welcome has been on screen, once a visit, so the next visit opens
- * on the look after this one's.
- */
-export function markSplashSeen(): void {
-  if (advanced) return;
-  advanced = true;
-  try {
-    localStorage.setItem(TURN_KEY, String((turn + 1) % CYCLE.length));
-  } catch {
-    // Storage refused: the next visit opens on the cycle's first look again.
+    return true;
   }
 }
 
@@ -91,8 +75,8 @@ function fromAddress(): SplashStyle | null {
 }
 
 function decide(): SplashStyle {
-  turn = storedTurn();
-  return lookForVisit(fromAddress(), turn);
+  asked = fromAddress();
+  return pickLook(asked, !seenBefore(), Math.random());
 }
 
 // Decided on the first read, which is before the welcome's first paint, so the picture never
@@ -117,7 +101,7 @@ function subscribe(listener: () => void): () => void {
   };
 }
 
-// For this visit only: kept, the choice would stand in for every draw after it.
+// Until the next new thread's welcome: kept, the choice would stand in for every draw after it.
 function choose(next: SplashStyle): void {
   if (splashStyleOf(next) === null || next === current) return;
   current = next;
@@ -126,11 +110,27 @@ function choose(next: SplashStyle): void {
 }
 
 /**
+ * Marks a thread's welcome as on screen. The visit's first welcome keeps the look decided as the
+ * app loaded; a later thread's welcome rolls a new one (Ethan), unless the address chose it.
+ * Remounting the same thread's welcome keeps its look. Call it before the welcome paints.
+ */
+export function showSplashFor(threadId: string): void {
+  if (shownFor === threadId) return;
+  const later = shownFor !== null;
+  shownFor = threadId;
+  try {
+    localStorage.setItem(SEEN_KEY, "1");
+  } catch {
+    // Storage refused: the next visit counts as a first one again.
+  }
+  if (later) choose(pickLook(asked, false, Math.random()));
+}
+
+/**
  * The welcome's painting and how to change it for this visit. Every caller reads the one store,
- * so the welcome and its switch agree with no prop between them. A look that is not available is
- * never chosen.
+ * so the welcome and its switch agree with no prop between them.
  */
 export function useSplash(): { style: SplashStyle; choose: (next: SplashStyle) => void } {
-  const style = useSyncExternalStore(subscribe, snapshot, () => CYCLE[0]); // → SplashStyle
+  const style = useSyncExternalStore(subscribe, snapshot, () => "abstract" as const); // → SplashStyle
   return { style, choose };
 }

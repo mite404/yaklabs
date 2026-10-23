@@ -1,54 +1,45 @@
 import { describe, expect, it } from "vitest";
-import { SPLASH_LOOKS, lookForVisit, splashStyleOf } from "./splash";
+import { SPLASH_LOOKS, pickLook, splashStyleOf } from "./splash";
 
 describe("SPLASH_LOOKS", () => {
-  it("lists the four looks in the switch's order, abstract first, with Bonsai waiting", () => {
-    expect(SPLASH_LOOKS.map((look) => [look.id, look.available])).toEqual([
-      ["abstract", true],
-      ["landscape", true],
-      ["vitruvian", true],
-      ["bonsai", false],
-    ]);
+  it("lists the three looks in the switch's order, abstract first", () => {
+    expect(SPLASH_LOOKS.map((look) => look.id)).toEqual(["abstract", "landscape", "vitruvian"]);
   });
 });
 
 describe("splashStyleOf", () => {
-  it("names each available look", () => {
+  it("names each look", () => {
     expect(splashStyleOf("landscape")).toBe("landscape");
     expect(splashStyleOf("abstract")).toBe("abstract");
     expect(splashStyleOf("vitruvian")).toBe("vitruvian");
   });
 
-  it("does not name Bonsai until it has assets", () => {
-    expect(splashStyleOf("bonsai")).toBeNull();
-  });
-
   it("refuses anything else, such as a stale stored value or a bad address", () => {
+    expect(splashStyleOf("bonsai")).toBeNull();
     expect(splashStyleOf("sphere")).toBeNull();
     expect(splashStyleOf("")).toBeNull();
     expect(splashStyleOf(null)).toBeNull();
   });
 });
 
-describe("lookForVisit", () => {
-  it("cycles abstract, landscape, Vitruvian, visit by visit, then round again", () => {
-    expect([0, 1, 2, 3, 4].map((turn) => lookForVisit(null, turn))).toEqual([
+describe("pickLook", () => {
+  it("opens a visitor's first welcome on abstract, whatever the roll", () => {
+    expect(pickLook(null, true, 0.99)).toBe("abstract");
+  });
+
+  it("splits later welcomes evenly across the three looks", () => {
+    expect([0, 0.33, 0.34, 0.66, 0.67, 0.999].map((roll) => pickLook(null, false, roll))).toEqual([
       "abstract",
+      "abstract",
+      "landscape",
       "landscape",
       "vitruvian",
-      "abstract",
-      "landscape",
+      "vitruvian",
     ]);
   });
 
-  it("starts the cycle over for a turn storage could not keep", () => {
-    expect(lookForVisit(null, Number.NaN)).toBe("abstract");
-    expect(lookForVisit(null, 1.5)).toBe("abstract");
-    expect(lookForVisit(null, -1)).toBe("vitruvian");
-  });
-
-  it("lets the address choose, wherever the cycle stands", () => {
-    expect(lookForVisit("vitruvian", 0)).toBe("vitruvian");
-    expect(lookForVisit("abstract", 2)).toBe("abstract");
+  it("lets the address choose, even for a first welcome", () => {
+    expect(pickLook("vitruvian", true, 0)).toBe("vitruvian");
+    expect(pickLook("landscape", false, 0.9)).toBe("landscape");
   });
 });

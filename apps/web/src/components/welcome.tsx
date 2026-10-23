@@ -65,7 +65,7 @@ const GreetingLine = env.auth.kind === "workos" ? WorkOsGreeting : LocalGreeting
 export function Welcome({ thread, pane }: { thread: ThreadSummary; pane: PaneKind }) {
   return (
     <div className="welcome" data-slot="welcome">
-      <WelcomeArt />
+      <WelcomeArt threadId={thread.id} />
       <div className="welcome-words flex w-full max-w-sm flex-col gap-7">
         <DesignToolingSeal className="welcome-seal" />
         <div className="flex flex-col gap-4">

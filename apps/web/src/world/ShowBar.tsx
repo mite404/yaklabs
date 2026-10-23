@@ -163,38 +163,25 @@ function Transport({ show, state }: On) {
   );
 }
 
-// What this is, which demo is on (Ethan: "SCRIPTED DEMO: Weekly Brief"), in the title bar's
-// green, bold.
+// Ethan: "SCRIPTED DEMO: September Invoices. The recap as a missed run's summary". Only CSS
+// title-cases the name, so the tabs keep the thread's sentence case. The pitch takes the body
+// grey (design pillars, rule 4).
 function Title({ show }: { show: Show }) {
   return (
-    <div className="flex min-w-0 items-baseline gap-2">
-      <span
-        data-slot="demo-title"
-        className="demo-title truncate text-sm font-bold tracking-[0.06em]"
-      >
-        <span className="uppercase">Scripted demo:</span> {show.script.thread}
-      </span>
-    </div>
-  );
-}
-
-// The show's standing, what of it is shipped and what is proposed, so the bar says so before
-// anyone asks: in the middle of the bar (Ethan).
-function Standing({ show }: { show: Show }) {
-  return (
-    <p
-      data-slot="demo-standing"
-      className="truncate text-center text-[11px] text-soft-ink max-md:hidden"
-    >
-      {show.script.standing}
+    <p data-slot="demo-title" className="truncate text-sm">
+      <span className="demo-title font-bold tracking-[0.06em]">
+        <span className="uppercase">Scripted demo:</span>{" "}
+        <span className="capitalize">{show.script.thread}</span>.
+      </span>{" "}
+      <span className="text-soft-ink">{show.script.pitch}</span>
     </p>
   );
 }
 
 /**
- * The controls of the show on screen, one row under the title bar (two on a phone): which demo
- * this is, what of the show is shipped or proposed in the middle, then Play, 2x, Restart and the
- * time played. It draws nothing unless the thread on screen is a show's main or one of its
+ * The controls of the show on screen, one row under the title bar: which demo this is and what
+ * it demonstrates, then, in the middle of the bar (at its end on a phone), Play, 2x, Restart and
+ * the time played. It draws nothing unless the thread on screen is a show's main or one of its
  * children, so it comes and goes with the Demo's threads. The thread below is the app's own,
  * driven through its own controls.
  */
@@ -207,13 +194,10 @@ export function ShowBar() {
       role="toolbar"
       aria-label="Scripted demo"
       data-slot="demo-controls"
-      className="grid h-10 shrink-0 grid-cols-[minmax(0,1fr)_minmax(0,auto)_minmax(0,1fr)] items-center gap-3 border-b border-hairline bg-paper px-3"
+      className="grid h-10 shrink-0 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 border-b border-hairline bg-paper px-3 max-md:grid-cols-[minmax(0,1fr)_auto]"
     >
       <Title show={on.show} />
-      <Standing show={on.show} />
-      <div className="flex justify-end">
-        <Transport show={on.show} state={on.state} />
-      </div>
+      <Transport show={on.show} state={on.state} />
     </div>
   );
 }

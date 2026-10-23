@@ -1844,6 +1844,8 @@ Amended 2026-10-01 (Ethan): a title renames from its own words or from Rename in
 and from nothing else. A click on the words of the tab in view opens them as a field, the text
 cursor saying so; a click on a tab not in view only chooses it, and the double click is gone. A
 lane's title loses its dotted rule: it reads as plain words until the pointer rests on it.
+Amended 2026-10-23 (Ethan): the splash switch no longer lists Bonsai. It offers Abstract,
+Landscape and Vitruvian, and a `?splash=bonsai` falls back like any unknown look.
 
 ## ADR-139 - Separate progress narration, finished responses, and work details
 
@@ -2267,6 +2269,9 @@ play as the Demo project's three threads (`/t/demo-brief`, `/t/demo-interrupted`
 overlay composed with the worker. `/demo/weekly-brief[?script=]` and its `/t/:id` threads
 redirect there. The scenario picker is gone, since the sidebar's Demo project lists the shows,
 and Restart resets one show instead of remounting the shell.
+Amended 2026-10-23 (Ethan): the standing line is gone from the bar and from the scripts. Play,
+2x, Restart and the status take the middle of the bar where it sat, and each script's `pitch`, one
+line on what the scenario demonstrates, follows the demo's name instead.
 
 ## ADR-149 - A jump lays runway so any turn can centre
 
@@ -2554,6 +2559,10 @@ dictation live microphone"): dictation in the device's own threads, the Live Pla
 listens to the visitor's microphone and the browser's speech service (ADR-028's live source);
 the Demo's threads and a scenario's keep the simulated recording, so a scripted take and a
 fixture sound the same every time.
+Amended 2026-10-23 (Ethan): the splash no longer cycles by visit. A visitor's first welcome is
+always abstract. Every later welcome, a new thread's or a returning visitor's first, rolls
+Abstract, Landscape or Vitruvian at random. `kay.splash.seen` marks the first welcome seen, and
+`kay.splash.turn` is retired. A `?splash=` still holds for the whole visit.
 
 ## ADR-160 - A public page tells the design tooling's story, sealed on the welcome
 
