@@ -18,6 +18,7 @@ import { useEffect, useRef, useState, type RefObject } from "react";
 import { QuietButton } from "../components/quiet-button";
 import { useRestart, useRuntimeState } from "../runtime";
 import { useShell, type Shell } from "./model";
+import { ThreadRowItem } from "./thread-row-menu";
 import { ProjectButton, ThreadRow } from "./tree-rows";
 
 // Fixed widths, so a loading screenshot is the same every time.
@@ -95,13 +96,23 @@ function useHandOff(tree: RefObject<HTMLElement | null>, shell: Shell | null): (
 
 // A main thread and the children below it, folded by its own row's arrow when it has any. `at`
 // is the thread the address names, which is marked.
-function MainRows({ node, at, folds }: { node: Main; at: ThreadId | null; folds: Folds }) {
+function MainRows({
+  node,
+  at,
+  folds,
+  shell,
+}: {
+  node: Main;
+  at: ThreadId | null;
+  folds: Folds;
+  shell: Shell;
+}) {
   const { main, children } = node;
   const open = !folds.folded.has(main.id);
   const hasChildren = children.length > 0;
   return (
     <>
-      <SidebarMenuItem className="group/thread">
+      <ThreadRowItem shell={shell} thread={main}>
         <ThreadRow
           thread={main}
           active={at === main.id}
@@ -118,12 +129,12 @@ function MainRows({ node, at, folds }: { node: Main; at: ThreadId | null; folds:
               : undefined
           }
         />
-      </SidebarMenuItem>
+      </ThreadRowItem>
       {open &&
         children.map((thread) => (
-          <SidebarMenuItem key={thread.id} className="group/thread">
+          <ThreadRowItem key={thread.id} shell={shell} thread={thread}>
             <ThreadRow thread={thread} active={at === thread.id} kind="child" />
-          </SidebarMenuItem>
+          </ThreadRowItem>
         ))}
     </>
   );
@@ -154,7 +165,13 @@ function ProjectRows({ node, shell, folds }: { node: ProjectNode; shell: Shell; 
       {open && (
         <SidebarMenu className="mt-0.5">
           {mains.map((each) => (
-            <MainRows key={each.main.id} node={each} at={threadOn(shell.active)} folds={folds} />
+            <MainRows
+              key={each.main.id}
+              node={each}
+              at={threadOn(shell.active)}
+              folds={folds}
+              shell={shell}
+            />
           ))}
         </SidebarMenu>
       )}
@@ -237,6 +254,7 @@ export function ProjectTree() {
                     node={each}
                     at={threadOn(shell.active)}
                     folds={folds}
+                    shell={shell}
                   />
                 ))}
               </SidebarMenu>
