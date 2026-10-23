@@ -70,7 +70,7 @@ export const returned: Script = {
   label: "Came back to it",
   shows:
     "A run you did not watch: outcomes first, evidence a layer down, a card's view carried into the next request, then what needs you.",
-  standing: "Proposed: the recap as a missed run's summary. Shipped: the rest.",
+  pitch: "The recap as a missed run's summary",
   project: "Operations",
   thread: "September invoices",
   children: {
