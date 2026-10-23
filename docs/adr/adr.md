@@ -1844,6 +1844,8 @@ Amended 2026-10-01 (Ethan): a title renames from its own words or from Rename in
 and from nothing else. A click on the words of the tab in view opens them as a field, the text
 cursor saying so; a click on a tab not in view only chooses it, and the double click is gone. A
 lane's title loses its dotted rule: it reads as plain words until the pointer rests on it.
+Amended 2026-10-23 (Ethan): the splash switch no longer lists Bonsai. It offers Abstract,
+Landscape and Vitruvian, and a `?splash=bonsai` falls back like any unknown look.
 
 ## ADR-139 - Separate progress narration, finished responses, and work details
 

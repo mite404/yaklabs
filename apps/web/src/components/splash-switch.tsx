@@ -16,8 +16,7 @@ const labelOf = (style: string): string =>
 
 /**
  * The button that picks the painting behind a new thread's welcome (ADR-136) for this visit: the
- * landscape, the abstract strokes, Vitruvian's sheet, or Bonsai once its assets exist, so a
- * visitor can look through each. The welcome places it, since it shows there and nowhere else.
+ * landscape, the abstract strokes, or Vitruvian's sheet, so a visitor can look through each. The welcome places it, since it shows there and nowhere else.
  * Its menu opens from the button's corner in 150ms, and Esc closes it.
  */
 export function SplashSwitch({ className }: { className?: string }) {
@@ -45,10 +44,9 @@ export function SplashSwitch({ className }: { className?: string }) {
               if (chosen !== null) choose(chosen);
             }}
           >
-            {SPLASH_LOOKS.map(({ id, label, available }) => (
-              <DropdownMenuRadioItem key={id} value={id} disabled={!available} closeOnClick>
+            {SPLASH_LOOKS.map(({ id, label }) => (
+              <DropdownMenuRadioItem key={id} value={id} closeOnClick>
                 {label}
-                {!available && <span className="ml-auto text-xs">Coming soon</span>}
               </DropdownMenuRadioItem>
             ))}
           </DropdownMenuRadioGroup>

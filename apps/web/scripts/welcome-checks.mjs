@@ -2,13 +2,13 @@
 /* oxlint-disable unicorn/consistent-function-scoping -- the two page callbacks are serialized
    into the page, so their helpers have to live inside them */
 // A new thread's welcome and its debug switch for the painting (ADR-135, ADR-136, ADR-138) on
-// the real app's demo scenario: where the switch shows, what each look paints, what waits for
-// its assets, how the switch is driven, whether the words stay legible over each painting, and
+// the real app's demo scenario: where the switch shows, what each look paints, how the switch is
+// driven, whether the words stay legible over each painting, and
 // whether its buttons keep the site's corners.
 // Every check opens its own browser context, so none sees another's data or stored look.
 import { BASE, shotPath, sidebarDrawn } from "./lever.mjs";
 
-/** The looks that have their assets, in the switch's order; Bonsai is listed and waits. */
+/** The looks the switch offers. */
 export const LOOKS = ["landscape", "abstract", "vitruvian"];
 const THEMES = ["light", "dark"];
 // WCAG AA for body text: the words against the worst pixel of the painting behind them.
@@ -306,7 +306,7 @@ export const welcomeChecks = {
     };
   },
 
-  // W2: a first visit opens on the abstract painting; each available look sets <html
+  // W2: a first visit opens on the abstract painting; each look sets <html
   // data-splash>, draws its own painting or sheet, changes the picture and labels the button;
   // the next visit opens on landscape, the cycle's next look, whatever the switch picked.
   async W2(browser) {
@@ -353,8 +353,8 @@ export const welcomeChecks = {
     };
   },
 
-  // W3: Bonsai is listed and disabled, after the cycle's looks in its order; an unknown or
-  // unavailable look in the address falls back to where the cycle stands (abstract, landscape,
+  // W3: the menu lists the cycle's three looks in its order and nothing else; an unknown look in
+  // the address, Bonsai's included, falls back to where the cycle stands (abstract, landscape,
   // Vitruvian), a look the address names wins, and a look the switch kept in an earlier build no
   // longer stands in for the cycle.
   async W3(browser) {
@@ -362,12 +362,7 @@ export const welcomeChecks = {
     await startThread(page);
     await switchOf(page).click();
     await menuOf(page).waitFor();
-    const bonsai = page.getByRole("menuitemradio", { name: /^Bonsai/ });
     const listed = await page.getByRole("menuitemradio").allInnerTexts();
-    const disabled = (await bonsai.getAttribute("aria-disabled")) === "true";
-    const hint = (await bonsai.innerText()).includes("Coming soon");
-    await bonsai.click({ force: true });
-    const after = await paintOf(page);
     await context.close();
     const cases = [
       { query: "splash=bonsai", turn: null, retired: null, want: "abstract" },
@@ -384,15 +379,8 @@ export const welcomeChecks = {
     }
     const fallbacks = cases.every((each, i) => got[i] === each.want);
     return {
-      ok:
-        listed.length === 4 &&
-        listed.map((text) => text.replace(/\s*Coming soon/, "")).join("|") ===
-          "Abstract|Landscape|Vitruvian|Bonsai" &&
-        disabled &&
-        hint &&
-        after.attr === "abstract" &&
-        fallbacks,
-      detail: `menu ${JSON.stringify(listed)}; Bonsai aria-disabled ${disabled}, hint ${hint}, look after a press ${after.attr}; fallbacks ${JSON.stringify(got)} for ${JSON.stringify(cases.map((each) => each.want))}`,
+      ok: listed.join("|") === "Abstract|Landscape|Vitruvian" && fallbacks,
+      detail: `menu ${JSON.stringify(listed)}; fallbacks ${JSON.stringify(got)} for ${JSON.stringify(cases.map((each) => each.want))}`,
     };
   },
 

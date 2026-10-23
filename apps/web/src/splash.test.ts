@@ -2,28 +2,20 @@ import { describe, expect, it } from "vitest";
 import { SPLASH_LOOKS, lookForVisit, splashStyleOf } from "./splash";
 
 describe("SPLASH_LOOKS", () => {
-  it("lists the four looks in the switch's order, abstract first, with Bonsai waiting", () => {
-    expect(SPLASH_LOOKS.map((look) => [look.id, look.available])).toEqual([
-      ["abstract", true],
-      ["landscape", true],
-      ["vitruvian", true],
-      ["bonsai", false],
-    ]);
+  it("lists the three looks in the switch's order, abstract first", () => {
+    expect(SPLASH_LOOKS.map((look) => look.id)).toEqual(["abstract", "landscape", "vitruvian"]);
   });
 });
 
 describe("splashStyleOf", () => {
-  it("names each available look", () => {
+  it("names each look", () => {
     expect(splashStyleOf("landscape")).toBe("landscape");
     expect(splashStyleOf("abstract")).toBe("abstract");
     expect(splashStyleOf("vitruvian")).toBe("vitruvian");
   });
 
-  it("does not name Bonsai until it has assets", () => {
-    expect(splashStyleOf("bonsai")).toBeNull();
-  });
-
   it("refuses anything else, such as a stale stored value or a bad address", () => {
+    expect(splashStyleOf("bonsai")).toBeNull();
     expect(splashStyleOf("sphere")).toBeNull();
     expect(splashStyleOf("")).toBeNull();
     expect(splashStyleOf(null)).toBeNull();

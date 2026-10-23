@@ -1,24 +1,20 @@
 import { useSyncExternalStore } from "react";
 
 /** The painting behind a new thread's welcome (ADR-136), with a switch to look through the others. */
-export type SplashStyle = "landscape" | "abstract" | "vitruvian" | "bonsai";
+export type SplashStyle = "landscape" | "abstract" | "vitruvian";
 
-// One row per look. A look with no assets yet is listed but cannot be chosen.
-type SplashLook = { id: SplashStyle; label: string; available: boolean };
+type SplashLook = { id: SplashStyle; label: string };
 
-/** The looks the switch offers, in its order: the visit cycle's, then Bonsai, which waits for its assets. */
+/** The looks the switch offers, in the visit cycle's order. */
 export const SPLASH_LOOKS: readonly SplashLook[] = [
-  { id: "abstract", label: "Abstract", available: true },
-  { id: "landscape", label: "Landscape", available: true },
-  { id: "vitruvian", label: "Vitruvian", available: true },
-  { id: "bonsai", label: "Bonsai", available: false },
+  { id: "abstract", label: "Abstract" },
+  { id: "landscape", label: "Landscape" },
+  { id: "vitruvian", label: "Vitruvian" },
 ];
 
 // The looks visits take in turn, from a visitor's first (Ethan: "abstract first, painting,
 // vitruvian man"), then round again.
-const CYCLE: readonly SplashStyle[] = SPLASH_LOOKS.filter((look) => look.available).map(
-  (look) => look.id,
-);
+const CYCLE: readonly SplashStyle[] = SPLASH_LOOKS.map((look) => look.id);
 // Where the cycle stands: the place in CYCLE of the look the next visit opens with.
 const TURN_KEY = "kay.splash.turn";
 // Keys earlier builds kept, read by nothing now and cleared: the switch's last pick, and the
@@ -33,9 +29,9 @@ let turn = 0;
 let advanced = false;
 const listeners = new Set<() => void>();
 
-/** The look a string names, or null for anything else: unknown, or listed but not available yet. */
+/** The look a string names, or null for anything else. */
 export const splashStyleOf = (value: string | null): SplashStyle | null =>
-  SPLASH_LOOKS.find((look) => look.available && look.id === value)?.id ?? null;
+  SPLASH_LOOKS.find((look) => look.id === value)?.id ?? null;
 
 /**
  * The look a visit opens with: the one the address asks for, else the cycle's look at `visits`
@@ -127,8 +123,7 @@ function choose(next: SplashStyle): void {
 
 /**
  * The welcome's painting and how to change it for this visit. Every caller reads the one store,
- * so the welcome and its switch agree with no prop between them. A look that is not available is
- * never chosen.
+ * so the welcome and its switch agree with no prop between them.
  */
 export function useSplash(): { style: SplashStyle; choose: (next: SplashStyle) => void } {
   const style = useSyncExternalStore(subscribe, snapshot, () => CYCLE[0]); // → SplashStyle
