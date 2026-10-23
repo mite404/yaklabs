@@ -27,3 +27,6 @@ catalog:
   vite: ^8.2.2
   vitest: 4.1.11
   zod: ^4.5.4
+# miniflare pins undici exactly; force the October 2026 security fix.
+overrides:
+  miniflare>undici: 7.30.1

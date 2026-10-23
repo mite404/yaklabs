@@ -28,7 +28,7 @@ jobs:
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v7
         with:
-          node-version: 26
+          node-version: 26.12.1
           cache: pnpm
       - run: pnpm install --frozen-lockfile
 
@@ -73,7 +73,7 @@ jobs:
   design-verification:
     runs-on: ubuntu-latest
     # Baselines identify Debian 12 separately from Ubuntu and macOS rasterization.
-    container: node:26.10.0-bookworm
+    container: node:26.12.1-bookworm
     timeout-minutes: 30
     env:
       HOME: /root
