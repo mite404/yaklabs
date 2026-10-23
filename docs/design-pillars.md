@@ -62,6 +62,23 @@ Components use only named tokens, never raw hex. The core set uses yaklabs.ai's 
 `--chalk`, `--moss`, `--rust`); colours the site does not declare carry a `--yak-` prefix, and roles
 such as `--accent`, `--bubble-*`, and `--btn-*` are built on top.
 
+The first-visit guide is an explicit exception (**Ethan**): vivid red, orange, blue and green
+bullets match outlines around Demo, Live Playground, Play and Canvas. Its private `--guide-*`
+properties in `apps/web/src/index.css` do not feed product status colors. Words retain the normal
+inks; bright marks have ink keylines, so color is not the only way to read the instructions.
+The existing dialog handles focus, Escape and dismissal. Its backdrop uses paper at 24% and a 2px
+blur (`--space / 12`); its paper surface, 14px corners, 24px padding, typography and shadow use the
+existing app rules (**derived**). Dismissal is remembered per account in this browser, not remotely.
+First visits render the history drawer expanded from the start, without an opening animation, and
+outline the whole Demo section (**Ethan**). After dismissal, the docked or closed preference is
+remembered separately for each signed-in account in this browser. It is not synced across devices.
+The expanded override applies only while the project guide is visible; deep links retain the saved
+drawer choice, and advancing or dismissing the guide restores it.
+On desktop the guide sits at the right with a `--space * 2` inset. Below the 768px sidebar
+breakpoint the project guide sits at the bottom with a `--space / 2` inset and padding, `--space / 3`
+gaps, and a `--space * 5 / 6` heading. Unrelated drawer navigation and the redundant introductory
+sentence are hidden for this step, leaving both outlined projects visible above it (**derived**).
+
 ### The site's contrast pattern: two inks, two lines
 
 yaklabs.ai uses two text inks and two line weights, and nothing else: `--ink` for headings (13.3:1
