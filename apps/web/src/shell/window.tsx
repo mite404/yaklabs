@@ -63,11 +63,9 @@ export function Window({
         className="fixed inset-0 flex flex-col overflow-hidden bg-paper md:inset-4 md:rounded-[12px] md:border md:border-hairline md:shadow-[0_8px_32px_var(--shadow)]"
       >
         <SidebarProvider
-          open={projectsGuide || choice.open}
-          openMobile={projectsGuide ? true : undefined}
-          onOpenChange={projectsGuide ? undefined : choice.onOpenChange}
-          data-instant={projectsGuide ? "" : undefined}
-          data-guide-projects={projectsGuide ? "" : undefined}
+          {...(projectsGuide
+            ? { open: true, openMobile: true, "data-instant": "", "data-guide-projects": "" }
+            : choice)}
           className="min-h-0 flex-1 flex-col transition-transform duration-300 ease-out data-instant:transition-none motion-reduce:transition-none max-md:data-mobile-open:translate-x-(--sidebar-width-mobile)"
           style={sidebarVars(sized.width)}
         >

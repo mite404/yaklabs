@@ -10,7 +10,7 @@ import {
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { env } from "../env";
 import { useVisitor } from "../session";
-import { useShell } from "../shell/model";
+import { useShell, type Shell } from "../shell/model";
 import { entryOf, viewOf } from "../shell/state";
 import { ids } from "../world/ids";
 import { useShow } from "../world/provider";
@@ -18,25 +18,68 @@ import { useShow } from "../world/provider";
 type Stage = "checking" | "waiting" | "projects" | "demo" | "closed";
 type Target = "demo" | "live-playground" | "play" | "canvas";
 type Outline = { target: Target; rect: DOMRect };
+type Visit = { visitor: string; step: Stage };
 
 const TARGETS: Record<"projects" | "demo", readonly Target[]> = {
   projects: ["demo", "live-playground"],
   demo: ["play", "canvas"],
 };
 
+const STEPS = {
+  projects: {
+    number: 1,
+    title: "A quick look around",
+    description: "Two ways to explore. The colors point to the matching places in the app.",
+    button: "Next",
+    note: null,
+    points: [
+      {
+        target: "demo",
+        title: "Choose a demo",
+        text: "Scripted examples. No live model is called.",
+      },
+      {
+        target: "live-playground",
+        title: "Try the live model",
+        text:
+          env.agent.kind === "gateway"
+            ? "Ask a real model your own question."
+            : "Real model when signed in; stand-in in this preview.",
+      },
+    ],
+  },
+  demo: {
+    number: 2,
+    title: "Try the scripted demo",
+    description: "You’re in a demo now. It waits for you to press Play.",
+    button: "Got it",
+    note: "In Live Playground, your canvas is saved in this browser. Demo changes reset on reload.",
+    points: [
+      {
+        target: "play",
+        title: "Press Play",
+        text: "Start the scripted walkthrough. You can pause, restart or run it at 2× speed. No live model is called.",
+      },
+      {
+        target: "canvas",
+        title: "Open Canvas",
+        text: "Canvas sits beside the thread. Drag selected text into it to start a side thread, or drag a card or its title bar there to keep it alongside the conversation.",
+      },
+    ],
+  },
+} as const;
+
+// Full containment matters: a partially visible project cannot explain all of its demo rows.
+function inViewport(rect: DOMRect): boolean {
+  return rect.left >= 0 && rect.right <= innerWidth && rect.top >= 0 && rect.bottom <= innerHeight;
+}
+
 // Sidebar sections precede the splash links and include every expanded demo row.
 function targetElement(target: Target): HTMLElement | undefined {
   return Array.from(document.querySelectorAll<HTMLElement>(`[data-guide-target="${target}"]`)).find(
     (element) => {
       const rect = element.getBoundingClientRect();
-      return (
-        rect.width > 0 &&
-        rect.height > 0 &&
-        rect.left >= 0 &&
-        rect.right <= innerWidth &&
-        rect.top >= 0 &&
-        rect.bottom <= innerHeight
-      );
+      return rect.width > 0 && rect.height > 0 && inViewport(rect);
     },
   );
 }
@@ -107,17 +150,40 @@ function Point({
   );
 }
 
+// A blank Playground thread is the welcome screen, not a demo or an existing conversation.
+function onWelcome(shell: Shell): boolean {
+  const active = shell.workspace.threads.find((thread) => thread.id === shell.active?.main);
+  if (active?.place.kind !== "main") return false;
+  return (
+    active.place.projectId === STARTER.project.id &&
+    active.turnCount === 0 &&
+    viewOf(shell.doc, active.id).pane === "thread"
+  );
+}
+
+// A destination carries its shell so advancing cannot open a missing or non-device demo.
+function demoDestination(shell: Shell | null) {
+  if (!env.demo || shell?.source.kind !== "device") return null;
+  const thread = entryOf(shell.workspace, ids.project);
+  return thread === undefined ? null : { shell, thread };
+}
+
+function guideStage(step: Stage, demo: ReturnType<typeof demoDestination>): Stage {
+  if (step !== "waiting") return step;
+  if (demo === null) return "waiting";
+  return onWelcome(demo.shell) ? "projects" : "waiting";
+}
+
 /** Owns first-visit eligibility and the guide's steps, independently of sidebar preferences. */
 export function useFirstVisitGuide() {
   const shell = useShell();
   const visitor = useVisitor();
-  const [visit, setVisit] = useState<{ visitor: string; step: Stage }>({
+  const [visit, setVisit] = useState<Visit>({
     visitor,
     step: "checking",
   });
-  const demo = shell === null ? undefined : entryOf(shell.workspace, ids.project);
-  const destination = useShow(demo ?? null);
-  const active = shell?.workspace.threads.find((thread) => thread.id === shell.active?.main);
+  const demo = demoDestination(shell);
+  const playback = useShow(demo?.thread ?? null);
   const key = `kay.onboarding.v1:${visitor}`;
 
   useEffect(() => {
@@ -131,16 +197,8 @@ export function useFirstVisitGuide() {
     setVisit({ visitor, step: dismissed ? "closed" : "waiting" });
   }, [visitor, key]);
 
-  const eligible =
-    env.demo &&
-    shell?.source.kind === "device" &&
-    demo !== undefined &&
-    active?.place.kind === "main" &&
-    active.place.projectId === STARTER.project.id &&
-    active.turnCount === 0 &&
-    viewOf(shell.doc, active.id).pane === "thread";
   const step = visit.visitor === visitor ? visit.step : "checking";
-  const stage = step === "waiting" && eligible ? "projects" : step;
+  const stage = guideStage(step, demo);
   const close = () => {
     setVisit({ visitor, step: "closed" });
     try {
@@ -153,9 +211,9 @@ export function useFirstVisitGuide() {
     stage,
     close,
     next: () => {
-      if (stage === "projects" && shell !== null && demo !== undefined) {
-        destination?.show.pause();
-        shell.open(demo);
+      if (stage === "projects" && demo !== null) {
+        playback?.show.pause();
+        demo.shell.open(demo.thread);
         setVisit({ visitor, step: "demo" });
       } else close();
     },
@@ -170,6 +228,7 @@ export function FirstVisitGuide({ guide }: { guide: ReturnType<typeof useFirstVi
     if (stage === "projects" || stage === "demo") title.current?.focus();
   }, [stage]);
   if (stage !== "projects" && stage !== "demo") return null;
+  const step = STEPS[stage];
 
   return (
     <Dialog
@@ -184,57 +243,31 @@ export function FirstVisitGuide({ guide }: { guide: ReturnType<typeof useFirstVi
         overlayClassName="guide-backdrop"
         initialFocus={title}
         finalFocus={() => {
-          const target = targetElement(stage === "projects" ? "demo" : "play");
+          const target = targetElement(TARGETS[stage][0]);
           return target?.querySelector<HTMLElement>("a, button") ?? target ?? null;
         }}
       >
         <header className="guide-header">
-          <p className="guide-progress">{stage === "projects" ? "1" : "2"} of 2</p>
+          <p className="guide-progress">{step.number} of 2</p>
           <DialogTitle ref={title} tabIndex={-1} className="guide-title">
-            {stage === "projects" ? "A quick look around" : "Try the scripted demo"}
+            {step.title}
           </DialogTitle>
-          <DialogDescription className="guide-description">
-            {stage === "projects"
-              ? "Two ways to explore. The colors point to the matching places in the app."
-              : "You’re in a demo now. It waits for you to press Play."}
-          </DialogDescription>
+          <DialogDescription className="guide-description">{step.description}</DialogDescription>
         </header>
         <ul className="guide-points">
-          {stage === "projects" ? (
-            <>
-              <Point target="demo" title="Choose a demo">
-                Scripted examples. No live model is called.
-              </Point>
-              <Point target="live-playground" title="Try the live model">
-                {env.agent.kind === "gateway"
-                  ? "Ask a real model your own question."
-                  : "Real model when signed in; stand-in in this preview."}
-              </Point>
-            </>
-          ) : (
-            <>
-              <Point target="play" title="Press Play">
-                Start the scripted walkthrough. You can pause, restart or run it at 2× speed. No
-                live model is called.
-              </Point>
-              <Point target="canvas" title="Open Canvas">
-                Canvas sits beside the thread. Drag selected text into it to start a side thread, or
-                drag a card or its title bar there to keep it alongside the conversation.
-              </Point>
-            </>
-          )}
+          {step.points.map((point) => (
+            <Point key={point.target} target={point.target} title={point.title}>
+              {point.text}
+            </Point>
+          ))}
         </ul>
-        {stage === "demo" && (
-          <p className="guide-note">
-            In Live Playground, your canvas is saved in this browser. Demo changes reset on reload.
-          </p>
-        )}
+        {step.note && <p className="guide-note">{step.note}</p>}
         <footer className="guide-footer">
           <Button variant="ghost" onClick={close}>
             Skip tour
           </Button>
           <Button variant="outline" onClick={next}>
-            {stage === "projects" ? "Next" : "Got it"}
+            {step.button}
           </Button>
         </footer>
       </DialogContent>
