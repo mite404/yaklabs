@@ -163,27 +163,27 @@ function Transport({ show, state }: On) {
   );
 }
 
-// What this is, which demo is on (Ethan: "SCRIPTED DEMO: Weekly Brief"), in the title bar's
-// green, bold.
+// Ethan: "SCRIPTED DEMO: September Invoices. The recap as a missed run's summary". Only CSS
+// title-cases the name, so the tabs keep the thread's sentence case. The pitch takes the body
+// grey (design pillars, rule 4).
 function Title({ show }: { show: Show }) {
   return (
-    <div className="flex min-w-0 items-baseline gap-2">
-      <span
-        data-slot="demo-title"
-        className="demo-title truncate text-sm font-bold tracking-[0.06em]"
-      >
-        <span className="uppercase">Scripted demo:</span> {show.script.thread}
-      </span>
-    </div>
+    <p data-slot="demo-title" className="truncate text-sm">
+      <span className="demo-title font-bold tracking-[0.06em]">
+        <span className="uppercase">Scripted demo:</span>{" "}
+        <span className="capitalize">{show.script.thread}</span>.
+      </span>{" "}
+      <span className="text-soft-ink">{show.script.pitch}</span>
+    </p>
   );
 }
 
 /**
- * The controls of the show on screen, one row under the title bar: which demo this is, then,
- * in the middle of the bar (at its end on a phone), Play, 2x, Restart and the time played. It
- * draws nothing unless the thread on screen is a show's main or one of its children, so it
- * comes and goes with the Demo's threads. The thread below is the app's own, driven through its
- * own controls.
+ * The controls of the show on screen, one row under the title bar: which demo this is and what
+ * it demonstrates, then, in the middle of the bar (at its end on a phone), Play, 2x, Restart and
+ * the time played. It draws nothing unless the thread on screen is a show's main or one of its
+ * children, so it comes and goes with the Demo's threads. The thread below is the app's own,
+ * driven through its own controls.
  */
 export function ShowBar() {
   const shell = useShell();

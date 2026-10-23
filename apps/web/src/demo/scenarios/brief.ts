@@ -122,6 +122,7 @@ export const brief: Script = {
   label: "Weekly brief",
   shows:
     "The whole arc: narration, parallel checks, a refused chart, a finding, a decision, a draft.",
+  pitch: "Every surface here",
   project: "Support desk",
   thread: "Weekly brief",
   children: {

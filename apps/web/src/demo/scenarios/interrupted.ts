@@ -9,6 +9,7 @@ export const interrupted: Script = {
   id: "interrupted",
   label: "Interrupted reply",
   shows: "A reply that stops halfway stays honest, and a retry reads as a new attempt.",
+  pitch: "The failure, Try again and the record",
   project: "Finance",
   thread: "Refund audit",
   children: {

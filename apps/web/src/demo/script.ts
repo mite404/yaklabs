@@ -46,6 +46,8 @@ export type Script = {
   label: string;
   /** One line on what this scenario shows, for the picker's description. */
   shows: string;
+  /** What the scenario demonstrates, after the demo's name in the show's bar. */
+  pitch: string;
   // TODO(U5b): the World spec names the project (world/demo.ts); drop this once U5b lands.
   project: string;
   thread: string;

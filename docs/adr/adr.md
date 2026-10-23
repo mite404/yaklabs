@@ -2267,6 +2267,9 @@ play as the Demo project's three threads (`/t/demo-brief`, `/t/demo-interrupted`
 overlay composed with the worker. `/demo/weekly-brief[?script=]` and its `/t/:id` threads
 redirect there. The scenario picker is gone, since the sidebar's Demo project lists the shows,
 and Restart resets one show instead of remounting the shell.
+Amended 2026-10-23 (Ethan): the standing line is gone from the bar and from the scripts. Play,
+2x, Restart and the status take the middle of the bar where it sat, and each script's `pitch`, one
+line on what the scenario demonstrates, follows the demo's name instead.
 
 ## ADR-149 - A jump lays runway so any turn can centre
 
