@@ -147,6 +147,9 @@ importers:
       '@storybook/react-vite':
         specifier: 'catalog:'
         version: 10.6.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(storybook@10.6.0(@types/react@19.3.0)(react@19.3.0))(typescript@6.0.3)(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.2)(jiti@2.7.0))
+      '@tailwindcss/vite':
+        specifier: ^4.3.3
+        version: 4.3.3(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.2)(jiti@2.7.0))
       '@types/node':
         specifier: 'catalog:'
         version: 26.6.3
@@ -165,6 +168,9 @@ importers:
       '@yaklabs/config':
         specifier: workspace:*
         version: link:../../packages/config
+      '@yaklabs/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
       playwright:
         specifier: 'catalog:'
         version: 1.63.0
@@ -177,6 +183,9 @@ importers:
       storybook:
         specifier: 'catalog:'
         version: 10.6.0(@types/react@19.3.0)(react@19.3.0)
+      tailwindcss:
+        specifier: 'catalog:'
+        version: 4.3.3
       typescript:
         specifier: 'catalog:'
         version: 6.0.3
@@ -384,6 +393,9 @@ importers:
         specifier: ^1.4.0
         version: 1.4.0
     devDependencies:
+      '@storybook/react-vite':
+        specifier: 'catalog:'
+        version: 10.6.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(storybook@10.6.0(@types/react@19.3.0)(react@19.3.0))(typescript@6.0.3)(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.2)(jiti@2.7.0))
       '@tailwindcss/postcss':
         specifier: ^4.3.3
         version: 4.3.3
@@ -399,6 +411,9 @@ importers:
       '@yaklabs/config':
         specifier: workspace:*
         version: link:../config
+      storybook:
+        specifier: 'catalog:'
+        version: 10.6.0(@types/react@19.3.0)(react@19.3.0)
       tailwindcss:
         specifier: 'catalog:'
         version: 4.3.3

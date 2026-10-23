@@ -100,6 +100,22 @@
   }
 }
 
+@layer components {
+  /* Restore preflight for shadcn slots above the catalog's bare-element styles, below utilities.
+     Shared by the app and Storybook so ghost buttons and sidebar labels have the same surface. */
+  :where(button[data-slot]) {
+    border: 0 solid;
+    border-radius: 0;
+    background-color: transparent;
+    padding: 0;
+    color: inherit;
+    font-size: inherit;
+  }
+  :where(a[data-slot]) {
+    color: inherit;
+  }
+}
+
 /* A toast floats as a menu does, so it casts the menu's shadow, and speaks in the site's Inter
    (design pillars, rule 7). Sonner's own sheet sets both, a system font stack and a lighter
    shadow, outside any layer, where no utility can reach them, so each rule here carries one
