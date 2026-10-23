@@ -43,8 +43,8 @@ const MARK_ICONS: Record<Mark, LucideIcon> = {
 // since archiving clears a pin and a snooze (ADR-129).
 const MARKS = "absolute inset-y-0 left-1 flex w-3.5 flex-col items-center justify-center";
 
-// The marks at the row's left; the icons say to the eye what `spoken` says to a screen reader.
-function Marks({ marks }: { marks: Mark[] }) {
+/** The marks at the row's left; the icons say to the eye what `spoken` says to a screen reader. */
+export function Marks({ marks }: { marks: Mark[] }) {
   if (marks.length === 0) return null;
   const size = marks.length > 1 ? "size-3!" : "size-3.5!";
   return (
@@ -99,8 +99,8 @@ function Named({
   );
 }
 
-// A child's branch, where its main's title starts; the row's title names it.
-function ChildIcon(): ReactElement {
+/** A child's branch, where its main's title starts; the row's title names it. */
+export function ChildIcon(): ReactElement {
   return (
     <span data-slot="child-icon" aria-hidden="true" className="flex shrink-0 text-soft-ink">
       <ChildThreadIcon />
