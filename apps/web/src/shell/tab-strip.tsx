@@ -3,7 +3,7 @@ import { Button } from "@yaklabs/ui/components/button";
 import { DropdownMenu, DropdownMenuTrigger } from "@yaklabs/ui/components/dropdown-menu";
 import { Skeleton } from "@yaklabs/ui/components/skeleton";
 import { Tabs, TabsList, TabsTrigger } from "@yaklabs/ui/components/tabs";
-import { Archive, Ellipsis, Plus, X } from "lucide-react";
+import { Ellipsis, Plus, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import { inBackground, useRuntime } from "../runtime";
 import { panelId } from "./deck";
@@ -334,8 +334,7 @@ function CloseSlot(props: TabProps) {
  * The open threads as shadcn Tabs: choosing one goes to its address, which is what makes it
  * active. Tabs narrow as more open; past their floor the strip scrolls, fading at an edge with
  * tabs beyond it, and keeps the active one in view. While the runtime starts, one skeleton tab
- * holds the place; a failed start leaves the strip empty. After the tabs, Archive puts the active
- * main thread away (ADR-129), disabled with none active, and "+" starts a new one.
+ * holds the place; a failed start leaves the strip empty. After the tabs, "+" starts a new one.
  */
 export function TabStrip({ shell, starting }: { shell: Shell | null; starting: boolean }) {
   const active = shell?.active?.main ?? null;
@@ -385,18 +384,6 @@ export function TabStrip({ shell, starting }: { shell: Shell | null; starting: b
           </div>
         </div>
       </Tabs>
-      <Button
-        variant="ghost"
-        size="icon-sm"
-        className="text-soft-ink"
-        aria-label="Archive thread"
-        disabled={active === null}
-        onClick={() => {
-          if (active !== null) shell?.archive(active, true);
-        }}
-      >
-        <Archive />
-      </Button>
       <Button
         ref={plus}
         variant="ghost"

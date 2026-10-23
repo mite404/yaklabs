@@ -14,7 +14,14 @@ import {
 } from "@yaklabs/ui/components/sidebar";
 import { Plus } from "lucide-react";
 import { SidebarSection } from "@yaklabs/ui/components/sidebar-section";
-import { useEffect, useRef, useState, type RefObject } from "react";
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type MouseEvent,
+  type RefObject,
+} from "react";
 import { QuietButton } from "../components/quiet-button";
 import { useRestart, useRuntimeState } from "../runtime";
 import { useShell, type Shell } from "./model";
@@ -91,6 +98,58 @@ function useHandOff(tree: RefObject<HTMLElement | null>, shell: Shell | null): (
   }, [tree, at]);
   return () => {
     armed.current = true;
+  };
+}
+
+// A row action can remove its own button or move its whole main to another shelf. Hand
+// keyboard focus back to that thread, or to its folded destination's header. Any intervening
+// input cancels the hand-off, so a slow workspace update cannot steal focus back.
+function useActionFocus(tree: RefObject<HTMLElement | null>, shell: Shell | null) {
+  const workspace = shell?.workspace;
+  const pending = useRef<{
+    button: HTMLButtonElement;
+    href: string;
+    id: string;
+    controller: AbortController;
+  } | null>(null);
+  useEffect(() => () => pending.current?.controller.abort(), []);
+  useLayoutEffect(() => {
+    const action = pending.current;
+    if (action === null || workspace === undefined || action.button.isConnected) return;
+    pending.current = null;
+    action.controller.abort();
+    if (document.activeElement !== document.body) return;
+    const thread = workspace.threads.find((each) => each.id === action.id);
+    const section = thread === undefined ? "Projects" : (shelfOf(thread) ?? "Projects");
+    const row = Array.from(tree.current?.querySelectorAll<HTMLAnchorElement>("a") ?? []).find(
+      (link) => link.getAttribute("href") === action.href,
+    );
+    const header = tree.current?.querySelector<HTMLButtonElement>(
+      `button[aria-label^="${section},"]`,
+    );
+    (row ?? header)?.focus();
+  }, [tree, workspace]);
+  return (event: MouseEvent<HTMLElement>) => {
+    const button =
+      event.target instanceof Element
+        ? event.target.closest<HTMLButtonElement>("button[data-thread-action]")
+        : null;
+    if (button === null || !button.matches(":focus-visible")) return;
+    const href = button
+      .closest('[data-sidebar="menu-item"]')
+      ?.querySelector("a")
+      ?.getAttribute("href");
+    if (typeof href !== "string" || href === "") return;
+    pending.current?.controller.abort();
+    const controller = new AbortController();
+    pending.current = { button, href, id: button.dataset.threadAction ?? "", controller };
+    const cancel = () => {
+      pending.current = null;
+      controller.abort();
+    };
+    for (const type of ["pointerdown", "keydown", "focusin"]) {
+      document.addEventListener(type, cancel, { capture: true, signal: controller.signal });
+    }
   };
 }
 
@@ -228,10 +287,11 @@ export function ProjectTree() {
   const folds = useFolds();
   const group = useRef<HTMLDivElement>(null);
   const handOff = useHandOff(group, shell);
+  const actionFocus = useActionFocus(group, shell);
   const tree = shell === null ? [] : sidebarTree(shell.workspace);
   const { live, shelves } = shelve(tree);
   return (
-    <SidebarGroup ref={group}>
+    <SidebarGroup ref={group} onClickCapture={actionFocus}>
       {shell === null || tree.length === 0 ? (
         <SidebarSection label="Projects" count={0} defaultOpen>
           <TreeState shell={shell} onNewProject={handOff} />

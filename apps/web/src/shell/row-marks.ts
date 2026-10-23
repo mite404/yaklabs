@@ -1,14 +1,14 @@
 import type { ThreadSummary } from "@yaklabs/runtime";
 import { wakeText } from "./wake-text";
 
-/** A mark a thread row shows before its title (ADR-127 to ADR-129). */
+/** A thread's status mark (ADR-127 to ADR-129); only pinned gets a gutter icon. */
 export type Mark = "pinned" | "snoozed" | "archived";
 
 /** How a thread row reads, given its marks. */
 export type RowLook = {
   /** The row's ink at rest: an archived thread is dimmed (ADR-129). */
   ink: "text-soft-ink" | "text-faint-ink";
-  /** The marks before the title, left to right. */
+  /** The thread's marks, retained for spoken status even when they have no gutter icon. */
   marks: Mark[];
   /** What follows the title for a screen reader: ", pinned, snoozed until Fri 2 Oct, 9:00". */
   spoken: string;
