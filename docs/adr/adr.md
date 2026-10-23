@@ -1844,6 +1844,8 @@ Amended 2026-10-01 (Ethan): a title renames from its own words or from Rename in
 and from nothing else. A click on the words of the tab in view opens them as a field, the text
 cursor saying so; a click on a tab not in view only chooses it, and the double click is gone. A
 lane's title loses its dotted rule: it reads as plain words until the pointer rests on it.
+Amended 2026-10-23 (Ethan): the splash switch no longer lists Bonsai. It offers Abstract,
+Landscape and Vitruvian, and a `?splash=bonsai` falls back like any unknown look.
 
 ## ADR-139 - Separate progress narration, finished responses, and work details
 
@@ -2557,6 +2559,10 @@ dictation live microphone"): dictation in the device's own threads, the Live Pla
 listens to the visitor's microphone and the browser's speech service (ADR-028's live source);
 the Demo's threads and a scenario's keep the simulated recording, so a scripted take and a
 fixture sound the same every time.
+Amended 2026-10-23 (Ethan): the splash no longer cycles by visit. A visitor's first welcome is
+always abstract. Every later welcome, a new thread's or a returning visitor's first, rolls
+Abstract, Landscape or Vitruvian at random. `kay.splash.seen` marks the first welcome seen, and
+`kay.splash.turn` is retired. A `?splash=` still holds for the whole visit.
 
 ## ADR-160 - A public page tells the design tooling's story, sealed on the welcome
 
