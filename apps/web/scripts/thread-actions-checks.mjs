@@ -98,8 +98,70 @@ async function pinOrSnoozeChild(page, title, item) {
   if (item === "Snooze") await snoozeIn(lane, "In 1 hour");
 }
 
-/** The checks, keyed A1 to A9, each resolving to { ok, detail }; Share's are in share-checks.mjs. */
+// Tab from the row link to its named action, rather than skipping keyboard navigation.
+async function keyboardRowAction(page, row, action) {
+  await row.focus();
+  await page.keyboard.press("Tab");
+  if (action === "Archive" || action === "Unarchive") await page.keyboard.press("Tab");
+  const label = await page.locator(":focus").getAttribute("aria-label");
+  if (label?.startsWith(`${action} `) !== true)
+    throw new Error(`Expected ${action}, focused ${label}`);
+  await page.keyboard.press("Enter");
+}
+
+async function focusedMain(page, archived) {
+  await page.waitForFunction((marked) => {
+    const active = document.activeElement;
+    return (
+      active?.matches('#sidebar a[href$="/t/t-001?scenario=demo"]') === true &&
+      active.textContent.includes(", archived") === marked
+    );
+  }, archived);
+}
+
+/** The checks, keyed A1 to A10, each resolving to { ok, detail }; Share's are in share-checks.mjs. */
 export const threadActionChecks = {
+  // Keyboard row actions keep a useful focus target even when their button or shelf unmounts.
+  async A10(browser) {
+    const page = await openDemo(browser);
+    const sidebar = sidebarOf(page);
+    const row = (id) => sidebar.locator(`a[href$="/t/${id}?scenario=demo"]`);
+    const focusOn = (selector) =>
+      page.waitForFunction((target) => document.activeElement?.matches(target), selector);
+    for (const id of ["t-001", "t-003"]) {
+      const link = row(id);
+      const selector = `#sidebar a[href$="/t/${id}?scenario=demo"]`;
+      await keyboardRowAction(page, link, "Pin");
+      await link.locator('[data-mark="pinned"]').waitFor();
+      await focusOn(selector);
+      await keyboardRowAction(page, link, "Unpin");
+      await link.locator('[data-mark="pinned"]').waitFor({ state: "detached" });
+      await focusOn(selector);
+    }
+    const main = row("t-001");
+    await keyboardRowAction(page, main, "Archive");
+    await main.waitFor({ state: "detached" });
+    await focusOn('#sidebar button[aria-label^="Archived,"]');
+    await page.keyboard.press("Enter");
+    await main.waitFor();
+    await keyboardRowAction(page, main, "Unarchive");
+    await focusedMain(page, false);
+    // The shelf remembers being opened, so a second Archive can focus the relocated row.
+    await keyboardRowAction(page, main, "Archive");
+    await focusedMain(page, true);
+    await keyboardRowAction(page, main, "Unarchive");
+    await focusedMain(page, false);
+    await keyboardRowAction(page, row("t-003"), "Archive");
+    await focusOn('#sidebar button[aria-label="Unarchive Why is Tuesday quiet?"]');
+    await page.keyboard.press("Enter");
+    await focusOn('#sidebar button[aria-label="Archive Why is Tuesday quiet?"]');
+    return {
+      ok: true,
+      detail:
+        "main/child Pin, Unpin, Archive and Unarchive keep focus; closed shelf header and open shelf row receive focus",
+    };
+  },
+
   // The active tab carries the "⋯" with the six items and Rename, and the main thread has no
   // title bar of its own (ADR-138).
   async A1(browser) {
@@ -126,6 +188,7 @@ export const threadActionChecks = {
     await mark.waitFor();
     const pinned = await rowTitles(page);
     const pinnedRow = await rowOf(page, "Last week's sales");
+    await rowsOf(page).filter({ hasText: "Last week's sales" }).first().hover();
     await mark.click();
     await mark.waitFor({ state: "detached" });
     const after = await rowTitles(page);

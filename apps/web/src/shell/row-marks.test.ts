@@ -1,6 +1,9 @@
 import { threadIdSchema, type ProjectId, type ThreadSummary } from "@yaklabs/runtime";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
 import { rowLook } from "./row-marks";
+import { Marks } from "./tree-rows";
 import { wakeText } from "./wake-text";
 
 // Friday 2 October 2026 at 9:00 on the machine's clock, as a stored instant.
@@ -49,12 +52,19 @@ describe("rowLook (ADR-127 to ADR-129)", () => {
     });
   });
 
-  it("dims an archived thread and shows its filebox", () => {
+  it("keeps an archived thread dimmed and announces its status", () => {
     const look = rowLook(thread({ archivedAt: AT }));
     expect([look.ink, look.marks, look.spoken]).toEqual([
       "text-faint-ink",
       ["archived"],
       ", archived",
     ]);
+  });
+
+  it("renders only pinned status in the left gutter", () => {
+    expect(renderToStaticMarkup(createElement(Marks, { marks: ["snoozed", "archived"] }))).toBe("");
+    const pinned = renderToStaticMarkup(createElement(Marks, { marks: ["pinned", "snoozed"] }));
+    expect(pinned).toContain('data-mark="pinned"');
+    expect(pinned).not.toContain('data-mark="snoozed"');
   });
 });

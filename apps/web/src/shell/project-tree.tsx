@@ -4,6 +4,7 @@ import {
   type ProjectNode,
   type ThreadId,
   type ThreadSummary,
+  type Workspace,
 } from "@yaklabs/runtime";
 import {
   SidebarGroup,
@@ -14,7 +15,15 @@ import {
 } from "@yaklabs/ui/components/sidebar";
 import { Plus } from "lucide-react";
 import { SidebarSection } from "@yaklabs/ui/components/sidebar-section";
-import { useEffect, useRef, useState, type RefObject } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type MouseEvent,
+  type RefObject,
+} from "react";
 import { QuietButton } from "../components/quiet-button";
 import { useRestart, useRuntimeState } from "../runtime";
 import { useShell, type Shell } from "./model";
@@ -33,6 +42,14 @@ type Main = ProjectNode["mains"][number];
 
 // Ids folded by hand: projects, and mains with their children. Nothing is folded at first.
 type Folds = { folded: Set<string>; toggle: (id: string) => void };
+
+// The clicked row and its stable tree container, retained until the action removes its button.
+type RowAction = {
+  button: HTMLButtonElement;
+  tree: HTMLElement;
+  href: string;
+  controller: AbortController;
+};
 
 function useFolds(): Folds {
   const [folded, setFolded] = useState<Set<string>>(new Set());
@@ -91,6 +108,55 @@ function useHandOff(tree: RefObject<HTMLElement | null>, shell: Shell | null): (
   }, [tree, at]);
   return () => {
     armed.current = true;
+  };
+}
+
+// Only the clicked keyboard-focused action can request a hand-off, not another focused button.
+function focusedAction(target: EventTarget): HTMLButtonElement | null {
+  if (!(target instanceof Element)) return null;
+  return target.closest<HTMLButtonElement>("button[data-thread-action]:focus-visible");
+}
+
+// Restore the row when visible, otherwise its destination's folded header.
+function actionFocusTarget(action: RowAction, workspace: Workspace): HTMLElement | null {
+  const row = Array.from(action.tree.querySelectorAll<HTMLAnchorElement>("a")).find(
+    (link) => link.href === action.href,
+  );
+  const thread = workspace.threads.find((each) => each.id === action.button.dataset.threadAction);
+  const section = thread === undefined ? "Projects" : (shelfOf(thread) ?? "Projects");
+  const header = action.tree.querySelector<HTMLButtonElement>(`button[aria-label^="${section},"]`);
+  return row ?? header;
+}
+
+// A row action can remove its own button or move its whole main to another shelf. Any
+// intervening input cancels the hand-off, so a slow workspace update cannot steal focus back.
+function useActionFocus(shell: Shell | null) {
+  const workspace = shell?.workspace;
+  const pending = useRef<RowAction | null>(null);
+  const cancel = useCallback(() => {
+    pending.current?.controller.abort();
+    pending.current = null;
+  }, []);
+  useEffect(() => cancel, [cancel]);
+  useLayoutEffect(() => {
+    const action = pending.current;
+    if (action === null || workspace === undefined || action.button.isConnected) return;
+    cancel();
+    actionFocusTarget(action, workspace)?.focus();
+  }, [cancel, workspace]);
+  return (event: MouseEvent<HTMLElement>) => {
+    const button = focusedAction(event.target);
+    if (button === null) return;
+    const link = button
+      .closest('[data-sidebar="menu-item"]')
+      ?.querySelector<HTMLAnchorElement>("a");
+    if (!link) return;
+    cancel();
+    const controller = new AbortController();
+    pending.current = { button, tree: event.currentTarget, href: link.href, controller };
+    for (const type of ["pointerdown", "keydown", "focusin"]) {
+      document.addEventListener(type, cancel, { capture: true, signal: controller.signal });
+    }
   };
 }
 
@@ -228,10 +294,11 @@ export function ProjectTree() {
   const folds = useFolds();
   const group = useRef<HTMLDivElement>(null);
   const handOff = useHandOff(group, shell);
+  const actionFocus = useActionFocus(shell);
   const tree = shell === null ? [] : sidebarTree(shell.workspace);
   const { live, shelves } = shelve(tree);
   return (
-    <SidebarGroup ref={group}>
+    <SidebarGroup ref={group} onClickCapture={actionFocus}>
       {shell === null || tree.length === 0 ? (
         <SidebarSection label="Projects" count={0} defaultOpen>
           <TreeState shell={shell} onNewProject={handOff} />
