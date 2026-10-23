@@ -7,18 +7,18 @@ import {
 } from "@yaklabs/runtime";
 import {
   SidebarGroup,
-  SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuAction,
   SidebarMenuItem,
   SidebarMenuSkeleton,
 } from "@yaklabs/ui/components/sidebar";
 import { Plus } from "lucide-react";
+import { SidebarSection } from "@yaklabs/ui/components/sidebar-section";
 import { useEffect, useRef, useState, type RefObject } from "react";
 import { QuietButton } from "../components/quiet-button";
 import { useRestart, useRuntimeState } from "../runtime";
 import { useShell, type Shell } from "./model";
-import { FoldChevron, ProjectButton, ThreadRow } from "./tree-rows";
+import { ProjectButton, ThreadRow } from "./tree-rows";
 
 // Fixed widths, so a loading screenshot is the same every time.
 const SKELETON_WIDTHS = [168, 132, 150];
@@ -27,9 +27,6 @@ const SKELETON_WIDTHS = [168, 132, 150];
 // (applyMark); if old data has both, Archived holds it.
 type ShelfName = "Snoozed" | "Archived";
 const SHELF_NAMES: ShelfName[] = ["Snoozed", "Archived"];
-
-// The hairline after a section's name, across the rest of the panel: Projects and each shelf.
-const SECTION_LINE = <span aria-hidden="true" className="h-px min-w-4 flex-1 bg-hairline" />;
 
 type Main = ProjectNode["mains"][number];
 
@@ -165,57 +162,6 @@ function ProjectRows({ node, shell, folds }: { node: ProjectNode; shell: Shell; 
   );
 }
 
-// A shelf below the projects: its name over a hairline, then its count and a fold that starts
-// folded, unlike the projects. An empty shelf has no fold.
-function Shelf({
-  name,
-  mains,
-  shell,
-  folds,
-}: {
-  name: ShelfName;
-  mains: Main[];
-  shell: Shell;
-  folds: Folds;
-}) {
-  const [open, setOpen] = useState(false);
-  if (mains.length === 0) {
-    return (
-      <SidebarGroupLabel className="mt-2 gap-2 text-soft-ink">
-        {name}
-        {SECTION_LINE}
-      </SidebarGroupLabel>
-    );
-  }
-  return (
-    <>
-      <SidebarGroupLabel
-        render={
-          <button type="button" aria-expanded={open} aria-label={`${name}, ${mains.length}`} />
-        }
-        className="group/fold mt-2 gap-2 rounded-[var(--radius)] text-soft-ink hover:text-ink"
-        onClick={() => {
-          setOpen(!open);
-        }}
-      >
-        {name}
-        {SECTION_LINE}
-        <span aria-hidden="true" className="tabular-nums">
-          {mains.length}
-        </span>
-        <FoldChevron open={open} />
-      </SidebarGroupLabel>
-      {open && (
-        <SidebarMenu>
-          {mains.map((each) => (
-            <MainRows key={each.main.id} node={each} at={threadOn(shell.active)} folds={folds} />
-          ))}
-        </SidebarMenu>
-      )}
-    </>
-  );
-}
-
 // What the tree says before the workspace arrives: rows on their way, another tab that has
 // them, or a failed start.
 function Unready() {
@@ -257,7 +203,8 @@ function TreeState({ shell, onNewProject }: { shell: Shell | null; onNewProject:
  * The projects, their main threads and each main's children (ADR-092, ADR-093), newest main
  * first and each main's children newest first, both by creation (ADR-125). Rows open threads by
  * address; the URL's thread is marked. Snoozed and archived mains leave their projects for the
- * Snoozed and Archived shelves below them. It fills the projects panel beside the rail (ADR-144).
+ * Snoozed and Archived shelves below them; Projects and each shelf fold as a
+ * {@link SidebarSection}. It fills the projects panel beside the rail (ADR-144).
  */
 export function ProjectTree() {
   const shell = useShell();
@@ -268,21 +215,32 @@ export function ProjectTree() {
   const { live, shelves } = shelve(tree);
   return (
     <SidebarGroup ref={group}>
-      <SidebarGroupLabel className="gap-2 text-soft-ink">
-        Projects
-        {SECTION_LINE}
-      </SidebarGroupLabel>
       {shell === null || tree.length === 0 ? (
-        <TreeState shell={shell} onNewProject={handOff} />
+        <SidebarSection label="Projects" count={0} defaultOpen>
+          <TreeState shell={shell} onNewProject={handOff} />
+        </SidebarSection>
       ) : (
         <>
-          <SidebarMenu className="gap-2">
-            {live.map((node) => (
-              <ProjectRows key={node.project.id} node={node} shell={shell} folds={folds} />
-            ))}
-          </SidebarMenu>
+          <SidebarSection label="Projects" count={live.length} defaultOpen>
+            <SidebarMenu className="gap-2">
+              {live.map((node) => (
+                <ProjectRows key={node.project.id} node={node} shell={shell} folds={folds} />
+              ))}
+            </SidebarMenu>
+          </SidebarSection>
           {shelves.map(({ name, mains }) => (
-            <Shelf key={name} name={name} mains={mains} shell={shell} folds={folds} />
+            <SidebarSection key={name} label={name} count={mains.length} className="mt-2">
+              <SidebarMenu>
+                {mains.map((each) => (
+                  <MainRows
+                    key={each.main.id}
+                    node={each}
+                    at={threadOn(shell.active)}
+                    folds={folds}
+                  />
+                ))}
+              </SidebarMenu>
+            </SidebarSection>
           ))}
         </>
       )}
