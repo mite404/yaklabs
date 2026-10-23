@@ -46,11 +46,6 @@ export type Script = {
   label: string;
   /** One line on what this scenario shows, for the picker's description. */
   shows: string;
-  /**
-   * What of this scenario is the product's and what is proposed, in one line under the demo's
-   * name, so a watcher never takes a prototype for shipped work or the other way round.
-   */
-  standing: string;
   // TODO(U5b): the World spec names the project (world/demo.ts); drop this once U5b lands.
   project: string;
   thread: string;
