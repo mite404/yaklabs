@@ -1,4 +1,10 @@
-import { sidebarTree, type Located, type ProjectNode, type ThreadId } from "@yaklabs/runtime";
+import {
+  sidebarTree,
+  type Located,
+  type ProjectNode,
+  type ThreadId,
+  type ThreadSummary,
+} from "@yaklabs/runtime";
 import {
   SidebarGroup,
   SidebarGroupLabel,
@@ -12,10 +18,19 @@ import { useEffect, useRef, useState, type RefObject } from "react";
 import { QuietButton } from "../components/quiet-button";
 import { useRestart, useRuntimeState } from "../runtime";
 import { useShell, type Shell } from "./model";
-import { ProjectButton, ThreadRow } from "./tree-rows";
+import { FoldChevron, ProjectButton, ThreadRow } from "./tree-rows";
 
 // Fixed widths, so a loading screenshot is the same every time.
 const SKELETON_WIDTHS = [168, 132, 150];
+
+// The shelves below the projects, each holding the mains that carry its mark (ADR-128,
+// ADR-129); archiving clears a snooze, so a main sits on one at most.
+const SHELVES = [
+  { name: "Snoozed", holds: (main: ThreadSummary) => main.snoozedUntil !== null },
+  { name: "Archived", holds: (main: ThreadSummary) => main.archivedAt !== null },
+] as const;
+
+type Main = ProjectNode["mains"][number];
 
 // Ids folded by hand: projects, and mains with their children. Nothing is folded at first.
 type Folds = { folded: Set<string>; toggle: (id: string) => void };
@@ -32,6 +47,24 @@ function useFolds(): Folds {
       });
     },
   };
+}
+
+// Whether a main sits on a shelf rather than in its project.
+const shelved = (main: ThreadSummary): boolean => SHELVES.some((shelf) => shelf.holds(main));
+
+// The tree with its shelved mains taken out, and each shelf with the mains it holds, every
+// project's in turn.
+function shelve(tree: ProjectNode[]): { live: ProjectNode[]; shelves: [string, Main[]][] } {
+  const live = tree.map((node) => ({
+    ...node,
+    mains: node.mains.filter((each) => !shelved(each.main)),
+  })); // → ProjectNode[]
+  const all = tree.flatMap((node) => node.mains); // → Main[]
+  const shelves = SHELVES.map(({ name, holds }): [string, Main[]] => [
+    name,
+    all.filter((each) => holds(each.main)),
+  ]);
+  return { live, shelves };
 }
 
 // The thread the address names: a child, else its main.
@@ -58,15 +91,7 @@ function useHandOff(tree: RefObject<HTMLElement | null>, shell: Shell | null): (
 
 // A main thread and the children below it, folded by its own row's arrow when it has any. `at`
 // is the thread the address names, which is marked.
-function MainRows({
-  node,
-  at,
-  folds,
-}: {
-  node: ProjectNode["mains"][number];
-  at: ThreadId | null;
-  folds: Folds;
-}) {
+function MainRows({ node, at, folds }: { node: Main; at: ThreadId | null; folds: Folds }) {
   const { main, children } = node;
   const open = !folds.folded.has(main.id);
   const hasChildren = children.length > 0;
@@ -133,6 +158,59 @@ function ProjectRows({ node, shell, folds }: { node: ProjectNode; shell: Shell; 
   );
 }
 
+// A shelf below the projects: its name and a hairline across the panel, then, while it holds
+// any, how many and the fold that shows them, folded at first. An empty shelf is its name and
+// line alone, with nothing to fold.
+function Shelf({
+  name,
+  mains,
+  shell,
+  folds,
+}: {
+  name: string;
+  mains: Main[];
+  shell: Shell;
+  folds: Folds;
+}) {
+  const [open, setOpen] = useState(false);
+  const line = <span aria-hidden="true" className="h-px min-w-4 flex-1 bg-hairline" />;
+  if (mains.length === 0) {
+    return (
+      <SidebarGroupLabel className="mt-2 gap-2 text-soft-ink">
+        {name}
+        {line}
+      </SidebarGroupLabel>
+    );
+  }
+  return (
+    <>
+      <SidebarGroupLabel
+        render={
+          <button type="button" aria-expanded={open} aria-label={`${name}, ${mains.length}`} />
+        }
+        className="group/fold mt-2 gap-2 rounded-[var(--radius)] text-soft-ink hover:text-ink"
+        onClick={() => {
+          setOpen(!open);
+        }}
+      >
+        {name}
+        {line}
+        <span aria-hidden="true" className="tabular-nums">
+          {mains.length}
+        </span>
+        <FoldChevron open={open} />
+      </SidebarGroupLabel>
+      {open && (
+        <SidebarMenu>
+          {mains.map((each) => (
+            <MainRows key={each.main.id} node={each} at={threadOn(shell.active)} folds={folds} />
+          ))}
+        </SidebarMenu>
+      )}
+    </>
+  );
+}
+
 // What the tree says before the workspace arrives: rows on their way, another tab that has
 // them, or a failed start.
 function Unready() {
@@ -173,7 +251,8 @@ function TreeState({ shell, onNewProject }: { shell: Shell | null; onNewProject:
 /**
  * The projects, their main threads and each main's children (ADR-092, ADR-093), newest main
  * first and each main's children newest first, both by creation (ADR-125). Rows open threads by
- * address; the URL's thread is marked. It fills the projects panel beside the rail (ADR-144).
+ * address; the URL's thread is marked. Snoozed and archived mains leave their projects for the
+ * Snoozed and Archived shelves below them. It fills the projects panel beside the rail (ADR-144).
  */
 export function ProjectTree() {
   const shell = useShell();
@@ -181,17 +260,23 @@ export function ProjectTree() {
   const group = useRef<HTMLDivElement>(null);
   const handOff = useHandOff(group, shell);
   const tree = shell === null ? [] : sidebarTree(shell.workspace);
+  const { live, shelves } = shelve(tree);
   return (
     <SidebarGroup ref={group}>
       <SidebarGroupLabel className="text-soft-ink">Projects</SidebarGroupLabel>
       {shell === null || tree.length === 0 ? (
         <TreeState shell={shell} onNewProject={handOff} />
       ) : (
-        <SidebarMenu className="gap-2">
-          {tree.map((node) => (
-            <ProjectRows key={node.project.id} node={node} shell={shell} folds={folds} />
+        <>
+          <SidebarMenu className="gap-2">
+            {live.map((node) => (
+              <ProjectRows key={node.project.id} node={node} shell={shell} folds={folds} />
+            ))}
+          </SidebarMenu>
+          {shelves.map(([name, mains]) => (
+            <Shelf key={name} name={name} mains={mains} shell={shell} folds={folds} />
           ))}
-        </SidebarMenu>
+        </>
       )}
     </SidebarGroup>
   );

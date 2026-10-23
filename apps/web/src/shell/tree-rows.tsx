@@ -106,14 +106,16 @@ function Named({
   );
 }
 
-// The fold arrow a project's row and a main thread's fold button share: ">" while folded, and
-// open, a "v" that fades in while the pointer is on the row and fades out once it leaves - each
-// wraps this in its own `group/fold`, whether that group is the whole row (a project) or just
-// spans it (a thread row's stretched link and separate button both sit inside one). Keyboard
-// focus shows it too, but only `:focus-visible`: a click also leaves focus on the button, and
-// plain `:focus-within` would then hold the "v" up after the pointer has gone.
-// A touch screen, with no hover to reveal it, shows the "v" whenever the fold is open.
-function FoldChevron({ open }: { open: boolean }): ReactElement {
+/**
+ * The fold arrow a project's row and a main thread's fold button share: ">" while folded, and
+ * open, a "v" that fades in while the pointer is on the row and fades out once it leaves - each
+ * wraps this in its own `group/fold`, whether that group is the whole row (a project) or just
+ * spans it (a thread row's stretched link and separate button both sit inside one). Keyboard
+ * focus shows it too, but only `:focus-visible`: a click also leaves focus on the button, and
+ * plain `:focus-within` would then hold the "v" up after the pointer has gone.
+ * A touch screen, with no hover to reveal it, shows the "v" whenever the fold is open.
+ */
+export function FoldChevron({ open }: { open: boolean }): ReactElement {
   const common = "size-3.5! shrink-0 text-soft-ink";
   return open ? (
     <ChevronDown
