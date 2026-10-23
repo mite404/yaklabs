@@ -334,8 +334,8 @@ function CloseSlot(props: TabProps) {
  * The open threads as shadcn Tabs: choosing one goes to its address, which is what makes it
  * active. Tabs narrow as more open; past their floor the strip scrolls, fading at an edge with
  * tabs beyond it, and keeps the active one in view. While the runtime starts, one skeleton tab
- * holds the place; a failed start leaves the strip empty. After the tabs, Archive puts the open
- * thread away (ADR-129) and "+" starts a new one.
+ * holds the place; a failed start leaves the strip empty. After the tabs, Archive puts the active
+ * main thread away (ADR-129), disabled with none active, and "+" starts a new one.
  */
 export function TabStrip({ shell, starting }: { shell: Shell | null; starting: boolean }) {
   const active = shell?.active?.main ?? null;
