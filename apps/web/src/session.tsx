@@ -35,8 +35,20 @@ function useNoSession(): Session | undefined {
   return undefined;
 }
 
+function useWorkOsVisitor(): string {
+  const { user } = useAuth();
+  return user?.id ?? "signed-out";
+}
+
+function useLocalVisitor(): string {
+  return "local-preview";
+}
+
 /** Wraps every protected route: a pass-through without sign-in, the WorkOS gate with it. */
 export const RequireSession = env.auth.kind === "workos" ? WorkOsGate : OpenGate;
 
 /** The visitor's session, or undefined when the build has no sign-in. */
 export const useSession = env.auth.kind === "workos" ? useWorkOsSession : useNoSession;
+
+/** The signed-in account's ID, or the local preview's separate preference namespace. */
+export const useVisitor = env.auth.kind === "workos" ? useWorkOsVisitor : useLocalVisitor;

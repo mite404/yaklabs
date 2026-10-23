@@ -145,7 +145,7 @@ function ProjectRows({ node, shell, folds }: { node: ProjectNode; shell: Shell; 
   const { project, mains } = node;
   const open = !folds.folded.has(project.id);
   return (
-    <SidebarMenuItem>
+    <SidebarMenuItem data-guide-target={project.id}>
       <ProjectButton
         name={project.name}
         open={open}

@@ -65,6 +65,7 @@ function useSidebar() {
 // oxlint-disable-next-line max-lines-per-function -- owns the sidebar's full state: open/collapsed, mobile sheet, cookie persistence, keyboard shortcut
 function SidebarProvider({
   defaultOpen = true,
+  openMobile: openMobileProp,
   open: openProp,
   onOpenChange: setOpenProp,
   className,
@@ -73,11 +74,14 @@ function SidebarProvider({
   ...props
 }: React.ComponentProps<"div"> & {
   defaultOpen?: boolean;
+  /** An optional controlled phone-drawer state, such as an onboarding presentation. */
+  openMobile?: boolean;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
 }) {
   const isMobile = useIsMobile();
-  const [openMobile, setOpenMobile] = React.useState(false);
+  const [_openMobile, setOpenMobile] = React.useState(false);
+  const openMobile = openMobileProp ?? _openMobile;
 
   // This is the internal state of the sidebar.
   // We use openProp and setOpenProp for control from outside the component.

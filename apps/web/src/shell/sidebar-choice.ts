@@ -4,6 +4,8 @@
 // read.
 import { cssVars } from "@yaklabs/ui/lib/utils";
 import { useState, type CSSProperties } from "react";
+import { env } from "../env";
+import { useVisitor } from "../session";
 import type { SidebarWidth } from "./sidebar";
 import { handFocusToToggle } from "./peek-page";
 import { parseStoredWidth, SIDEBAR_DEFAULT_PX, widthValue } from "./sidebar-width";
@@ -15,10 +17,10 @@ const WIDTH_KEY = "kay.sidebar-width";
 // A window this wide opens with the sidebar open, until the visitor chooses.
 const WIDE_PX = 1280;
 
-// A browser that refuses storage decides by the window's width.
-function readSidebarOpen(): boolean {
+// The guide temporarily expands the panel separately; this is only the visitor's own choice.
+function readSidebarOpen(key: string): boolean {
   try {
-    const stored = localStorage.getItem(SIDEBAR_KEY); // → "open" | "closed" | null
+    const stored = localStorage.getItem(key); // → "open" | "closed" | null
     if (stored === "open" || stored === "closed") return stored === "open";
   } catch {
     // Private windows may refuse storage.
@@ -26,9 +28,9 @@ function readSidebarOpen(): boolean {
   return window.innerWidth >= WIDE_PX;
 }
 
-function rememberSidebar(open: boolean): void {
+function rememberSidebar(key: string, open: boolean): void {
   try {
-    localStorage.setItem(SIDEBAR_KEY, open ? "open" : "closed");
+    localStorage.setItem(key, open ? "open" : "closed");
   } catch {
     // The choice holds for this visit.
   }
@@ -48,14 +50,22 @@ function readSidebarWidth(): number {
  * Whether the sidebar is open, as the visitor last chose, and the way to choose again. Closing
  * it first hands keyboard focus on what it hides to the title bar's toggle.
  */
-export function useSidebarOpen(): { open: boolean; onOpenChange: (open: boolean) => void } {
-  const [open, setOpen] = useState(readSidebarOpen);
+export function useSidebarOpen(): {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+} {
+  const visitor = useVisitor();
+  const key = env.auth.kind === "workos" ? `${SIDEBAR_KEY}:${visitor}` : SIDEBAR_KEY;
+  const [choice, setChoice] = useState(() => ({ visitor, open: readSidebarOpen(key) }));
+  if (choice.visitor !== visitor) {
+    setChoice({ visitor, open: readSidebarOpen(key) });
+  }
   return {
-    open,
+    open: choice.open,
     onOpenChange: (next) => {
       if (!next) handFocusToToggle();
-      setOpen(next);
-      rememberSidebar(next);
+      setChoice({ ...choice, visitor, open: next });
+      rememberSidebar(key, next);
     },
   };
 }
