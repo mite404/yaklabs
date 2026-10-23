@@ -23,12 +23,10 @@ import { FoldChevron, ProjectButton, ThreadRow } from "./tree-rows";
 // Fixed widths, so a loading screenshot is the same every time.
 const SKELETON_WIDTHS = [168, 132, 150];
 
-// The shelves below the projects, each holding the mains that carry its mark (ADR-128,
-// ADR-129); archiving clears a snooze, so a main sits on one at most.
-const SHELVES = [
-  { name: "Snoozed", holds: (main: ThreadSummary) => main.snoozedUntil !== null },
-  { name: "Archived", holds: (main: ThreadSummary) => main.archivedAt !== null },
-] as const;
+// The shelves below the projects, in display order. A main carries one mark at most
+// (applyMark); if old data has both, Archived holds it.
+type ShelfName = "Snoozed" | "Archived";
+const SHELF_NAMES: ShelfName[] = ["Snoozed", "Archived"];
 
 type Main = ProjectNode["mains"][number];
 
@@ -49,21 +47,27 @@ function useFolds(): Folds {
   };
 }
 
-// Whether a main sits on a shelf rather than in its project.
-const shelved = (main: ThreadSummary): boolean => SHELVES.some((shelf) => shelf.holds(main));
+// The shelf a main sits on, or null while it stays in its project.
+function shelfOf(main: ThreadSummary): ShelfName | null {
+  if (main.archivedAt !== null) return "Archived";
+  if (main.snoozedUntil !== null) return "Snoozed";
+  return null;
+}
 
-// The tree with its shelved mains taken out, and each shelf with the mains it holds, every
-// project's in turn.
-function shelve(tree: ProjectNode[]): { live: ProjectNode[]; shelves: [string, Main[]][] } {
+// The tree without its shelved mains, and each shelf's mains in project order, not by date.
+function shelve(tree: ProjectNode[]): {
+  live: ProjectNode[];
+  shelves: { name: ShelfName; mains: Main[] }[];
+} {
   const live = tree.map((node) => ({
     ...node,
-    mains: node.mains.filter((each) => !shelved(each.main)),
+    mains: node.mains.filter((each) => shelfOf(each.main) === null),
   })); // → ProjectNode[]
   const all = tree.flatMap((node) => node.mains); // → Main[]
-  const shelves = SHELVES.map(({ name, holds }): [string, Main[]] => [
+  const shelves = SHELF_NAMES.map((name) => ({
     name,
-    all.filter((each) => holds(each.main)),
-  ]);
+    mains: all.filter((each) => shelfOf(each.main) === name),
+  })); // → { name, mains }[]
   return { live, shelves };
 }
 
@@ -158,16 +162,15 @@ function ProjectRows({ node, shell, folds }: { node: ProjectNode; shell: Shell; 
   );
 }
 
-// A shelf below the projects: its name and a hairline across the panel, then, while it holds
-// any, how many and the fold that shows them, folded at first. An empty shelf is its name and
-// line alone, with nothing to fold.
+// A shelf below the projects: its name over a hairline, then its count and a fold that starts
+// folded, unlike the projects. An empty shelf has no fold.
 function Shelf({
   name,
   mains,
   shell,
   folds,
 }: {
-  name: string;
+  name: ShelfName;
   mains: Main[];
   shell: Shell;
   folds: Folds;
@@ -273,7 +276,7 @@ export function ProjectTree() {
               <ProjectRows key={node.project.id} node={node} shell={shell} folds={folds} />
             ))}
           </SidebarMenu>
-          {shelves.map(([name, mains]) => (
+          {shelves.map(({ name, mains }) => (
             <Shelf key={name} name={name} mains={mains} shell={shell} folds={folds} />
           ))}
         </>
