@@ -10,6 +10,8 @@ Use it to catch visual drift as humans and agents change the product. Code is th
 Figma receives token exports. Automated checks find differences. A person decides whether an
 intentional visual change should become the new reference.
 
+UI drift verification runs manually, not in CI. A human runs the capture and reviews its evidence.
+
 ## Run it
 
 From the repository root, using Node 26 and the repository's pinned pnpm version:
@@ -50,10 +52,10 @@ Only PASS means everything was compared and found as approved.
 | BROKEN | 3 | The run did not finish cleanly; the cause is printed | No, do not use it |
 
 References are per machine, since browsers draw text slightly differently on each OS. The
-approved ones come from CI's Debian image, so a run on a Mac is INCOMPLETE and says so before it
-captures anything. To see CI's comparison, unzip the PR's `design-verification` artifact into
-`.artifacts/verify-ui-drift/` (it holds `runs/`) and open it in the review app. Changes and axe
-violations are listed even when a run is INCOMPLETE, so they are never hidden by it.
+existing approved references were captured on Debian 12. Run manually in a matching environment
+to compare with them. A run on a Mac is INCOMPLETE and says so before it captures anything.
+Open the manually saved evidence in the review app. Changes and axe violations are listed even
+when a run is INCOMPLETE, so they are never hidden by it.
 
 ## From design to drift check
 
@@ -87,8 +89,8 @@ Commit these with the code.
 Reports and comparison images live in `.artifacts/verify-ui-drift/runs/`, which Git ignores.
 
 The CLI rejects stale or incomplete evidence, failed comparator checks, altered images, and selected
-captures with axe violations. CI cannot approve references. Never approve an unexplained difference
-just to make a check pass.
+captures with axe violations. Only a person can approve references. Never approve an unexplained
+difference just to make a check pass.
 
 ## Check the tool itself
 
