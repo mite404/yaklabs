@@ -1,8 +1,7 @@
 import Color from "colorjs.io";
 import { AtRule, parse, Rule, type Container, type Document, type Root } from "postcss";
 import valueParser from "postcss-value-parser";
-// The native compiler does not expose the legacy synchronous AST API.
-import ts from "typescript-api";
+import ts from "typescript";
 import type {
   AuthoredColor,
   ColorInventory,
