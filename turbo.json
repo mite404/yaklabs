@@ -18,7 +18,6 @@
     "!packages/config/**",
     "!packages/runtime/**",
     "!packages/ui/**",
-    "!tools/verify-ui-drift/**",
     // The catalog's token tests read this web asset, outside the package graph.
     "apps/web/public/chrome/painting.json"
   ],

@@ -45,9 +45,9 @@ Lefthook runs on every commit and touches only staged files: Oxlint, Oxfmt, and 
 for markdown. After a pull or a branch switch it runs `pnpm install` when the lockfile moved past
 what `node_modules` holds, so a branch that adds a package never leaves the dev server failing to
 resolve it. CI (`.github/workflows/ci.yml`) runs the rest on every pull request: format, lint,
-types, the fallow audit against the base branch, unit and story tests, and both builds. Its
-`design-verification` job runs `pnpm verify-ui-drift run` and fails on UI drift from the approved
-references or on an axe violation. Only a person can approve a new reference, locally.
+types, the fallow audit against the base branch, unit and story tests, and both builds.
+UI drift verification is a manual human check: run `pnpm verify-ui-drift run` and review the saved
+evidence with `pnpm verify-ui-drift review`. Only a person can approve a new reference.
 
 To prove a component change in a real browser while you work on it, use the
 `verify-storybook-component` skill under `.agents/skills/`.
