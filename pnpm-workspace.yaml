@@ -23,7 +23,8 @@ catalog:
   sonner: ^2.0.8
   storybook: ^10.6.0
   tailwindcss: ^4.3.3
-  typescript: ^6.0.3
+  # TypeScript 7 ships the native compiler as tsc (the preview called it tsgo).
+  typescript: ^7.0.2
   vite: ^8.2.2
   vitest: 4.1.11
   zod: ^4.5.4
