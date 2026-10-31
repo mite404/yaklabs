@@ -116,6 +116,9 @@ jobs:
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
       - uses: pnpm/action-setup@v4
       - run: pnpm install --frozen-lockfile
+      # cache otherwise falls back to gzip in this container (61s to save the browsers).
+      - name: Install cache compression
+        run: apt-get update && apt-get install -y --no-install-recommends zstd
       - name: Playwright version
         id: playwright
         run: echo "version=$(pnpm --filter verify-ui-drift exec playwright --version | cut -d ' ' -f 2)" >> "$GITHUB_OUTPUT"
