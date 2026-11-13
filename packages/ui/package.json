@@ -32,6 +32,7 @@
     "@tailwindcss/postcss": "^4.3.3",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
+    "@typescript/native": "catalog:",
     "@vitejs/plugin-react": "catalog:",
     "@yaklabs/config": "workspace:*",
     "storybook": "catalog:",
